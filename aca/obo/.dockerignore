@@ -1,0 +1,31 @@
+# Python / build artifacts
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Local dev tooling installed by the M365 Agents Toolkit
+devTools/
+appPackage/build/
+
+# Secrets and local environment files — provided via ACA env vars, never baked in
+.env
+env/.env.*.user
+.localConfigs*
+.notification.*store.json
+
+# VCS / editor / docs not needed in the image
+.git/
+.gitignore
+.vscode/
+docs/
+images/
+*.md
+!README.md
+
+# Deployment helper script (not needed inside the container)
+deploy-aca.ps1

@@ -1,0 +1,9 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/*.js", "/*.css"]
+  },
+  "globalHeaders": {
+    "Cache-Control": "no-store, must-revalidate"
+  }
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Framework Agents</title>
+  <link rel="stylesheet" href="styles.css?v=1" />
+</head>
+<body>
+  <!-- Sign-in view -->
+  <div id="login-view" class="login-view">
+    <div class="login-card">
+      <h1>Agent Framework Agents</h1>
+      <p>Sign in with your work account to use the agents.</p>
+      <button id="login-btn" class="primary">Sign in</button>
+      <p id="login-error" class="error"></p>
+    </div>
+  </div>
+
+  <!-- App view -->
+  <div id="app-view" class="app-view" hidden>
+    <header class="topbar">
+      <div class="brand">Agent Framework Agents</div>
+      <div class="user">
+        <span id="user-name"></span>
+        <button id="logout-btn" class="link">Sign out</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav id="tabs" class="tabs" aria-label="Agents"></nav>
+      <main id="panels" class="panels"></main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
+  <script src="config.js?v=1"></script>
+  <script src="app.js?v=1"></script>
+</body>
+</html>

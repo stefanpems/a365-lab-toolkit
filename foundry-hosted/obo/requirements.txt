@@ -1,0 +1,17 @@
+# Foundry Hosted Agent runtime dependencies (OBO variant)
+
+# Foundry chat client (agent_framework.foundry.FoundryChatClient) + Agent Framework core
+agent-framework-foundry
+
+# Foundry hosting integration (ResponsesHostServer / InvocationsHostServer).
+# Also brings the azure.ai.agentserver namespace (used by main.py for the custom OBO
+# invoke handler: azure.ai.agentserver.invocations.InvocationAgentServerHost) + starlette
+# transitively. >=1.0.0a260630 => Foundry hosted-agent protocol 2.0.0 (matches azure.yaml).
+agent-framework-foundry-hosting>=1.0.0a260630
+
+# Auth + HTTP
+azure-identity
+httpx>=0.24.0
+
+# Local dev
+python-dotenv

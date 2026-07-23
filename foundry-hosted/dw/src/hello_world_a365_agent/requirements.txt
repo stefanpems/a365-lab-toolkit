@@ -1,0 +1,42 @@
+# Microsoft 365 Agents SDK — hosting + bot protocol
+microsoft-agents-hosting-aiohttp>=1.1.0.dev7
+microsoft-agents-hosting-core>=1.1.0.dev7
+microsoft-agents-authentication-msal>=1.1.0.dev7
+microsoft-agents-activity>=1.1.0.dev7
+
+# Microsoft Agent 365 SDK — notifications + observability
+microsoft_agents_a365_observability_core>=0.1.0
+microsoft_agents_a365_runtime>=0.1.0
+microsoft_agents_a365_notifications>=0.1.0
+microsoft-opentelemetry>=0.1.0a3
+
+# Microsoft Agent Framework — OUR agent logic (Agent + Azure OpenAI chat client + Mail MCP tool),
+# same core used for the OBO/S2S agents. We depend on agent-framework-CORE (not the
+# `agent-framework` meta-package, which pulls agent-framework-core[all] = every third-party
+# provider: ollama/bedrock/mem0/cosmos/chatkit/... causing pathological pip backtracking and a
+# bloated image). Core provides agent_framework.Agent and agent_framework.MCPStreamableHTTPTool.
+# The agent_framework.openai.OpenAIChatCompletionClient we import lives in the SEPARATE
+# `agent-framework-openai` extension package — core only ships a stub that raises
+# ModuleNotFoundError until this package is installed, so it MUST be listed explicitly.
+agent-framework-core==1.0.0
+agent-framework-openai==1.0.0
+openai>=1.0.0
+
+# Model Context Protocol SDK — required by agent_framework's MCPStreamableHTTPTool
+# (used for the Agent 365 Mail MCP tool when DW_ENABLE_MAIL=true). Without it the
+# server crashes at startup with "`MCPStreamableHTTPTool` requires `mcp`".
+mcp>=1.0.0
+
+# Azure SDK
+azure-identity>=1.17.0
+azure-keyvault-secrets>=4.8.0
+azure-monitor-opentelemetry>=1.6.0
+
+# HTTP / web stack
+aiohttp>=3.10
+httpx>=0.24.0
+python-dotenv>=1.0.0
+
+# Utilities
+pydantic>=2.0.0
+typing-extensions>=4.0.0

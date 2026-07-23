@@ -1,0 +1,32 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/vdevPreview/MicrosoftTeams.schema.json",
+  "id": "fa48baa5-1de8-4e94-b88e-b72f9b4f2478",
+  "name": {
+    "short": "AgentFrameworkDWSample",
+    "full": "AgentFrameworkDWSample"
+  },
+  "description": {
+    "short": "Agent Framework AI teammate that helps with email via Microsoft 365 MCP tools.",
+    "full": "AgentFrameworkDWSample is a Python AI teammate built on the Microsoft Agent Framework and hosted on Azure Container Apps. It can read and send email through Microsoft 365 MCP tools on behalf of users, with Agent 365 observability. It demonstrates the Agent Framework \u002B Agent 365 AI teammate experience."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#9ec9d9",
+  "version": "1.1.4",
+  "manifestVersion": "devPreview",
+  "developer": {
+    "name": "Microsoft Corporation",
+    "mpnId": "",
+    "websiteUrl": "https://go.microsoft.com/fwlink/?LinkId=518028",
+    "privacyUrl": "https://go.microsoft.com/fwlink/?LinkId=518028",
+    "termsOfUseUrl": "https://shares.datatransfer.microsoft.com/assets/Microsoft_Terms_of_Use.html"
+  },
+  "agenticUserTemplates": [
+    {
+      "id": "7b0926a6-c4ee-445a-a913-bd054594bd09",
+      "file": "agenticUserTemplateManifest.json"
+    }
+  ]
+}

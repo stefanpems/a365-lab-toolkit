@@ -1,0 +1,25 @@
+name: agent365-dw-autopilot-agentframeworkfh
+
+hooks:
+  postprovision:
+    shell: pwsh
+    run: ./scripts/post-provision.ps1
+    interactive: true
+    continueOnError: false
+
+# Agent service — declared so `azd ai agent` commands (monitor/show/sessions) can resolve
+# our already-deployed hosted agent. NOTE: this agent uses the DW *activity* protocol served
+# by the Microsoft Agents SDK host; it is NOT deployed via `azd deploy` (it's built + versioned
+# by the postprovision scripts via `az acr build`). This block exists only for log/monitor
+# resolution. It is COMMENTED OUT during provisioning because `language: docker` makes
+# `azd provision` require a local Docker runtime, which we don't need (the image is built in ACR).
+# Re-enable it (and ensure Docker is running) only if you want to use `azd ai agent` monitor commands.
+# NOTE: name MUST match the deployed AGENT_NAME in the azd env (.azure/<env>/.env).
+services:
+  agentframeworkFH-DW2-agent:
+    host: azure.ai.agent
+    kind: hosted
+    name: agentframeworkFH-DW2-agent
+    project: ./src/hello_world_a365_agent
+    language: docker
+    startupCommand: python main.py

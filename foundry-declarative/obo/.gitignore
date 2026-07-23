@@ -1,0 +1,10 @@
+# Secrets & local config — never commit
+.env
+*.user
+MAIL_TOKEN*
+*.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc

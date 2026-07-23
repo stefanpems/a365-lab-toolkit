@@ -1,0 +1,785 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.45.15.27210",
+      "templateHash": "17434411005254776414"
+    }
+  },
+  "parameters": {
+    "environmentName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Name of the application. Used to ensure resource names are unique."
+      }
+    },
+    "location": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Primary location for all resources"
+      }
+    },
+    "accountName": {
+      "type": "string",
+      "defaultValue": "[format('dwfh{0}acct', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Name of the Cognitive Services account"
+      }
+    },
+    "projectName": {
+      "type": "string",
+      "defaultValue": "[format('dwfh{0}proj', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Name of the Cognitive Services project"
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "defaultValue": "[format('dwfh{0}acr', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Name of the Container Registry"
+      }
+    },
+    "cognitiveServicesSku": {
+      "type": "string",
+      "defaultValue": "S0",
+      "metadata": {
+        "description": "SKU of Cognitive Services account"
+      }
+    },
+    "containerRegistrySku": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "SKU of Container Registry"
+      }
+    },
+    "agentName": {
+      "type": "string",
+      "defaultValue": "agentframeworkFH-DW2-agent"
+    },
+    "maibName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-maib', parameters('agentName'))]"
+    },
+    "botName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-bot', parameters('agentName'))]",
+      "metadata": {
+        "description": "Name of the Bot Service"
+      }
+    },
+    "botDisplayName": {
+      "type": "string",
+      "defaultValue": "[format('{0} Bot', parameters('agentName'))]",
+      "metadata": {
+        "description": "Display name of the bot"
+      }
+    },
+    "botServiceSku": {
+      "type": "string",
+      "defaultValue": "F0",
+      "metadata": {
+        "description": "SKU of the Bot Service"
+      }
+    },
+    "modelName": {
+      "type": "string",
+      "defaultValue": "gpt-4.1",
+      "metadata": {
+        "description": "Model name"
+      }
+    },
+    "modelVersion": {
+      "type": "string",
+      "defaultValue": "2025-04-14",
+      "metadata": {
+        "description": "Model version"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to all resources"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "project-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "accountName": {
+            "value": "[parameters('accountName')]"
+          },
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "containerRegistryName": {
+            "value": "[parameters('containerRegistryName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "cognitiveServicesSku": {
+            "value": "[parameters('cognitiveServicesSku')]"
+          },
+          "containerRegistrySku": {
+            "value": "[parameters('containerRegistrySku')]"
+          },
+          "modelName": {
+            "value": "[parameters('modelName')]"
+          },
+          "modelVersion": {
+            "value": "[parameters('modelVersion')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.45.15.27210",
+              "templateHash": "11177832975205344169"
+            }
+          },
+          "parameters": {
+            "accountName": {
+              "type": "string"
+            },
+            "projectName": {
+              "type": "string"
+            },
+            "containerRegistryName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "cognitiveServicesSku": {
+              "type": "string",
+              "defaultValue": "S0"
+            },
+            "containerRegistrySku": {
+              "type": "string",
+              "defaultValue": "Basic",
+              "allowedValues": [
+                "Basic",
+                "Standard",
+                "Premium"
+              ]
+            },
+            "publicNetworkAccess": {
+              "type": "string",
+              "defaultValue": "Enabled"
+            },
+            "modelName": {
+              "type": "string"
+            },
+            "modelVersion": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "acrPullRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+            "cognitiveServicesUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2025-09-01",
+              "name": "[parameters('accountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "AIServices",
+              "sku": {
+                "name": "[parameters('cognitiveServicesSku')]"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "customSubDomainName": "[parameters('accountName')]",
+                "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+                "allowProjectManagement": "true",
+                "isAiFoundryType": "true"
+              }
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/projects",
+              "apiVersion": "2026-03-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('projectName'))]",
+              "location": "[parameters('location')]",
+              "kind": "AIServices",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "[parameters('cognitiveServicesSku')]"
+              },
+              "properties": {
+                "displayName": "[parameters('projectName')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('containerRegistryName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('containerRegistrySku')]"
+              },
+              "properties": {
+                "adminUserEnabled": false,
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+              "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), variables('acrPullRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), '2026-03-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), variables('cognitiveServicesUserRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('cognitiveServicesUserRoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), '2026-03-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('modelName'))]",
+              "sku": {
+                "name": "GlobalStandard",
+                "capacity": 10
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('modelName')]",
+                  "version": "[parameters('modelVersion')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "acrloginServer": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]"
+            },
+            "foundryProjectEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), '2026-03-01').endpoints['AI Foundry API']]"
+            },
+            "foundryProjectPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), '2026-03-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "deployment-script-umi",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.45.15.27210",
+              "templateHash": "3334227566628914101"
+            }
+          },
+          "parameters": {
+            "identityName": {
+              "type": "string",
+              "defaultValue": "foundry-deployment-script-umi",
+              "metadata": {
+                "description": "Name of the User Assigned Managed Identity to create"
+              }
+            }
+          },
+          "variables": {
+            "cognitiveServicesUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[parameters('identityName')]",
+              "location": "[resourceGroup().location]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), 'Contributor')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), variables('cognitiveServicesUserRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('cognitiveServicesUserRoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "uamiClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), '2023-01-31').clientId]"
+            },
+            "uamiPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), '2023-01-31').principalId]"
+            },
+            "uamiResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'project-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "maib-creation-script",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "uamiResourceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'deployment-script-umi'), '2025-04-01').outputs.uamiResourceId.value]"
+          },
+          "azureAIProjectEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'project-deployment'), '2025-04-01').outputs.foundryProjectEndpoint.value]"
+          },
+          "maibName": {
+            "value": "[parameters('maibName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.45.15.27210",
+              "templateHash": "10302630236864760326"
+            }
+          },
+          "parameters": {
+            "uamiResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "User-assigned managed identity resource ID that the script will run as"
+              }
+            },
+            "azureAIProjectEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AI Project Endpoint URL"
+              }
+            },
+            "maibName": {
+              "type": "string",
+              "metadata": {
+                "description": "Managed agent identity blueprint name for the Azure AI Project"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2023-08-01",
+              "name": "create-agent-script",
+              "location": "[resourceGroup().location]",
+              "kind": "AzurePowerShell",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('uamiResourceId'))]": {}
+                }
+              },
+              "properties": {
+                "azPowerShellVersion": "11.5",
+                "timeout": "PT15M",
+                "retentionInterval": "P1D",
+                "arguments": "[format('-AzureAIProjectEndpoint \"{0}\" -MAIBName \"{1}\"', parameters('azureAIProjectEndpoint'), parameters('maibName'))]",
+                "environmentVariables": [
+                  {
+                    "name": "RESOURCE_GROUP_NAME",
+                    "value": "[resourceGroup().name]"
+                  }
+                ],
+                "scriptContent": "  param(\r\n    [Parameter(Mandatory = $true)]\r\n    [string] $AzureAIProjectEndpoint,\r\n    [Parameter(Mandatory = $true)]\r\n    [string] $MAIBName\r\n  )\r\n\r\n  $ErrorActionPreference = \"Stop\"\r\n\r\n  $maibUrl = \"$($AzureAIProjectEndpoint)/managedagentidentityblueprints/$($MAIBName)?api-version=2025-11-15-preview\"\r\n\r\n  Write-Host \"Connecting with managed identity...\"\r\n  Connect-AzAccount -Identity\r\n\r\n  Write-Host \"Getting access token for https://ai.azure.com ...\"\r\n  $tokenResponse = Get-AzAccessToken -ResourceUrl \"https://ai.azure.com\"\r\n  $aiAzureToken  = $tokenResponse.Token | ConvertFrom-SecureString -AsPlainText\r\n  Write-Host \"Token length: $($aiAzureToken.Length)\"\r\n\r\n  $headers = @{\r\n      \"Content-Type\"  = \"application/json\"\r\n      \"Accept\"        = \"application/json\"\r\n      \"Authorization\" = \"Bearer $aiAzureToken\"\r\n  }\r\n\r\n  Write-Host \"Creating managed agent identity blueprint at: $maibUrl\"\r\n    \r\n  $response = Invoke-RestMethod -Uri $maibUrl `\r\n      -Method Put `\r\n      -Headers $headers `\r\n      -ErrorAction Stop\r\n\r\n  Write-Host \"\"\r\n  Write-Host \"Response:\"\r\n  $response | ConvertTo-Json -Depth 100 | Write-Host\r\n  \r\n  $blueprintClientId = $response.agentIdentityBlueprint.clientId\r\n\r\n  $DeploymentScriptOutputs = @{\r\n      blueprintClientId = $blueprintClientId\r\n  }\r\n\r\n"
+              }
+            }
+          ],
+          "outputs": {
+            "blueprintClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', 'create-agent-script'), '2023-08-01').outputs.blueprintClientId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'deployment-script-umi')]",
+        "[resourceId('Microsoft.Resources/deployments', 'project-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "botservice-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "botName": {
+            "value": "[parameters('botName')]"
+          },
+          "displayName": {
+            "value": "[parameters('botDisplayName')]"
+          },
+          "msaAppId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'maib-creation-script'), '2025-04-01').outputs.blueprintClientId.value]"
+          },
+          "endpoint": {
+            "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}/agents/{2}/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview', parameters('accountName'), parameters('projectName'), parameters('agentName'))]"
+          },
+          "botServiceSku": {
+            "value": "[parameters('botServiceSku')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.45.15.27210",
+              "templateHash": "9146868062219397767"
+            }
+          },
+          "parameters": {
+            "botName": {
+              "type": "string"
+            },
+            "displayName": {
+              "type": "string"
+            },
+            "msaAppId": {
+              "type": "string"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "botServiceSku": {
+              "type": "string",
+              "defaultValue": "F0"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.BotService/botServices",
+              "apiVersion": "2022-09-15",
+              "name": "[parameters('botName')]",
+              "kind": "azurebot",
+              "location": "global",
+              "sku": {
+                "name": "[parameters('botServiceSku')]"
+              },
+              "properties": {
+                "displayName": "[parameters('displayName')]",
+                "endpoint": "[parameters('endpoint')]",
+                "msaAppId": "[parameters('msaAppId')]",
+                "msaAppTenantId": "[tenant().tenantId]",
+                "msaAppType": "SingleTenant"
+              }
+            },
+            {
+              "type": "Microsoft.BotService/botServices/channels",
+              "apiVersion": "2021-03-01",
+              "name": "[format('{0}/{1}', parameters('botName'), 'MsTeamsChannel')]",
+              "location": "global",
+              "properties": {
+                "channelName": "MsTeamsChannel"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.BotService/botServices', parameters('botName'))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'maib-creation-script')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoring-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "botName": {
+            "value": "[parameters('botName')]"
+          },
+          "workspaceName": {
+            "value": "[format('{0}-logs', parameters('environmentName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.45.15.27210",
+              "templateHash": "7444991131943571343"
+            }
+          },
+          "parameters": {
+            "botName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Bot Service whose diagnostics are collected"
+              }
+            },
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Log Analytics workspace"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the workspace"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2022-10-01",
+              "name": "[parameters('workspaceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.BotService/botServices', parameters('botName'))]",
+              "name": "[format('{0}-diag', parameters('botName'))]",
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "logs": [
+                  {
+                    "category": "BotRequest",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "workspaceName": {
+              "type": "string",
+              "value": "[parameters('workspaceName')]"
+            },
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'botservice-deployment')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "AZURE_CONTAINER_REGISTRY_ENDPOINT": {
+      "type": "string",
+      "metadata": {
+        "description": "ACR login server endpoint"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'project-deployment'), '2025-04-01').outputs.acrloginServer.value]"
+    },
+    "AZURE_AI_PROJECT_ENDPOINT": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'project-deployment'), '2025-04-01').outputs.foundryProjectEndpoint.value]"
+    },
+    "AGENT_IDENTITY_BLUEPRINT_ID": {
+      "type": "string",
+      "metadata": {
+        "description": "Agent identity blueprint ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'maib-creation-script'), '2025-04-01').outputs.blueprintClientId.value]"
+    },
+    "SUBSCRIPTION_ID": {
+      "type": "string",
+      "value": "[subscription().subscriptionId]"
+    },
+    "RESOURCE_GROUP": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "LOCATION": {
+      "type": "string",
+      "value": "[parameters('location')]"
+    },
+    "ACCOUNT_NAME": {
+      "type": "string",
+      "value": "[parameters('accountName')]"
+    },
+    "PROJECT_NAME": {
+      "type": "string",
+      "value": "[parameters('projectName')]"
+    },
+    "AGENT_NAME": {
+      "type": "string",
+      "value": "[parameters('agentName')]"
+    },
+    "TENANT_ID": {
+      "type": "string",
+      "value": "[tenant().tenantId]"
+    },
+    "PROJECT_PRINCIPAL_ID": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'project-deployment'), '2025-04-01').outputs.foundryProjectPrincipalId.value]"
+    },
+    "MAIB_NAME": {
+      "type": "string",
+      "value": "[parameters('maibName')]"
+    },
+    "MODEL_NAME": {
+      "type": "string",
+      "value": "[parameters('modelName')]"
+    },
+    "LOG_ANALYTICS_WORKSPACE": {
+      "type": "string",
+      "metadata": {
+        "description": "Log Analytics workspace collecting Bot Service gateway diagnostics"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.workspaceName.value]"
+    }
+  }
+}
