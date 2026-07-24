@@ -1,8 +1,8 @@
 #requires -Version 5.1
-# Deploy dell'agente AI Teammate "AgentFrameworkDWSample" su Azure Container Apps.
+# Deploy the AI Teammate agent "AgentFrameworkDWSample" to Azure Container Apps.
 # Region fissa: polandcentral (verificata con capacity). Riusa il LAW agentframework-logs.
 # Uso:
-#   .\deploy-aca-DW.ps1 -ClientSecret '<blueprint client secret in chiaro>'
+#   .\deploy-aca-DW.ps1 -ClientSecret '<blueprint client secret in cleartext>'
 # Il secret NON e' hardcoded: recuperabile con 'a365 setup blueprint --show-secret'.
 param(
     [Parameter(Mandatory = $true)]
@@ -17,7 +17,7 @@ $env:PYTHONUTF8 = "1"
 
 # ============================ Parametri ============================
 $RG        = "agentframework-DW-rg-pl"
-# NB: i nomi delle Container App devono essere minuscoli (Azure non ammette maiuscole).
+# NB: Container App names must be lowercase (Azure does not allow uppercase).
 $APP       = "agentframework-dw-sample"
 $ENVNAME   = "agentframework-DW-env"
 $LOC       = "polandcentral"
@@ -45,7 +45,7 @@ Write-Host "Recupero credenziali del Log Analytics workspace '$LAW_NAME'..." -Fo
 $lawId  = az monitor log-analytics workspace show -g $LAW_RG -n $LAW_NAME --query customerId -o tsv
 $lawKey = az monitor log-analytics workspace get-shared-keys -g $LAW_RG -n $LAW_NAME --query primarySharedKey -o tsv
 
-# --- 4. Container Apps environment (log-analytics = LAW riusato) ---
+# --- 4. Container Apps environment (log-analytics = reused LAW) ---
 $envExists = az containerapp env show -n $ENVNAME -g $RG --query name -o tsv 2>$null
 if (-not $envExists) {
     Write-Host "Creo l'environment ACA '$ENVNAME' collegato al LAW '$LAW_NAME'..." -ForegroundColor Cyan
@@ -61,7 +61,7 @@ if (-not $acrName) {
     Write-Host "Creo l'ACR '$acrName'..." -ForegroundColor Cyan
     az acr create -n $acrName -g $RG --sku Basic --admin-enabled true | Out-Null
 }
-Write-Host "Build dell'immagine '$IMAGE' via ACR '$acrName'..." -ForegroundColor Cyan
+Write-Host "Building image '$IMAGE' via ACR '$acrName'..." -ForegroundColor Cyan
 az acr build -r $acrName -t $IMAGE . | Out-Null
 
 $acrServer = az acr show -n $acrName -g $RG --query loginServer -o tsv
@@ -79,7 +79,7 @@ Get-Content env/.env.playground.user |
     ForEach-Object { $k, $v = $_ -split '=', 2; $m[$k.Trim()] = $v.Trim() }
 
 # --- 7. Crea/aggiorna la Container App ---
-Write-Host "Deploy della Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
+Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
 $appExists = az containerapp show -n $APP -g $RG --query name -o tsv 2>$null
 if ($appExists) {
     az containerapp registry set -n $APP -g $RG --server $acrServer --username $acrUser --password $acrPass | Out-Null

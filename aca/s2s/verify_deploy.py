@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Verifica tecnica dell'agente deployato — esercita lo STESSO codice del container.
+Technical verification of the deployed agent — exercises the SAME code as the container.
 
-Modalità:
-  --llm    (default) Test di accesso all'LLM: costruisce OpenAIChatCompletionClient +
+Modes:
+  --llm    (default) LLM access test: builds OpenAIChatCompletionClient +
            Agent esattamente come agent.py e fa un round-trip reale.
-  --health Controlla anche l'endpoint /api/health dell'istanza cloud.
+  --health Also checks the /api/health endpoint of the cloud instance.
 
 Uso:
   .venv\\Scripts\\python.exe verify_deploy.py --llm
@@ -58,7 +58,7 @@ def _load_llm_config() -> dict:
 
 
 async def test_llm() -> bool:
-    """Costruisce il client/agent come agent.py e verifica il round-trip LLM."""
+    """Builds the client/agent like agent.py and verifies the LLM round-trip."""
     from agent_framework import Agent
     from agent_framework.openai import OpenAIChatCompletionClient
 
@@ -90,11 +90,11 @@ async def test_llm() -> bool:
 
 
 async def test_health() -> bool:
-    """Verifica /api/health dell'istanza cloud."""
+    """Checks /api/health of the cloud instance."""
     import httpx
 
     url = f"https://{CLOUD_FQDN}/api/health"
-    print("== Test 0: health dell'istanza cloud ==")
+    print("== Test 0: cloud instance health ==")
     print(f"   url        : {url}")
     try:
         async with httpx.AsyncClient(timeout=25) as c:
@@ -105,13 +105,13 @@ async def test_health() -> bool:
         print(f"   esito      : {'PASS' if ok else 'FAIL'}")
         return ok
     except Exception as e:
-        print(f"   errore     : {e}")
+        print(f"   error      : {e}")
         print("   esito      : FAIL")
         return False
 
 
 def _decode_jwt_payload(token: str) -> dict:
-    """Decodifica (senza verifica) il payload di un JWT per ispezione."""
+    """Decodes (without verification) a JWT payload for inspection."""
     t = token.strip()
     if t.lower().startswith("bearer "):
         t = t[7:]
@@ -140,17 +140,17 @@ def _load_obo_token() -> str:
 # Resource (audience) dei Work IQ / Agent 365 Tools MCP server.
 MCP_RESOURCE = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
 
-# FQDN dell'istanza S2S deployata in Azure Container Apps.
+# FQDN of the S2S instance deployed to Azure Container Apps.
 S2S_FQDN = "agentframework-s2s-sample.thankfulcoast-e0e43978.polandcentral.azurecontainerapps.io"
 
 
 async def test_cloud(prompt: str, fqdn: str = S2S_FQDN, from_name: str = "Tester") -> bool:
-    """Invia un prompt DIRETTAMENTE all'istanza in ACA via POST /api/messages.
+    """Sends a prompt DIRECTLY to the ACA instance via POST /api/messages.
 
     Usa deliveryMode=expectReplies: il container (che gira anonymous) bufferizza le
-    attivita' di risposta e le restituisce nel CORPO HTTP, quindi non serve alcun
+    reply activities and returns them in the HTTP BODY, so no
     connector/serviceUrl raggiungibile. E' la prova che l'ISTANZA CLOUD elabora il prompt.
-    Il campo from.name simula l'identita' del chiamante (in Teams/M365 la popola la piattaforma).
+    The from.name field simulates the caller's identity (in Teams/M365 the platform populates it).
     """
     import uuid
     import httpx
@@ -199,7 +199,7 @@ def _get_app_only_token(scope: str) -> str:
     """Ottiene un token APP-ONLY (client_credentials) con le credenziali del blueprint S2S.
 
     Usa CONNECTIONS__SERVICE_CONNECTION__SETTINGS__{CLIENTID,CLIENTSECRET,TENANTID}
-    (scritte da 'a365 setup' in .env) — la stessa identita' applicativa usata a runtime
+    (written by 'a365 setup' into .env) — the same application identity used at runtime
     dal container in ACA via service_connection.
     """
     import httpx
@@ -228,7 +228,7 @@ def _get_app_only_token(scope: str) -> str:
 
 
 async def _run_agent_prompt_llm(prompt: str) -> str:
-    """Costruisce l'agente LLM-only (come agent.py) ed esegue un singolo prompt."""
+    """Builds the LLM-only agent (like agent.py) and runs a single prompt."""
     from agent_framework import Agent
     from agent_framework.openai import OpenAIChatCompletionClient
 
@@ -243,11 +243,11 @@ async def _run_agent_prompt_llm(prompt: str) -> str:
 
 
 async def test_s2s(email: str) -> bool:
-    """Invia i due prompt di test esercitando lo STESSO codice dell'agente, ma con
-    identita' APP-ONLY (S2S / client_credentials) del blueprint — non OBO utente.
+    """Sends the two test prompts exercising the SAME agent code, but with
+    the blueprint's APP-ONLY identity (S2S / client_credentials) — not user OBO.
 
     Prompt 1: "Che puoi fare per me?"                 (solo LLM)
-    Prompt 2: "Invia un'email di test a <email>"      (LLM + tool MCP Mail, token app-only)
+    Prompt 2: "Send a test email to <email>"      (LLM + Mail MCP tool, app-only token)
     """
     import httpx
     from agent_framework import Agent, MCPStreamableHTTPTool
@@ -267,7 +267,7 @@ async def test_s2s(email: str) -> bool:
     print()
 
     # --- Prompt 2: LLM + MCP Mail con token APP-ONLY ---
-    print("== Prompt 2 (S2S, LLM + MCP Mail app-only): 'Invia un'email di test' ==")
+    print("== Prompt 2 (S2S, LLM + Mail MCP app-only): 'Send a test email' ==")
     try:
         token = _get_app_only_token(f"{MCP_RESOURCE}/.default")
         claims = _decode_jwt_payload(token)
@@ -305,13 +305,13 @@ async def test_s2s(email: str) -> bool:
                     "If asked to send an email, call the mail tool to actually send it, then confirm."
                 ),
             )
-            resp = await agent.run(f"Invia un'email di test a {email}")
+            resp = await agent.run(f"Send a test email to {email}")
             text2 = (resp.text or "").strip()
             print(f"   risposta : {text2}")
             ok2 = "sent" in text2.lower() or "inviat" in text2.lower()
     except Exception as e:
         print(f"   [risultato tool] {type(e).__name__}: {e}")
-        print("   (in puro S2S un errore di autorizzazione qui e' il comportamento atteso)")
+        print("   (in pure S2S an authorization error here is the expected behavior)")
         ok2 = False
     finally:
         await http_client.aclose()
@@ -321,14 +321,14 @@ async def test_s2s(email: str) -> bool:
 
 
 async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
-    """Test OBO: token utente -> connessione Mail MCP -> invio email via tool."""
+    """OBO test: user token -> Mail MCP connection -> send email via tool."""
     import httpx
     from agent_framework import Agent, MCPStreamableHTTPTool
     from agent_framework.openai import OpenAIChatCompletionClient
 
     print("== Test 2: MCP Mail via OBO ==")
 
-    # --- 2.1 Auth utente (OBO): ispeziona il token ---
+    # --- 2.1 User auth (OBO): inspect the token ---
     token = _load_obo_token()
     if not token:
         print("   [FAIL] Nessun bearer token OBO (SECRET_BEARER_TOKEN vuoto). Rigenera con refresh-bearer-token.")
@@ -337,8 +337,8 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
     upn = claims.get("preferred_username") or claims.get("upn") or claims.get("unique_name") or "?"
     aud = claims.get("aud", "?")
     scp = claims.get("scp", "?")
-    print("   [2.1 auth utente OBO]")
-    print(f"      utente   : {upn}")
+    print("   [2.1 OBO user auth]")
+    print(f"      user     : {upn}")
     print(f"      audience : {aud}")
     print(f"      scopes   : {scp}")
     if "McpServers.Mail" not in str(scp):
@@ -377,7 +377,7 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
                     names = [getattr(t, "name", str(t)) for t in tools]
                     print(f"      tool disponibili: {names}")
                 else:
-                    print("      (list_tools non disponibile; procedo con l'agente)")
+                    print("      (list_tools not available; proceeding with the agent)")
             except Exception as le:
                 print(f"      [WARN] list_tools: {le}")
 
@@ -394,7 +394,7 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
             print(f"      risposta : {text}")
             ok = "EMAIL-SENT" in text.upper() or "sent" in text.lower()
     except Exception as e:
-        print(f"   [FAIL] Errore durante il test MCP/OBO: {type(e).__name__}: {e}")
+        print(f"   [FAIL] Error during the MCP/OBO test: {type(e).__name__}: {e}")
         ok = False
     finally:
         await http_client.aclose()
@@ -408,12 +408,12 @@ async def main() -> int:
     parser.add_argument("--llm", action="store_true", help="Test accesso LLM")
     parser.add_argument("--health", action="store_true", help="Test /api/health cloud")
     parser.add_argument("--mcp", action="store_true", help="Test MCP Mail via OBO (invio email)")
-    parser.add_argument("--s2s", action="store_true", help="Invia i 2 prompt di test con identita' app-only (S2S)")
-    parser.add_argument("--cloud", metavar="PROMPT", help="Invia un prompt DIRETTAMENTE all'istanza ACA (/api/messages, expectReplies)")
+    parser.add_argument("--s2s", action="store_true", help="Send the 2 test prompts with app-only identity (S2S)")
+    parser.add_argument("--cloud", metavar="PROMPT", help="Send a prompt DIRECTLY to the ACA instance (/api/messages, expectReplies)")
     parser.add_argument("--from-name", dest="from_name", default="Tester", help="Nome del chiamante (activity.from.name) per il test --cloud")
     parser.add_argument("--email", default="stefanpe@microsoft.com", help="Destinatario email di test")
     parser.add_argument("--subject", default="Test da AgentFrameworkSample", help="Oggetto email")
-    parser.add_argument("--body", default="Questa e' un'email di test inviata dall'agente via MCP (OBO).", help="Corpo email")
+    parser.add_argument("--body", default="This is a test email sent by the agent via MCP (OBO).", help="Email body")
     args = parser.parse_args()
 
     # default se nessun flag: solo --llm
@@ -434,7 +434,7 @@ async def main() -> int:
     if args.cloud:
         results["cloud"] = await test_cloud(args.cloud, from_name=args.from_name)
 
-    print("\n======== RIEPILOGO ========")
+    print("\n======== SUMMARY ========")
     for name, ok in results.items():
         print(f"  {name:8s}: {'PASS' if ok else 'FAIL'}")
     return 0 if all(results.values()) else 1

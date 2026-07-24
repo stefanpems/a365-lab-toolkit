@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Verifica tecnica dell'agente deployato — esercita lo STESSO codice del container.
+Technical verification of the deployed agent — exercises the SAME code as the container.
 
-Modalità:
-  --llm    (default) Test di accesso all'LLM: costruisce OpenAIChatCompletionClient +
+Modes:
+  --llm    (default) LLM access test: builds OpenAIChatCompletionClient +
            Agent esattamente come agent.py e fa un round-trip reale.
-  --health Controlla anche l'endpoint /api/health dell'istanza cloud.
+  --health Also checks the /api/health endpoint of the cloud instance.
 
 Uso:
   .venv\\Scripts\\python.exe verify_deploy.py --llm
@@ -58,7 +58,7 @@ def _load_llm_config() -> dict:
 
 
 async def test_llm() -> bool:
-    """Costruisce il client/agent come agent.py e verifica il round-trip LLM."""
+    """Builds the client/agent like agent.py and verifies the LLM round-trip."""
     from agent_framework import Agent
     from agent_framework.openai import OpenAIChatCompletionClient
 
@@ -90,11 +90,11 @@ async def test_llm() -> bool:
 
 
 async def test_health() -> bool:
-    """Verifica /api/health dell'istanza cloud."""
+    """Checks /api/health of the cloud instance."""
     import httpx
 
     url = f"https://{CLOUD_FQDN}/api/health"
-    print("== Test 0: health dell'istanza cloud ==")
+    print("== Test 0: cloud instance health ==")
     print(f"   url        : {url}")
     try:
         async with httpx.AsyncClient(timeout=25) as c:
@@ -105,13 +105,13 @@ async def test_health() -> bool:
         print(f"   esito      : {'PASS' if ok else 'FAIL'}")
         return ok
     except Exception as e:
-        print(f"   errore     : {e}")
+        print(f"   error      : {e}")
         print("   esito      : FAIL")
         return False
 
 
 def _decode_jwt_payload(token: str) -> dict:
-    """Decodifica (senza verifica) il payload di un JWT per ispezione."""
+    """Decodes (without verification) a JWT payload for inspection."""
     t = token.strip()
     if t.lower().startswith("bearer "):
         t = t[7:]
@@ -138,14 +138,14 @@ def _load_obo_token() -> str:
 
 
 async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
-    """Test OBO: token utente -> connessione Mail MCP -> invio email via tool."""
+    """OBO test: user token -> Mail MCP connection -> send email via tool."""
     import httpx
     from agent_framework import Agent, MCPStreamableHTTPTool
     from agent_framework.openai import OpenAIChatCompletionClient
 
     print("== Test 2: MCP Mail via OBO ==")
 
-    # --- 2.1 Auth utente (OBO): ispeziona il token ---
+    # --- 2.1 User auth (OBO): inspect the token ---
     token = _load_obo_token()
     if not token:
         print("   [FAIL] Nessun bearer token OBO (SECRET_BEARER_TOKEN vuoto). Rigenera con refresh-bearer-token.")
@@ -154,8 +154,8 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
     upn = claims.get("preferred_username") or claims.get("upn") or claims.get("unique_name") or "?"
     aud = claims.get("aud", "?")
     scp = claims.get("scp", "?")
-    print("   [2.1 auth utente OBO]")
-    print(f"      utente   : {upn}")
+    print("   [2.1 OBO user auth]")
+    print(f"      user     : {upn}")
     print(f"      audience : {aud}")
     print(f"      scopes   : {scp}")
     if "McpServers.Mail" not in str(scp):
@@ -194,7 +194,7 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
                     names = [getattr(t, "name", str(t)) for t in tools]
                     print(f"      tool disponibili: {names}")
                 else:
-                    print("      (list_tools non disponibile; procedo con l'agente)")
+                    print("      (list_tools not available; proceeding with the agent)")
             except Exception as le:
                 print(f"      [WARN] list_tools: {le}")
 
@@ -211,7 +211,7 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
             print(f"      risposta : {text}")
             ok = "EMAIL-SENT" in text.upper() or "sent" in text.lower()
     except Exception as e:
-        print(f"   [FAIL] Errore durante il test MCP/OBO: {type(e).__name__}: {e}")
+        print(f"   [FAIL] Error during the MCP/OBO test: {type(e).__name__}: {e}")
         ok = False
     finally:
         await http_client.aclose()
@@ -227,7 +227,7 @@ async def main() -> int:
     parser.add_argument("--mcp", action="store_true", help="Test MCP Mail via OBO (invio email)")
     parser.add_argument("--email", default="stefanpe@microsoft.com", help="Destinatario email di test")
     parser.add_argument("--subject", default="Test da AgentFrameworkSample", help="Oggetto email")
-    parser.add_argument("--body", default="Questa e' un'email di test inviata dall'agente via MCP (OBO).", help="Corpo email")
+    parser.add_argument("--body", default="This is a test email sent by the agent via MCP (OBO).", help="Email body")
     args = parser.parse_args()
 
     # default se nessun flag: solo --llm
@@ -244,7 +244,7 @@ async def main() -> int:
     if args.mcp:
         results["mcp"] = await test_mcp_obo(args.email, args.subject, args.body)
 
-    print("\n======== RIEPILOGO ========")
+    print("\n======== SUMMARY ========")
     for name, ok in results.items():
         print(f"  {name:8s}: {'PASS' if ok else 'FAIL'}")
     return 0 if all(results.values()) else 1

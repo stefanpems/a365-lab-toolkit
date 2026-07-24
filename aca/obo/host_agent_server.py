@@ -62,7 +62,7 @@ load_dotenv()
 agents_sdk_config = load_configuration_from_env(environ)
 
 
-# --- SPA /chat auth (token utente Entra) + OBO exchange per il Mail MCP ---
+# --- SPA /chat auth (Entra user token) + OBO exchange for the Mail MCP ---
 _UI_TENANT_ID = os.getenv("TENANT_ID") or os.getenv(
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID", ""
 )
@@ -86,7 +86,7 @@ def _get_jwks_client():
 
 
 def validate_user_token(token: str) -> dict:
-    """Valida un access token utente Entra (firma via JWKS, audience, issuer del tenant)."""
+    """Validates an Entra user access token (JWKS signature, audience, tenant issuer)."""
     import jwt as _jwtlib
 
     signing_key = _get_jwks_client().get_signing_key_from_jwt(token)
@@ -105,10 +105,10 @@ def validate_user_token(token: str) -> dict:
 
 
 def obo_exchange_for_mail(user_token: str) -> str:
-    """On-Behalf-Of: scambia il token utente per un token al Mail MCP (aud Agent 365 Tools).
+    """On-Behalf-Of: exchanges the user token for a Mail MCP token (aud Agent 365 Tools).
 
     Usa le credenziali del blueprint (service connection) come confidential client. Il token
-    risultante è delegato dell'utente firmato, quindi il Mail MCP agisce sulla SUA mailbox.
+    resulting token is delegated for the signed-in user, so the Mail MCP acts on THEIR mailbox.
     """
     import msal
 
@@ -411,8 +411,8 @@ class GenericAgentHost:
             )
 
         async def chat(req: Request) -> Response:
-            """SPA endpoint (OBO): valida il token utente, fa OBO exchange e invia email
-            dalla mailbox dell'utente autenticato. Ritorna {reply}."""
+            """SPA endpoint (OBO): validates the user token, performs the OBO exchange and sends email
+            from the authenticated user's mailbox. Returns {reply}."""
             authz = req.headers.get("Authorization", "")
             if not authz.lower().startswith("bearer "):
                 return json_response({"error": "missing bearer token"}, status=401)

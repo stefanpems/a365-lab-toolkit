@@ -62,7 +62,7 @@ load_dotenv()
 agents_sdk_config = load_configuration_from_env(environ)
 
 
-# --- SPA /chat auth (validazione token utente Entra) ---
+# --- SPA /chat auth (Entra user token validation) ---
 _UI_TENANT_ID = os.getenv("TENANT_ID") or os.getenv(
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID", ""
 )
@@ -83,7 +83,7 @@ def _get_jwks_client():
 
 
 def validate_user_token(token: str) -> dict:
-    """Valida un access token utente Entra (firma via JWKS, audience, issuer del tenant).
+    """Validates an Entra user access token (JWKS signature, audience, tenant issuer).
 
     Ritorna i claim decodificati (name/preferred_username/oid/tid/...). Solleva se non valido.
     """
@@ -389,7 +389,7 @@ class GenericAgentHost:
             )
 
         async def chat(req: Request) -> Response:
-            """SPA endpoint: valida il token utente Entra, esegue l'LLM, ritorna {reply}."""
+            """SPA endpoint: validates the Entra user token, runs the LLM, returns {reply}."""
             authz = req.headers.get("Authorization", "")
             if not authz.lower().startswith("bearer "):
                 return json_response({"error": "missing bearer token"}, status=401)

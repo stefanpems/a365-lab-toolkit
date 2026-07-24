@@ -1,7 +1,7 @@
 #requires -Version 5.1
 # Corregge il case dei nomi env var per Linux (case-sensitive) e ripristina il comando.
 # Su Windows os.environ rende MAIUSCOLI i nomi -> il parser trova CONNECTIONS.
-# Su Linux i nomi restano com'e' -> servono MAIUSCOLI per matchare il parser dell'SDK.
+# On Linux the names stay as-is -> UPPERCASE is required to match the SDK parser.
 $ErrorActionPreference = 'Stop'
 
 $RG  = "agentframework-rg-pl"
@@ -17,7 +17,7 @@ Get-Content env/.env.playground.user |
     Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } |
     ForEach-Object { $k,$v = $_ -split '=',2; $m[$k.Trim()] = $v.Trim() }
 
-Write-Host "Aggiorno env var (MAIUSCOLE) + reset comando di avvio..." -ForegroundColor Cyan
+Write-Host "Updating env vars (UPPERCASE) + resetting startup command..." -ForegroundColor Cyan
 az containerapp update -n $APP -g $RG `
   --image $IMG `
   --command "python" --args "start_with_generic_host.py" `
@@ -37,7 +37,7 @@ az containerapp update -n $APP -g $RG `
   -o none
 Write-Host "update exit=$LASTEXITCODE" -ForegroundColor Green
 
-Write-Host "Attendo l'avvio..." -ForegroundColor Cyan
+Write-Host "Waiting for startup..." -ForegroundColor Cyan
 Start-Sleep -Seconds 35
 az containerapp revision list -n $APP -g $RG `
   --query "[?properties.active].{name:name,running:properties.runningState,replicas:properties.replicas}" -o table

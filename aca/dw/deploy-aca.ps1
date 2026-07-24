@@ -1,6 +1,6 @@
 #requires -Version 5.1
-# Cleanup + (re)deploy dell'agente su Azure Container Apps in una region con capacity.
-# Uso: da un terminale PowerShell nella cartella del progetto -> .\deploy-aca.ps1
+# Cleanup + (re)deploy the agent to Azure Container Apps in a region with capacity.
+# Usage: from a PowerShell terminal in the project folder -> .\deploy-aca.ps1
 $ErrorActionPreference = 'Stop'
 
 # ============================ Parametri ============================
@@ -43,7 +43,7 @@ foreach ($r in $REGIONS) {
         $LOC = $r
         break
     }
-    Write-Host "Region '$r' senza capacity (o errore). Passo alla prossima..." -ForegroundColor DarkYellow
+    Write-Host "Region '$r' has no capacity (or error). Trying the next one..." -ForegroundColor DarkYellow
 }
 
 if (-not $LOC) {
@@ -56,8 +56,8 @@ $cfg          = Get-Content a365.generated.config.json | ConvertFrom-Json
 $clientId     = $cfg.agentBlueprintId
 $tenantId     = az account show --query tenantId -o tsv
 # NB: a365.generated.config.json contiene il secret cifrato DPAPI (solo Windows).
-# Serve il secret IN CHIARO da 'a365 setup blueprint --show-secret'.
-$clientSecret = Read-Host "Incolla il blueprint client secret IN CHIARO (a365 setup blueprint --show-secret)"
+# The CLEARTEXT secret from 'a365 setup blueprint --show-secret' is required.
+$clientSecret = Read-Host "Paste the CLEARTEXT blueprint client secret (a365 setup blueprint --show-secret)"
 
 $m = @{}
 Get-Content env/.env.playground.user |
@@ -65,7 +65,7 @@ Get-Content env/.env.playground.user |
     ForEach-Object { $k,$v = $_ -split '=',2; $m[$k.Trim()] = $v.Trim() }
 
 # --- 5. Deploy su Azure Container Apps (build dal Dockerfile via ACR) ---
-Write-Host "Deploy della Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
+Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
 az containerapp up `
   --name $APP --resource-group $RG --location $LOC --environment $ENVNAME `
   --source . --target-port 3978 --ingress external `
