@@ -187,6 +187,13 @@ the next section.
   `a365` command an interactive **"Permissions requested"** dialog appears and requires
   **"Consent on behalf of your organization"**; `a365 setup requirements` must report 0 failed
   before creating any blueprint.
+- [ ] **[ACA, FH, FD] First-party service principals instantiated** In a new tenant the
+  Microsoft first-party apps the sample uses may have **no service principal** yet. Instantiate
+  the ones you need with `az ad sp create --id <appId>` (idempotent): **Agent 365 Tools**
+  `ea9ffc3e-8a23-4a7d-836d-234d7c7565c1` (Mail MCP; OBO/DW), and, if missing, Messaging Bot API
+  `5a807f24-…` and Agent365Observability `9b975845-…`. `a365 setup all` also auto-provisions
+  still-missing resource SPs interactively. The `Agent 365 CLI` `3c5eabff-…` app is **not**
+  instantiable — you register your own public client instead.
 - [ ] **[ACA-OBO, ACA-DW]** Admin consent can be granted for the blueprint permissions created
   by `a365 setup permissions mcp` and `a365 setup permissions bot`, including Agent 365 Tools,
   Messaging Bot, Observability, Graph/Power Platform permissions used by the sample.

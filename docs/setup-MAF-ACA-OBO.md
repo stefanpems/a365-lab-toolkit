@@ -12,7 +12,10 @@ tenant/subscription/region/name values with your own.
 
 ## 0. Prerequisites
 
-- **Azure CLI** (`az login`) with Contributor on a subscription.
+- **Azure CLI** — sign in to the **target tenant** and confirm the active context before any
+  command: `az login --tenant <YOUR_ENTRA_TENANT_ID>` then
+  `az account show --query "{tenant:tenantId,sub:id,user:user.name}"`. Contributor on the
+  target subscription (Owner for some variants — see the checklist).
 - **Agent 365 CLI** (`a365`, ≥ v1.1.x) and **.NET** (its runtime).
 - **Python 3.12+**, `uv` (`pip install uv`; ensure its Scripts dir is on PATH).
 - Roles: **Global Administrator** (or *Agent ID Developer* + a Global Admin for consents).
@@ -60,12 +63,37 @@ Write-Host "clientAppId = $app"
 ```
 
 Put the printed `appId` in the `clientAppId` field of `aca/obo/a365.config.json`,
-`aca/s2s/a365.config.json`, and `aca/dw/a365.config.json`. Leave the Microsoft first-party
-resource IDs (Agent 365 Tools `ea9ffc3e-…`, etc.) unchanged — those are not lab tenant IDs.
+`aca/s2s/a365.config.json`, and `aca/dw/a365.config.json`, and set `tenantId` to your target
+tenant in each. Leave the Microsoft first-party resource IDs (Agent 365 Tools `ea9ffc3e-…`,
+etc.) unchanged — those are not lab tenant IDs.
 
 > **These `a365.config.json` files are gitignored** (tenant-specific). Each ACA folder ships
 > an `a365.config.json.example`; create your working copy from it, then fill in your values:
 > `Copy-Item a365.config.json.example a365.config.json`.
+
+#### Instantiate the first-party service principals (new tenant, once)
+
+A brand-new tenant usually has **no service principal** for the Microsoft first-party apps the
+sample uses. Unlike the `Agent 365 CLI` public client (which you register yourself, above),
+these are real multi-tenant Microsoft apps, so you only need to **instantiate** their SP with
+`az ad sp create --id <appId>` (idempotent — skip any that already exist):
+
+```powershell
+# Agent 365 Tools (Mail MCP audience). Required for OBO/DW Mail.
+az ad sp create --id ea9ffc3e-8a23-4a7d-836d-234d7c7565c1 2>$null
+# Usually already present in M365 tenants (create only if missing):
+az ad sp create --id 5a807f24-c9de-44ee-a3a7-329e88a00ffc 2>$null  # Messaging Bot API
+az ad sp create --id 9b975845-388f-4429-889e-eab1ef63949c 2>$null  # Agent365Observability
+```
+
+> `az ad sp create --id 3c5eabff-…` (the lab's Agent 365 CLI) **fails** with *"does not
+> reference a valid application object"* — that app is not instantiable in your tenant, which
+> is exactly why you register your own public client in the step above.
+>
+> During the later `a365 setup all` step the CLI **auto-detects any still-missing resource
+> SPs** (e.g. per-server MCP audiences) and prompts you per resource to create them; accept
+> (it shells out to `az ad sp create`). If you run it non-interactively it prints the exact
+> `az ad sp create` commands to run instead.
 
 ### 0.2 Authenticate once, up front (avoid the WAM prompt storm)
 

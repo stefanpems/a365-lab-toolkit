@@ -17,6 +17,13 @@ tenant `863ee9e2-…`, subscription `d6116047-…`, region `eastus2`, model `gpt
 - `azd auth login` (browser; token expires ~daily). `az login` and `azd auth login` are
   **separate** token stores. The **Foundry Project Manager** role is needed to deploy.
 
+> **Target a specific tenant.** Sign both CLIs into the target tenant explicitly:
+> `az login --tenant <YOUR_ENTRA_TENANT_ID>` and
+> `azd auth login --tenant-id <YOUR_ENTRA_TENANT_ID>`. On a managed/corporate machine the `azd`
+> **browser** login may hang or pick the wrong account; if so, use
+> `azd auth login --tenant-id <YOUR_ENTRA_TENANT_ID> --use-device-code` and complete the code
+> at `https://microsoft.com/devicelogin`. Verify with `azd auth login --check-status`.
+
 ## 1. Get the sources
 
 ```powershell
