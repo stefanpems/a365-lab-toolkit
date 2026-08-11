@@ -77,6 +77,16 @@ When a row names a more specific scope, that scope takes precedence over these g
   subscription with `az account show`.
 - [ ] **[FH]** Verify the active `azd` environment and authentication separately from Azure
   CLI authentication.
+- [ ] **[ACA] Authenticate `a365` once, up front, in an EXTERNAL terminal window** (not the
+  VS Code integrated terminal), from any one of the ACA variant folders you are deploying
+  (`aca/obo`, `aca/s2s`, or `aca/dw`). `a365` uses Windows Web Account Manager (WAM); in an
+  embedded terminal the sign-in pop-up opens behind other windows, is auto-cancelled, and MSAL
+  retries, causing a **repeating sequence of sign-in prompts**. One clean sign-in seeds the
+  shared MSAL cache (`%LocalAppData%\Microsoft.Agents.A365.DevTools.Cli`) that every later
+  `a365` command — for any ACA variant — reuses silently. FH/FD variants use `az login` /
+  `azd auth login` and are not affected.
+- [ ] **[ACA] Never run more than one `a365 setup …` at a time** — each concurrent process
+  opens its own WAM window and multiplies the prompts.
 - [ ] **[ALL]** Do not store client secrets, model keys, generated tenant configuration, or
   deployment tokens in tracked files.
 
@@ -171,6 +181,12 @@ the next section.
 
 ### Agent and application consent
 
+- [ ] **[ACA] First run in a new tenant** The `Agent 365 CLI` public client exists in the
+  target tenant (register a tenant-owned one if the lab's `3c5eabff-…` app is absent) and a
+  Global Administrator grants admin consent (AllPrincipals) to it. On the first authenticated
+  `a365` command an interactive **"Permissions requested"** dialog appears and requires
+  **"Consent on behalf of your organization"**; `a365 setup requirements` must report 0 failed
+  before creating any blueprint.
 - [ ] **[ACA-OBO, ACA-DW]** Admin consent can be granted for the blueprint permissions created
   by `a365 setup permissions mcp` and `a365 setup permissions bot`, including Agent 365 Tools,
   Messaging Bot, Observability, Graph/Power Platform permissions used by the sample.

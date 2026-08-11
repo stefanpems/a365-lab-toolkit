@@ -1,13 +1,21 @@
 // ============================================================================
-// Runtime configuration for the Agent Framework Agents UI.
+// EXAMPLE runtime configuration for the Agent Framework Agents UI.
+// Copy this file to `config.js` and replace every <PLACEHOLDER> with your own
+// tenant/subscription values. `config.js` is gitignored (tenant-specific);
+// this `.example` is the tracked template.
+//
+// Values that are NOT placeholders (e.g. the Agent 365 Tools Mail scope
+// `ea9ffc3e-...` and `https://ai.azure.com/.default`) are Microsoft first-party
+// resource identifiers — keep them as-is.
+//
 // One vertical tab is rendered per entry in "agents".
-// Each agent needs its Container App base URL and the Entra scope used to call it.
+// Include only the agents you actually deploy; delete the others.
 // ============================================================================
 window.APP_CONFIG = {
   msal: {
-    // SPA app registration "agentframework-ui-spa"
-    clientId: "f9fe265c-5fc4-4a4e-8885-600746b05542",
-    authority: "https://login.microsoftonline.com/863ee9e2-ebff-43d4-a0c8-4f224aefc536"
+    // SPA app registration you created in your tenant (Application/client ID).
+    clientId: "<YOUR_SPA_APP_ID>",
+    authority: "https://login.microsoftonline.com/<YOUR_ENTRA_TENANT_ID>"
   },
   agents: [
     {
@@ -15,15 +23,16 @@ window.APP_CONFIG = {
       kind: "aca",
       name: "AgentFrameworkS2SSample (ACA, S2S)",
       description: "S2S blueprint agent. The /chat endpoint validates the user's Entra token and replies via the LLM.",
-      apiBase: "https://agentframework-s2s-sample.thankfulcoast-e0e43978.polandcentral.azurecontainerapps.io",
-      scope: "api://894f3b9c-aa7b-450d-b3c4-20bf5c931022/access_agent_as_user"
+      apiBase: "https://<YOUR_ACA_S2S_FQDN>",
+      scope: "api://<YOUR_ACA_S2S_APP_ID>/access_agent_as_user"
     },
     {
       id: "obo",
       kind: "aca",
       name: "AgentFrameworkSample (ACA, OBO)",
       description: "OBO agent. /chat uses the user's delegated Mail token and sends email from their mailbox.",
-      apiBase: "https://agentframework-sample.icybush-c1787b58.polandcentral.azurecontainerapps.io",
+      apiBase: "https://<YOUR_ACA_OBO_FQDN>",
+      // First-party Agent 365 Tools Mail scope — keep as-is.
       scope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All"
     },
     {
@@ -35,7 +44,7 @@ window.APP_CONFIG = {
       kind: "foundry-invocations",
       name: "OBO Foundry Hosted (invocations)",
       description: "Foundry Hosted Agent (OBO). Gateway auth + mail_token in the body; sends email from your mailbox.",
-      endpoint: "https://cog-z2qo7tuwnjouk.services.ai.azure.com/api/projects/agent365-obo-agentframeworkfh-py/agents/agentframeworkFH-OBO-agent/endpoint/protocols/invocations?api-version=v1",
+      endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/agents/<YOUR_FH_OBO_AGENT_NAME>/endpoint/protocols/invocations?api-version=v1",
       endpointScope: "https://ai.azure.com/.default",
       mailScope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All",
       // Prefix for a PER-USER server session id (see app.js). Foundry sessions are bound
@@ -51,7 +60,7 @@ window.APP_CONFIG = {
       kind: "foundry-responses",
       name: "S2S Foundry Hosted (responses)",
       description: "Foundry Hosted Agent (S2S). Its own identity; conversational assistant.",
-      endpoint: "https://cog-iodjlgvedslrg.services.ai.azure.com/api/projects/agent365-s2s-agentframeworkfh-py/agents/agentframeworkFH-S2S-agent/endpoint/protocols/openai/responses?api-version=v1",
+      endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/agents/<YOUR_FH_S2S_AGENT_NAME>/endpoint/protocols/openai/responses?api-version=v1",
       endpointScope: "https://ai.azure.com/.default"
     },
     {
@@ -67,9 +76,9 @@ window.APP_CONFIG = {
       kind: "foundry-prompt",
       name: "OBO Foundry Declarative (prompt agent)",
       description: "Foundry prompt agent (OBO). Project Responses API + agent_reference; the Mail token is passed as a structured input and email is sent from your mailbox.",
-      endpoint: "https://cog-z2qo7tuwnjouk.services.ai.azure.com/api/projects/agent365-obo-agentframeworkfh-py/openai/v1/responses",
+      endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/openai/v1/responses",
       endpointScope: "https://ai.azure.com/.default",
-      agentName: "agentframeworkFD-OBO-agent",
+      agentName: "<YOUR_FD_OBO_AGENT_NAME>",
       mailScope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All"
     },
     {
@@ -82,9 +91,9 @@ window.APP_CONFIG = {
       kind: "foundry-prompt",
       name: "S2S Foundry Declarative (prompt agent)",
       description: "Foundry prompt agent (S2S). Own identity; conversational assistant, no mailbox access.",
-      endpoint: "https://cog-z2qo7tuwnjouk.services.ai.azure.com/api/projects/agent365-obo-agentframeworkfh-py/openai/v1/responses",
+      endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/openai/v1/responses",
       endpointScope: "https://ai.azure.com/.default",
-      agentName: "agentframeworkFD-S2S-agent"
+      agentName: "<YOUR_FD_S2S_AGENT_NAME>"
     }
   ]
 };

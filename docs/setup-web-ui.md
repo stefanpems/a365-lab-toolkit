@@ -113,6 +113,9 @@ window.APP_CONFIG = {
 
 ## 6. Validate & deploy to Azure Static Web Apps
 
+> **`config.js` is gitignored** (tenant-specific). Create it from the tracked template first:
+> `Copy-Item config.js.example config.js`, then set the values above.
+
 Always syntax-check before deploying — a single JS error breaks the whole page (including
 login):
 

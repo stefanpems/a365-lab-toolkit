@@ -15,6 +15,11 @@
 **/env/.env.playground.user
 # Agent 365 CLI machine-generated config (contains blueprint client secret + IDs)
 **/a365.generated.config*.json
+# Tenant-specific input config — copy each *.example, then fill in your own values.
+# ACA blueprint config (tenantId + client app id + names)
+**/a365.config.json
+# Web SPA runtime config (SPA app id, tenant authority, agent endpoints/scopes)
+ui/config.js
 # Backups / historical copies of config that may hold secrets
 **/*.OLD.json
 **/*bak*.json
@@ -57,3 +62,4 @@ Thumbs.db
 !**/.env.template
 !**/.env.example
 !**/*.template.json
+!**/*.example

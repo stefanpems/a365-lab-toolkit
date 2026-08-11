@@ -20,6 +20,89 @@ tenant/subscription/region/name values with your own.
   `3c5eabff-e557-4da1-a216-700d0d1e5bf7`) — used as `CLIENT_APP_ID`, **not** the agentic
   blueprint (an agentic app cannot mint a device-code/WAM user token → `AADSTS82006`).
 
+> **First run in a new tenant — admin consent is requested.** The `3c5eabff-…` app is a
+> reference from the original lab and may **not** exist in your tenant. In that case
+> `a365 setup requirements` fails with *"Client app not found in tenant"*. Register your own
+> **public client** named `Agent 365 CLI` (fallback public client, redirect URIs
+> `https://login.microsoftonline.com/common/oauth2/nativeclient` and `http://localhost`),
+> create its service principal, and put its **Application (client) ID** in `clientAppId`.
+>
+> On the first authenticated command the CLI opens an interactive sign-in. A
+> **"Permissions requested"** dialog appears (e.g. *Microsoft Graph Command Line Tools* and
+> the Agent 365 CLI app): a **Global Administrator** must tick **"Consent on behalf of your
+> organization"** and **Accept**. The CLI also adds the required Graph permissions to the
+> client app and prints an `/adminconsent` URL — admin consent (AllPrincipals) on that app is
+> **mandatory**, because a per-user grant is not sufficient and agents inherit no permissions
+> without it.
+>
+> When you open the `/adminconsent` URL, the tenant-owned client shows a **"Review for your
+> organization"** dialog with a *"This application is not published by Microsoft."* banner
+> (expected — it is your own app, not a first-party one). The scopes listed are the Agent 365
+> blueprint/registration/identity permissions plus `User.Read`. After **Accept**, the browser
+> redirects to the native-client URI and lands on a Microsoft page reading **"This is not the
+> right page / You have reached the wrong page. Please close this app or window and try
+> again."** — this is the **expected, harmless** end of the consent redirect; consent has been
+> recorded. Close the tab and re-run `a365 setup requirements` until it reports **0 failed**.
+
+### 0.1 Register the tenant-owned client app (new tenant, once)
+
+If `a365 setup requirements` reports *"Client app not found in tenant"*, create your own
+public client and point all three ACA configs at it:
+
+```powershell
+# Create a tenant-owned "Agent 365 CLI" public client + its service principal
+$app = az ad app create --display-name 'Agent 365 CLI' `
+  --is-fallback-public-client true `
+  --public-client-redirect-uris 'https://login.microsoftonline.com/common/oauth2/nativeclient' 'http://localhost' `
+  --query appId -o tsv
+az ad sp create --id $app | Out-Null
+Write-Host "clientAppId = $app"
+```
+
+Put the printed `appId` in the `clientAppId` field of `aca/obo/a365.config.json`,
+`aca/s2s/a365.config.json`, and `aca/dw/a365.config.json`. Leave the Microsoft first-party
+resource IDs (Agent 365 Tools `ea9ffc3e-…`, etc.) unchanged — those are not lab tenant IDs.
+
+> **These `a365.config.json` files are gitignored** (tenant-specific). Each ACA folder ships
+> an `a365.config.json.example`; create your working copy from it, then fill in your values:
+> `Copy-Item a365.config.json.example a365.config.json`.
+
+### 0.2 Authenticate once, up front (avoid the WAM prompt storm)
+
+This applies to the **ACA** variants only (they use the `a365` CLI). Foundry Hosted (FH) and
+Foundry Declarative (FD) authenticate with `az login` / `azd auth login` instead and are not
+affected.
+
+`a365` signs in with the Windows **Web Account Manager (WAM)**. Two rules keep this smooth:
+
+1. **Run `a365` in a real, external terminal window for the first sign-in — not the VS Code
+   integrated terminal.** In an embedded terminal the WAM pop-up opens *behind* other windows,
+   loses focus, and is auto-cancelled; MSAL then retries, producing a **repeating sequence of
+   sign-in prompts**. A normal PowerShell/Windows Terminal window shows the pop-up in the
+   foreground and completes cleanly.
+2. **Never run more than one `a365 setup …` at a time.** Each process opens its **own** WAM
+   window, so concurrent runs multiply the prompts. Wait for one command to finish before
+   starting the next.
+
+Do the one-time preventive sign-in in an external window, from **any one** of the ACA agent
+folders you intend to deploy (`aca/obo`, `aca/s2s`, or `aca/dw` — they share the same tenant
+and client app, so a single sign-in seeds the cache for all of them):
+
+```powershell
+# Replace <repo> with your clone path and <variant> with obo | s2s | dw
+cd <repo>\aca\<variant>
+a365 setup requirements
+```
+
+Complete the single WAM dialog. `a365` stores the token in a shared, DPAPI-encrypted MSAL
+cache under `%LocalAppData%\Microsoft.Agents.A365.DevTools.Cli`, so **every subsequent `a365`
+command — in any terminal, for any ACA variant — reuses it silently**. Re-run until it reports
+**0 failed**.
+
+> After the CLI adds the `wids` optional claim (first run), one more interactive sign-in is
+> expected so the new token carries that claim; it is cached afterwards. If your host blocks
+> WAM, the CLI falls back to **device code** (`https://login.microsoft.com/device` + a code).
+
 ## 1. Get the sources
 
 ```powershell

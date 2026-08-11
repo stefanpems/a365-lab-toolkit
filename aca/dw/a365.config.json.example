@@ -1,6 +1,6 @@
 {
-  "tenantId": "863ee9e2-ebff-43d4-a0c8-4f224aefc536",
-  "clientAppId": "3c5eabff-e557-4da1-a216-700d0d1e5bf7",
+  "tenantId": "<YOUR_ENTRA_TENANT_ID>",
+  "clientAppId": "<YOUR_AGENT365_CLI_PUBLIC_CLIENT_APP_ID>",
   "agentIdentityDisplayName": "AgentFrameworkDWSample Identity",
   "agentBlueprintDisplayName": "AgentFrameworkDWSample Blueprint",
   "agentDescription": "AgentFrameworkDWSample",
