@@ -220,6 +220,47 @@ a365 setup permissions bot  --agent-name "AgentFrameworkSample"   # Bot API + Ob
 - Recover the client secret later with `a365 setup blueprint --show-secret` (in cleartext;
   the stored `agentBlueprintClientSecret` is DPAPI-encrypted and unusable in Linux).
 
+### 4.1 What `a365 setup all` does (first run — expect this exact flow)
+
+Running `a365 setup all --m365 --agent-name "AgentFrameworkSample"` performs, in order:
+
+1. **Requirements re-check** — a **Frontier** warning ("Tenant enrollment cannot be verified
+   automatically") is normal for OBO/S2S; it must still end `… 0 failed`.
+2. **Creates the blueprint app + service principal** and prints a summary with the
+   **Blueprint ID** and **service principal ID**.
+3. **Prints the blueprint client secret exactly once** — *"Copy this value now — it will not
+   be shown again automatically."* Record it now (you pass it to `deploy-aca.ps1` later) and
+   **do not commit it**; recover it with `a365 setup blueprint --show-secret` from the same
+   folder/machine/user.
+4. Possible warning: **"Could not add access_agent_as_user scope to blueprint. Add it
+   manually: Entra portal > App registrations > Expose an API."** Not blocking for ACA-OBO;
+   this scope is used by the **Web UI** for the S2S agent — add it later when wiring the SPA.
+5. **Configures inheritable permissions** (Microsoft Graph, Agent 365 Tools, Messaging Bot
+   API, Observability API, Power Platform API — `kind=allAllowed`).
+6. **Application permission prompt**: *"Assign this application permission now? [y/N]"* for
+   `Observability API: Agent365.Observability.OtelWrite` → answer **`y`**.
+7. **Delegated admin consent (browser)**: an *"Allow agents created from this blueprint to
+   access data?"* page (Mail MCP, read/write mail, send mail as you, chat, profiles, sites,
+   files, channels…) → **Allow**. The CLI polls up to ~180s (*"Still waiting for admin
+   consent…"*) then prints *"Consent granted (All permissions)."*
+   - If the browser shows **"Try that again using a different browser — We couldn't connect
+     to that service, likely because of settings put in place by your IT team"**, your
+     default browser is blocked by Conditional Access: **open the same consent URL in a
+     different browser** and Accept. Even if the tab shows an error after Accept, the CLI
+     usually still detects the consent.
+8. **Creates the agent identity** and **registers the agent** (prints their IDs).
+9. **Messaging endpoint** prompt → **leave blank** (press Enter); it is a post-deploy artifact.
+10. **Writes project settings**: creates/updates `aca/obo/.env` (stamps `TenantId`,
+    `ServiceConnection`, `AgentBlueprint`, `Agent365Observability`) and
+    `aca/obo/a365.generated.config.json` (blueprint ids + DPAPI-encrypted secret). Both are
+    **gitignored**.
+
+It ends with a **Setup Summary** (Prerequisites validated, Blueprint created, Inheritable
+Permissions configured, Grants granted tenant-wide delegated, Agent identity created, Agent
+registered, Messaging endpoint deferred, Project settings written) and **"Setup completed
+successfully"**. **Next step:** register the messaging endpoint **after** the container deploy
+with `a365 setup blueprint --endpoint-only --messaging-endpoint <https-url>` (see §7).
+
 ## 5. (Optional) Local test in the Playground
 
 Configure `CLIENT_APP_ID=3c5eabff-…` in `env/.env.playground`, run
