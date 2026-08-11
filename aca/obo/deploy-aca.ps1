@@ -112,27 +112,37 @@ Get-Content env/.env.playground.user |
 
 # --- 5. Deploy su Azure Container Apps (build dal Dockerfile via ACR) ---
 Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
+
+# Base env vars. NB: NON impostare AZURE_OPENAI_API_KEY quando la key e' vuota:
+# con Entra ID (key auth disabilitata) una stringa vuota "" viene interpretata dal
+# client openai come una chiave fornita ma non valida -> errore "Missing credentials"
+# che scavalca l'autenticazione via managed identity. La key va passata SOLO se valorizzata.
+$envVars = @(
+    "PORT=3978"
+    "HOST=0.0.0.0"
+    "AZURE_OPENAI_ENDPOINT=$($m['AZURE_OPENAI_ENDPOINT'])"
+    "AZURE_OPENAI_DEPLOYMENT=$($m['AZURE_OPENAI_DEPLOYMENT_NAME'])"
+    "AZURE_OPENAI_API_VERSION=$($m['AZURE_OPENAI_API_VERSION'])"
+    "AUTH_HANDLER_NAME=AGENTIC"
+    "USE_AGENTIC_AUTH=true"
+    "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__TYPE=AgenticUserAuthorization"
+    "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES=ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default"
+    "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__ALT_BLUEPRINT_NAME=SERVICE_CONNECTION"
+    "CONNECTIONSMAP__0__SERVICEURL=*"
+    "CONNECTIONSMAP__0__CONNECTION=service_connection"
+    "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=$clientId"
+    "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=$clientSecret"
+    "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=$tenantId"
+)
+if ($m['SECRET_AZURE_OPENAI_API_KEY']) {
+    $envVars += "AZURE_OPENAI_API_KEY=$($m['SECRET_AZURE_OPENAI_API_KEY'])"
+}
+
 az containerapp up `
   --name $APP --resource-group $RG --location $LOC --environment $ENVNAME `
   --subscription $SUB `
   --source . --target-port 3978 --ingress external `
-  --env-vars `
-    "PORT=3978" `
-    "HOST=0.0.0.0" `
-    "AZURE_OPENAI_ENDPOINT=$($m['AZURE_OPENAI_ENDPOINT'])" `
-    "AZURE_OPENAI_API_KEY=$($m['SECRET_AZURE_OPENAI_API_KEY'])" `
-    "AZURE_OPENAI_DEPLOYMENT=$($m['AZURE_OPENAI_DEPLOYMENT_NAME'])" `
-    "AZURE_OPENAI_API_VERSION=$($m['AZURE_OPENAI_API_VERSION'])" `
-    "AUTH_HANDLER_NAME=AGENTIC" `
-    "USE_AGENTIC_AUTH=true" `
-    "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__TYPE=AgenticUserAuthorization" `
-    "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES=ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default" `
-    "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__ALT_BLUEPRINT_NAME=SERVICE_CONNECTION" `
-    "CONNECTIONSMAP__0__SERVICEURL=*" `
-    "CONNECTIONSMAP__0__CONNECTION=service_connection" `
-    "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=$clientId" `
-    "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=$clientSecret" `
-    "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=$tenantId"
+  --env-vars @envVars
 
 # --- 5b. (Entra ID auth per Azure OpenAI) Managed identity + ruolo ---
 # Necessario quando la subscription disabilita la key auth (Azure Policy disableLocalAuth=true):

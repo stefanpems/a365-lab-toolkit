@@ -208,6 +208,17 @@ SECRET_AZURE_OPENAI_API_KEY=<key>
 > the **`Cognitive Services OpenAI User`** role on the Azure OpenAI account, and have the agent
 > acquire an AAD token (`DefaultAzureCredential`) instead of a key. Pick an Azure OpenAI
 > resource/subscription **without** that policy if you must use key auth unchanged.
+>
+> **How the agent wires Entra ID (important — agent-framework 1.0.0 detail).** In
+> [`agent.py`](../aca/obo/agent.py) `_create_chat_client()`, when no API key is present the
+> agent builds the underlying `openai.AsyncAzureOpenAI` client **itself**, passing an
+> `azure_ad_token_provider` from
+> `azure.identity.get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")`,
+> and hands it to `OpenAIChatCompletionClient(model=deployment, async_client=azure_client)`.
+> Do **not** rely on passing `credential=DefaultAzureCredential()` to the agent-framework
+> client: **agent-framework 1.0.0 silently ignores it** (the `credential`→token-provider
+> wiring only exists in newer builds), so the client is created with no auth and the container
+> crashes at startup with `openai.OpenAIError: Missing credentials`.
 
 ## 4. Create the blueprint + permissions
 
@@ -310,7 +321,8 @@ Required container env vars (**UPPERCASE** — Linux is case-sensitive):
 HOST=0.0.0.0
 PORT=3978
 PYTHONUTF8=1
-AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_DEPLOYMENT / AZURE_OPENAI_API_VERSION / AZURE_OPENAI_API_KEY
+AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_DEPLOYMENT / AZURE_OPENAI_API_VERSION
+AZURE_OPENAI_API_KEY   # ONLY when key auth is used; OMITTED for Entra ID (see gotcha below)
 AUTH_HANDLER_NAME=AGENTIC
 AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__TYPE=AgenticUserAuthorization
 AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES=ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default
@@ -325,8 +337,19 @@ ENABLE_A365_OBSERVABILITY_EXPORTER=true
 
 Verify: `GET https://<fqdn>/api/health` → `{"status":"ok","agent_initialized":true}`.
 
+> **Gotcha — never set `AZURE_OPENAI_API_KEY` to an empty string.** With Entra ID auth the key
+> must be **absent**, not empty. `openai.AsyncAzureOpenAI` reads `AZURE_OPENAI_API_KEY` from the
+> environment when no `api_key` is passed; a present-but-empty value (`""`) is treated as a
+> real (invalid) key and the client raises `openai.OpenAIError: Missing credentials`, shadowing
+> the managed-identity token provider. `deploy-aca.ps1` therefore adds `AZURE_OPENAI_API_KEY`
+> to the container **only when `SECRET_AZURE_OPENAI_API_KEY` is non-empty**; and `agent.py`
+> defensively removes an empty `AZURE_OPENAI_API_KEY` from the environment before creating the
+> client. If you ever set this variable by hand, leave it **unset** for Entra ID.
+
 > The `az acr build` **log stream** may crash with a cp1252 `UnicodeEncodeError` on Windows;
-> this is harmless — the server-side build still succeeds (`az acr task list-runs`).
+> this is harmless — the server-side build still succeeds (`az acr task list-runs`). Piping the
+> command through `Select-Object` can **abort it before the image is pushed**; add `--no-logs`
+> (and pipe through `Out-String -Stream`) if you need to trim the output.
 
 ## 7. Register the messaging endpoint
 
