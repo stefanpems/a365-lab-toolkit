@@ -1,17 +1,28 @@
 #requires -Version 5.1
 # Cleanup + (re)deploy the agent to Azure Container Apps in a region with capacity.
-# Usage: from a PowerShell terminal in the project folder -> .\deploy-aca.ps1
+# Usage: from a PowerShell terminal in the project folder ->
+#   .\deploy-aca.ps1 -Subscription <TARGET_SUB_ID> -AoaiRg <AOAI_RG> -AoaiAcc <AOAI_ACCOUNT>
+# The blueprint client secret is requested interactively (Read-Host) unless -ClientSecret is passed.
+# Subscription/AoaiRg/AoaiAcc also fall back to env vars DEPLOY_SUB / DEPLOY_AOAI_RG / DEPLOY_AOAI_ACC,
+# so no tenant-specific value needs to be committed to this file.
+[CmdletBinding()]
+param(
+    [string]$ClientSecret,
+    [string]$Subscription = $env:DEPLOY_SUB,
+    [string]$AoaiRg       = $env:DEPLOY_AOAI_RG,
+    [string]$AoaiAcc      = $env:DEPLOY_AOAI_ACC
+)
 $ErrorActionPreference = 'Stop'
 
 # ============================ Parametri ============================
 $RG      = "agentframework-rg-pl"
 $APP     = "agentframework-sample"
 $ENVNAME = "agentframework-env"
-$SUB     = ""   # IMPOSTA l'ID subscription TARGET (consigliato). Vuoto = subscription corrente (rischioso).
+$SUB     = $Subscription   # ID subscription TARGET (via -Subscription o $env:DEPLOY_SUB). Vuoto = subscription corrente (rischioso).
 # Azure OpenAI con auth Entra ID (opzionale ma necessario se la sub disabilita la key auth):
-# imposta il RG e il nome dell'account Azure OpenAI su cui assegnare il ruolo alla managed identity.
-$AOAI_RG  = ""   # es. 'agentframework-aoai-rg' (vuoto = salta MI/ruolo, usa la key)
-$AOAI_ACC = ""   # es. il nome dell'account Azure OpenAI (vuoto = salta MI/ruolo, usa la key)
+# RG e nome dell'account Azure OpenAI su cui assegnare il ruolo alla managed identity.
+$AOAI_RG  = $AoaiRg    # es. 'agentframework-aoai-rg' (vuoto = salta MI/ruolo, usa la key)
+$AOAI_ACC = $AoaiAcc   # es. il nome dell'account Azure OpenAI (vuoto = salta MI/ruolo, usa la key)
 
 # Region da provare in ordine. polandcentral verificata con capacity (2026-07-07).
 $REGIONS = @(
@@ -61,7 +72,7 @@ $clientId     = $cfg.agentBlueprintId
 $tenantId     = az account show --query tenantId -o tsv
 # NB: a365.generated.config.json contiene il secret cifrato DPAPI (solo Windows).
 # The CLEARTEXT secret from 'a365 setup blueprint --show-secret' is required.
-$clientSecret = Read-Host "Paste the CLEARTEXT blueprint client secret (a365 setup blueprint --show-secret)"
+$clientSecret = if ($ClientSecret) { $ClientSecret } else { Read-Host "Paste the CLEARTEXT blueprint client secret (a365 setup blueprint --show-secret)" }
 
 $m = @{}
 Get-Content env/.env.playground.user |

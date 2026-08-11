@@ -21,9 +21,9 @@ tenant/subscription/region/name values with your own.
   > context is frequently a **different** tenant/subscription (and can revert silently), so
   > you can create resources in the wrong place. Set it explicitly and re-verify:
   > `az account set --subscription <YOUR_SUBSCRIPTION_ID>` → `az account show`. Pass
-  > **`--subscription <YOUR_SUBSCRIPTION_ID>` on every `az` command**, and set the `$SUB`
-  > variable at the top of `deploy-aca.ps1` (and `deploy-aca-S2S.ps1` / `deploy-aca-DW.ps1`)
-  > to the target subscription id.
+  > **`--subscription <YOUR_SUBSCRIPTION_ID>` on every `az` command**, and pass `-Subscription`
+  > to `deploy-aca.ps1` (and `deploy-aca-S2S.ps1` / `deploy-aca-DW.ps1`)
+  > with the target subscription id (or set `$env:DEPLOY_SUB`).
 - **Agent 365 CLI** (`a365`, ≥ v1.1.x) and **.NET** (its runtime).
 - **Python 3.12+**, `uv` (`pip install uv`; ensure its Scripts dir is on PATH).
 - Roles: **Global Administrator** (or *Agent ID Developer* + a Global Admin for consents).
@@ -278,17 +278,20 @@ Deploy with `deploy-aca.ps1` (auto-probes regions for ACA capacity — the lab l
 `polandcentral`). It builds with `az acr build` and creates the Container App:
 
 ```powershell
-.\deploy-aca.ps1 -ClientSecret '<blueprint client secret (cleartext)>'
+# The blueprint client secret is requested interactively (Read-Host), so it never lands in
+# shell history. Pass the target subscription + Azure OpenAI resource as parameters:
+.\deploy-aca.ps1 -Subscription '<TARGET_SUB_ID>' -AoaiRg '<AOAI_RG>' -AoaiAcc '<AOAI_ACCOUNT>'
 ```
 
-> **Set the deploy-script variables first.** At the top of `deploy-aca.ps1` set `$SUB` to your
-> **target subscription id** (so it never runs against the wrong context). For **Entra ID auth**
-> to Azure OpenAI (required when key auth is disabled — see §3), also set `$AOAI_RG` and
-> `$AOAI_ACC` to your Azure OpenAI resource group and account name: the script then enables the
+> **Pass the target values as parameters — never commit tenant-specific ids.** `-Subscription`
+> pins the **target subscription id** (so the deploy never runs against the wrong context; these
+> three also read from env vars `DEPLOY_SUB` / `DEPLOY_AOAI_RG` / `DEPLOY_AOAI_ACC`). For
+> **Entra ID auth** to Azure OpenAI (required when key auth is disabled — see §3), pass `-AoaiRg`
+> and `-AoaiAcc` (your Azure OpenAI resource group and account name): the script then enables the
 > Container App's **system-assigned managed identity** and grants it the
 > **`Cognitive Services OpenAI User`** role on that account, and the agent authenticates with
-> `DefaultAzureCredential` (leave `AZURE_OPENAI_API_KEY` empty). Leave `$AOAI_RG`/`$AOAI_ACC`
-> empty only if you use key auth.
+> `DefaultAzureCredential` (leave `AZURE_OPENAI_API_KEY` empty). Omit `-AoaiRg`/`-AoaiAcc`
+> only if you use key auth. If you prefer, pass `-ClientSecret '<cleartext>'` to skip the prompt.
 
 Required container env vars (**UPPERCASE** — Linux is case-sensitive):
 
