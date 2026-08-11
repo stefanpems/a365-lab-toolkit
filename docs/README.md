@@ -5,11 +5,26 @@ integrated with **Microsoft Agent 365**, spanning three authentication models (O
 Digital Worker) across three hosting/dev models: **Azure Container Apps (ACA)**, **Foundry
 Hosted (FH)**, and **Foundry Declarative / prompt agents (FD)**.
 
-## Start here
+> **Open this README first.** It is the documentation entry point. The prerequisites
+> checklist is the starting point for a new environment; the introduction is a deeper
+> architecture and concepts reference, not a competing entry page.
 
-- **[00-introduction.md](00-introduction.md)** — concepts, naming convention, capability
-  comparison, architectures, Tool Gateway integration, observability, governance & security,
-  and the mapping to the reference implementation.
+## Recommended reading order
+
+1. **[Central prerequisites checklist](prerequisites-checklist.md)** — validate a new tenant,
+   subscription, deployment workstation, licenses, and permissions; each requirement states
+   which agent variants it applies to.
+2. **[Introduction and architecture reference](00-introduction.md)** — understand the
+   hosting/authentication models, capabilities, identity flows, Tool Gateway, observability,
+   governance, and security.
+3. Choose only the agent variants you need from the setup-guide table below.
+4. If required, deploy the optional **[Web UI](setup-web-ui.md)** after its OBO/S2S agents.
+
+## Documentation map
+
+- **[prerequisites-checklist.md](prerequisites-checklist.md)** — central, scoped readiness
+  checklist for clean-tenant deployments.
+- **[00-introduction.md](00-introduction.md)** — conceptual and architectural reference.
 
 ## Setup guides (one per agent type)
 

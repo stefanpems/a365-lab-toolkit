@@ -1,6 +1,10 @@
-# Building Agent 365 test agents (OBO, S2S, DW) on Azure Container Apps and Foundry Hosted
+# Building Agent 365 test agents (OBO, S2S, DW) on Azure Container Apps and Foundry
 
-> Introduction and conceptual reference for a family of **six** test agents built on the
+> **Where to start:** begin with [README.md](README.md). For a new tenant or subscription,
+> complete the [central prerequisites checklist](prerequisites-checklist.md) before using this
+> conceptual reference or an agent-specific setup guide.
+>
+> Introduction and conceptual reference for a family of **nine** test agents built on the
 > **Microsoft Agent Framework (MAF)** and integrated with **Microsoft Agent 365**.
 >
 > This document is written to be **reusable**: it describes the agent types generically so
@@ -47,10 +51,10 @@ So the types are: `MAF-ACA-OBO`, `MAF-ACA-S2S`, `MAF-ACA-DW`, `MAF-FH-OBO`, `MAF
 
 ---
 
-## 2. The two building blocks: authentication model × hosting model
+## 2. The two building blocks: authentication model × hosting/dev model
 
-The six agents are the cross-product of **three authentication models** and **two hosting
-models**. It helps to understand each axis independently.
+The nine agents are the cross-product of **three authentication models** and **three
+hosting/dev models**. It helps to understand each axis independently.
 
 ### 2.1 Authentication models (Agent 365)
 
