@@ -16,6 +16,14 @@ tenant/subscription/region/name values with your own.
   command: `az login --tenant <YOUR_ENTRA_TENANT_ID>` then
   `az account show --query "{tenant:tenantId,sub:id,user:user.name}"`. Contributor on the
   target subscription (Owner for some variants — see the checklist).
+
+  > **Pin the subscription — mandatory.** On a managed/corporate machine the default `az`
+  > context is frequently a **different** tenant/subscription (and can revert silently), so
+  > you can create resources in the wrong place. Set it explicitly and re-verify:
+  > `az account set --subscription <YOUR_SUBSCRIPTION_ID>` → `az account show`. Pass
+  > **`--subscription <YOUR_SUBSCRIPTION_ID>` on every `az` command**, and set the `$SUB`
+  > variable at the top of `deploy-aca.ps1` (and `deploy-aca-S2S.ps1` / `deploy-aca-DW.ps1`)
+  > to the target subscription id.
 - **Agent 365 CLI** (`a365`, ≥ v1.1.x) and **.NET** (its runtime).
 - **Python 3.12+**, `uv` (`pip install uv`; ensure its Scripts dir is on PATH).
 - Roles: **Global Administrator** (or *Agent ID Developer* + a Global Admin for consents).
@@ -188,6 +196,15 @@ AZURE_OPENAI_API_VERSION=2024-12-01-preview
 SECRET_AZURE_OPENAI_API_KEY=<key>
 ```
 
+> **Governed subscriptions — API-key auth may be disabled.** If an Azure Policy enforces
+> `disableLocalAuth=true` on Cognitive Services, `az cognitiveservices account keys list`
+> fails with *"disableLocalAuth is set to be true"* and the setting reverts even if you try to
+> turn it off. In that case the key-based env above **cannot** be used: switch to **Entra ID
+> auth** — assign the Container App's managed identity (or your dev identity for local tests)
+> the **`Cognitive Services OpenAI User`** role on the Azure OpenAI account, and have the agent
+> acquire an AAD token (`DefaultAzureCredential`) instead of a key. Pick an Azure OpenAI
+> resource/subscription **without** that policy if you must use key auth unchanged.
+
 ## 4. Create the blueprint + permissions
 
 ```powershell
@@ -222,6 +239,15 @@ Deploy with `deploy-aca.ps1` (auto-probes regions for ACA capacity — the lab l
 ```powershell
 .\deploy-aca.ps1 -ClientSecret '<blueprint client secret (cleartext)>'
 ```
+
+> **Set the deploy-script variables first.** At the top of `deploy-aca.ps1` set `$SUB` to your
+> **target subscription id** (so it never runs against the wrong context). For **Entra ID auth**
+> to Azure OpenAI (required when key auth is disabled — see §3), also set `$AOAI_RG` and
+> `$AOAI_ACC` to your Azure OpenAI resource group and account name: the script then enables the
+> Container App's **system-assigned managed identity** and grants it the
+> **`Cognitive Services OpenAI User`** role on that account, and the agent authenticates with
+> `DefaultAzureCredential` (leave `AZURE_OPENAI_API_KEY` empty). Leave `$AOAI_RG`/`$AOAI_ACC`
+> empty only if you use key auth.
 
 Required container env vars (**UPPERCASE** — Linux is case-sensitive):
 

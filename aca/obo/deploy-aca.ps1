@@ -7,7 +7,11 @@ $ErrorActionPreference = 'Stop'
 $RG      = "agentframework-rg-pl"
 $APP     = "agentframework-sample"
 $ENVNAME = "agentframework-env"
-$SUB     = ""   # opzionale: nome/ID subscription. Vuoto = subscription corrente
+$SUB     = ""   # IMPOSTA l'ID subscription TARGET (consigliato). Vuoto = subscription corrente (rischioso).
+# Azure OpenAI con auth Entra ID (opzionale ma necessario se la sub disabilita la key auth):
+# imposta il RG e il nome dell'account Azure OpenAI su cui assegnare il ruolo alla managed identity.
+$AOAI_RG  = ""   # es. 'agentframework-aoai-rg' (vuoto = salta MI/ruolo, usa la key)
+$AOAI_ACC = ""   # es. il nome dell'account Azure OpenAI (vuoto = salta MI/ruolo, usa la key)
 
 # Region da provare in ordine. polandcentral verificata con capacity (2026-07-07).
 $REGIONS = @(
@@ -86,6 +90,23 @@ az containerapp up `
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=$clientId" `
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=$clientSecret" `
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=$tenantId"
+
+# --- 5b. (Entra ID auth per Azure OpenAI) Managed identity + ruolo ---
+# Necessario quando la subscription disabilita la key auth (Azure Policy disableLocalAuth=true):
+# l'agente usa DefaultAzureCredential e la Container App autentica con la sua managed identity.
+if ($AOAI_ACC -and $AOAI_RG) {
+    Write-Host "Abilito la managed identity della Container App e assegno 'Cognitive Services OpenAI User'..." -ForegroundColor Cyan
+    $miPrincipal = az containerapp identity assign -n $APP -g $RG --system-assigned --query principalId -o tsv
+    $aoaiScope = az cognitiveservices account show -n $AOAI_ACC -g $AOAI_RG --query id -o tsv
+    az role assignment create --assignee-object-id $miPrincipal --assignee-principal-type ServicePrincipal `
+        --role "Cognitive Services OpenAI User" --scope $aoaiScope | Out-Null
+    # Riavvia la revisione cosi' l'identita' assegnata viene usata subito.
+    $rev = az containerapp show -n $APP -g $RG --query properties.latestRevisionName -o tsv
+    az containerapp revision restart -n $APP -g $RG --revision $rev 2>$null | Out-Null
+    Write-Host "Managed identity + ruolo assegnati su '$AOAI_ACC'." -ForegroundColor Green
+} else {
+    Write-Host "AOAI_RG/AOAI_ACC non impostati: salto managed identity/ruolo (percorso a chiave)." -ForegroundColor Yellow
+}
 
 # --- 6. Output URL + prossimo passo ---
 $fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv

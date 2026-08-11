@@ -23,6 +23,12 @@ tenant `863ee9e2-…`, subscription `d6116047-…`, region `eastus2`, model `gpt
 > **browser** login may hang or pick the wrong account; if so, use
 > `azd auth login --tenant-id <YOUR_ENTRA_TENANT_ID> --use-device-code` and complete the code
 > at `https://microsoft.com/devicelogin`. Verify with `azd auth login --check-status`.
+>
+> **Pin the subscription.** The default `az` context on a corporate machine is often a
+> different subscription and can revert silently. Set it explicitly and verify before any
+> provisioning: `az account set --subscription <YOUR_SUBSCRIPTION_ID>` → `az account show`;
+> pin `azd` with `azd env set AZURE_SUBSCRIPTION_ID <YOUR_SUBSCRIPTION_ID>` and
+> `azd env set AZURE_TENANT_ID <YOUR_ENTRA_TENANT_ID>`.
 
 ## 1. Get the sources
 

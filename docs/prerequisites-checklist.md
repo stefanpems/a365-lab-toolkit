@@ -73,10 +73,17 @@ When a row names a more specific scope, that scope takes precedence over these g
 
 ### Authentication sanity check
 
-- [ ] **[ALL]** Before any provisioning command, verify the active identity, tenant, and
-  subscription with `az account show`.
-- [ ] **[FH]** Verify the active `azd` environment and authentication separately from Azure
-  CLI authentication.
+- [ ] **[ALL] Pin and verify the target subscription on every command.** On a managed/corporate
+  machine the default `az` context is often a **different** tenant/subscription and can silently
+  revert even after `az login --tenant <target>` — creating resources in the wrong subscription.
+  Set it explicitly and verify before any provisioning:
+  `az account set --subscription <TARGET_SUBSCRIPTION_ID>` then
+  `az account show --query "{tenant:tenantId,sub:id,user:user.name}"`. Pass
+  **`--subscription <TARGET_SUBSCRIPTION_ID>` explicitly on every `az` command**, and set the
+  target subscription in the deploy scripts (the `$SUB` variable in `deploy-aca*.ps1`).
+- [ ] **[FH] Pin the target for `azd` too.** Use a dedicated `azd` environment and set
+  subscription/tenant explicitly (`azd env set AZURE_SUBSCRIPTION_ID <target>` /
+  `AZURE_TENANT_ID <target>`); verify with `azd env get-values`.
 - [ ] **[ACA] Authenticate `a365` once, up front, in an EXTERNAL terminal window** (not the
   VS Code integrated terminal), from any one of the ACA variant folders you are deploying
   (`aca/obo`, `aca/s2s`, or `aca/dw`). `a365` uses Windows Web Account Manager (WAM); in an
@@ -132,6 +139,11 @@ register the providers beforehand.
 - [ ] **[ACA] Mandatory** An Azure OpenAI resource and compatible Chat Completions model
   deployment exist. Record endpoint, deployment name, API version, and a supported
   authentication credential. The current ACA scripts consume an API key.
+  **In governed subscriptions an Azure Policy may enforce `disableLocalAuth=true`, disabling
+  API-key auth** (key listing fails and the flag reverts). Then use **Entra ID auth**: grant
+  the Container App's managed identity the **`Cognitive Services OpenAI User`** role on the
+  account and have the agent use an AAD token, or choose a resource/subscription without that
+  policy.
 - [ ] **[FH-OBO, FH-S2S] Mandatory unless provisioning a new project** A Foundry account and
   project are selected. A compatible chat model such as `gpt-4.1` must be deployable; the
   model can be deployed between `azd provision` and `azd deploy`.
