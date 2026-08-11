@@ -297,6 +297,13 @@ Deploy with `deploy-aca.ps1` (auto-probes regions for ACA capacity — the lab l
 > `DefaultAzureCredential` (leave `AZURE_OPENAI_API_KEY` empty). Omit `-AoaiRg`/`-AoaiAcc`
 > only if you use key auth. If you prefer, pass `-ClientSecret '<cleartext>'` to skip the prompt.
 
+> **Fast re-deploys — `-ReuseEnv`.** By default the script **deletes the whole resource group**
+> and re-probes regions on every run; deleting an ACA **managed environment** takes **20–40 min**,
+> so re-deploys are slow. Pass **`-ReuseEnv`** to **reuse the existing RG + environment** (no
+> deletion, no region probe) and only rebuild/redeploy the Container App — much faster. It fails
+> if the RG/environment don't exist yet, so use it only for the **2nd run onward**:
+> `.\deploy-aca.ps1 -ReuseEnv -Subscription '<TARGET_SUB_ID>' -AoaiRg '<AOAI_RG>' -AoaiAcc '<AOAI_ACCOUNT>'`.
+
 Required container env vars (**UPPERCASE** — Linux is case-sensitive):
 
 ```

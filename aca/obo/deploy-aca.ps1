@@ -10,7 +10,11 @@ param(
     [string]$ClientSecret,
     [string]$Subscription = $env:DEPLOY_SUB,
     [string]$AoaiRg       = $env:DEPLOY_AOAI_RG,
-    [string]$AoaiAcc      = $env:DEPLOY_AOAI_ACC
+    [string]$AoaiAcc      = $env:DEPLOY_AOAI_ACC,
+    # -ReuseEnv: riusa il resource group + environment ACA esistenti (NIENTE cancellazione del RG,
+    # niente region-probe). Utile per ri-deploy veloci: la cancellazione di un managed environment
+    # richiede 20-40 min, questo la evita del tutto. Fallisce se RG/environment non esistono gia'.
+    [switch]$ReuseEnv
 )
 $ErrorActionPreference = 'Stop'
 
@@ -45,30 +49,47 @@ az account set --subscription $SUB
 $acct = az account show --subscription $SUB --query "{name:name,id:id,tenantId:tenantId,user:user.name}" -o json | ConvertFrom-Json
 Write-Host "Target subscription: $($acct.name) [$($acct.id)] tenant $($acct.tenantId) as $($acct.user)" -ForegroundColor Green
 
-# --- 1. Cleanup: elimina il resource group precedente (rimuove env/workspace parziali) ---
-if ((az group exists -n $RG @SubArg) -eq "true") {
-    Write-Host "Elimino il resource group '$RG' e tutto il suo contenuto..." -ForegroundColor Yellow
-    az group delete -n $RG --yes @SubArg
-}
-
-# --- 2. Provider (idempotente) ---
-az provider register -n Microsoft.App --wait @SubArg
-az provider register -n Microsoft.OperationalInsights --wait @SubArg
-
-# --- 3. Trova una region con capacity creando l'environment ACA ---
-$LOC = $null
-foreach ($r in $REGIONS) {
-    Write-Host "`n=== Provo region '$r' ===" -ForegroundColor Cyan
-    if ((az group exists -n $RG @SubArg) -eq "true") { az group delete -n $RG --yes @SubArg }
-    az group create -n $RG -l $r @SubArg | Out-Null
-
-    az containerapp env create -n $ENVNAME -g $RG -l $r --logs-destination none @SubArg 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Capacity OK in '$r'." -ForegroundColor Green
-        $LOC = $r
-        break
+# --- 1-3. Preparazione environment ---
+if ($ReuseEnv) {
+    # Percorso RIUSO: nessuna cancellazione del RG, nessun region-probe. Riusa cio' che esiste.
+    if ((az group exists -n $RG @SubArg) -ne "true") {
+        Write-Error "-ReuseEnv impostato ma il resource group '$RG' non esiste. Esegui senza -ReuseEnv per un deploy pulito."
+        exit 1
     }
-    Write-Host "Region '$r' has no capacity (or error). Trying the next one..." -ForegroundColor DarkYellow
+    $LOC = az containerapp env show -n $ENVNAME -g $RG @SubArg --query location -o tsv 2>$null
+    if (-not $LOC) {
+        Write-Error "-ReuseEnv impostato ma l'environment '$ENVNAME' non esiste in '$RG'. Esegui senza -ReuseEnv."
+        exit 1
+    }
+    # Normalizza 'Poland Central' -> 'polandcentral' per --location.
+    $LOC = ($LOC -replace '\s','').ToLower()
+    Write-Host "Riuso environment esistente '$ENVNAME' in '$LOC' (RG '$RG'). Salto cancellazione e region-probe." -ForegroundColor Green
+} else {
+    # --- 1. Cleanup: elimina il resource group precedente (rimuove env/workspace parziali) ---
+    if ((az group exists -n $RG @SubArg) -eq "true") {
+        Write-Host "Elimino il resource group '$RG' e tutto il suo contenuto..." -ForegroundColor Yellow
+        az group delete -n $RG --yes @SubArg
+    }
+
+    # --- 2. Provider (idempotente) ---
+    az provider register -n Microsoft.App --wait @SubArg
+    az provider register -n Microsoft.OperationalInsights --wait @SubArg
+
+    # --- 3. Trova una region con capacity creando l'environment ACA ---
+    $LOC = $null
+    foreach ($r in $REGIONS) {
+        Write-Host "`n=== Provo region '$r' ===" -ForegroundColor Cyan
+        if ((az group exists -n $RG @SubArg) -eq "true") { az group delete -n $RG --yes @SubArg }
+        az group create -n $RG -l $r @SubArg | Out-Null
+
+        az containerapp env create -n $ENVNAME -g $RG -l $r --logs-destination none @SubArg 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Capacity OK in '$r'." -ForegroundColor Green
+            $LOC = $r
+            break
+        }
+        Write-Host "Region '$r' has no capacity (or error). Trying the next one..." -ForegroundColor DarkYellow
+    }
 }
 
 if (-not $LOC) {
