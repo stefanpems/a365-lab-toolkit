@@ -4,9 +4,9 @@
 # On Linux the names stay as-is -> UPPERCASE is required to match the SDK parser.
 $ErrorActionPreference = 'Stop'
 
-$RG  = "agentframework-rg-pl"
-$APP = "agentframework-sample"
-$IMG = "ca80215d4590acr.azurecr.io/agentframework-sample:v3"
+$RG  = "agentframework-OBO-rg-pl"
+$APP = "agentframework-obo-sample"
+$IMG = "ca80215d4590acr.azurecr.io/agentframework-obo-sample:v3"
 
 $cfg      = Get-Content a365.generated.config.json | ConvertFrom-Json
 $clientId = $cfg.agentBlueprintId

@@ -15,9 +15,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # ============================ Parametri ============================
-$RG      = "agentframework-rg-pl"
-$APP     = "agentframework-sample"
-$ENVNAME = "agentframework-env"
+$RG      = "agentframework-OBO-rg-pl"
+$APP     = "agentframework-obo-sample"
+$ENVNAME = "agentframework-OBO-env"
 $SUB     = $Subscription   # ID subscription TARGET (via -Subscription o $env:DEPLOY_SUB). Vuoto = subscription corrente (rischioso).
 # Azure OpenAI con auth Entra ID (opzionale ma necessario se la sub disabilita la key auth):
 # RG e nome dell'account Azure OpenAI su cui assegnare il ruolo alla managed identity.

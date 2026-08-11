@@ -3,9 +3,9 @@
 # The secret is prompted at runtime and stays in your terminal.
 $ErrorActionPreference = 'Stop'
 
-$RG  = "agentframework-rg-pl"
-$APP = "agentframework-sample"
-$IMG = "ca80215d4590acr.azurecr.io/agentframework-sample:v3"
+$RG  = "agentframework-OBO-rg-pl"
+$APP = "agentframework-obo-sample"
+$IMG = "ca80215d4590acr.azurecr.io/agentframework-obo-sample:v3"
 
 $sec = Read-Host "Paste the CLEARTEXT blueprint client secret (from 'a365 setup blueprint --show-secret')"
 if ([string]::IsNullOrWhiteSpace($sec)) { throw "Secret vuoto: interrompo." }
