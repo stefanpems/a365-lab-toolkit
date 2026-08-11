@@ -19,9 +19,13 @@ tenant/subscription/region/name values with your own.
 
   > **Pin the subscription — mandatory.** On a managed/corporate machine the default `az`
   > context is frequently a **different** tenant/subscription (and can revert silently), so
-  > you can create resources in the wrong place. Set it explicitly and re-verify:
+  > you can create resources in the wrong place. The `az` context is **shared on-disk state**:
+  > a **parallel shell/CLI session** (or `az account set` elsewhere) can flip it mid-deploy.
+  > Set it explicitly and re-verify:
   > `az account set --subscription <YOUR_SUBSCRIPTION_ID>` → `az account show`. Pass
-  > **`--subscription <YOUR_SUBSCRIPTION_ID>` on every `az` command**, and pass `-Subscription`
+  > **`--subscription <YOUR_SUBSCRIPTION_ID>` on every `az` command** (`deploy-aca.ps1` resolves
+  > the target once and passes `--subscription` on **every** underlying `az` call, so a concurrent
+  > context flip can't hijack it), and pass `-Subscription`
   > to `deploy-aca.ps1` (and `deploy-aca-S2S.ps1` / `deploy-aca-DW.ps1`)
   > with the target subscription id (or set `$env:DEPLOY_SUB`).
 - **Agent 365 CLI** (`a365`, ≥ v1.1.x) and **.NET** (its runtime).

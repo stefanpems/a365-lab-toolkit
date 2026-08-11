@@ -33,26 +33,36 @@ $REGIONS = @(
 )
 # ==================================================================
 
-if ($SUB) { az account set --subscription $SUB }
+# Concurrency-safe subscription pinning: resolve the target subscription ONCE and pass it
+# explicitly (--subscription $SUB, splatted as @SubArg) on EVERY az command below. This protects
+# against a parallel session flipping the shared az context mid-deploy.
+if (-not $SUB) {
+    $SUB = az account show --query id -o tsv
+    Write-Host "No -Subscription given: pinning to current az context '$SUB'." -ForegroundColor Yellow
+}
+$SubArg = @('--subscription', $SUB)
+az account set --subscription $SUB
+$acct = az account show --subscription $SUB --query "{name:name,id:id,tenantId:tenantId,user:user.name}" -o json | ConvertFrom-Json
+Write-Host "Target subscription: $($acct.name) [$($acct.id)] tenant $($acct.tenantId) as $($acct.user)" -ForegroundColor Green
 
 # --- 1. Cleanup: elimina il resource group precedente (rimuove env/workspace parziali) ---
-if ((az group exists -n $RG) -eq "true") {
+if ((az group exists -n $RG @SubArg) -eq "true") {
     Write-Host "Elimino il resource group '$RG' e tutto il suo contenuto..." -ForegroundColor Yellow
-    az group delete -n $RG --yes
+    az group delete -n $RG --yes @SubArg
 }
 
 # --- 2. Provider (idempotente) ---
-az provider register -n Microsoft.App --wait
-az provider register -n Microsoft.OperationalInsights --wait
+az provider register -n Microsoft.App --wait @SubArg
+az provider register -n Microsoft.OperationalInsights --wait @SubArg
 
 # --- 3. Trova una region con capacity creando l'environment ACA ---
 $LOC = $null
 foreach ($r in $REGIONS) {
     Write-Host "`n=== Provo region '$r' ===" -ForegroundColor Cyan
-    if ((az group exists -n $RG) -eq "true") { az group delete -n $RG --yes }
-    az group create -n $RG -l $r | Out-Null
+    if ((az group exists -n $RG @SubArg) -eq "true") { az group delete -n $RG --yes @SubArg }
+    az group create -n $RG -l $r @SubArg | Out-Null
 
-    az containerapp env create -n $ENVNAME -g $RG -l $r --logs-destination none 2>$null
+    az containerapp env create -n $ENVNAME -g $RG -l $r --logs-destination none @SubArg 2>$null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Capacity OK in '$r'." -ForegroundColor Green
         $LOC = $r
@@ -69,7 +79,7 @@ if (-not $LOC) {
 # --- 4. Leggi credenziali blueprint + config LLM (restano nel terminale, non stampate) ---
 $cfg          = Get-Content a365.generated.config.json | ConvertFrom-Json
 $clientId     = $cfg.agentBlueprintId
-$tenantId     = az account show --query tenantId -o tsv
+$tenantId     = az account show --subscription $SUB --query tenantId -o tsv
 # NB: a365.generated.config.json contiene il secret cifrato DPAPI (solo Windows).
 # The CLEARTEXT secret from 'a365 setup blueprint --show-secret' is required.
 $clientSecret = if ($ClientSecret) { $ClientSecret } else { Read-Host "Paste the CLEARTEXT blueprint client secret (a365 setup blueprint --show-secret)" }
@@ -83,6 +93,7 @@ Get-Content env/.env.playground.user |
 Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
 az containerapp up `
   --name $APP --resource-group $RG --location $LOC --environment $ENVNAME `
+  --subscription $SUB `
   --source . --target-port 3978 --ingress external `
   --env-vars `
     "PORT=3978" `
@@ -107,20 +118,20 @@ az containerapp up `
 # l'agente usa DefaultAzureCredential e la Container App autentica con la sua managed identity.
 if ($AOAI_ACC -and $AOAI_RG) {
     Write-Host "Abilito la managed identity della Container App e assegno 'Cognitive Services OpenAI User'..." -ForegroundColor Cyan
-    $miPrincipal = az containerapp identity assign -n $APP -g $RG --system-assigned --query principalId -o tsv
-    $aoaiScope = az cognitiveservices account show -n $AOAI_ACC -g $AOAI_RG --query id -o tsv
+    $miPrincipal = az containerapp identity assign -n $APP -g $RG --system-assigned --query principalId -o tsv @SubArg
+    $aoaiScope = az cognitiveservices account show -n $AOAI_ACC -g $AOAI_RG --query id -o tsv @SubArg
     az role assignment create --assignee-object-id $miPrincipal --assignee-principal-type ServicePrincipal `
-        --role "Cognitive Services OpenAI User" --scope $aoaiScope | Out-Null
+        --role "Cognitive Services OpenAI User" --scope $aoaiScope @SubArg | Out-Null
     # Riavvia la revisione cosi' l'identita' assegnata viene usata subito.
-    $rev = az containerapp show -n $APP -g $RG --query properties.latestRevisionName -o tsv
-    az containerapp revision restart -n $APP -g $RG --revision $rev 2>$null | Out-Null
+    $rev = az containerapp show -n $APP -g $RG --query properties.latestRevisionName -o tsv @SubArg
+    az containerapp revision restart -n $APP -g $RG --revision $rev @SubArg 2>$null | Out-Null
     Write-Host "Managed identity + ruolo assegnati su '$AOAI_ACC'." -ForegroundColor Green
 } else {
     Write-Host "AOAI_RG/AOAI_ACC non impostati: salto managed identity/ruolo (percorso a chiave)." -ForegroundColor Yellow
 }
 
 # --- 6. Output URL + prossimo passo ---
-$fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv
+$fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv @SubArg
 Write-Host ""
 Write-Host "Deploy completato." -ForegroundColor Green
 Write-Host "Messaging endpoint: https://$fqdn/api/messages"
