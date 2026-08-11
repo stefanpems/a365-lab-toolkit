@@ -103,6 +103,32 @@ command — in any terminal, for any ACA variant — reuses it silently**. Re-ru
 > expected so the new token carries that claim; it is cached afterwards. If your host blocks
 > WAM, the CLI falls back to **device code** (`https://login.microsoft.com/device` + a code).
 
+> **What to expect during the sequence (first run in a new tenant):**
+>
+> - **Several WAM sign-ins in a row**: if your Windows default account differs from the
+>   target-tenant admin (e.g. a corporate machine account vs. the demo tenant admin), the
+>   silent probe uses the Windows account, never matches, and **each internal Graph call
+>   re-prompts**. In our lab a single `a365 setup requirements` needed **~13 completed
+>   interactive sign-ins with 0 tokens served from cache** before reaching `0 failed`. Pick the
+>   **target-tenant admin** in every dialog; the sequence is finite (one per internal Graph
+>   call), not an infinite loop. Ignore the transient `User canceled authentication` lines
+>   caused by a hidden/late window.
+> - **How to avoid the storm (recommended):** run the whole `a365` procedure from a machine or
+>   user whose **default Windows (WAM) account is the target-tenant admin** — then the silent
+>   cache matches and later calls need no prompt. If that is not possible, either clear the
+>   a365 sign-in cache (`%LocalAppData%\Microsoft.Agents.A365.DevTools.Cli`) so the CLI stops
+>   requesting the mismatched account, or simply complete the finite sequence once. **Never run
+>   two `a365 setup …` at the same time** — concurrent processes each open their own WAM window
+>   and multiply the prompts.
+> - A separate **"Microsoft Graph Command Line Tools — Permissions requested"** dialog appears
+>   (it is the Graph PowerShell client the check uses). A **Global Administrator** must tick
+>   **"Consent on behalf of your organization"** and **Accept**.
+> - Immediately after, the CLI prints the app-registration changes it will apply to your
+>   `Agent 365 CLI` client (add redirect URIs `http://localhost:8400/` and the WAM broker URI,
+>   add the `wids` optional claim) and asks in the terminal:
+>   **`Do you want to proceed? (y/N):`** — answer **`y`**. Without the `wids` claim the CLI
+>   cannot detect the Global Administrator role and would skip the AllPrincipals OAuth2 grants.
+
 ## 1. Get the sources
 
 ```powershell
