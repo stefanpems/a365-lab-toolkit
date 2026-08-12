@@ -35,7 +35,7 @@ uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
 ```json
 {
   "tenantId": "<tenant>",
-  "clientAppId": "3c5eabff-e557-4da1-a216-700d0d1e5bf7",
+  "clientAppId": "<your tenant-owned 'Agent 365 CLI' public client app id>",
   "agentIdentityDisplayName": "AgentFrameworkS2SSample Identity",
   "agentBlueprintDisplayName": "AgentFrameworkS2SSample Blueprint",
   "agentDescription": "AgentFrameworkS2SSample",
@@ -44,6 +44,9 @@ uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
   "authMode": "s2s"
 }
 ```
+
+> `clientAppId` is **your tenant-owned public client** (see [setup-MAF-ACA-OBO.md](setup-MAF-ACA-OBO.md)
+> §0.1) — the lab id `3c5eabff-…` will not exist in a new tenant.
 
 Reset `a365.generated.config.json` to `{}` to force a **new** blueprint.
 

@@ -17,16 +17,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- Foundry project (reuse an existing project that already has a chat model) ------------
-# Default = the same Foundry project used by the OBO declarative agent (it already has a
-# gpt-4.1 deployment and the required RBAC). A prompt agent is just a definition, so multiple
-# agents can coexist in one project; the AGENT_NAME differentiates them.
-PROJECT_ENDPOINT: str = os.environ.get(
-    "FOUNDRY_PROJECT_ENDPOINT",
-    "https://cog-z2qo7tuwnjouk.services.ai.azure.com/api/projects/agent365-obo-agentframeworkfh-py",
-)
+# --- Foundry project (must be YOUR project that has a chat model deployment) --------------
+# Set FOUNDRY_PROJECT_ENDPOINT in .env (see .env.template). No default is provided on purpose:
+# a lab-specific default would silently target the wrong tenant/project. A prompt agent is just
+# a definition, so multiple agents (OBO + S2S) can coexist in one project; AGENT_NAME differs.
+PROJECT_ENDPOINT: str = os.environ.get("FOUNDRY_PROJECT_ENDPOINT", "")
 MODEL: str = os.environ.get("FOUNDRY_MODEL_NAME", "gpt-4.1")
 AGENT_NAME: str = os.environ.get("AGENT_NAME", "agentframeworkFD-S2S-agent")
+
+if not PROJECT_ENDPOINT:
+    raise ValueError(
+        "FOUNDRY_PROJECT_ENDPOINT is required. Set it in foundry-declarative/s2s/.env "
+        "(e.g. https://<account>.services.ai.azure.com/api/projects/<project>)."
+    )
 
 # --- Instructions (own-identity, conversational; no user data / no mailbox) ---------------
 AGENT_PROMPT: str = """You are a helpful assistant that acts with your OWN application
