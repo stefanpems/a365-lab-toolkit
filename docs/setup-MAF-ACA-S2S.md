@@ -92,27 +92,43 @@ The CLI can create the blueprint/identity/registration but **still finish with "
 completed — action required before proceeding"**. Two steps commonly do not complete
 automatically:
 
-1. **Delegated admin consent "not detected".** The browser opens the *"Allow agents created
-   from this blueprint to access data?"* page, but after **Allow** it may redirect to
-   **entra.microsoft.com** showing **"Try that again using a different browser — We couldn't
-   connect to that service, likely because of settings put in place by your IT team."** That
-   is **Conditional Access** blocking your default browser, so the CLI reports *"Consent was
-   not detected"* and the subsequent `oauth2PermissionGrants` calls fail with
-   `Request_ResourceNotFound`. **Fix:** open the **admin-consent URL printed in the Setup
-   Summary** (`https://login.microsoftonline.com/<tenant>/v2.0/adminconsent?client_id=<blueprint>&scope=…`)
-   in a **different browser** and Accept. Verify with `a365 query-entra inheritance`.
+1. **Delegated admin consent "not detected" — usually a *cosmetic* error, the consent IS
+   granted.** The browser opens the *"Allow agents created from this blueprint to access
+   data?"* page; after **Allow** it redirects to **entra.microsoft.com/TokenAuthorize** which
+   often shows **"Try that again using a different browser — We couldn't connect to that
+   service, likely because of settings put in place by your IT team."** This is **Conditional
+   Access** blocking the *redirect target* (`entra.microsoft.com`), **not** the consent itself:
+   the redirect URL contains **`admin_consent=True`**, i.e. **the grant was already recorded
+   when you clicked Allow**. The CLI only reports *"Consent was not detected"* because it never
+   received the redirect back. **Do NOT keep retrying in different browsers** — instead
+   **verify** the grants directly (run as a target-tenant admin; remember `az ad`/Graph ignore
+   `--subscription`, so re-pin and re-check `az ad signed-in-user`):
+
+   ```powershell
+   $blueprintSpId = '<blueprint service principal id>'   # printed by a365 setup
+   az rest --method GET --uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?`$filter=clientId eq '$blueprintSpId'" `
+     --query "value[].{resourceId:resourceId, consentType:consentType, scope:scope}" -o json
+   ```
+
+   If you see `AllPrincipals` grants for Microsoft Graph (Mail/Chat/Sites/Files/Channel),
+   Agent 365 Tools (`McpServers.Mail.All`), Messaging Bot API (`AgentData.ReadWrite`),
+   Observability (`Agent365.Observability.OtelWrite`) and Power Platform — **consent is done**;
+   ignore the browser error. (Only if the grants are genuinely missing, open the admin-consent
+   URL from the Summary in a browser that is NOT blocked by Conditional Access.)
 
 2. **S2S Observability app-role not assigned.** `Assigning S2S app roles…` fails with
    `Request_ResourceNotFound` (the just-created SP has not propagated / needs
-   *Application Administrator*). The Summary prints the exact remediation — run it as a
-   tenant admin:
+   *Application Administrator*). The Summary prints a `Connect-MgGraph` remediation, but the
+   fastest fix is a single `az rest` call as a tenant admin (no Graph PowerShell module needed):
 
    ```powershell
-   Connect-MgGraph -TenantId <tenant> -Scopes 'AppRoleAssignment.ReadWrite.All','Application.Read.All' -UseDeviceCode
-   $agentSpId = '<agent identity SP id>'                         # from the Summary
-   $obs   = Get-MgServicePrincipal -Filter "appId eq '9b975845-388f-4429-889e-eab1ef63949c'"
-   $roleId = ($obs.AppRoles | Where-Object { $_.Value -eq 'Agent365.Observability.OtelWrite' }).Id
-   New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $agentSpId -PrincipalId $agentSpId -ResourceId $obs.Id -AppRoleId $roleId
+   $agentSp = '<agent identity SP id>'                    # printed by a365 setup
+   $obsSp   = az ad sp show --id '9b975845-388f-4429-889e-eab1ef63949c' --query id -o tsv   # Observability API SP
+   $roleId  = az rest --method GET --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$obsSp" --query "appRoles[?value=='Agent365.Observability.OtelWrite'].id | [0]" -o tsv
+   $body = @{ principalId = $agentSp; resourceId = $obsSp; appRoleId = $roleId } | ConvertTo-Json
+   $tmp = New-TemporaryFile; $body | Set-Content $tmp -Encoding utf8
+   az rest --method POST --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$agentSp/appRoleAssignments" --headers "Content-Type=application/json" --body "@$tmp"
+   Remove-Item $tmp
    ```
 
 > **These two are not blocking for the ACA-S2S `/chat` web-UI test.** A pure S2S agent replies
@@ -134,7 +150,33 @@ The Summary correctly lists it as **"Messaging endpoint deferred"**.
 
 ## 4. Deploy to Azure Container Apps (app-only env vars)
 
-Use `deploy-aca-S2S.ps1`. The container env vars **omit** the agentic auth block; keep only
+> **Prerequisite — create `aca/s2s/env/.env.playground.user`** (gitignored) with the Azure
+> OpenAI config **before** deploying; `deploy-aca-S2S.ps1` reads it for the LLM env vars. Same
+> shape as the OBO agent (leave the key **empty** for Entra ID auth):
+>
+> ```
+> AZURE_OPENAI_ENDPOINT=https://<your-aoai>.openai.azure.com/
+> AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4.1-mini
+> AZURE_OPENAI_API_VERSION=2024-12-01-preview
+> SECRET_AZURE_OPENAI_API_KEY=
+> ```
+>
+> Missing this file makes the deploy fail at `Get-Content env/.env.playground.user` (*"Cannot
+> find path …"*). Note this is **separate** from the `aca/s2s/.env` that `a365 setup` writes.
+
+> **`az acr build` can crash the deploy with a cp1252 `UnicodeEncodeError`** (colorama log
+> stream on Windows). `deploy-aca-S2S.ps1` builds with **`--no-logs`** to avoid it (the build
+> still runs server-side). If you build manually, add `--no-logs` too.
+
+Use `deploy-aca-S2S.ps1` (pass the target subscription + Azure OpenAI resource for the
+managed-identity role, like the OBO deploy; the blueprint secret is requested interactively):
+
+```powershell
+cd aca/s2s
+.\deploy-aca-S2S.ps1 -Subscription '<TARGET_SUB_ID>' -AoaiRg '<AOAI_RG>' -AoaiAcc '<AOAI_ACCOUNT>'
+```
+
+The container env vars **omit** the agentic auth block; keep only
 the service connection (the blueprint's app-only credentials):
 
 ```

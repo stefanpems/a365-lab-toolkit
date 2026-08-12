@@ -87,7 +87,10 @@ if (-not $acrName) {
     az acr create -n $acrName -g $RG --sku Basic --admin-enabled true @SubArg | Out-Null
 }
 Write-Host "Building image '$IMAGE' via ACR '$acrName'..." -ForegroundColor Cyan
-az acr build -r $acrName -t $IMAGE . @SubArg | Out-Null
+# --no-logs: lo streaming dei log di 'az acr build' va in crash su Windows con
+# UnicodeEncodeError (colorama/cp1252) e puo' interrompere lo script. La build gira
+# comunque server-side; senza --logs non si rompe.
+az acr build -r $acrName -t $IMAGE --no-logs . @SubArg | Out-Null
 
 $acrServer = az acr show -n $acrName -g $RG --query loginServer -o tsv @SubArg
 $acrUser   = az acr credential show -n $acrName -g $RG --query username -o tsv @SubArg
@@ -101,7 +104,12 @@ $tenantId = az account show --query tenantId -o tsv @SubArg
 if (-not $ClientSecret) { $ClientSecret = Read-Host "Paste the CLEARTEXT blueprint client secret (a365 setup blueprint --show-secret)" }
 
 $m = @{}
-Get-Content env/.env.playground.user |
+$llmEnv = 'env/.env.playground.user'
+if (-not (Test-Path $llmEnv)) {
+    Write-Error "Manca '$llmEnv': crealo con la config Azure OpenAI (AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_API_VERSION e SECRET_AZURE_OPENAI_API_KEY vuoto se usi Entra ID). Vedi env/.env.playground.user dell'agente OBO come riferimento."
+    exit 1
+}
+Get-Content $llmEnv |
     Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } |
     ForEach-Object { $k, $v = $_ -split '=', 2; $m[$k.Trim()] = $v.Trim() }
 
