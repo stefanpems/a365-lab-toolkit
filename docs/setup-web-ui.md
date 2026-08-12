@@ -260,6 +260,26 @@ Open the SWA URL, click **Sign in** (redirect flow), and exercise each tab:
 - **ACA S2S / FH S2S** — a generic prompt returns an LLM answer with the agent's **own**
   identity (no user impersonation).
 
+> **First use of the ACA S2S tab — a one-time incremental consent is EXPECTED.** The SPA
+> requests a token for `api://<s2s-app-id>/access_agent_as_user`, so on the first call Entra
+> shows a **two-app** consent (even though you admin-consented the SPA earlier — the second app
+> is the blueprint API itself):
+> 1. **"Permissions requested (1 of 2 apps)"** — *agentframework-ui-spa* → *"Access agent on
+>    behalf of user (AgentFrameworkS2SSample Blueprint)"* → click **Next**.
+> 2. **"Permissions requested (2 of 2 apps)"** — *AgentFrameworkS2SSample Blueprint* (shown as
+>    **unverified** — normal, it is your own app) → as an admin tick **"Consent on behalf of
+>    your organization"** → **Accept**.
+>
+> After this once, subsequent calls do not prompt. If the redirect lands on a Conditional-Access
+> *"Try that again using a different browser"* page, the consent was still recorded (see the
+> ACA-S2S guide §3.1).
+
+> **The agent answers in the language of your prompt.** This is normal LLM behavior: e.g.
+> typing the Scandinavian greeting `Hej!` yields a Swedish reply
+> (*"Hej! Hur kan jag hjälpa dig idag?"*). Write in English/Italian to get English/Italian back.
+> A successful reply here confirms the S2S agent works end-to-end (LLM via its own managed
+> identity).
+
 Multi-user note: the SPA was validated with several non-admin users side by side. Foundry
 sessions are per-user (`agent_session_id`) and a single client-side retry handles transient
 gateway 5xx.
