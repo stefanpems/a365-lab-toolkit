@@ -132,10 +132,57 @@ $tok = az staticwebapp secrets list --name agentframework-ui -g agentframework-u
 npx -y @azure/static-web-apps-cli deploy "." --deployment-token $tok --env production
 ```
 
+> **Region:** SWA **Free** is only offered in a few regions and some reject new customers
+> (`westeurope` returned *"region is currently not accepting new customers"* in the lab). Use
+> **`eastus2`** (validated) or another allowed region — it is independent of where the ACA
+> agents run.
+
+> **If `npx @azure/static-web-apps-cli deploy` fails** with *"Deployment failed with exit
+> code 1 / The deployment binary exited with code 1"* and no further detail, invoke the
+> downloaded uploader **directly** (this succeeds where the wrapper silently fails):
+> ```powershell
+> $c = "$env:USERPROFILE\.swa\deploy\<hash>\StaticSitesClient.exe"   # path printed by the CLI
+> $tok = az staticwebapp secrets list -n agentframework-ui -g agentframework-ui --query properties.apiKey -o tsv
+> & $c upload --app "." --apiToken $tok --skipAppBuild true
+> ```
+> It prints `Deployment Complete :)` and the site URL.
+
 After the first deploy, add the SWA host (`https://<swa-host>`) as a **SPA redirect URI** on
 the app registration (step 2) if you didn't already.
 
-> Editing local files does **not** update the live site — you must **redeploy** each time.
+> **Editing local files does **not** update the live site — you must **redeploy** each time.**
+
+### 6a. Enable CORS on the ACA agents (`UI_ALLOWED_ORIGINS`) — required
+
+The ACA `/chat` endpoint only emits `Access-Control-Allow-Origin` for origins listed in the
+container env var **`UI_ALLOWED_ORIGINS`** (comma-separated; empty by default — so the browser
+**blocks** the cross-origin `POST` and the tab silently fails). The SWA host is known only
+**after** the SWA is created, so this is a **post-deploy** step on each ACA agent you expose:
+
+```powershell
+az containerapp update -n agentframework-obo-sample -g agentframework-OBO-rg-pl `
+  --subscription <TARGET_SUB_ID> --set-env-vars "UI_ALLOWED_ORIGINS=https://<swa-host>"
+```
+
+Verify the preflight returns the header (expect HTTP 204 with `Access-Control-Allow-Origin`):
+
+```powershell
+Invoke-WebRequest -Method Options -UseBasicParsing `
+  -Uri "https://<obo-fqdn>/chat" `
+  -Headers @{ Origin="https://<swa-host>"; 'Access-Control-Request-Method'='POST' } |
+  Select-Object -ExpandProperty Headers
+```
+
+> **Shared `az` context / parallel sessions — `az ad` ignores `--subscription`.** All the
+> app-registration steps (`az ad app ...`, `az ad sp ...`, `az ad app permission admin-consent`,
+> `az rest` → Graph) act as the **globally active** `az` account, **not** the one implied by
+> `--subscription`. If another shell (or a parallel automation) runs `az account set`, your
+> Graph calls can silently execute against the **wrong tenant** (e.g. creating the SPA app
+> registration in a corporate tenant, or failing admin-consent with *"can only be performed by
+> an administrator"*). **Before every `az ad`/Graph command**, run
+> `az account set --subscription <TARGET>` **and verify**
+> `az ad signed-in-user show --query userPrincipalName -o tsv` is the **target tenant admin**;
+> abort if it isn't.
 
 ## 7. Verify
 
