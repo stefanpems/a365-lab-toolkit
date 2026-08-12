@@ -55,6 +55,11 @@ azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME gpt-4.1
 azd deploy
 ```
 
+- **`azd provision` asks *"Select location"*** here too (it sets `AZURE_LOCATION`). As in
+  MAF-FH-OBO §4, pick a region that offers **`gpt-4.1` GlobalStandard** — **East US 2
+  (`eastus2`)** works (validated). You can also pre-set it non-interactively with
+  `azd env set AZURE_LOCATION eastus2` before provisioning.
+
 Responses is generated with `version: 2.0.0` correctly (unlike Invocations). The output gives
 the **Responses endpoint** (`.../protocols/openai/responses?api-version=v1`).
 
