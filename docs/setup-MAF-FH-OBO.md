@@ -117,6 +117,24 @@ azd deploy
 Each `azd deploy` creates a new **agent version**; traffic routes to the latest. The output
 gives the Playground URL and the **Invocations endpoint**.
 
+> **`azd deploy` → 403 Forbidden `…/AIServices/agents/read` (UserError).** Foundry agent
+> create/read/write are **data-plane** actions; being subscription **Owner** is **not** enough
+> (Owner grants control-plane `*` Actions, not the agent **DataActions**). Grant the **deploying
+> identity** the **`Cognitive Services User`** role (dataActions `Microsoft.CognitiveServices/*`,
+> which covers `AIServices/agents/*`) on the Foundry **account**, then re-run `azd deploy`
+> (RBAC takes ~1–2 min to propagate):
+>
+> ```powershell
+> $acct = az cognitiveservices account show -g <RG> -n <ACCOUNT> --query id -o tsv
+> $me   = az ad signed-in-user show --query id -o tsv
+> az role assignment create --assignee-object-id $me --assignee-principal-type User `
+>   --role "Cognitive Services User" --scope $acct
+> ```
+>
+> (In this tenant the classic *Azure AI User / Project Manager* roles are absent; `Cognitive
+> Services User`'s wildcard is the reliable grant. The **web-UI users** who *call* the agent
+> need the same role — or the narrower **`Foundry Agent Consumer`** — on the account.)
+
 ## 5. Observability
 
 Foundry auto-injects `APPLICATIONINSIGHTS_CONNECTION_STRING`. For the A365 exporter, assign
