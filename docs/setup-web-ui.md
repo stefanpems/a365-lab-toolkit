@@ -226,6 +226,32 @@ Invoke-WebRequest -Method Options -UseBasicParsing `
 > `az ad signed-in-user show --query userPrincipalName -o tsv` is the **target tenant admin**;
 > abort if it isn't.
 
+### 6b. S2S only — `UI_AUDIENCE` + the `access_agent_as_user` scope
+
+The **ACA S2S** agent's `/chat` validates the caller's Entra token **audience** against the
+container env var **`UI_AUDIENCE`** (= the **S2S blueprint app id**). The SPA acquires a token
+for `api://<s2s-app-id>/access_agent_as_user`, so its `aud` is the blueprint app id; set:
+
+```powershell
+az containerapp update -n agentframework-s2s-sample -g agentframework-S2S-rg-pl `
+  --subscription <TARGET_SUB_ID> --set-env-vars "UI_AUDIENCE=<s2s-blueprint-app-id>"
+```
+
+For this to work the **blueprint app must expose** the `access_agent_as_user` delegated scope
+under identifier URI `api://<s2s-app-id>` (recent `a365 setup all --authmode s2s` adds it —
+verify with `az ad app show --id <s2s-app-id> --query "api.oauth2PermissionScopes[].value"`),
+and the **SPA must be granted + admin-consented** for it:
+
+```powershell
+$scopeId = az ad app show --id <s2s-app-id> --query "api.oauth2PermissionScopes[?value=='access_agent_as_user'].id | [0]" -o tsv
+az ad app permission add --id <SPA_APPID> --api <s2s-app-id> --api-permissions "$scopeId=Scope"
+az ad app permission admin-consent --id <SPA_APPID>
+```
+
+> **The OBO agent does NOT need `UI_AUDIENCE`.** Its SPA token targets the **Mail** resource
+> (`ea9ffc3e-…/McpServers.Mail.All`), so its `aud` is the Mail MCP, not the agent — leave
+> `UI_AUDIENCE` unset for OBO (the `/chat` still validates signature, issuer and expiry).
+
 ## 7. Verify
 
 Open the SWA URL, click **Sign in** (redirect flow), and exercise each tab:
