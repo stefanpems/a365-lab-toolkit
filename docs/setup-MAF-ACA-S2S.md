@@ -56,12 +56,81 @@ Reset `a365.generated.config.json` to `{}` to force a **new** blueprint.
 a365 setup all --authmode s2s --m365
 ```
 
+> ### ⚠️ Expect a very long manual authentication sequence
+> On a machine where the **Windows default (WAM) account is NOT the tenant admin** you are
+> onboarding (e.g. a corporate laptop signed in as `you@corp.com` while the target admin is
+> `admin@contoso.onmicrosoft.com`), `a365 setup all` prints **`Authenticating via Windows
+> Account Manager…` before almost every directory call and each one pops an interactive
+> sign-in**. In this lab run the single `a365 setup all --authmode s2s --m365` triggered
+> **~12–13 WAM authentications** (matching the ~13 seen for the OBO `a365 setup requirements`)
+> **plus 1 interactive browser admin-consent** — one per phase below:
+>
+> 1. initial context, 2. requirements check, 3. "verifying consent for blueprint operations",
+> 4–6. creating the blueprint application (Graph sign-in → authenticated → current user),
+> 7. creating the blueprint service principal, 8. creating the blueprint client secret,
+> 9. creating the agent identity, 10. registering the agent — **plus** the delegated
+> **admin-consent page** in the browser.
+>
+> **How to avoid the storm:** run on a machine/profile whose **default Windows/WAM account IS
+> the target-tenant admin** (then MSAL silently reuses the cached token and the prompts
+> collapse to one or two). Otherwise, just power through — it is finite, not a loop. **Never**
+> launch a second `a365 setup …` in parallel (each opens its own WAM window → unmanageable).
+
 This creates the blueprint, configures inheritable permissions (Graph, Agent 365 Tools,
-Messaging Bot API, Observability, Power Platform), assigns the **application app-role**
-`Agent365.Observability.OtelWrite` (answer `y` to the `[y/N]` prompt), creates the agent
-identity, and registers the agent. Record the blueprint app id, SP id, and client secret.
+Messaging Bot API, Observability, Power Platform), then prompts twice with `[y/N]` (answer
+**`y`** to both): once to **assign the application app-role** `Agent365.Observability.OtelWrite`,
+and once to **add the delegated permissions** to the blueprint. It then creates the agent
+identity and registers the agent. **Record the printed Blueprint ID, service-principal ID,
+agent-identity ID and the client secret** (shown once — recover later with
+`a365 setup blueprint --show-secret`).
 
 > The Frontier prerequisite check may warn — **irrelevant for S2S**.
+
+### 3.1 Two failures you will likely hit (and how to fix them)
+
+The CLI can create the blueprint/identity/registration but **still finish with "Setup
+completed — action required before proceeding"**. Two steps commonly do not complete
+automatically:
+
+1. **Delegated admin consent "not detected".** The browser opens the *"Allow agents created
+   from this blueprint to access data?"* page, but after **Allow** it may redirect to
+   **entra.microsoft.com** showing **"Try that again using a different browser — We couldn't
+   connect to that service, likely because of settings put in place by your IT team."** That
+   is **Conditional Access** blocking your default browser, so the CLI reports *"Consent was
+   not detected"* and the subsequent `oauth2PermissionGrants` calls fail with
+   `Request_ResourceNotFound`. **Fix:** open the **admin-consent URL printed in the Setup
+   Summary** (`https://login.microsoftonline.com/<tenant>/v2.0/adminconsent?client_id=<blueprint>&scope=…`)
+   in a **different browser** and Accept. Verify with `a365 query-entra inheritance`.
+
+2. **S2S Observability app-role not assigned.** `Assigning S2S app roles…` fails with
+   `Request_ResourceNotFound` (the just-created SP has not propagated / needs
+   *Application Administrator*). The Summary prints the exact remediation — run it as a
+   tenant admin:
+
+   ```powershell
+   Connect-MgGraph -TenantId <tenant> -Scopes 'AppRoleAssignment.ReadWrite.All','Application.Read.All' -UseDeviceCode
+   $agentSpId = '<agent identity SP id>'                         # from the Summary
+   $obs   = Get-MgServicePrincipal -Filter "appId eq '9b975845-388f-4429-889e-eab1ef63949c'"
+   $roleId = ($obs.AppRoles | Where-Object { $_.Value -eq 'Agent365.Observability.OtelWrite' }).Id
+   New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $agentSpId -PrincipalId $agentSpId -ResourceId $obs.Id -AppRoleId $roleId
+   ```
+
+> **These two are not blocking for the ACA-S2S `/chat` web-UI test.** A pure S2S agent replies
+> with the LLM using its **own** identity (Azure OpenAI via managed identity) and does **not**
+> use the delegated Mail permissions or the Observability telemetry, so the container runs and
+> answers even before you complete them. Complete them anyway for a correct, telemetry-enabled
+> blueprint.
+
+### 3.2 Messaging endpoint — leave it blank
+
+At *"Messaging endpoint URL:"* press **Enter** (leave blank). It is a **post-deploy** artifact:
+register it after §4 with
+`a365 setup blueprint --endpoint-only --messaging-endpoint "https://<fqdn>/api/messages"`.
+The Summary correctly lists it as **"Messaging endpoint deferred"**.
+
+`a365 setup all` writes `aca/s2s/.env` and `aca/s2s/a365.generated.config.json` (both
+**gitignored**) — these are what `deploy-aca-S2S.ps1` reads in §4.
+
 
 ## 4. Deploy to Azure Container Apps (app-only env vars)
 
