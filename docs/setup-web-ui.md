@@ -260,19 +260,24 @@ Open the SWA URL, click **Sign in** (redirect flow), and exercise each tab:
 - **ACA S2S / FH S2S** — a generic prompt returns an LLM answer with the agent's **own**
   identity (no user impersonation).
 
-> **First use of the ACA S2S tab — a one-time incremental consent is EXPECTED.** The SPA
-> requests a token for `api://<s2s-app-id>/access_agent_as_user`, so on the first call Entra
+> **First use of a newly-added agent tab — a one-time incremental consent is EXPECTED.** This
+> happens for the **ACA S2S** tab and for every **Foundry** tab (Hosted / Declarative) the first
+> time a user exercises it, because the SPA now requests a **new scope** not yet consented for
+> that user (`api://<s2s-app-id>/access_agent_as_user` for S2S; `https://ai.azure.com/.default`
+> — Azure ML `user_impersonation` — for the Foundry agents; plus the Mail scope for OBO). Entra
 > shows a **two-app** consent (even though you admin-consented the SPA earlier — the second app
-> is the blueprint API itself):
-> 1. **"Permissions requested (1 of 2 apps)"** — *agentframework-ui-spa* → *"Access agent on
->    behalf of user (AgentFrameworkS2SSample Blueprint)"* → click **Next**.
-> 2. **"Permissions requested (2 of 2 apps)"** — *AgentFrameworkS2SSample Blueprint* (shown as
+> is the downstream API/blueprint):
+> 1. **"Permissions requested (1 of 2 apps)"** — *agentframework-ui-spa* (lists the aggregated
+>    new scopes: *View basic profile*, *Maintain access*, *Mail MCP Server All*, *Access agent
+>    on behalf of user*, *user_impersonation*) → click **Next**.
+> 2. **"Permissions requested (2 of 2 apps)"** — the downstream app/blueprint (shown as
 >    **unverified** — normal, it is your own app) → as an admin tick **"Consent on behalf of
 >    your organization"** → **Accept**.
 >
 > After this once, subsequent calls do not prompt. If the redirect lands on a Conditional-Access
 > *"Try that again using a different browser"* page, the consent was still recorded (see the
-> ACA-S2S guide §3.1).
+> ACA-S2S guide §3.1). The **Foundry (Hosted/Declarative) tabs** trigger the same flow on first
+> use — accept it once.
 
 > **The agent answers in the language of your prompt.** This is normal LLM behavior: e.g.
 > typing the Scandinavian greeting `Hej!` yields a Swedish reply
