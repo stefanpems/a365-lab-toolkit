@@ -115,7 +115,9 @@ azd deploy
 ```
 
 Each `azd deploy` creates a new **agent version**; traffic routes to the latest. The output
-gives the Playground URL and the **Invocations endpoint**.
+gives the Playground URL and the **Invocations endpoint** (shape:
+`https://<account>.services.ai.azure.com/api/projects/<project>/agents/<agent-name>/endpoint/protocols/invocations?api-version=v1`)
+— copy it into the SPA `config.js` `obo-fh` entry (see [setup-web-ui.md](setup-web-ui.md) §5).
 
 > **`azd deploy` → 403 Forbidden `…/AIServices/agents/read` (UserError).** Foundry agent
 > create/read/write are **data-plane** actions; being subscription **Owner** is **not** enough
