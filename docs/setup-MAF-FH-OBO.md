@@ -71,15 +71,33 @@ python-dotenv
 
 ## 4. Init, provision, deploy
 
+First authenticate `azd` to the **target tenant** and pin the subscription/tenant (separate from
+`az login`; see §0):
+
+```powershell
+azd auth login --tenant-id <YOUR_ENTRA_TENANT_ID>
+```
+
 ```powershell
 azd ai agent init --src . --agent-name agentframeworkFH-OBO-agent `
   --deploy-mode code --runtime python_3_13 --entry-point main.py --protocol invocations
+azd env set AZURE_SUBSCRIPTION_ID <YOUR_SUBSCRIPTION_ID>
+azd env set AZURE_TENANT_ID <YOUR_ENTRA_TENANT_ID>
 azd env set AZURE_RESOURCE_GROUP agentframeworkFH-OBO-rg
 ```
 
+- **Interactive survey — two prompts** (the `azd ai agent` extension, e.g. `v1.0.0-beta.5`,
+  prints a **FOUNDRY** banner):
+  1. *"How do you want to initialize your agent?"* → **`Use the code in the current directory`**
+     (already highlighted → **Enter**). Do **not** pick *"Start new from a template"* — that
+     scaffolds an empty project and discards the sample's `main.py` / `foundry_agent.py`.
+  2. *"How should dependencies be resolved?"* → **`Remote build (dependencies installed on
+     server during deployment)`** (matches `dependencyResolution: remote_build` in `azure.yaml`).
+  - **Skip both prompts** by appending **`--no-prompt`** to the `init` command (it then uses the
+    flags you passed + those defaults). It is a beta extension, so if `--no-prompt` misbehaves,
+    just run without it and press **Enter** through the two prompts. Type to filter, arrows to
+    move; for a fixed project use `--project-id <existing>`.
 - **Fix `azure.yaml` protocol to `version: 2.0.0`** — init may generate a stale `1.0.0`.
-- In the interactive survey, type filter text (`Create`, `Skip`) + Enter; empty send = accept
-  default. For automation use `--no-prompt --project-id <existing>`.
 
 ```powershell
 azd provision
