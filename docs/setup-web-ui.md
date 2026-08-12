@@ -38,39 +38,81 @@ cd agent365-agentframework-samples/ui
 
 ## 2. Create the SPA app registration
 
-Register a **single-page application** (SPA platform) in Microsoft Entra and add its
-**redirect URI** = the SPA origin (e.g. `https://<swa-host>` and, for local testing,
-`http://localhost:<port>`). Record its **app id** → this is `config.js` → `msal.clientId`.
+Register a **single-page application** (SPA platform) in Microsoft Entra whose **redirect URIs**
+are the SPA origin(s) — the SWA host (created in §6) and, for local testing, `http://localhost:3000`.
+Record its **app id** → this is `config.js` → `msal.clientId`.
+
+> **Do the app-registration steps in the TARGET tenant.** `az ad ...` / `az rest`→Graph ignore
+> `--subscription` and act as the **globally active** `az` account. Before each one run
+> `az account set --subscription <TARGET_SUB>` and confirm
+> `az ad signed-in-user show --query userPrincipalName -o tsv` is the **target-tenant admin**
+> (a parallel shell doing `az account set` can silently flip you to the wrong tenant).
 
 ```powershell
-$spa = az ad app create --display-name "agentframework-ui-spa" `
-  --query appId -o tsv
-# Add the SPA redirect URI(s) in the portal (Authentication → SPA), or via Graph.
+# 1) Create the app (or patch it if it already exists) and its service principal
+$appId = az ad app create --display-name "agentframework-ui-spa" `
+  --sign-in-audience AzureADMyOrg --query appId -o tsv
+az ad sp create --id $appId | Out-Null
+$objId = az ad app show --id $appId --query id -o tsv
+
+# 2) Set the SPA redirect URIs. Use a FILE for the body: an inline JSON string is broken by
+#    az.cmd on Windows ("Unable to read JSON request payload").
+$swaHost = "<swa-host>"   # e.g. victorious-bush-xxxx.azurestaticapps.net (known after §6)
+$tmp = Join-Path $env:TEMP 'spa_patch.json'
+@{ spa = @{ redirectUris = @("https://$swaHost", "http://localhost:3000") } } |
+  ConvertTo-Json -Depth 5 | Set-Content $tmp -Encoding utf8
+az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/$objId" `
+  --headers "Content-Type=application/json" --body "@$tmp"
+Remove-Item $tmp
 ```
+
+> The SWA host is known only **after** you create the Static Web App (§6). Either create the SWA
+> first and set both redirect URIs here, or add the SWA host as a second redirect URI after §6.
 
 ## 3. Grant & consent the delegated permissions (AllPrincipals)
 
 The SPA needs delegated permissions, **admin-consented tenant-wide** so non-admin users don't
-hit "Need admin approval". Consent all of these:
+hit "Need admin approval". Which ones depend on the agents you expose:
 
-| API | Permission | Used for |
+| API | Permission (scope id) | Used for |
 | --- | --- | --- |
-| Microsoft Graph | `openid` `profile` `offline_access` | sign-in (grant **AllPrincipals** explicitly) |
-| Azure Machine Learning Services (`18a66f5f-dbdf-4c17-9dd7-1634712a9cbe`) | `user_impersonation` (`1a7925b5-f871-417a-9b8b-303f9f29fa10`) | `https://ai.azure.com/.default` for Foundry agents |
-| Agent 365 Tools (`ea9ffc3e-8a23-4a7d-836d-234d7c7565c1`) | `McpServers.Mail.All` | OBO Mail token |
-| ACA OBO blueprint | `McpServers.Mail.All` (via the ACA OBO scope) | ACA OBO `/chat` |
-| ACA S2S blueprint | `api://<s2s-app-id>/access_agent_as_user` | ACA S2S `/chat` |
+| Microsoft Graph (`00000003-0000-0000-c000-000000000000`) | `openid` (`37f7f235-527c-4136-accd-4a02d197296e`) `profile` (`14dad69e-099b-42c9-810b-d002981feec1`) `offline_access` (`7427e0e9-2fba-42fe-b0c0-848c9e6a8182`) | sign-in |
+| Azure Machine Learning Services (`18a66f5f-dbdf-4c17-9dd7-1634712a9cbe`) | `user_impersonation` (`1a7925b5-f871-417a-9b8b-303f9f29fa10`) | `https://ai.azure.com/.default` for **Foundry** agents |
+| Agent 365 Tools (`ea9ffc3e-8a23-4a7d-836d-234d7c7565c1`) | `McpServers.Mail.All` (`be685e8e-277f-43ec-aff6-087fdca57ca3`) | **OBO** Mail token (ACA + Foundry OBO) |
+| ACA S2S blueprint | `api://<s2s-app-id>/access_agent_as_user` | **ACA S2S** `/chat` |
+
+> **The resource service principals must exist in the tenant.** Agent 365 Tools
+> (`ea9ffc3e-…`) is created by `a365 setup` during agent onboarding; if
+> `az ad sp show --id ea9ffc3e-8a23-4a7d-836d-234d7c7565c1` returns nothing, run the OBO agent
+> setup first (or `az ad sp create --id ea9ffc3e-8a23-4a7d-836d-234d7c7565c1` as a tenant admin).
+> The scope ids above are stable, but you can re-read one with
+> `az ad sp show --id <api> --query "oauth2PermissionScopes[?value=='<name>'].id" -o tsv`.
 
 ```powershell
-az ad app permission add --id <SPA_APPID> --api 18a66f5f-dbdf-4c17-9dd7-1634712a9cbe `
-  --api-permissions 1a7925b5-f871-417a-9b8b-303f9f29fa10=Scope
-az ad app permission admin-consent --id <SPA_APPID>
+$graph = "00000003-0000-0000-c000-000000000000"
+$tools = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
+# Sign-in (OIDC)
+az ad app permission add --id $appId --api $graph --api-permissions `
+  37f7f235-527c-4136-accd-4a02d197296e=Scope `
+  14dad69e-099b-42c9-810b-d002981feec1=Scope `
+  7427e0e9-2fba-42fe-b0c0-848c9e6a8182=Scope
+# OBO Mail (only if you expose an OBO agent)
+az ad app permission add --id $appId --api $tools --api-permissions `
+  be685e8e-277f-43ec-aff6-087fdca57ca3=Scope
+# ACA S2S (only if you expose the S2S agent) — use the S2S blueprint app id + its scope id:
+# az ad app permission add --id $appId --api <s2s-app-id> --api-permissions <access_agent_as_user-id>=Scope
+
+az ad app permission admin-consent --id $appId    # run as a TARGET-tenant admin
 ```
 
-> `az ad app permission admin-consent` grants the app's **configured** permissions
-> AllPrincipals, but the OIDC basics (`openid/profile/offline_access`) can remain admin-only.
-> With restricted user-consent this blocks non-admin login — fix it by creating an explicit
-> **AllPrincipals** `oauth2PermissionGrant` for Microsoft Graph `openid profile offline_access`.
+> If `admin-consent` fails with *"can only be performed by an administrator"* even though you
+> are one, your active `az` identity has flipped (see §2 warning) — re-pin with
+> `az account set --subscription <TARGET>` and re-verify `az ad signed-in-user show`.
+>
+> `admin-consent` grants the app's **configured** permissions AllPrincipals, but the OIDC basics
+> can remain admin-only under restricted user-consent — if non-admin login still shows
+> "Need admin approval", create an explicit **AllPrincipals** `oauth2PermissionGrant` for
+> Microsoft Graph `openid profile offline_access`.
 
 ## 4. Azure RBAC for the Foundry (FH) agents
 
