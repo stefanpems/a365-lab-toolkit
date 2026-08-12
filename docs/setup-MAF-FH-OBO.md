@@ -99,6 +99,11 @@ azd env set AZURE_RESOURCE_GROUP agentframeworkFH-OBO-rg
 azd provision
 ```
 
+- **`azd provision` asks *"Select location"*** (it sets `AZURE_LOCATION`). Pick a region that
+  offers **`gpt-4.1` GlobalStandard** — **East US 2 (`eastus2`)** works (validated). You can also
+  pre-set it non-interactively with `azd env set AZURE_LOCATION eastus2` before provisioning.
+  Provisioning the Foundry project + account + connections takes a few minutes.
+
 Deploy the model separately (the azd hosted-agent catalog may not offer gpt-4.1):
 
 ```powershell
