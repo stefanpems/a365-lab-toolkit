@@ -211,12 +211,20 @@ a365 publish --aiteammate
 > **Important:** a **Frontier `MICROSOFT_365_E7_NO_TEAMS`** license bundles the **`AGENT_365`
 > service plan** but the admin center does **not** accept E7 (No Teams) as an "Agent 365
 > license" for autopilot policy templates — selecting it (even when free) does **not** satisfy
-> the gate. You need an actual **Microsoft Agent 365** license SKU in the tenant. If it shows
-> **0 of 0**, none are provisioned — freeing/reassigning E7 will **not** help; obtain Agent 365
-> license units via the **Frontier preview program** / M365 admin center → **Billing** (the
-> *"Frontier Preview Program — enrollment cannot be verified"* warning at `a365 setup` is a
-> sign the entitlement may not be granted yet). The uploaded agent stays in **Registry /
-> "Not activated"** until a recognized Agent 365 license exists.
+> the gate. The **recognized** Agent 365 license is a distinct SKU shown as
+> **"Microsoft 365 Frontier for Autopilots (no Teams)"** (the red banner lists it under *"Agent
+> 365 Licenses in your tenant are:"*). If your tenant shows **0 of** that SKU, none are
+> provisioned — freeing/reassigning E7 will **not** help; obtain Agent 365 license units via the
+> **Frontier preview program** / M365 admin center → **Billing** (the *"Frontier Preview
+> Program — enrollment cannot be verified"* warning at `a365 setup` is a sign the entitlement may
+> not be granted yet).
+>
+> **Two-license requirement.** Because the Autopilot license is the **"(no Teams)"** variant,
+> selecting it alone raises *"The selected Agent 365 license doesn't include Microsoft Teams.
+> Select an additional license that provides Teams access to continue."* — you must **also**
+> select a Teams-providing license (**Microsoft Teams Enterprise**). With **both** *Frontier for
+> Autopilots (no Teams)* **and** *Teams Enterprise* checked, **Next** enables. The uploaded agent
+> stays in **Registry / "Not activated"** until a recognized Agent 365 license exists.
 
 ## 8. Create and license instances
 
