@@ -101,6 +101,16 @@ the admin center when the agent user is enabled.
 >   context: `az account set --subscription <TARGET_SUB>`, confirm
 >   `az account show --query tenantId` is the target, then
 >   `az ad sp create --id <resource-app-id>`.
+> - The **delegated admin consent** opens a browser (*"Allow agents created from this blueprint
+>   to access data?"*). After **Accept**, the `entra.microsoft.com/TokenAuthorize?admin_consent=True`
+>   redirect may show *"Try that again using a different browser"* — this is a **cosmetic
+>   Conditional-Access block on the redirect target**, not a consent failure (`admin_consent=True`
+>   means the grant went through, same as MAF-ACA-S2S §3.1). The CLI can't detect it and offers
+>   **`Add these permissions to the blueprint programmatically? [y/N]`**. That fallback may shell
+>   out to `az rest` (active az context), so on a flip-prone box answer **`N`** and instead
+>   **verify** the grants with a pinned/verified target context:
+>   `az rest --method GET --url "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?\$filter=clientId eq '<blueprint-sp-id>'"`;
+>   add any missing grant programmatically yourself (pinned).
 
 ## 4. Deploy to Azure Container Apps
 
