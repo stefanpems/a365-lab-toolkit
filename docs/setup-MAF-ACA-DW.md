@@ -115,6 +115,26 @@ the admin center when the agent user is enabled.
 >   The endpoint is a post-deploy artifact (you only know the FQDN after §4); register it in §5
 >   with `a365 setup blueprint --endpoint-only`.
 
+After `setup all` finishes with *"action required"*, the **Setup Summary** lists what to verify
+and finish. With the target context **pinned + verified** (`az account set --subscription
+<TARGET_SUB>`; confirm `az ad signed-in-user`), complete them:
+
+- **Delegated grants** — verify they landed (the browser consent usually succeeds despite the
+  cosmetic block): `az rest --method GET --url "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?\$filter=clientId eq '<blueprint-sp-id>'"`.
+  You should see Graph (Mail/Chat/Sites/Files/Channel), Power Platform (Connectivity), Messaging
+  Bot (AgentData), Observability (OtelWrite, delegated), and Agent 365 Tools (Mail) grants.
+- **Observability application app-role** (the "S2S app role" the summary flags) — assign it
+  (the in-line attempt can fail on SP propagation): POST to
+  `…/servicePrincipals/<blueprint-sp-id>/appRoleAssignments` with
+  `{"principalId":"<blueprint-sp-id>","resourceId":"<observability-sp-id>","appRoleId":"<OtelWrite-role-id>"}`.
+  On Windows, pass the JSON via `--body "@file.json"` (inline `--body '{...}'` fails with
+  *"Unable to read JSON request payload"*).
+- **`ext_UtilityInsights` SP** — the summary asks to `az ad sp create --id <appId>` and grant
+  `Tools.ListInvoke.All`. In a fresh **Frontier-preview** tenant this can fail with
+  **`NoBackingApplicationObject`** (the resource app isn't published/propagated in the tenant
+  yet). It only backs tool-metadata listing, so it is **non-blocking** for a basic teammate —
+  defer it and retry once the resource is available.
+
 ## 4. Deploy to Azure Container Apps
 
 Same code and Dockerfile as MAF-ACA-OBO. Use `deploy-aca-DW.ps1` (fixed region, **self-contained
