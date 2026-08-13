@@ -28,7 +28,8 @@ import os
 from typing import Optional
 
 import httpx
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from openai import AsyncAzureOpenAI
 
 from agent_framework import Agent, MCPStreamableHTTPTool
 from agent_framework.openai import OpenAIChatCompletionClient
@@ -137,11 +138,21 @@ class FoundryDigitalWorkerAgent(AgentInterface):
         exists within a turn (exchanged from the turn's Authorization). It is opened
         lazily on the first turn via :meth:`_ensure_mail_connected`.
         """
-        self._client = OpenAIChatCompletionClient(
+        # agent-framework 1.0.0's OpenAI clients do NOT convert an Entra ID `credential=`
+        # into an azure_ad_token_provider (that wiring only exists in newer builds), so
+        # passing `credential=` fails at runtime with "Missing credentials". Build
+        # AsyncAzureOpenAI directly with an azure_ad_token_provider (works on every version;
+        # the framework passes the provided client through as-is). The managed identity needs
+        # the "Cognitive Services OpenAI User" role on the Azure OpenAI account.
+        token_provider = get_bearer_token_provider(self._credential, AOAI_SCOPE)
+        azure_client = AsyncAzureOpenAI(
             azure_endpoint=self._endpoint,
-            credential=self._credential,
-            model=self._deployment,
+            azure_ad_token_provider=token_provider,
             api_version=self._api_version,
+        )
+        self._client = OpenAIChatCompletionClient(
+            model=self._deployment,
+            async_client=azure_client,
         )
 
         self._agent = Agent(

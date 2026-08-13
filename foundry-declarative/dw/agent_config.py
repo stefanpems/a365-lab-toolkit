@@ -23,12 +23,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Foundry project (reuse the existing project that has a gpt-4.1 model + RBAC) ----------
-PROJECT_ENDPOINT: str = os.environ.get(
-    "FOUNDRY_PROJECT_ENDPOINT",
-    "https://cog-z2qo7tuwnjouk.services.ai.azure.com/api/projects/agent365-obo-agentframeworkfh-py",
-)
+# Set FOUNDRY_PROJECT_ENDPOINT in .env (see .env.template). No default is provided on purpose:
+# a lab-specific default would silently target the wrong tenant/project.
+PROJECT_ENDPOINT: str = os.environ.get("FOUNDRY_PROJECT_ENDPOINT", "")
 MODEL: str = os.environ.get("FOUNDRY_MODEL_NAME", "gpt-4.1")
 AGENT_NAME: str = os.environ.get("AGENT_NAME", "agentframeworkFD-DW-agent")
+
+if not PROJECT_ENDPOINT:
+    raise ValueError(
+        "FOUNDRY_PROJECT_ENDPOINT is required. Set it in foundry-declarative/dw/.env "
+        "(e.g. https://<account>.services.ai.azure.com/api/projects/<project>)."
+    )
 
 # --- Azure resources used by the autopilot publish (Bot Service) --------------------------
 # The Bot Service must be created in the resource group that contains the Foundry resource.
