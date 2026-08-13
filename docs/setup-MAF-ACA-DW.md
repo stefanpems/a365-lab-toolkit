@@ -66,15 +66,24 @@ agent user is enabled.
 
 ## 4. Deploy to Azure Container Apps
 
-Same code and Dockerfile as MAF-ACA-OBO. Use `deploy-aca-DW.ps1` (fixed region, reuses the
-shared Log Analytics workspace, client secret via `-ClientSecret`). Container env vars are the
+Same code and Dockerfile as MAF-ACA-OBO. Use `deploy-aca-DW.ps1` (fixed region, **self-contained
+Log Analytics workspace**, client secret via `-ClientSecret`). Container env vars are the
 **agentic** set (identical to MAF-ACA-OBO step 6): `AUTH_HANDLER_NAME=AGENTIC` +
 `AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__*` +
 `CONNECTIONS__SERVICE_CONNECTION__*`.
 
 ```powershell
-.\deploy-aca-DW.ps1 -ClientSecret '<blueprint client secret (cleartext)>'
+.\deploy-aca-DW.ps1 -ClientSecret '<blueprint client secret (cleartext)>' `
+  -Subscription <TARGET_SUB> -AoaiRg <AOAI_RG> -AoaiAcc <AOAI_ACCOUNT>
 ```
+
+Like MAF-ACA-OBO, the script pins `--subscription` on every `az` call (parallel-session flip
+safe), passes the Azure OpenAI **key only if non-empty**, builds with `az acr build --no-logs`
+(avoids the cp1252 console crash), and — when `-AoaiRg`/`-AoaiAcc` are given — assigns the
+Container App **system-managed identity** the **`Cognitive Services OpenAI User`** role on the
+Azure OpenAI account (required when the subscription disables key auth → Entra ID). `agent.py`
+builds `AsyncAzureOpenAI` with an `azure_ad_token_provider` and pops an empty
+`AZURE_OPENAI_API_KEY` (same Entra ID fix as MAF-ACA-OBO).
 
 > Container App names must be **lowercase** (Azure constraint). Verify
 > `GET https://<fqdn>/api/health` → `200`.
