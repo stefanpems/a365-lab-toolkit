@@ -88,6 +88,20 @@ Consents encountered (grant as Global Admin): a Graph/Power-Platform admin conse
 Messaging-Bot/Observability/Power-Platform admin consent. A further approval happens later in
 the admin center when the agent user is enabled.
 
+> **Two transient snags on a fresh/multi-tenant setup:**
+> - The in-line **OtelWrite app-role assignment can fail** right after blueprint creation with
+>   *"Resource `<blueprint-sp-id>` does not exist …"* — the new blueprint **service principal
+>   hasn't propagated** yet. `setup all` continues and lists it under manual steps; re-assign it
+>   later (after propagation) with
+>   `az rest --method POST --url "https://graph.microsoft.com/v1.0/servicePrincipals/<blueprint-sp-id>/appRoleAssignments" --body '{"principalId":"<blueprint-sp-id>","resourceId":"<observability-sp-id>","appRoleId":"<OtelWrite-role-id>"}'`.
+> - `setup all` may prompt **`… - Provision via 'az ad sp create'? [y/N]`** for a missing
+>   resource service principal (e.g. `ext_UtilityInsights`). **`az ad sp create` uses the active
+>   Azure CLI context and IGNORES `--subscription`.** On a machine whose `az` context can flip to
+>   another tenant, answer **`N`** and provision it yourself with a **pinned + verified** target
+>   context: `az account set --subscription <TARGET_SUB>`, confirm
+>   `az account show --query tenantId` is the target, then
+>   `az ad sp create --id <resource-app-id>`.
+
 ## 4. Deploy to Azure Container Apps
 
 Same code and Dockerfile as MAF-ACA-OBO. Use `deploy-aca-DW.ps1` (fixed region, **self-contained
