@@ -203,12 +203,20 @@ a365 publish --aiteammate
    → **Security policies** → **Review**.
 
 > **Licensing gate (hard blocker).** *Apply template → Licenses* requires **≥ 1 Agent 365
-> license available** in the tenant. If you see *"Policy templates require at least one Agent
-> 365 License"* and *"Microsoft Agent 365: 0 of 0 licenses available"* (every license row says
-> *"You're out of licenses"*), you **cannot** activate/create an instance until you **free or
-> acquire** an Agent 365 / **M365 E7 (Frontier)** license (M365 admin center → Billing →
-> Licenses). The uploaded agent stays in **Registry / "Not activated"** meanwhile — resume this
-> step once a license is available.
+> license** that the admin center **recognizes as an Agent 365 license** (the wizard says
+> *"Agent 365 licenses are automatically selected"* and auto-picks them when present). If you
+> see the red *"Policy templates require at least one Agent 365 License"* and **Next stays
+> disabled**, the tenant has no recognized Agent 365 license.
+>
+> **Important:** a **Frontier `MICROSOFT_365_E7_NO_TEAMS`** license bundles the **`AGENT_365`
+> service plan** but the admin center does **not** accept E7 (No Teams) as an "Agent 365
+> license" for autopilot policy templates — selecting it (even when free) does **not** satisfy
+> the gate. You need an actual **Microsoft Agent 365** license SKU in the tenant. If it shows
+> **0 of 0**, none are provisioned — freeing/reassigning E7 will **not** help; obtain Agent 365
+> license units via the **Frontier preview program** / M365 admin center → **Billing** (the
+> *"Frontier Preview Program — enrollment cannot be verified"* warning at `a365 setup` is a
+> sign the entitlement may not be granted yet). The uploaded agent stays in **Registry /
+> "Not activated"** until a recognized Agent 365 license exists.
 
 ## 8. Create and license instances
 
