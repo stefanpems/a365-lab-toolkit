@@ -1,8 +1,8 @@
 {
   "tenantId": "<YOUR_ENTRA_TENANT_ID>",
   "clientAppId": "<YOUR_AGENT365_CLI_PUBLIC_CLIENT_APP_ID>",
-  "agentIdentityDisplayName": "AgentFrameworkDWSample Identity",
-  "agentBlueprintDisplayName": "AgentFrameworkDWSample Blueprint",
+  "agentIdentityDisplayName": "AgentFramework DW Identity",
+  "agentBlueprintDisplayName": "AgentFramework DW Sample",
   "agentDescription": "AgentFrameworkDWSample",
   "aiTeammate": true,
   "useBlueprint": false

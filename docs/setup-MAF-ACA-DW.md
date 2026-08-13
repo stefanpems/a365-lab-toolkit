@@ -41,8 +41,8 @@ uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
 
 ```json
 {
-  "agentIdentityDisplayName": "AgentFrameworkDWSample Identity",
-  "agentBlueprintDisplayName": "AgentFrameworkDWSample Blueprint",
+  "agentIdentityDisplayName": "AgentFramework DW Identity",
+  "agentBlueprintDisplayName": "AgentFramework DW Sample",
   "agentDescription": "AgentFrameworkDWSample",
   "aiTeammate": true,
   "useBlueprint": false
@@ -50,6 +50,13 @@ uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
 ```
 
 Reset `a365.generated.config.json` to `{}` for a **new** blueprint.
+
+> **Keep the blueprint display name ≤ 30 characters and without a redundant "Blueprint"
+> suffix.** `a365 publish` (§6) derives the package **`name.short`** from
+> `agentBlueprintDisplayName`, and Teams/M365 rejects a `name.short` longer than **30 chars**.
+> Note that `a365 setup all --agent-name <name>` auto-derives the blueprint display name as
+> `"<name> Blueprint"` — with a 22-char base like `AgentFrameworkDWSample` that yields 32 chars
+> and fails packaging. Prefer a short display name such as **`AgentFramework DW Sample`** (24).
 
 ## 3. Create the blueprint + permissions
 
@@ -176,8 +183,11 @@ a365 publish --aiteammate
 
 - Emits `manifest/` (`manifest.json` with an `agenticUserTemplates` block →
   `agenticUserTemplateManifest.json`, icons) and `manifest/manifest.zip`.
-- Before packaging, set a real `description` and shorten `name.short`/`name.full` to **≤ 30
-  characters** (the CLI rejects longer names).
+- `a365 publish` **regenerates `name.short`/`name.full` from `agentBlueprintDisplayName`** and
+  prompts *"Open manifest in your default editor now? (Y/n)"* if `name.short` is **> 30 chars**.
+  Keep the blueprint display name ≤ 30 (see §2, e.g. `AgentFramework DW Sample`) so this never
+  triggers; otherwise answer **Y** and shorten `name.short`/`name.full` before packaging. Also
+  give a real `description`.
 
 ## 7. Upload, register, activate (admin center — browser)
 
