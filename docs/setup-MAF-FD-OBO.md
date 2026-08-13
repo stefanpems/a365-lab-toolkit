@@ -17,9 +17,21 @@ See [00-introduction.md](00-introduction.md) for concepts and
 - **az login** with **Foundry User** on the project and **Cognitive Services User** on the
   Foundry account (to invoke the agent).
 - A Foundry project with a chat model (e.g. `gpt-4.1`).
-- Python venv with `azure-ai-projects azure-identity openai msal python-dotenv`.
+- Python venv with `azure-ai-projects azure-identity httpx openai msal python-dotenv`
+  (`httpx` is a runtime dependency of `azure-ai-projects` and is listed in `requirements.txt`).
 - The **Agent 365 Tools** Mail MCP consent (`McpServers.Mail.All`) available to the public
   client used to fetch the test token (the "Agent 365 CLI" app `3c5eabff-…`).
+
+> **Identity gotcha (`DefaultAzureCredential`).** `deploy_agent.py` authenticates with
+> `DefaultAzureCredential`. On a dev box that also has **corporate** credentials cached (VS,
+> Azure PowerShell, the Windows shared-token cache), that chain can silently pick the **wrong**
+> identity and fail with *"Identity(object id: …) does not have permissions for
+> Microsoft.CognitiveServices/accounts/AIServices/agents/write"*. Two things to check before
+> deploying: (1) pin the Azure CLI to the **target** account —
+> `az account set --subscription <target-sub>` and confirm
+> `az account show --query user.name` is your **target** admin (the active account can flip if
+> another `az login` runs elsewhere); (2) force the credential chain to use only the CLI:
+> `$env:AZURE_TOKEN_CREDENTIALS = "AzureCliCredential"` (PowerShell) before `python deploy_agent.py`.
 
 ## 1. Get the sources
 
@@ -75,7 +87,7 @@ The invocation authenticates to the Foundry gateway with a token for
 Add a `foundry-prompt` tab to `ui/config.js` (see [setup-web-ui.md](setup-web-ui.md)):
 
 ```js
-{ id:"obo-fd", kind:"foundry-prompt", name:"OBO Foundry Declarative (prompt agent)",
+{ id:"obo-fd", kind:"foundry-prompt", name:"FD-OBO",
   endpoint:"https://<account>.services.ai.azure.com/api/projects/<project>/openai/v1/responses",
   endpointScope:"https://ai.azure.com/.default",
   agentName:"agentframeworkFD-OBO-agent",

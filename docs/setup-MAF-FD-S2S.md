@@ -46,7 +46,7 @@ is a project-level Responses call with `agent_reference`.
 Add a `foundry-prompt` tab **without** `mailScope` (see [setup-web-ui.md](setup-web-ui.md)):
 
 ```js
-{ id:"s2s-fd", kind:"foundry-prompt", name:"S2S Foundry Declarative (prompt agent)",
+{ id:"s2s-fd", kind:"foundry-prompt", name:"FD-S2S",
   endpoint:"https://<account>.services.ai.azure.com/api/projects/<project>/openai/v1/responses",
   endpointScope:"https://ai.azure.com/.default",
   agentName:"agentframeworkFD-S2S-agent" }
