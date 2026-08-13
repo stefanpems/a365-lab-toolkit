@@ -192,11 +192,23 @@ a365 publish --aiteammate
 ## 7. Upload, register, activate (admin center — browser)
 
 1. [M365 admin center](https://admin.cloud.microsoft/#/agents/all) → **Agents → All agents →
-   Upload custom agent** → select `manifest.zip`.
-2. If you **skip** user assignment during upload, the agent lands in **Registry** with State
-   **"Not activated"** (it does **not** create a *Requests* entry).
-3. Open it → **Activate** → choose *who can create instances* → apply the AI-teammate **policy
-   template** (which **assigns the Agent 365 license**) → confirm. State becomes active.
+   Upload custom agent** → select `manifest.zip`. The wizard walks through **Upload agent →
+   Publish to users → Apply template → Accept permissions → Review & finish**. The agent shows
+   with the manifest **`name.short`** (e.g. *AgentFramework DW Sample*).
+2. **Publish to users**: choose who can request instances (e.g. *All users*). **Activate
+   (optional)**: choose who can create instances (*None* / *All users* / *Specific*).
+3. **Apply template**: pick a **policy template** that carries an **Agent 365 license** (the
+   default template has none). Creating a custom template goes **Details** (name; *Agents with
+   their own identity* for a teammate) → **Licenses** (Location + pick an **Agent 365 license**)
+   → **Security policies** → **Review**.
+
+> **Licensing gate (hard blocker).** *Apply template → Licenses* requires **≥ 1 Agent 365
+> license available** in the tenant. If you see *"Policy templates require at least one Agent
+> 365 License"* and *"Microsoft Agent 365: 0 of 0 licenses available"* (every license row says
+> *"You're out of licenses"*), you **cannot** activate/create an instance until you **free or
+> acquire** an Agent 365 / **M365 E7 (Frontier)** license (M365 admin center → Billing →
+> Licenses). The uploaded agent stays in **Registry / "Not activated"** meanwhile — resume this
+> step once a license is available.
 
 ## 8. Create and license instances
 
