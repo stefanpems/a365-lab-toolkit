@@ -111,6 +111,9 @@ the admin center when the agent user is enabled.
 >   **verify** the grants with a pinned/verified target context:
 >   `az rest --method GET --url "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?\$filter=clientId eq '<blueprint-sp-id>'"`;
 >   add any missing grant programmatically yourself (pinned).
+> - Finally `setup all` prompts **`Messaging endpoint URL:`** — **leave it blank** (press Enter).
+>   The endpoint is a post-deploy artifact (you only know the FQDN after §4); register it in §5
+>   with `a365 setup blueprint --endpoint-only`.
 
 ## 4. Deploy to Azure Container Apps
 
