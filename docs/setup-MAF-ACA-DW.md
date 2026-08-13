@@ -53,30 +53,40 @@ Reset `a365.generated.config.json` to `{}` for a **new** blueprint.
 
 ## 3. Create the blueprint + permissions
 
-> **Pin the tenant first (multi-tenant machines).** `a365 setup blueprint` **auto-detects the
-> tenant from `az account show`**. If the active Azure CLI context points at a *different*
-> tenant (common on a box with several logins / parallel sessions), the CLI prints *"Detected
-> tenant change … current session is tenant `<other>`"*, aborts without creating the blueprint,
-> and removes `a365.generated.config.json`. Always pin the target tenant in the **same** command
-> line, and verify, before running `a365`:
->
-> ```powershell
-> az account set --subscription <TARGET_SUB>
-> if ((az account show --query tenantId -o tsv) -eq "<TARGET_TENANT>") {
->     a365 setup blueprint --no-endpoint
-> } else { Write-Host "ABORT: az is not on the target tenant" -ForegroundColor Red }
-> ```
+The most reliable, reproducible path — and the one the CLI itself steers you to on a fresh
+tenant — is a single **`a365 setup all`** with explicit flags (it does **not** depend on the
+`a365.config.json` being picked up):
 
 ```powershell
-a365 setup blueprint --no-endpoint     # creates the AI-teammate Entra app
-a365 setup permissions mcp             # McpServers.Mail.All, McpServersMetadata.Read.All
-a365 setup permissions bot             # Bot API + Observability + Power Platform
+az account set --subscription <TARGET_SUB>
+a365 setup all --agent-name AgentFrameworkDWSample --aiteammate --tenant-id <TARGET_TENANT>
 ```
 
+- **`--aiteammate`** creates an AI-teammate blueprint and *overrides* the `aiTeammate` field in
+  `a365.config.json`; for a teammate, `setup all` provisions **blueprint + permissions only**
+  (no infrastructure, no endpoint). The granular `a365 setup blueprint` subcommand has **no**
+  `--aiteammate` flag, so use `setup all` for teammates.
+- **`--agent-name`** derives `AgentIdentityDisplayName="<name> Identity"` and
+  `AgentBlueprintDisplayName="<name> Blueprint"`, and resolves `ClientAppId` by looking up the
+  **"Agent 365 CLI"** app in your tenant. When provided, no config file is required.
+- **`--tenant-id`** forces the tenant. This matters on a **multi-tenant machine**: `a365`
+  auto-detects the tenant from `az account show`, and if the active Azure CLI context points at
+  a *different* tenant (e.g. a parallel session), the CLI prints *"Detected tenant change …
+  current session is tenant `<other>`"*, aborts without creating the blueprint, and removes
+  `a365.generated.config.json`. Pinning `az account set --subscription <TARGET_SUB>` in the same
+  line **and** passing `--tenant-id` makes the run deterministic.
+
+Expected output: a *"Frontier Preview Program — Tenant enrollment cannot be verified
+automatically"* **warning** (non-blocking if the tenant is enrolled), then the blueprint is
+created (note the **Blueprint ID** and **service principal ID**), the `access_agent_as_user`
+scope is added, and a **client secret** is printed **once** — copy it now (needed at deploy;
+retrieve later with `a365 setup blueprint --show-secret` from the same folder/user/machine).
+
 Consents encountered (grant as Global Admin): a Graph/Power-Platform admin consent, an Agent
-365 Tools consent, an Observability app-role `[y/N]` prompt, and a Messaging-Bot/Observability
-/Power-Platform admin consent. A fourth approval happens later in the admin center when the
-agent user is enabled.
+365 Tools consent, an Observability app-role prompt **`Assign this application permission now?
+[y/N]`** (answer **`y`** to grant `Agent365.Observability.OtelWrite`), and a
+Messaging-Bot/Observability/Power-Platform admin consent. A further approval happens later in
+the admin center when the agent user is enabled.
 
 ## 4. Deploy to Azure Container Apps
 
