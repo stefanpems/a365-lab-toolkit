@@ -53,6 +53,20 @@ Reset `a365.generated.config.json` to `{}` for a **new** blueprint.
 
 ## 3. Create the blueprint + permissions
 
+> **Pin the tenant first (multi-tenant machines).** `a365 setup blueprint` **auto-detects the
+> tenant from `az account show`**. If the active Azure CLI context points at a *different*
+> tenant (common on a box with several logins / parallel sessions), the CLI prints *"Detected
+> tenant change … current session is tenant `<other>`"*, aborts without creating the blueprint,
+> and removes `a365.generated.config.json`. Always pin the target tenant in the **same** command
+> line, and verify, before running `a365`:
+>
+> ```powershell
+> az account set --subscription <TARGET_SUB>
+> if ((az account show --query tenantId -o tsv) -eq "<TARGET_TENANT>") {
+>     a365 setup blueprint --no-endpoint
+> } else { Write-Host "ABORT: az is not on the target tenant" -ForegroundColor Red }
+> ```
+
 ```powershell
 a365 setup blueprint --no-endpoint     # creates the AI-teammate Entra app
 a365 setup permissions mcp             # McpServers.Mail.All, McpServersMetadata.Read.All
