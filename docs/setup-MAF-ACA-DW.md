@@ -292,13 +292,22 @@ template inline, or **create a custom policy template first** and select it duri
 
 ## 8. Create and license instances
 
-- **User (hire) in Teams**: *Apps → find the agent → Add/Create instance* (the user becomes
-  Owner). Creation is **asynchronous** (minutes to hours); the **creator** is notified in the
-  Teams activity feed when the agent user becomes searchable.
-- **Admin in the admin center**: *Registry → `<blueprint>` → Instances → Add instance*.
+Two ways to create an instance (once the agent is **Available**, §7.1):
+
+- **User (hire) in Teams**: **Apps → Built for your org → `AgentFramework DW Sample` →
+  `Create instance`** (the user becomes **Owner**). This is available to whoever you allowed in
+  *Publish to users → Activate* (e.g. *All users*).
+- **Admin in the admin center**: the agent side panel → **`+ Add instance`** (or *Registry →
+  `<agent>` → Instances → Add instance*).
+
+Instance creation is **asynchronous** (minutes to hours); the **creator** is notified in the
+Teams activity feed when the agent user becomes **searchable** — only then is it usable in Teams
+(1:1 chat / @mention), by email, or via Word/Office comments.
+
 - **License an instance** (if the policy template didn't): *All agents → Registry →
   `<blueprint>` → Instances → `<instance>` → Licenses → Save* (agent users are **not**
-  licensed under *Users → Active users*).
+  licensed under *Users → Active users*). Assign **E5/E7 here** if needed (they can't go in the
+  policy template — see the §7.1 Save-hang gotcha).
 
 Each instance is an **agent user** with its own mailbox, OneDrive, Teams presence, and
 directory entry.
