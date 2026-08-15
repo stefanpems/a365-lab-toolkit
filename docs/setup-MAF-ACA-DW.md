@@ -321,6 +321,13 @@ Verify in **admin center → Agents → `<agent>` → Instances** (Name / Email 
 **Autopilot license `consumed` increments by 1** per active instance, and an **agent user**
 `<alias>@<tenant>` (enabled) appears in the directory.
 
+> **Admin-center visibility is fast; end-user surfaces lag.** An instance typically shows
+> **Active** in the *Instances* tab **almost immediately** (and already holds its license +
+> directory entry), **while still not being discoverable/usable in Teams or M365 Copilot**.
+> Those surfaces need extra time for the agent user to become **searchable** — *Active in MAC ≠
+> usable in Teams/Copilot yet*. Allow more time (and note the Teams "Create instance" path is
+> intermittent, §8.1).
+
 > **Not a store app.** Searching the instance name in the M365 Copilot **Agent Store** returns
 > *"no matches"* — the instance is an **agent user (a person)**, not a store app. Interact with
 > it via **1:1 chat / @mention / email** (`<alias>@<tenant>`) or manage it in the admin center
