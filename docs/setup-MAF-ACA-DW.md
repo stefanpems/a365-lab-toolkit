@@ -283,6 +283,13 @@ template inline, or **create a custom policy template first** and select it duri
    in step 2. The agent becomes **Active** in the Registry; then create an instance (§8) or let
    users hire it in Teams.
 
+> **Post-publish is asynchronous.** Right after **Publish** the agent may still show
+> **Unavailable** with an **Activate** button. Wait a few minutes and **reopen** the agent side
+> panel (close/refresh): the status flips to **Available** on its own and the **Activate** button
+> **disappears** — you do **not** click it (activation was already set in *Publish to users*).
+> The agent header then shows **Available** + **`+ Add instance`** (Entra agent ID = the
+> blueprint app id; Title ID `T_…`).
+
 ## 8. Create and license instances
 
 - **User (hire) in Teams**: *Apps → find the agent → Add/Create instance* (the user becomes
