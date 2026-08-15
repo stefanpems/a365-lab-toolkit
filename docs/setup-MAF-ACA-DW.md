@@ -270,9 +270,13 @@ template inline, or **create a custom policy template first** and select it duri
 > **creation wizard** (*Agents → Settings → Add a new policy template → Licenses*), adding an
 > **E5** or **E7** license makes the final **Save never complete, with no error** (it just
 > hangs). Keep the *creation* wizard to *Frontier for Autopilots (no Teams)* + *Teams
-> Enterprise*. To give instances **E5/E7** (mailbox + O365 services), add them **afterwards** on
-> the deployed **Agent template → Licenses** tab or on each instance — see §8 (that path saves
-> fine).
+> Enterprise*. To give instances **E5/E7** (mailbox + full O365 services) assign them **in one of
+> these two places instead** (both save fine):
+> - **On the deployed Agent template → Licenses tab** — the convenient option when **all
+>   instances should get the same licenses** (e.g. every instance gets **E5**). Applies to every
+>   **new** instance created from the template. *(See §8.)*
+> - **On each individual instance** — after the user creates it, when instances need
+>   **different** licenses. *(See §8.)*
 
 **Upload + publish the agent** (*All agents → `+ Add agent`*):
 1. **Upload agent** — select `manifest.zip` (from `aca/dw/manifest/`).
