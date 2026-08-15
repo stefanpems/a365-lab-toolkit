@@ -299,13 +299,32 @@ template inline, or **create a custom policy template first** and select it duri
 
 ## 8. Create and license instances
 
-Two ways to create an instance (once the agent is **Available**, §7.1):
+**Three entry points** to create an instance (once the agent is **Available**, §7.1). All open
+the same **Create agent** form — *Agent icon*, *Agent name*, *Alias* `<name>@<tenant>.onmicrosoft.com`,
+*Agent description*, *Managed by* — then **Create** → *"Your agent is being created. You'll get a
+notification when the set up process is complete."* Whoever creates it becomes **Owner**; the
+entry points are available to whoever you allowed in *Publish to users → Activate* (e.g. *All
+users*).
 
-- **User (hire) in Teams**: **Apps → Built for your org → `AgentFramework DW Sample` →
-  `Create instance`** (the user becomes **Owner**). This is available to whoever you allowed in
-  *Publish to users → Activate* (e.g. *All users*).
-- **Admin in the admin center**: the agent side panel → **`+ Add instance`** (or *Registry →
-  `<agent>` → Instances → Add instance*).
+- **M365 Copilot** — `m365.cloud.microsoft/chat` → **Agent Store** (or *More agents*) → open
+  **`AgentFramework DW Sample`** → **`Create instance`**. **Most reliable in this preview:**
+  provisioned **immediately** and showed **Active** in the admin-center *Instances* tab right
+  away.
+- **Teams** — `teams.cloud.microsoft` → **Apps → Built for your org → `AgentFramework DW Sample`
+  → `Create instance`**. **Intermittent in this preview:** a first attempt was silently dropped
+  (nothing created — see below), a **retry provisioned fine**.
+- **Admin center** — Agents → agent side panel → **`+ Add instance`** (or *Registry → `<agent>`
+  → Instances → Add instance*).
+
+Verify in **admin center → Agents → `<agent>` → Instances** (Name / Email `<alias>@<tenant>` /
+**Status = Active** / Owner). **Quick log-side confirmation** it really provisioned: the
+**Autopilot license `consumed` increments by 1** per active instance, and an **agent user**
+`<alias>@<tenant>` (enabled) appears in the directory.
+
+> **Not a store app.** Searching the instance name in the M365 Copilot **Agent Store** returns
+> *"no matches"* — the instance is an **agent user (a person)**, not a store app. Interact with
+> it via **1:1 chat / @mention / email** (`<alias>@<tenant>`) or manage it in the admin center
+> *Instances* tab.
 
 Instance creation is **asynchronous** (minutes to hours); the **creator** is notified in the
 Teams activity feed when the agent user becomes **searchable** — only then is it usable in Teams
@@ -367,6 +386,11 @@ a notification when the set up process is complete."*
 > **Agents → `<agent>` → `+ Add instance`** (admin-driven, more reliable than the Teams path).
 > If the admin path *also* creates nothing (license stays `0 consumed`), it is a preview backend
 > outage — retry later / raise with the Frontier program.
+>
+> *Observed:* the very first Teams attempt dropped silently; simply **retrying** (a second Teams
+> *Create instance*, or the **M365 Copilot** path) provisioned fine — two instances then existed
+> and the Autopilot license went `0 → 2 consumed`. Treat the Teams path as **intermittent** in
+> preview and prefer **M365 Copilot** or the **admin center** for reliability.
 
 ## 9. Tool Gateway & observability
 
