@@ -26,6 +26,32 @@ activate it (*"Insufficient licenses available"*):
 Refs: [Frontier](https://learn.microsoft.com/microsoft-agent-365/frontier),
 [Create agent instances](https://learn.microsoft.com/microsoft-agent-365/developer/create-instance#troubleshooting).
 
+### 0.1 Obtain the "Frontier for Autopilots (No Teams) Trial" licenses (required)
+
+The policy template that activates an autopilot agent (§7) is gated on a license the admin
+center recognizes as an **Agent 365** license — namely **"Microsoft 365 Frontier for Autopilots
+(No Teams) Trial"**. **Without it you cannot approve/activate the agent.** In a fresh Diamond
+tenant it shows **0 of 0** until you enable the trial:
+
+1. **M365 admin center → Copilot → Settings → View all** — verify **Copilot Frontier** is
+   enabled (in Diamond tenants it is enabled for **All Users** by default).
+2. **M365 admin center → Agent 365 → Overview → `Get Started with AI Teammates`** *(this is the
+   easily-missed step)*. On the order page that opens (priced at **$0**), click **Edit** (top
+   left), fill in the required fields — only then does **Try now** become enabled.
+3. Click **Try now** → **25 "Microsoft 365 Frontier for Autopilots (No Teams) Trial"** licenses
+   become available in the tenant.
+
+**Two-license rule (see §7):** in the policy-template wizard you must select **both**
+**Microsoft 365 Frontier for Autopilots (No Teams) Trial** *and* **Microsoft Teams Enterprise**
+— the Autopilot license is the "(No Teams)" variant, so without a Teams-providing license the
+**Next** button stays disabled.
+
+**Diamond tenants pre-assign all E7 and Teams Enterprise to users by default** — free up a few
+first so they can be assigned to your autopilot agents. When unassigning, you must **also remove
+the dependent licenses in the same operation** (e.g. Calling Plan, Planner + Project, some
+Dynamics 365) — see §8 / the license-cleanup note; the removal must happen atomically per user
+(the admin-center UI removes one license at a time and hits the dependency conflict).
+
 ## 1. Get the sources
 
 ```powershell
