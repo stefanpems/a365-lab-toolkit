@@ -252,6 +252,37 @@ a365 publish --aiteammate
 > Autopilots (no Teams)* **and** *Teams Enterprise* checked, **Next** enables. The uploaded agent
 > stays in **Registry / "Not activated"** until a recognized Agent 365 license exists.
 
+### 7.1 Custom policy template + publish flow (verified)
+
+Once the licenses are available (§0.1) you can either **upload the agent** and create/pick a
+template inline, or **create a custom policy template first** and select it during upload.
+
+**Create the custom policy template** (*Agents → Settings → Add a new policy template*):
+1. **Details** — name (e.g. `Stefanpe Custom Policy Template for AI Teammates`); *What kind of
+   agent?* → **Agents with their own identity**.
+2. **Licenses** — Location + select **both** *Microsoft 365 Frontier for Autopilots (no Teams)*
+   **and** *Microsoft Teams Enterprise*.
+3. **Security policies and protections** — leave defaults (Entra / Purview / Defender /
+   SharePoint) or adjust.
+4. **Review and save**.
+
+> **Gotcha — do NOT add E5 or E7 to the template.** If you add an **E5** or **E7** license to
+> the policy template, the final **Save never completes and no error is shown** (it just hangs).
+> Keep the template to *Frontier for Autopilots (no Teams)* + *Teams Enterprise*; assign **E5/E7
+> to the agent users afterwards** (§8), not through the template.
+
+**Upload + publish the agent** (*All agents → `+ Add agent`*):
+1. **Upload agent** — select `manifest.zip` (from `aca/dw/manifest/`).
+2. **Publish to users** — *Publish* = who can request instances (*All users*); **Activate
+   (optional)** = who can create instances (*None* / *All users* / *Specific*). This selection
+   **is** the activation — there is no separate "Activate" button later.
+3. **Apply template** — pick your custom template; it shows both licenses with availability
+   (e.g. *Frontier for Autopilots 25/25*, *Teams Enterprise 7/50*).
+4. **Accept permissions** — usually *"No required permissions"* for this sample.
+5. **Review & finish → `Publish`** — this **publishes and activates** the agent per the choices
+   in step 2. The agent becomes **Active** in the Registry; then create an instance (§8) or let
+   users hire it in Teams.
+
 ## 8. Create and license instances
 
 - **User (hire) in Teams**: *Apps → find the agent → Add/Create instance* (the user becomes
