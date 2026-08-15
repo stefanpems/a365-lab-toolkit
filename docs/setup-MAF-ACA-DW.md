@@ -359,6 +359,14 @@ a notification when the set up process is complete."*
 > - **License availability** — if the template's licenses ran out mid-provision, it stalls.
 > - If it stays **Pending** for many hours or shows **Failed**: delete the instance and recreate;
 >   a persistent stall is a Frontier-**preview** provisioning issue (retry later).
+>
+> **Silent-drop case (nothing to delete).** If the **Instances** *and* **Requests** tabs are
+> **both empty** after a Teams "Create instance" — no instance, no request, no agent user, and
+> the Autopilot license still **`0 consumed`** — the Teams user-hire request was **silently
+> dropped** and there is **nothing to delete**. Recreate from the **admin center** instead:
+> **Agents → `<agent>` → `+ Add instance`** (admin-driven, more reliable than the Teams path).
+> If the admin path *also* creates nothing (license stays `0 consumed`), it is a preview backend
+> outage — retry later / raise with the Frontier program.
 
 ## 9. Tool Gateway & observability
 
