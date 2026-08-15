@@ -328,6 +328,29 @@ Teams activity feed when the agent user becomes **searchable** — only then is 
 Each instance is an **agent user** with its own mailbox, OneDrive, Teams presence, and
 directory entry.
 
+### 8.1 Expected sequence & provisioning delay (Teams "Create instance")
+
+From Teams the user flow is: **Apps → Built for your org → `<agent>` → `Create instance`** →
+**Create agent** form (*Agent name*, *Alias* `<name>@<tenant>.onmicrosoft.com`, *Agent
+description*, *Managed by*) → **Create** → green toast *"Your agent is being created. You'll get
+a notification when the set up process is complete."*
+
+> **Provisioning to visibility can take a long time — and can stall.** After a successful
+> "Create", the agent user (mailbox + Teams + directory entry) is provisioned **asynchronously**.
+> It may take **many hours** before the instance appears in **Teams** and in the **A365 Agent
+> Registry**. In one run it was **still not visible after 8+ hours** and no agent-user object had
+> been created in the directory (verified via Graph: no `AFDW1` user, no users created that day)
+> — i.e. the request was effectively **stuck**, not just slow.
+>
+> **What to check when it doesn't appear:**
+> - **A365 admin center → Agents → `<agent>` → Instances** — the instance **status**
+>   (*Provisioning* / *Failed* / *Active*).
+> - **Agents → Requests** — the instance request may be **Pending** or **Failed** (with an error).
+> - The **creator's Teams activity feed** — the completion/error notification lands there.
+> - **License availability** — if the template's licenses ran out mid-provision, it stalls.
+> - If it stays **Pending** for many hours or shows **Failed**: delete the instance and recreate;
+>   a persistent stall is a Frontier-**preview** provisioning issue (retry later).
+
 ## 9. Tool Gateway & observability
 
 - Work IQ tools work as in MAF-ACA-OBO (the agentic path auto-resolves per-audience tokens).
