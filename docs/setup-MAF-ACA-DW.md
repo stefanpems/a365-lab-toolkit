@@ -342,6 +342,15 @@ a notification when the set up process is complete."*
 > been created in the directory (verified via Graph: no `AFDW1` user, no users created that day)
 > — i.e. the request was effectively **stuck**, not just slow.
 >
+> **Log-side signals that a request never provisioned** (checked via Graph with `az` token +
+> `Invoke-RestMethod`, since `az rest` mangles `()`/`&` in URLs on Windows): the agent user is
+> absent from **`/v1.0/users`** *and* **`/beta/users`**, absent from **deletedItems**, there is
+> **no `directoryAudits` entry** for it that day, and the **Agent 365 Autopilot license shows
+> `0 consumed`** (an active instance consumes **1**). If licenses are still **available** (not a
+> quota shortage), the stall is in the **Agent 365 provisioning backend** (preview), not in
+> Entra/licensing — there is nothing to fix tenant-side; use the admin-center **Instances /
+> Requests** tabs and **delete + recreate**.
+>
 > **What to check when it doesn't appear:**
 > - **A365 admin center → Agents → `<agent>` → Instances** — the instance **status**
 >   (*Provisioning* / *Failed* / *Active*).
