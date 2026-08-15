@@ -266,10 +266,13 @@ template inline, or **create a custom policy template first** and select it duri
    SharePoint) or adjust.
 4. **Review and save**.
 
-> **Gotcha — do NOT add E5 or E7 to the template.** If you add an **E5** or **E7** license to
-> the policy template, the final **Save never completes and no error is shown** (it just hangs).
-> Keep the template to *Frontier for Autopilots (no Teams)* + *Teams Enterprise*; assign **E5/E7
-> to the agent users afterwards** (§8), not through the template.
+> **Gotcha — do NOT add E5 or E7 while *creating* the policy template.** In the policy-template
+> **creation wizard** (*Agents → Settings → Add a new policy template → Licenses*), adding an
+> **E5** or **E7** license makes the final **Save never complete, with no error** (it just
+> hangs). Keep the *creation* wizard to *Frontier for Autopilots (no Teams)* + *Teams
+> Enterprise*. To give instances **E5/E7** (mailbox + O365 services), add them **afterwards** on
+> the deployed **Agent template → Licenses** tab or on each instance — see §8 (that path saves
+> fine).
 
 **Upload + publish the agent** (*All agents → `+ Add agent`*):
 1. **Upload agent** — select `manifest.zip` (from `aca/dw/manifest/`).
@@ -304,7 +307,16 @@ Instance creation is **asynchronous** (minutes to hours); the **creator** is not
 Teams activity feed when the agent user becomes **searchable** — only then is it usable in Teams
 (1:1 chat / @mention), by email, or via Word/Office comments.
 
-- **License an instance** (if the policy template didn't): *All agents → Registry →
+> **Assign extra licenses at the Agent template *before* creating instances (recommended).** The
+> deployed agent's **Licenses** tab (agent side panel → **Licenses**) lets you add licenses
+> **beyond** the policy-template minimum — e.g. **Microsoft 365 E5 or E7 (No Teams)** — so that
+> **every new instance** gets a **mailbox + full O365 services** (not just Frontier for
+> Autopilots + Teams). Check the boxes and **Save changes**; you get *"License assignment
+> updated. New agent instances created from this template will be assigned the licenses you
+> selected."* Unlike the policy-template *creation* wizard (§7.1 gotcha), adding E5/E7 **here**
+> works. Do this **before** creating instances so they inherit the licenses.
+
+- **License an existing instance** (if not covered above): *All agents → Registry →
   `<blueprint>` → Instances → `<instance>` → Licenses → Save* (agent users are **not**
   licensed under *Users → Active users*). Assign **E5/E7 here** if needed (they can't go in the
   policy template — see the §7.1 Save-hang gotcha).
