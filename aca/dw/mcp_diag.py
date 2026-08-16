@@ -98,8 +98,35 @@ def _log_mcp_request(request) -> None:
         tool_name = params.get("name") if isinstance(params, dict) else None
         if tool_name:
             logger.info("MCP call → method=%s tool=%s", method, tool_name)
+            _log_tool_arguments(tool_name, params)
         else:
             logger.info("MCP call → method=%s", method)
+
+
+def _log_tool_arguments(tool_name: str, params: dict) -> None:
+    """Log a safe, truncated summary of a tools/call's arguments.
+
+    Reveals whom the model actually addressed a Mail send to (recipients/subject)
+    without dumping attachment bytes or long HTML bodies — so a "tool returned 200
+    but no email arrived" case shows whether the recipient was missing/wrong.
+    """
+    try:
+        args = params.get("arguments")
+        if not isinstance(args, dict):
+            return
+        summary = {}
+        for key, value in args.items():
+            low = key.lower()
+            if any(t in low for t in ("attachment", "content", "body")):
+                # Don't log attachment bytes / full body — just note presence + size.
+                summary[key] = f"<{type(value).__name__} len={len(str(value))}>"
+            elif isinstance(value, str):
+                summary[key] = value[:120]
+            else:
+                summary[key] = value
+        logger.info("MCP tool args → %s: %s", tool_name, json.dumps(summary, default=str)[:600])
+    except Exception:  # pragma: no cover - never break the request path
+        pass
 
 
 def _decode_jwt_claims(auth_header: Optional[str]) -> dict:

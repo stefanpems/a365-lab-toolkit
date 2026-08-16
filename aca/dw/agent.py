@@ -386,6 +386,7 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
                 else:
                     try:
                         result = await asyncio.wait_for(self.agent.run(message), timeout=turn_timeout)
+                        self._log_tool_results(result)
                         answer = self._extract_result(result) or "I couldn't process your request at this time."
                     except asyncio.TimeoutError:
                         # agent.run hung (typically a broken MCP tool connection).
@@ -471,6 +472,31 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
         except Exception as e:
             logger.error(f"Error processing notification: {e}")
             return f"Sorry, I encountered an error processing the notification: {str(e)}"
+
+    def _log_tool_results(self, result) -> None:
+        """Log each tool's actual return payload so a 'HTTP 200 but no effect'
+        outcome (e.g. a Mail send that reports success yet delivers nothing) is
+        visible. Walks the run response messages for function call/result content.
+        """
+        try:
+            messages = getattr(result, "messages", None) or []
+            for msg in messages:
+                for content in getattr(msg, "contents", None) or []:
+                    ctype = type(content).__name__
+                    if ctype == "FunctionCallContent":
+                        logger.info(
+                            "🔧 tool call: %s args=%s",
+                            getattr(content, "name", "?"),
+                            str(getattr(content, "arguments", ""))[:400],
+                        )
+                    elif ctype == "FunctionResultContent":
+                        logger.info(
+                            "🔧 tool result: %s → %s",
+                            getattr(content, "name", None) or getattr(content, "call_id", "?"),
+                            str(getattr(content, "result", ""))[:600],
+                        )
+        except Exception as e:  # pragma: no cover - diagnostics must never break a turn
+            logger.debug("tool result logging failed: %s", e)
 
     def _extract_result(self, result) -> str:
         """Extract text content from agent result"""
