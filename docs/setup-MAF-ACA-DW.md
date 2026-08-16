@@ -412,18 +412,33 @@ a notification when the set up process is complete."*
 > tool error. Query the container's Log Analytics for the `mcp_diag` line:
 > `ContainerAppConsoleLogs_CL | where Log_s has 'agent365.svc.cloud.microsoft' or Log_s has 'mcp_diag' | order by TimeGenerated desc`.
 > A failing line looks like *`ERROR:mcp_diag:Agent 365 tool call failed — HTTP 401 POST … mcp_MailTools | x-ms-agentid=None | token_claims={… "aud":"ea9ffc3e-…", "scp":"McpServers.Mail.All", "xms_par_app_azp":"<blueprint>", "idtyp":"user"}`*.
-> The bearer token is otherwise correct (audience = Agent 365 Tools, `McpServers.Mail.All`,
+> The bearer token is otherwise well-formed (audience = Agent 365 Tools, `McpServers.Mail.All`,
 > target tenant, agentic-user). **Ruled out:** the agent user is a real `#microsoft.graph.agentUser`
 > with a **mailbox** (`SMTP:<alias>@…`) and full licenses (**Frontier for Autopilots + Teams
-> Enterprise + E7**) — so it is **not** a license/mailbox problem. **Cause:** the request carries
-> **no `x-ms-agentid`** and the token is **blueprint-level** (`xms_par_app_azp = <blueprint>`),
-> not scoped to the acting **instance** — so the Mail gateway can't authorize "send as
-> `<instance>`" → **401**. The Mail token + headers are produced by the **Agent 365 SDK**
-> (`microsoft_agents_a365 … McpToolRegistrationService`), not the sample, so this is an
-> **agentic multi-instance wiring gap at the SDK/preview level** — update `microsoft_agents_a365`
-> to a build that stamps the per-turn instance `x-ms-agentid`, or raise it with the Agent 365
-> preview team. (The clarifying "loop" is the small model being cautious **plus** every Mail call
-> 401-ing so it can never complete.)
+> Enterprise + E7**) — so it is **not** a license/mailbox problem.
+>
+> **Two root causes, both fixed in this sample:**
+>
+> 1. **Stale/expired tool token (the main one).** `setup_mcp_servers()` used to be memoized with
+>    a one-shot `mcp_servers_initialized` flag: the per-audience OAuth token is baked into the MCP
+>    tools' **httpx client headers at build time** and the SDK never refreshes it. Because the
+>    Container App runs a **single always-on replica** (`--min-replicas 1`), the very first turn's
+>    token stays frozen and, once it expires (~60–90 min), **every** Mail call returns 401. Fixed
+>    by rebuilding the MCP tools (which re-runs the token exchange) once they exceed a TTL —
+>    `self._mcp_ttl_seconds`, default **1800 s**, override with `MCP_TOKEN_TTL_SECONDS` — closing
+>    the previous httpx clients first via `tool_service.cleanup()` to avoid leaks. This is exactly
+>    a "force token re-acquisition" so a long-lived agent keeps a valid token.
+> 2. **Missing `x-ms-agentid` on per-server calls.** The SDK adds `x-ms-agentid` to the *discovery*
+>    (gateway) request but **not** to the per-server MCP tool calls, so those arrive with no agent
+>    identifier (hence `x-ms-agentid=None`). As a belt-and-suspenders fix, [mcp_diag.py](../aca/dw/mcp_diag.py)
+>    now stamps `x-ms-agentid` on outbound Agent 365 MCP requests when absent, deriving the same
+>    value the SDK uses for discovery (`xms_par_app_azp` > `appid` > `azp` from the token).
+>
+> Redeploy the image after these fixes (`az acr build` + `az containerapp update --image`, no
+> secret rotation needed) and confirm 100% traffic is on the new revision
+> (`az containerapp ingress traffic show`). (The clarifying "loop" is the small `gpt-4.1-mini`
+> model being cautious **plus** every Mail call 401-ing so it can never complete — once the token
+> is valid the loop stops.)
 
 ## 10. Verify
 

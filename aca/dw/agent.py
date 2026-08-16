@@ -115,6 +115,16 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
         # Track if MCP servers have been set up
         self.mcp_servers_initialized = False
 
+        # When the MCP tools were last (re)built. The per-audience OAuth tokens are
+        # baked into the httpx client headers at build time and are NOT refreshed by
+        # the SDK afterwards, so a long-lived container would keep sending an expired
+        # token and every tool call (e.g. Mail send) would fail HTTP 401. We rebuild
+        # the tools before that token expires — see setup_mcp_servers().
+        self._mcp_setup_at: float = 0.0
+        # Rebuild interval (seconds). Keep it comfortably below the access-token
+        # lifetime (~60–90 min). Override with MCP_TOKEN_TTL_SECONDS if needed.
+        self._mcp_ttl_seconds = float(os.getenv("MCP_TOKEN_TTL_SECONDS", "1800"))
+
         # Degraded-mode state: set when an MCP tool fails to initialize/connect so
         # we stop attaching the broken tool (which would hang agent.run) and always
         # tell the user what failed and where to look.
@@ -236,8 +246,29 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
 
     async def setup_mcp_servers(self, auth: Authorization, auth_handler_name: Optional[str], context: TurnContext, instructions: Optional[str] = None):
         """Set up MCP server connections"""
+        # The per-audience OAuth tokens the SDK acquires are embedded in the MCP
+        # tools' httpx client headers at build time and are never refreshed, so once
+        # the token expires every tool call returns HTTP 401. Rebuild the tools (which
+        # re-runs the token exchange) once the current set is older than the TTL.
+        import time as _time
+
         if self.mcp_servers_initialized:
-            return
+            age = _time.monotonic() - self._mcp_setup_at
+            if age < self._mcp_ttl_seconds:
+                return
+            logger.info(
+                "♻️ Refreshing MCP tools after %.0fs (token TTL %.0fs) to avoid an expired-token 401",
+                age,
+                self._mcp_ttl_seconds,
+            )
+            # Close the previous tools/httpx clients before rebuilding so tokens are
+            # re-acquired fresh and no connections/file descriptors leak.
+            try:
+                if self.tool_service:
+                    await self.tool_service.cleanup()
+            except Exception as e:
+                logger.warning("⚠️ MCP tool cleanup before refresh failed: %s", e)
+            self.mcp_servers_initialized = False
 
         try:
             if not self.tool_service:
@@ -270,6 +301,7 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
             if self.agent:
                 logger.info("✅ MCP setup completed")
                 self.mcp_servers_initialized = True
+                self._mcp_setup_at = _time.monotonic()
                 await self._log_mcp_functions()
             else:
                 logger.warning("⚠️ MCP setup failed")

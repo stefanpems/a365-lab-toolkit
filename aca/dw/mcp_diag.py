@@ -131,6 +131,52 @@ def _decode_jwt_claims(auth_header: Optional[str]) -> dict:
         return {"token": "(undecodable)"}
 
 
+def _agent_id_from_auth_header(auth_header: Optional[str]) -> Optional[str]:
+    """Extract the agent identifier from a Bearer JWT, mirroring the SDK's own
+    ``x-ms-agentid`` resolution order: ``xms_par_app_azp`` > ``appid`` > ``azp``.
+
+    Returns None when no token / no usable claim is present.
+    """
+    if not auth_header:
+        return None
+    token = auth_header.split(" ", 1)[-1].strip()
+    parts = token.split(".")
+    if len(parts) < 2:
+        return None
+    try:
+        payload = parts[1]
+        payload += "=" * (-len(payload) % 4)  # pad base64url
+        claims = json.loads(base64.urlsafe_b64decode(payload).decode("utf-8", "replace"))
+    except Exception:
+        return None
+    for claim in ("xms_par_app_azp", "appid", "azp"):
+        value = claims.get(claim)
+        if value:
+            return str(value)
+    return None
+
+
+def _ensure_agent_id_header(request) -> None:
+    """Stamp the ``x-ms-agentid`` header on outbound Agent 365 MCP tool calls.
+
+    The Agent 365 SDK adds ``x-ms-agentid`` to the discovery (gateway) request but
+    NOT to the per-server MCP tool calls, so those requests reach the tool gateway
+    with no agent identifier. When the gateway requires it, the call fails with
+    HTTP 401. We derive the same value the SDK would use (from the Authorization
+    JWT) and attach it when missing. No-op if the header is already present or the
+    id cannot be resolved.
+    """
+    try:
+        if request.headers.get("x-ms-agentid"):
+            return
+        agent_id = _agent_id_from_auth_header(request.headers.get("authorization"))
+        if agent_id:
+            request.headers["x-ms-agentid"] = agent_id
+            logger.info("Stamped x-ms-agentid=%s on MCP tool request", agent_id)
+    except Exception as exc:  # pragma: no cover - never break the request path
+        logger.debug("Could not stamp x-ms-agentid: %s", exc)
+
+
 def apply_httpx_diagnostics() -> None:
     """Patch httpx.AsyncClient.send to capture bodies of Agent 365 error responses."""
     if getattr(httpx.AsyncClient, "_a365_diag_patched", False):
@@ -145,6 +191,7 @@ def apply_httpx_diagnostics() -> None:
         try:
             if (request.method or "").upper() == "POST" and _A365_HOST in str(request.url):
                 _log_mcp_request(request)
+                _ensure_agent_id_header(request)
         except Exception:  # pragma: no cover - never break the request path
             pass
 
