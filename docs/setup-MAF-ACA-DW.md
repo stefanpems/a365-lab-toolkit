@@ -407,6 +407,24 @@ a notification when the set up process is complete."*
 - Observability: set `ENABLE_A365_OBSERVABILITY_EXPORTER=true`; the exporter token is minted
   per turn via `exchange_token`. Optionally add `APPLICATIONINSIGHTS_CONNECTION_STRING`.
 
+> **Troubleshooting — Mail send fails with HTTP 401 (`x-ms-agentid=None`).** When you ask an
+> instance in Teams to send mail, the agent may loop ("working on it…") and finally report a
+> tool error. Query the container's Log Analytics for the `mcp_diag` line:
+> `ContainerAppConsoleLogs_CL | where Log_s has 'agent365.svc.cloud.microsoft' or Log_s has 'mcp_diag' | order by TimeGenerated desc`.
+> A failing line looks like *`ERROR:mcp_diag:Agent 365 tool call failed — HTTP 401 POST … mcp_MailTools | x-ms-agentid=None | token_claims={… "aud":"ea9ffc3e-…", "scp":"McpServers.Mail.All", "xms_par_app_azp":"<blueprint>", "idtyp":"user"}`*.
+> The bearer token is otherwise correct (audience = Agent 365 Tools, `McpServers.Mail.All`,
+> target tenant, agentic-user). **Ruled out:** the agent user is a real `#microsoft.graph.agentUser`
+> with a **mailbox** (`SMTP:<alias>@…`) and full licenses (**Frontier for Autopilots + Teams
+> Enterprise + E7**) — so it is **not** a license/mailbox problem. **Cause:** the request carries
+> **no `x-ms-agentid`** and the token is **blueprint-level** (`xms_par_app_azp = <blueprint>`),
+> not scoped to the acting **instance** — so the Mail gateway can't authorize "send as
+> `<instance>`" → **401**. The Mail token + headers are produced by the **Agent 365 SDK**
+> (`microsoft_agents_a365 … McpToolRegistrationService`), not the sample, so this is an
+> **agentic multi-instance wiring gap at the SDK/preview level** — update `microsoft_agents_a365`
+> to a build that stamps the per-turn instance `x-ms-agentid`, or raise it with the Agent 365
+> preview team. (The clarifying "loop" is the small model being cautious **plus** every Mail call
+> 401-ing so it can never complete.)
+
 ## 10. Verify
 
 Interact with the agent user directly in **Teams** (1:1 chat / @mention), by **email**, or via
