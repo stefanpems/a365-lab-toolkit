@@ -439,6 +439,12 @@ a notification when the set up process is complete."*
 > (`az containerapp ingress traffic show`). (The clarifying "loop" is the small `gpt-4.1-mini`
 > model being cautious **plus** every Mail call 401-ing so it can never complete — once the token
 > is valid the loop stops.)
+>
+> **Confirmed fixed.** After redeploying, the container logs show `Stamped x-ms-agentid=… on MCP
+> tool request`, `MCP call → tool=SendEmailWithAttachments`, `POST …/mcp_MailTools "HTTP/1.1 200
+> OK"`, `Function SendEmailWithAttachments succeeded` — **no 401** — and the email is delivered.
+> The same token-refresh fix is applied to the **MAF-ACA-OBO** and **MAF-ACA-S2S** samples (same
+> latent memoization); redeploy those images too if their containers are long-lived.
 
 ## 10. Verify
 
