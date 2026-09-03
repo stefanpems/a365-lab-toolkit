@@ -7,6 +7,9 @@
     },
     "location": {
       "value": "${AZURE_LOCATION}"
+    },
+    "agentIdentityBlueprintClientId": {
+      "value": "${AGENT_IDENTITY_BLUEPRINT_CLIENT_ID}"
     }
   }
 }

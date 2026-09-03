@@ -75,6 +75,43 @@ Retrieve values afterward: `azd env get-values` (blueprint id, agent name, accou
 > (its `language: docker` would force a local Docker runtime). Re-enable it (with Docker
 > running) only to use `azd ai agent monitor` on the deployed agent.
 
+### 3.1 Governed subscriptions (storage **shared-key disabled**) — create the blueprint out-of-band
+
+On a subscription whose policy **forbids shared-key access on storage accounts**, `azd provision`
+fails at the **managed agent identity blueprint** step with:
+
+```
+DeploymentScriptOperationFailed / 403 KeyBasedAuthenticationNotPermitted
+```
+
+Cause: the blueprint is created by an ARM **deployment script**
+(`infra/modules/maib-creation-script.bicep`), whose container mounts an Azure File share using the
+storage **shared key** — which the policy blocks. The account, project, model and ACR are created
+first, so only the blueprint (and the Bot Service / monitoring that depend on it) are missing.
+
+`main.bicep` supports skipping the script: pass the **pre-created** blueprint client id via
+`agentIdentityBlueprintClientId` (azd var `AGENT_IDENTITY_BLUEPRINT_CLIENT_ID`). Create the
+blueprint yourself with the same data-plane call the script makes, then re-provision:
+
+```powershell
+# 1. Project endpoint + MAIB name (agentName + '-maib'):
+$acc='<account>'; $proj='<project>'; $maib='<agentName>-maib'
+$ep="https://$acc.services.ai.azure.com/api/projects/$proj"
+# 2. Data-plane role to call the project, then PUT the blueprint:
+az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) `
+  --assignee-principal-type User --role 'a97b65f3-24c7-4388-baec-2e87135dc908' `
+  --scope (az cognitiveservices account show -n $acc -g <rg> --query id -o tsv)   # Cognitive Services User
+$tok = az account get-access-token --resource 'https://ai.azure.com' --query accessToken -o tsv
+$r = Invoke-RestMethod -Method Put -Uri "$ep/managedagentidentityblueprints/$maib`?api-version=2025-11-15-preview" `
+  -Headers @{ Authorization = "Bearer $tok"; 'Content-Type'='application/json' }
+$r.agentIdentityBlueprint.clientId   # <-- the blueprint client id (Bot Service msaAppId)
+# 3. If a failed 'create-agent-script' deploymentScript remains, delete it:
+az resource delete -g <rg> -n create-agent-script --resource-type Microsoft.Resources/deploymentScripts
+# 4. Feed it back and re-provision (bicep now SKIPS the deployment script):
+azd env set AGENT_IDENTITY_BLUEPRINT_CLIENT_ID <clientId>
+azd provision
+```
+
 ## 4. Approve the blueprint
 
 1. [M365 admin center → Agents → Requests](https://admin.cloud.microsoft/#/agents/all/requested).

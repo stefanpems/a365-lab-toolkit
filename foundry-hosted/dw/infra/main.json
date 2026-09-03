@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "17434411005254776414"
+      "templateHash": "11814589177738426649"
     }
   },
   "parameters": {
@@ -113,7 +113,17 @@
       "metadata": {
         "description": "Tags to apply to all resources"
       }
+    },
+    "agentIdentityBlueprintClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Client id of a pre-created managed agent identity blueprint. When set, the ARM\ndeployment script that creates the blueprint is SKIPPED. Required on subscriptions whose policy\nforbids shared-key access on storage accounts, because ARM deploymentScripts mount their file\nshare with the storage shared key and fail with KeyBasedAuthenticationNotPermitted. Create the\nblueprint out-of-band (PUT {projectEndpoint}/managedagentidentityblueprints/{maibName}) and pass\nits agentIdentityBlueprint.clientId here."
+      }
     }
+  },
+  "variables": {
+    "createBlueprintViaScript": "[empty(parameters('agentIdentityBlueprintClientId'))]"
   },
   "resources": [
     {
@@ -333,6 +343,7 @@
       }
     },
     {
+      "condition": "[variables('createBlueprintViaScript')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "deployment-script-umi",
@@ -418,6 +429,7 @@
       ]
     },
     {
+      "condition": "[variables('createBlueprintViaScript')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "maib-creation-script",
@@ -524,9 +536,7 @@
           "displayName": {
             "value": "[parameters('botDisplayName')]"
           },
-          "msaAppId": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'maib-creation-script'), '2025-04-01').outputs.blueprintClientId.value]"
-          },
+          "msaAppId": "[if(variables('createBlueprintViaScript'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'maib-creation-script'), '2025-04-01').outputs.blueprintClientId.value), createObject('value', parameters('agentIdentityBlueprintClientId')))]",
           "endpoint": {
             "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}/agents/{2}/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview', parameters('accountName'), parameters('projectName'), parameters('agentName'))]"
           },
@@ -732,7 +742,7 @@
       "metadata": {
         "description": "Agent identity blueprint ID"
       },
-      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'maib-creation-script'), '2025-04-01').outputs.blueprintClientId.value]"
+      "value": "[if(variables('createBlueprintViaScript'), reference(resourceId('Microsoft.Resources/deployments', 'maib-creation-script'), '2025-04-01').outputs.blueprintClientId.value, parameters('agentIdentityBlueprintClientId'))]"
     },
     "SUBSCRIPTION_ID": {
       "type": "string",
