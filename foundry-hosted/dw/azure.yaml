@@ -15,11 +15,11 @@ hooks:
 # `azd provision` require a local Docker runtime, which we don't need (the image is built in ACR).
 # Re-enable it (and ensure Docker is running) only if you want to use `azd ai agent` monitor commands.
 # NOTE: name MUST match the deployed AGENT_NAME in the azd env (.azure/<env>/.env).
-services:
-  agentframeworkFH-DW2-agent:
-    host: azure.ai.agent
-    kind: hosted
-    name: agentframeworkFH-DW2-agent
-    project: ./src/hello_world_a365_agent
-    language: docker
-    startupCommand: python main.py
+# services:
+#   agentframeworkFH-DW2-agent:
+#     host: azure.ai.agent
+#     kind: hosted
+#     name: agentframeworkFH-DW2-agent
+#     project: ./src/hello_world_a365_agent
+#     language: docker
+#     startupCommand: python main.py
