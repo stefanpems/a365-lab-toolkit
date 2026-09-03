@@ -23,6 +23,20 @@ does **not** use the Responses/Invocations protocols — it runs the **same Bot 
 - Region must support **Foundry hosted agents** (e.g. eastus2, polandcentral — see the
   [region list](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd)).
 
+> **⚠️ Check this first — governed subscriptions (storage shared-key).** If your subscription
+> enforces the policy **"Storage accounts should prevent shared key access"** (`allowSharedKeyAccess=false`),
+> the default `azd provision` **will stop midway** at the blueprint step with
+> `KeyBasedAuthenticationNotPermitted` (the ARM deployment script that creates the blueprint mounts
+> a storage file share with the shared key). This is **expected and recoverable** — follow the
+> **governed-subscription flow in §3** (create the blueprint out-of-band, then re-provision). Detect
+> it up front:
+>
+> ```powershell
+> # 'Deny' effect on a shared-key policy assignment => you are on the governed flow.
+> az policy assignment list --disable-scope-strict-match `
+>   --query "[?contains(to_string(displayName),'shared key') || contains(to_string(displayName),'Shared Key')].{name:displayName}" -o table
+> ```
+
 ## 1. Get the sources
 
 ```powershell
@@ -50,11 +64,14 @@ src/hello_world_a365_agent/
 
 ## 3. Provision everything
 
+### Path A — standard subscription
+
 ```powershell
 azd provision
 ```
 
-The **postprovision** hook (`scripts/post-provision.ps1`) orchestrates the five pieces:
+This runs the whole thing in one shot. The **postprovision** hook (`scripts/post-provision.ps1`)
+orchestrates the five pieces:
 
 1. **Build & push** the Docker image with `az acr build` (`build-docker-image-acr.ps1`).
 2. **Create an agent version** as a Foundry **hosted container** agent
@@ -75,42 +92,37 @@ Retrieve values afterward: `azd env get-values` (blueprint id, agent name, accou
 > (its `language: docker` would force a local Docker runtime). Re-enable it (with Docker
 > running) only to use `azd ai agent monitor` on the deployed agent.
 
-### 3.1 Governed subscriptions (storage **shared-key disabled**) — create the blueprint out-of-band
+### Path B — governed subscription (storage **shared-key disabled**)
 
-On a subscription whose policy **forbids shared-key access on storage accounts**, `azd provision`
-fails at the **managed agent identity blueprint** step with:
-
-```
-DeploymentScriptOperationFailed / 403 KeyBasedAuthenticationNotPermitted
-```
-
-Cause: the blueprint is created by an ARM **deployment script**
-(`infra/modules/maib-creation-script.bicep`), whose container mounts an Azure File share using the
-storage **shared key** — which the policy blocks. The account, project, model and ACR are created
-first, so only the blueprint (and the Bot Service / monitoring that depend on it) are missing.
-
-`main.bicep` supports skipping the script: pass the **pre-created** blueprint client id via
-`agentIdentityBlueprintClientId` (azd var `AGENT_IDENTITY_BLUEPRINT_CLIENT_ID`). Create the
-blueprint yourself with the same data-plane call the script makes, then re-provision:
+If you flagged the policy in §0, use this **three-step** flow. It is the *same* deployment, just
+with the blueprint created out-of-band (the only step the policy blocks). **Expect the first
+`azd provision` to stop at the blueprint step** — that is normal here, not a real failure.
 
 ```powershell
-# 1. Project endpoint + MAIB name (agentName + '-maib'):
-$acc='<account>'; $proj='<project>'; $maib='<agentName>-maib'
-$ep="https://$acc.services.ai.azure.com/api/projects/$proj"
-# 2. Data-plane role to call the project, then PUT the blueprint:
-az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) `
-  --assignee-principal-type User --role 'a97b65f3-24c7-4388-baec-2e87135dc908' `
-  --scope (az cognitiveservices account show -n $acc -g <rg> --query id -o tsv)   # Cognitive Services User
-$tok = az account get-access-token --resource 'https://ai.azure.com' --query accessToken -o tsv
-$r = Invoke-RestMethod -Method Put -Uri "$ep/managedagentidentityblueprints/$maib`?api-version=2025-11-15-preview" `
-  -Headers @{ Authorization = "Bearer $tok"; 'Content-Type'='application/json' }
-$r.agentIdentityBlueprint.clientId   # <-- the blueprint client id (Bot Service msaAppId)
-# 3. If a failed 'create-agent-script' deploymentScript remains, delete it:
-az resource delete -g <rg> -n create-agent-script --resource-type Microsoft.Resources/deploymentScripts
-# 4. Feed it back and re-provision (bicep now SKIPS the deployment script):
-azd env set AGENT_IDENTITY_BLUEPRINT_CLIENT_ID <clientId>
+# 1. Provision the base. It creates account/project/model/ACR, then STOPS at the blueprint
+#    deployment script with 'KeyBasedAuthenticationNotPermitted'. That is expected.
+azd provision
+
+# 2. Create the blueprint out-of-band + wire it back into azd (idempotent helper). It discovers
+#    the account/project in the RG, grants you 'Cognitive Services User', PUTs the blueprint,
+#    deletes the failed script, and runs `azd env set AGENT_IDENTITY_BLUEPRINT_CLIENT_ID`.
+pwsh -File .\scripts\create-agent-blueprint.ps1 -ResourceGroup <your-rg>
+
+# 3. Re-provision. With AGENT_IDENTITY_BLUEPRINT_CLIENT_ID set, main.bicep SKIPS the deployment
+#    script and finishes the Bot Service + monitoring + the full postprovision (steps 1–5 above).
 azd provision
 ```
+
+**Why this happens & why it is safe.** The blueprint is normally created by an ARM **deployment
+script** (`infra/modules/maib-creation-script.bicep`) whose container mounts an Azure File share
+with the storage **shared key** — blocked by the policy. `main.bicep` therefore accepts a
+pre-created blueprint client id via `agentIdentityBlueprintClientId` (azd var
+`AGENT_IDENTITY_BLUEPRINT_CLIENT_ID`); when set, the deployment-script modules are skipped and the
+value feeds the Bot Service `msaAppId` + the `AGENT_IDENTITY_BLUEPRINT_ID` output. The helper makes
+the **same** data-plane call the script would (`PUT {projectEndpoint}/managedagentidentityblueprints/{maibName}`)
+but from your own Entra ID token — no storage, no shared key. This mirrors the wider pattern for
+this subscription: **when a key-based mechanism is blocked, replace it with an Entra ID call** (the
+same reasoning used for Azure OpenAI key auth → managed identity in the ACA samples).
 
 ## 4. Approve the blueprint
 
