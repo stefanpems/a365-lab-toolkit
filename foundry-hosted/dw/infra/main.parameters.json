@@ -10,6 +10,9 @@
     },
     "agentIdentityBlueprintClientId": {
       "value": "${AGENT_IDENTITY_BLUEPRINT_CLIENT_ID}"
+    },
+    "botName": {
+      "value": "${AGENT_BOT_NAME}"
     }
   }
 }

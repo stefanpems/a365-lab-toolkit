@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "11814589177738426649"
+      "templateHash": "11589636178190640907"
     }
   },
   "parameters": {
@@ -74,9 +74,9 @@
     },
     "botName": {
       "type": "string",
-      "defaultValue": "[format('{0}-bot', parameters('agentName'))]",
+      "defaultValue": "",
       "metadata": {
-        "description": "Name of the Bot Service"
+        "description": "Name (handle) of the Bot Service. Bot handles are GLOBALLY unique across all\nAzure tenants, so the default appends a resource-group hash to avoid collisions with other\ndeployments of this sample (e.g. the reference lab). Override via azd var AGENT_BOT_NAME."
       }
     },
     "botDisplayName": {
@@ -123,6 +123,7 @@
     }
   },
   "variables": {
+    "effectiveBotName": "[if(empty(parameters('botName')), format('fhdw-bot-{0}', uniqueString(resourceGroup().id)), parameters('botName'))]",
     "createBlueprintViaScript": "[empty(parameters('agentIdentityBlueprintClientId'))]"
   },
   "resources": [
@@ -531,7 +532,7 @@
         "mode": "Incremental",
         "parameters": {
           "botName": {
-            "value": "[parameters('botName')]"
+            "value": "[variables('effectiveBotName')]"
           },
           "displayName": {
             "value": "[parameters('botDisplayName')]"
@@ -620,7 +621,7 @@
         "mode": "Incremental",
         "parameters": {
           "botName": {
-            "value": "[parameters('botName')]"
+            "value": "[variables('effectiveBotName')]"
           },
           "workspaceName": {
             "value": "[format('{0}-logs', parameters('environmentName'))]"

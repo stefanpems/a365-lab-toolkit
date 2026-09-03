@@ -64,6 +64,13 @@ src/hello_world_a365_agent/
 
 ## 3. Provision everything
 
+> **Azure Bot Service handles are GLOBALLY unique** (across all tenants). To avoid an
+> `InvalidBotData: The bot name is already registered to another bot application` error when more
+> than one person deploys this sample, `main.bicep` defaults the bot handle to
+> `fhdw-bot-<hash(resourceGroup)>`. Override it with the azd var **`AGENT_BOT_NAME`** if you want a
+> specific handle (2–42 chars). The handle is internal — Teams/publish bind to the **blueprint id**,
+> not the bot handle.
+
 ### Path A — standard subscription
 
 ```powershell

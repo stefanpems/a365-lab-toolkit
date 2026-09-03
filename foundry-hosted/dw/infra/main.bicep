@@ -41,11 +41,16 @@ param maibName string = '${agentName}-maib'
 // Bot Service module parameters
 // =================================================================================================
 
-@description('Name of the Bot Service')
-param botName string = '${agentName}-bot'
+@description('''Name (handle) of the Bot Service. Bot handles are GLOBALLY unique across all
+Azure tenants, so the default appends a resource-group hash to avoid collisions with other
+deployments of this sample (e.g. the reference lab). Override via azd var AGENT_BOT_NAME.''')
+param botName string = ''
 
 @description('Display name of the bot')
 param botDisplayName string = '${agentName} Bot'
+
+// Globally-unique bot handle (2-42 chars). Falls back to a hashed default when not supplied.
+var effectiveBotName = empty(botName) ? 'fhdw-bot-${uniqueString(resourceGroup().id)}' : botName
 
 @description('SKU of the Bot Service')
 param botServiceSku string = 'F0'
@@ -122,7 +127,7 @@ var blueprintClientId = createBlueprintViaScript ? deploymentScriptAgent.outputs
 module botService 'modules/botservice.bicep' = {
   name: 'botservice-deployment'
   params: {
-    botName: botName
+    botName: effectiveBotName
     displayName: botDisplayName
     msaAppId: blueprintClientId
     endpoint: 'https://${accountName}.services.ai.azure.com/api/projects/${projectName}/agents/${agentName}/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview'
@@ -135,7 +140,7 @@ module botService 'modules/botservice.bicep' = {
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring-deployment'
   params: {
-    botName: botName
+    botName: effectiveBotName
     workspaceName: '${environmentName}-logs'
     location: location
     tags: tags
