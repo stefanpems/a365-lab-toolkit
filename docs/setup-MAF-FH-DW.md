@@ -150,10 +150,33 @@ Sanity check: the Bot Service **`msaAppId` must equal your Blueprint ID** (`azd 
 AGENT_IDENTITY_BLUEPRINT_ID`). Verify with
 `az bot show -n <bot> -g <rg> --query properties.msaAppId`.
 
-## 4. Approve the blueprint
+## 4. Approve, grant consent & publish
 
-1. [M365 admin center → Agents → Requests](https://admin.cloud.microsoft/#/agents/all/requested).
-2. Locate your **agent blueprint** and click **Approve request and activate**.
+The provisioned agent lands as a **request** in the admin center. Approving it is a wizard, not a
+single click.
+
+1. [M365 admin center → Agents → All agents → **Requests**](https://admin.cloud.microsoft/#/agents/all/requested)
+   → open your agent (e.g. `agentframeworkFH-DW2-agent`, **Pending review**, *Platform: Microsoft
+   Foundry*). The **Details** tab shows the version, owner, and the **Entra agent ID**.
+2. **Permissions** tab → **Grant admin consent** for the scopes the agent needs:
+   - `Agent365.Observability.OtelWrite` (**Application**) — telemetry to Agent 365.
+   - `AgentData.ReadWrite` (Messaging Bot API, **Delegated**).
+   - the **Agent Tools** `McpServers.*.All` set (Mail, Teams, Calendar, Files, SharePoint,
+     Word/Excel/PowerPoint, Dataverse, D365, …) — all **Delegated**.
+   - `AgentIdentity.CreateAsManager` (Microsoft Graph, **Application**).
+3. **Publish to store** → the *Publish new agent* wizard:
+   1. **Publish to users** — *Host products* = **Copilot**; *Publish* = **All users**;
+      *Activate* = **All users** (or specific users/groups who may create instances).
+   2. **Apply template** — pick your **AI-teammate policy template** (§7.1 of
+      [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md)). It must carry **Microsoft 365 Frontier for
+      Autopilots (no Teams)** + **Microsoft Teams Enterprise**. The default Entra/Purview/Defender/
+      SharePoint protections are listed below the template.
+   3. **Accept permissions** → **Grant admin consent**. A **blueprint consent popup** appears —
+      *"Allow agents created from this blueprint to access data?"* (Access agent data, Enable Agent
+      365 Telemetry, Sign you in and read your profile). Click **Allow** → the wizard then shows
+      *"All required permissions have been granted."*
+   4. **Review and finish** → **Publish** → *"You published `<agent>`"*.
+4. The agent now shows **Available** in **Agents → All agents** (Platform *Microsoft Foundry*).
 
 ## 5. Configure Teams integration
 
@@ -164,10 +187,30 @@ AGENT_IDENTITY_BLUEPRINT_ID`). Verify with
 
 ## 6. Create instances (hire) & license
 
-In Microsoft Teams → **Apps → Agents for your team** → find your blueprint → **create an
+In Microsoft Teams → **Apps → Agents for your team** → find your agent → **create an
 instance**. Each instance is an **agent user** with its own mailbox, OneDrive, and Teams
-presence. Assign licenses per instance as in [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) §8 if
-the policy template didn't (admin approval may be required before hiring).
+presence.
+
+### 6.1 Give instances a mailbox + full O365 — add **Microsoft 365 E7** on the Licenses tab
+
+The AI-teammate policy template only assigns the **minimum** — **Frontier for Autopilots (no
+Teams)** + **Teams Enterprise**. That yields the agent identity + Teams presence but **not a full
+mailbox / O365 resources**. To make each new instance get a **mailbox + OneDrive + full O365**, add
+**Microsoft 365 E7 (No Teams)** (or E5) to the template's license set:
+
+1. Admin center → **Agents → All agents** → open your agent (the **template**) → **Licenses** tab.
+2. Check **Microsoft 365 Frontier for Autopilots (no Teams)** + **Microsoft Teams Enterprise** +
+   **Microsoft 365 E7 (No Teams)** → **Save changes**.
+3. You get *"License assignment updated. New agent instances created from this template will be
+   assigned the licenses you selected."* — the **Licenses (3)** set is now inherited by every new
+   instance.
+
+> **Why the Licenses tab and not the template wizard.** You **cannot** add E5/E7 while *creating*
+> the policy template (the **Save hangs** — same gotcha as [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md)
+> §7.1). Adding E5/E7 **here**, on the deployed agent's **Licenses** tab, works. Assign the
+> licenses **before** hiring so instances inherit the mailbox + O365 from creation. Existing
+> instances can be licensed per-instance (Instances → `<instance>` → Licenses) — see
+> [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) §8.
 
 ## 7. Observability
 
