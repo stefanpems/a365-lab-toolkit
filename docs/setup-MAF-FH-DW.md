@@ -131,6 +131,25 @@ but from your own Entra ID token — no storage, no shared key. This mirrors the
 this subscription: **when a key-based mechanism is blocked, replace it with an Entra ID call** (the
 same reasoning used for Azure OpenAI key auth → managed identity in the ACA samples).
 
+### 3.2 What a successful provision looks like
+
+`azd` ends with `SUCCESS: Your application was provisioned in Azure`, and the postprovision hook
+prints `Publish digital worker script finished` with a `titleId` + `teamsAppId`, the OAuth2 grants
+(MCP `McpServers.*` + APX `AgentData.ReadWrite`), and `Adding current user as blueprint owner`. The
+resource group then contains:
+
+| Resource | Example name |
+|---|---|
+| Foundry account + project + model (`gpt-4.1`) | `dwfh<hash>acct` / `…proj` |
+| Container Registry | `dwfh<hash>acr` |
+| Deployment-script UMI | `foundry-deployment-script-umi` (only on the standard path) |
+| **Azure Bot Service** (Teams channel) | `fhdw-bot-<hash>` |
+| Log Analytics workspace | `<env>-logs` |
+
+Sanity check: the Bot Service **`msaAppId` must equal your Blueprint ID** (`azd env get-values →
+AGENT_IDENTITY_BLUEPRINT_ID`). Verify with
+`az bot show -n <bot> -g <rg> --query properties.msaAppId`.
+
 ## 4. Approve the blueprint
 
 1. [M365 admin center → Agents → Requests](https://admin.cloud.microsoft/#/agents/all/requested).
