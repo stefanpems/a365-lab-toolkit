@@ -395,3 +395,10 @@ $env:PYTHONUTF8=1 ; .venv\Scripts\python.exe verify_deploy.py --mcp --email <int
 Expected: health `200`, LLM round-trip, and a **real email sent from the signed-in user's
 mailbox** via the Mail MCP. Test with an **internal** recipient (external delivery from a
 `.onmicrosoft.com` demo tenant can be blocked by anti-spam — not a code bug).
+
+> **Long-lived container — token refresh.** `setup_mcp_servers` rebuilds the MCP tools past a
+> TTL (`MCP_TOKEN_TTL_SECONDS`, default 1800s) so the per-audience OAuth token baked into the
+> tools' httpx client headers is re-acquired before it expires — otherwise an always-on replica
+> eventually returns **HTTP 401** on every Mail/Work IQ call. See
+> [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) §9 for the full diagnosis. Redeploy the image
+> (`az acr build` + `az containerapp update --image`, no secret rotation) to pick up the fix.

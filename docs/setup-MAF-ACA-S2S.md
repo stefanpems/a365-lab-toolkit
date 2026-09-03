@@ -244,3 +244,11 @@ Use `verify_deploy.py --cloud` (POST to `/api/messages` with `deliveryMode=expec
 hit the real ACA instance and read the buffered reply. Expected: a normal LLM answer to a
 generic prompt; a mail-send prompt returns **not authorized** (`AADSTS82001`) — the correct,
 expected S2S behavior.
+
+> **Long-lived container — token refresh.** When agentic auth is enabled, `setup_mcp_servers`
+> rebuilds the MCP tools past a TTL (`MCP_TOKEN_TTL_SECONDS`, default 1800s) so the per-audience
+> OAuth token baked into the tools' httpx client headers is re-acquired before it expires —
+> otherwise an always-on replica eventually returns **HTTP 401** on every Work IQ tool call. The
+> pure-S2S LLM-only path (no tools) is unaffected. See [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md)
+> §9 for the full diagnosis. Redeploy the image (`az acr build` + `az containerapp update
+> --image`, no secret rotation) to pick up the fix.
