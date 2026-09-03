@@ -178,12 +178,26 @@ single click.
    4. **Review and finish** → **Publish** → *"You published `<agent>`"*.
 4. The agent now shows **Available** in **Agents → All agents** (Platform *Microsoft Foundry*).
 
-## 5. Configure Teams integration
+## 5. Configure Teams integration (REQUIRED — this is what makes instances respond)
+
+**Without this step an instance is created but stays silent in Teams** — messages never reach the
+Foundry agent because the blueprint has no backend wired to the Bot Service. The postprovision
+hook that would do it (`scripts/configure-blueprint-backend.ps1`) is **commented out**, so do it
+manually:
 
 1. Open the [Teams Developer Portal → agent-blueprint](https://dev.teams.microsoft.com/tools/agent-blueprint)
    (if your blueprint isn't listed, open any blueprint and replace the id in the URL with your
    Blueprint ID from `azd env get-values`).
-2. Under **Configuration**, set the **Bot ID** = your **Blueprint ID**.
+2. Under **Configuration**, set the **Bot ID** = your **Blueprint ID** (= the Bot Service
+   `msaAppId`). Save.
+
+> This sets the blueprint **backendConfiguration** (`botBased.botId = <BlueprintId>`). Doing it via
+> `scripts/configure-blueprint-backend.ps1` needs an **interactive** Teams-scoped token — a plain
+> `az account get-access-token --resource https://dev.teams.microsoft.com` returns **403**. If you
+> prefer the script, first run `az login --scope https://dev.teams.microsoft.com/.default` (as the
+> blueprint owner), set `AGENT_IDENTITY_BLUEPRINT_ID`, then run it. The **UI path above is the
+> reliable one.** After saving, an existing silent instance starts responding within a minute or two
+> (recreate the instance if it stays silent).
 
 ## 6. Create instances (hire) & license
 
