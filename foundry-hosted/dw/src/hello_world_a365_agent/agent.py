@@ -25,13 +25,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import AsyncAzureOpenAI
 
 from agent_framework import Agent, MCPStreamableHTTPTool
+from agent_framework.foundry import FoundryChatClient
 from agent_framework.openai import OpenAIChatCompletionClient
 
 from microsoft_agents.hosting.core import Authorization, TurnContext
@@ -107,10 +108,21 @@ class FoundryDigitalWorkerAgent(AgentInterface):
 
         self._endpoint = os.getenv("AzureOpenAIEndpoint") or os.getenv("AZURE_OPENAI_ENDPOINT")
         self._deployment = os.getenv("ModelDeployment") or os.getenv("AZURE_OPENAI_DEPLOYMENT")
-        if not self._endpoint:
-            raise ValueError("AzureOpenAIEndpoint (or AZURE_OPENAI_ENDPOINT) is required")
+        # Preferred model path: the Foundry PROJECT endpoint. Routing inference through it gives
+        # every autopilot instance identity IMPLICIT model access (the project managed identity
+        # proxies the call), so no per-instance Cognitive Services role is ever needed. Only when
+        # it is absent do we fall back to the account-level Azure OpenAI endpoint (which requires
+        # the calling identity to hold a role on the account -- see setup-MAF-FH-DW.md 6.2).
+        self._project_endpoint = (
+            os.getenv("AzureAIProjectEndpoint") or os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+        )
         if not self._deployment:
             raise ValueError("ModelDeployment (or AZURE_OPENAI_DEPLOYMENT) is required")
+        if not self._project_endpoint and not self._endpoint:
+            raise ValueError(
+                "A model endpoint is required: set AzureAIProjectEndpoint (preferred) or "
+                "AzureOpenAIEndpoint."
+            )
         self._api_version = os.getenv("AZURE_OPENAI_API_VERSION", AOAI_API_VERSION_DEFAULT)
 
         self._credential = DefaultAzureCredential()
@@ -119,7 +131,7 @@ class FoundryDigitalWorkerAgent(AgentInterface):
         self._agent: Optional[Agent] = None
         # Set lazily once we build the chat client, and reused when (re)building the
         # agent after the Mail MCP connects mid-turn.
-        self._client: Optional[OpenAIChatCompletionClient] = None
+        self._client: Optional[Any] = None
         # Current agentic-user token for the Mail MCP (exchanged per turn from the
         # turn's Authorization). Read by _AgentTokenAuth on every Mail request.
         self._mail_token: Optional[str] = None
@@ -138,22 +150,36 @@ class FoundryDigitalWorkerAgent(AgentInterface):
         exists within a turn (exchanged from the turn's Authorization). It is opened
         lazily on the first turn via :meth:`_ensure_mail_connected`.
         """
-        # agent-framework 1.0.0's OpenAI clients do NOT convert an Entra ID `credential=`
-        # into an azure_ad_token_provider (that wiring only exists in newer builds), so
-        # passing `credential=` fails at runtime with "Missing credentials". Build
-        # AsyncAzureOpenAI directly with an azure_ad_token_provider (works on every version;
-        # the framework passes the provided client through as-is). The managed identity needs
-        # the "Cognitive Services OpenAI User" role on the Azure OpenAI account.
-        token_provider = get_bearer_token_provider(self._credential, AOAI_SCOPE)
-        azure_client = AsyncAzureOpenAI(
-            azure_endpoint=self._endpoint,
-            azure_ad_token_provider=token_provider,
-            api_version=self._api_version,
-        )
-        self._client = OpenAIChatCompletionClient(
-            model=self._deployment,
-            async_client=azure_client,
-        )
+        if self._project_endpoint:
+            # Foundry project endpoint -> implicit model access for EVERY instance identity; the
+            # project managed identity proxies inference to the deployment. Preferred for the DW
+            # autopilot, whose per-hire instances each have their own agent identity.
+            self._client = FoundryChatClient(
+                project_endpoint=self._project_endpoint,
+                model=self._deployment,
+                credential=self._credential,
+            )
+            logger.info(
+                "Chat client: FoundryChatClient (project endpoint %s)", self._project_endpoint
+            )
+        else:
+            # Fallback: account-level Azure OpenAI endpoint. agent-framework 1.0.0's OpenAI clients
+            # do NOT convert an Entra ID `credential=` into an azure_ad_token_provider, so we build
+            # AsyncAzureOpenAI directly with the token provider. The calling identity then needs a
+            # Cognitive Services role on the account (does NOT scale to per-hire instances).
+            token_provider = get_bearer_token_provider(self._credential, AOAI_SCOPE)
+            azure_client = AsyncAzureOpenAI(
+                azure_endpoint=self._endpoint,
+                azure_ad_token_provider=token_provider,
+                api_version=self._api_version,
+            )
+            self._client = OpenAIChatCompletionClient(
+                model=self._deployment,
+                async_client=azure_client,
+            )
+            logger.info(
+                "Chat client: OpenAIChatCompletionClient (account endpoint %s)", self._endpoint
+            )
 
         self._agent = Agent(
             client=self._client,

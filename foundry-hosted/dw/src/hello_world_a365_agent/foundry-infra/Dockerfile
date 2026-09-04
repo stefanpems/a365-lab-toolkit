@@ -6,6 +6,7 @@ ARG AUTHORITY_ENDPOINT
 ARG TENANT_ID
 ARG AZURE_OPENAI_ENDPOINT
 ARG MODEL_DEPLOYMENT
+ARG AZURE_AI_PROJECT_ENDPOINT
 
 # Copy source. The build context is the agent project root
 # (samples/python/foundry-ai-teammate/src/hello_world_a365_agent),
@@ -73,6 +74,8 @@ ENV AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES=5a8
 # -----------------------------------------------------------------------------
 ENV AzureOpenAIEndpoint=${AZURE_OPENAI_ENDPOINT}
 ENV ModelDeployment=${MODEL_DEPLOYMENT}
+# Preferred model path: the Foundry PROJECT endpoint (implicit access for every instance identity).
+ENV AzureAIProjectEndpoint=${AZURE_AI_PROJECT_ENDPOINT}
 ENV FOUNDRY_AGENT_DEFAULT_INSTANCE_CLIENT_ID=${BLUEPRINT_CLIENT_ID}
 
 ENTRYPOINT ["python", "-m", "hello_world_a365_agent"]

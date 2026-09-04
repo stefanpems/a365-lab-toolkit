@@ -10,6 +10,13 @@ Remove-Item "./.vs" -Recurse -Force -ErrorAction SilentlyContinue
 
 $authorityEndpoint = "https://login.microsoftonline.com/$($env:TENANT_ID)"
 $azureOpenAIEndpoint = "https://$($env:ACCOUNT_NAME).openai.azure.com/"
+# Preferred model path: the Foundry PROJECT endpoint. Routing inference through it gives every
+# autopilot instance identity implicit model access (no per-instance Cognitive Services role).
+$projectEndpoint = if ($env:AZURE_AI_PROJECT_ENDPOINT) {
+    $env:AZURE_AI_PROJECT_ENDPOINT
+} else {
+    "https://$($env:ACCOUNT_NAME).services.ai.azure.com/api/projects/$($env:PROJECT_NAME)"
+}
 
 
 $acrLoginServer = $env:AZURE_CONTAINER_REGISTRY_ENDPOINT
@@ -42,6 +49,7 @@ az acr build `
     --build-arg TENANT_ID=$env:TENANT_ID `
     --build-arg AZURE_OPENAI_ENDPOINT=$azureOpenAIEndpoint `
     --build-arg MODEL_DEPLOYMENT=$env:MODEL_NAME `
+    --build-arg AZURE_AI_PROJECT_ENDPOINT=$projectEndpoint `
     .
 $azExit = $LASTEXITCODE
 

@@ -263,11 +263,18 @@ endpoint**; a direct account-endpoint call requires an explicit role at account 
 | **A. Route inference through the project endpoint** *(recommended)* | ✅ **Yes — zero per-instance RBAC** | Have the agent call the **project** inference endpoint (`https://<account>.services.ai.azure.com/api/projects/<project>`) instead of the account OpenAI endpoint. Foundry then proxies the call with the **project managed identity** (which already holds `Cognitive Services User`/`Foundry User` on the account), and **every** agent identity in the project — every current and future instance — has **implicit** inference access, so no role assignment is ever required per hire. |
 | **B. Grant the role to the instance identity** *(interim / single instance)* | ❌ No — repeat at **every** hire | Assign **`Cognitive Services OpenAI User`** (least-privilege for OpenAI) *or* `Cognitive Services User` to that instance's agent identity at **account** scope. |
 
-> **Recommendation.** Because a blueprint is *hired many times*, option **B does not scale** — each
-> new instance is a new principal that would need its own grant. **Option A is the durable fix**: it
-> matches the Foundry "standard path" (implicit model access via the project endpoint) and covers
-> all future instances with no RBAC at all. Use **B only as an immediate unblock** for an
-> already-hired instance while you adopt A.
+> **✅ Implemented in this sample (Option A).** The agent builds its chat client with
+> **`agent_framework.foundry.FoundryChatClient`** against the **project endpoint**
+> ([agent.py](../foundry-hosted/dw/src/hello_world_a365_agent/agent.py)), and the build script bakes
+> `AZURE_AI_PROJECT_ENDPOINT` into the image
+> ([build-docker-image-acr.ps1](../foundry-hosted/dw/scripts/build-docker-image-acr.ps1),
+> [Dockerfile](../foundry-hosted/dw/src/hello_world_a365_agent/foundry-infra/Dockerfile) +
+> `agent-framework-foundry` in
+> [requirements.txt](../foundry-hosted/dw/src/hello_world_a365_agent/requirements.txt)). So a freshly
+> deployed agent version needs **no per-instance RBAC** — every current and future instance has
+> implicit model access. The account-endpoint path (and Option B) remain only as a **fallback** when
+> `AzureAIProjectEndpoint` is unset. Existing instances start working after a new agent version is
+> rolled out; you do **not** need to grant them anything.
 
 **Interim unblock (option B)** — grant the role to the instance principal named in the error. Use
 `--assignee-object-id` (not `--assignee`) so it doesn't need a Microsoft Graph lookup:

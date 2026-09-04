@@ -20,6 +20,10 @@ microsoft-opentelemetry>=0.1.0a3
 # ModuleNotFoundError until this package is installed, so it MUST be listed explicitly.
 agent-framework-core==1.0.0
 agent-framework-openai==1.0.0
+# Foundry project-endpoint chat client (agent_framework.foundry.FoundryChatClient): routes model
+# inference through the PROJECT endpoint so every autopilot instance identity has IMPLICIT model
+# access (no per-instance Cognitive Services role). See setup-MAF-FH-DW.md 6.2.
+agent-framework-foundry==1.0.0
 openai>=1.0.0
 
 # Model Context Protocol SDK — required by agent_framework's MCPStreamableHTTPTool
