@@ -31,6 +31,12 @@ definition; you don't ship code or a container.
 - Python venv with `azure-ai-projects azure-identity requests python-dotenv` (see
   `requirements.txt`).
 
+> **You will NOT hit the FH-DW shared-key blocker.** FD-DW is declarative — there is **no ARM
+> deployment script** and no storage account, so the governed-subscription policy *"Storage
+> accounts should prevent shared key access"* that stops the deploy midway for
+> [FH-DW](setup-MAF-FH-DW.md) §0/§3 **does not apply here**. The blueprint is created
+> automatically with the prompt-agent version (§2).
+
 ## 1. Get the sources
 
 ```powershell
@@ -108,6 +114,19 @@ python publish_autopilot.py dwpublish
    A successful response returns a `titleId` and `teamsAppId`. (The `agenticUserTemplate` is
    sent **inline** — no separate manifest file is needed.)
 
+> **⚠️ The Bot Service handle is GLOBALLY unique across ALL Azure tenants** (like a DNS name).
+> `BOT_NAME` defaults to `fddw-bot-<hash(rg+agent)>` for exactly this reason — a plain handle like
+> `agentframeworkfd-dw-bot` fails with `InvalidBotData: The bot name is already registered to
+> another bot application` if anyone (e.g. the reference lab) already used it. This is the same
+> trap FH-DW hit (see [setup-MAF-FH-DW.md](setup-MAF-FH-DW.md) §3). Override `BOT_NAME` only if you
+> need a specific 2–42-char handle. The handle is internal — Teams/publish bind to the
+> **blueprint id**, not the handle.
+
+> **Use only `dwpublish`.** The other sub-commands (`bot`, `publish`, `all`) are the older
+> data-plane path that returned `502 upstream_dependency_failed` **and** set the Bot Service
+> `msaAppId` to the **instance** principal. The digital-worker relay requires `msaAppId` =
+> **blueprint `client_id`**, which only `dwpublish` does.
+
 ## 4. Approve in the Microsoft 365 admin center
 
 1. [M365 admin center → Agents → All agents → **Requests**](https://admin.cloud.microsoft/#/agents/all/requested).
@@ -120,12 +139,43 @@ python publish_autopilot.py dwpublish
 > the agent was published as a **plain Agent** (portal regular publish or the 502-blocked
 > `publishAsAutopilot` path), **not** as a Digital Worker. Re-publish with `dwpublish`.
 
+### 4.1 Give instances a mailbox + full O365 — add Microsoft 365 E7 on the Licenses tab
+
+Exactly as for [FH-DW](setup-MAF-FH-DW.md) §6.1: the autopilot policy template assigns only the
+**minimum** — **Microsoft 365 Frontier for Autopilot** (the agent identity + the ability to act as
+itself). That is **not** a full mailbox / OneDrive / O365. To make each hired instance get a
+**mailbox + OneDrive + full O365**, add **Microsoft 365 E7 (No Teams)** (or E5) to the template's
+license set:
+
+1. Admin center → **Agents → All agents** → open your agent (the **template**) → **Licenses** tab.
+2. Check the **Frontier for Autopilot** license **+ Microsoft 365 E7 (No Teams)** → **Save changes**.
+
+> **Do it on the Licenses tab, not in the approval wizard.** You **cannot** add E5/E7 while
+> *creating* the policy template — the **Save hangs** (same gotcha as
+> [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) §7.1 and [FH-DW](setup-MAF-FH-DW.md) §6.1). Assign the
+> licenses **before** hiring so instances inherit the mailbox + O365 from creation.
+
 ## 5. Use it in Teams
 
 After approval the agent is in the **Registry**, appears in **Teams → Apps → Built for your
 org** and the **M365 Copilot agent store → Built by your org**. Add it / create an instance
 and chat. The Digital Worker acts with its **own agent identity** (own Entra identity + the
 Frontier-for-Autopilot license assigned by the template).
+
+### 5.1 Configure the blueprint backend (REQUIRED — otherwise the instance stays silent)
+
+Exactly as for [FH-DW](setup-MAF-FH-DW.md) §5, an instance can be created but **stay silent in
+Teams** until the blueprint's **backend** is wired to the Bot Service. Set it in the
+[Teams Developer Portal → agent-blueprint](https://dev.teams.microsoft.com/tools/agent-blueprint):
+under **Configuration**, set **Bot ID = your Blueprint ID** (= the Bot Service `msaAppId` =
+`blueprint.client_id`, printed by `python publish_autopilot.py identity`). Save. An existing silent
+instance starts responding within a minute or two.
+
+> **No per-instance model RBAC is needed here.** Unlike [FH-DW](setup-MAF-FH-DW.md) §6.2 — where
+> each hired instance's own identity must be granted a Cognitive Services role because the hosted
+> container calls the account-level Azure OpenAI endpoint directly — a **declarative** agent's
+> model inference is run by the Foundry platform, so **no** per-instance role assignment is
+> required for any instance.
 
 ## 6. Observability & tools
 

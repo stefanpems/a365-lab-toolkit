@@ -16,6 +16,7 @@ Values can be overridden via environment variables / a local .env (see .env.temp
 
 from __future__ import annotations
 
+import hashlib
 import os
 
 from dotenv import load_dotenv
@@ -38,7 +39,12 @@ if not PROJECT_ENDPOINT:
 # --- Azure resources used by the autopilot publish (Bot Service) --------------------------
 # The Bot Service must be created in the resource group that contains the Foundry resource.
 RESOURCE_GROUP: str = os.environ.get("AZURE_RESOURCE_GROUP", "agentframeworkFH-OBO-rg")
-BOT_NAME: str = os.environ.get("BOT_NAME", "agentframeworkfd-dw-bot")
+# Bot Service handles are GLOBALLY unique across ALL Azure tenants, so a plain name like
+# "agentframeworkfd-dw-bot" fails with InvalidBotData "bot name already registered" if anyone
+# else used it (the same trap FH-DW hit). Default to a collision-proof handle derived from the
+# RG + agent name; override BOT_NAME only for a specific 2-42 char handle.
+_bot_suffix = hashlib.sha1(f"{RESOURCE_GROUP}|{AGENT_NAME}".encode()).hexdigest()[:12]
+BOT_NAME: str = os.environ.get("BOT_NAME", f"fddw-bot-{_bot_suffix}")
 
 # --- Publish metadata (shown in the Teams / M365 agent store) -----------------------------
 PUBLISH_DISPLAY_NAME: str = os.environ.get("PUBLISH_DISPLAY_NAME", "AgentFramework FD Digital Worker")

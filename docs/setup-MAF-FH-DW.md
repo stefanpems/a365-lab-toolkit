@@ -226,6 +226,81 @@ mailbox / O365 resources**. To make each new instance get a **mailbox + OneDrive
 > instances can be licensed per-instance (Instances → `<instance>` → Licenses) — see
 > [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) §8.
 
+### 6.2 Model access — every instance identity must be able to call the model
+
+**Symptom.** The instance is created, is wired to Teams (§5), and *responds* — but every turn
+fails with an error from the chat model, e.g.:
+
+> `Error code: 401 - PermissionDenied — The principal <guid> lacks the required data action`
+> `Microsoft.CognitiveServices/accounts/OpenAI/deployments/chat/completions/action to perform`
+> `POST /openai/deployments/{deployment-id}/chat/completions` — or simply *"Principal does not have
+> access to API/Operation."*
+
+**Root cause — the autopilot per-instance identity model.** An autopilot is *one blueprint → many
+instances*, and **each hired instance gets its OWN agent identity** (a distinct Entra service
+principal) plus its own agent user account — see
+[What is an autopilot](https://learn.microsoft.com/azure/foundry/agents/concepts/autopilot-overview#the-identity-model).
+The hosted container authenticates its **model** call with `DefaultAzureCredential`
+([agent.py](../foundry-hosted/dw/src/hello_world_a365_agent/agent.py)), which at runtime resolves
+to the **instance's** agent identity — **not** the template/published identity. The provisioning
+step only grants the model role to the template identity
+([agent-creation-script.ps1](../foundry-hosted/dw/scripts/agent-creation-script.ps1) →
+`instance_identity.client_id`), so **every newly hired instance starts with no model access**. The
+`<guid>` in the error is that instance's principal, and `az role assignment list --assignee <guid>`
+returns nothing.
+
+Why a role is needed at all: the sample calls the **account-level Azure OpenAI endpoint directly**
+(`https://<account>.openai.azure.com/`). Per
+[Hosted agent permissions → Account-level access](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agent-permissions),
+an agent's *implicit* model-inference access applies **only when calling through the project
+endpoint**; a direct account-endpoint call requires an explicit role at account scope for the
+**calling identity** (here, each instance identity).
+
+**Fix — pick one.**
+
+| Option | Covers **future** instances? | What to do |
+|---|---|---|
+| **A. Route inference through the project endpoint** *(recommended)* | ✅ **Yes — zero per-instance RBAC** | Have the agent call the **project** inference endpoint (`https://<account>.services.ai.azure.com/api/projects/<project>`) instead of the account OpenAI endpoint. Foundry then proxies the call with the **project managed identity** (which already holds `Cognitive Services User`/`Foundry User` on the account), and **every** agent identity in the project — every current and future instance — has **implicit** inference access, so no role assignment is ever required per hire. |
+| **B. Grant the role to the instance identity** *(interim / single instance)* | ❌ No — repeat at **every** hire | Assign **`Cognitive Services OpenAI User`** (least-privilege for OpenAI) *or* `Cognitive Services User` to that instance's agent identity at **account** scope. |
+
+> **Recommendation.** Because a blueprint is *hired many times*, option **B does not scale** — each
+> new instance is a new principal that would need its own grant. **Option A is the durable fix**: it
+> matches the Foundry "standard path" (implicit model access via the project endpoint) and covers
+> all future instances with no RBAC at all. Use **B only as an immediate unblock** for an
+> already-hired instance while you adopt A.
+
+**Interim unblock (option B)** — grant the role to the instance principal named in the error. Use
+`--assignee-object-id` (not `--assignee`) so it doesn't need a Microsoft Graph lookup:
+
+```powershell
+$sub   = '<subscription-id>'
+$scope = "/subscriptions/$sub/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>"
+
+az role assignment create `
+  --subscription $sub `
+  --assignee-object-id '<instance-principal-guid-from-the-error>' `
+  --assignee-principal-type ServicePrincipal `
+  --role 'Cognitive Services OpenAI User' `
+  --scope $scope
+```
+
+After RBAC propagates, send a new message — **do not recreate the instance** (a new hire produces a
+new principal that again lacks the role).
+
+**Verify** which principal a failing turn used and whether it holds the role:
+
+```powershell
+# The <guid> is printed in the Teams error; confirm it has (or lacks) the model role at account scope.
+az role assignment list --subscription $sub --scope $scope --include-inherited `
+  --assignee-object-id '<instance-principal-guid>' `
+  --query "[].{role:roleDefinitionName,scope:scope}" -o table
+```
+
+> **Scope of this issue.** This affects **FH-DW only**. **ACA-DW** authenticates the model call with
+> the Container App's *own* fixed managed identity (one grant covers all instances; the per-instance
+> agentic identity is used only for the Mail token), and **FD-DW** is declarative (the platform
+> handles inference). Neither needs per-instance model RBAC.
+
 ## 7. Observability
 
 App Insights is auto-injected. For the A365 exporter, assign the app role
