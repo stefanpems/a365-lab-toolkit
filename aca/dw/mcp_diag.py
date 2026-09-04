@@ -233,14 +233,19 @@ def apply_httpx_diagnostics() -> None:
                     body = raw.decode("utf-8", "replace").strip()
                 except Exception:  # pragma: no cover - defensive
                     pass
-                # Benign MCP transport negotiation: the streamable-HTTP client
-                # probes the endpoint with GET (SSE); this server answers 405
-                # ("use POST for MCP JSON-RPC") and the client then POSTs fine.
-                # Do NOT treat that as a tool failure.
-                benign = method == "GET" or response.status_code == 405
+                # Benign, non-tool-call failures that must NOT be recorded as tool errors:
+                #  * GET / 405: the streamable-HTTP client probes the endpoint with GET (SSE);
+                #    this server answers 405 ("use POST for MCP JSON-RPC") and the client POSTs fine.
+                #  * DELETE: only used to TERMINATE an MCP session. During a token refresh we tear
+                #    down the old session whose token has already EXPIRED (that is why we refresh),
+                #    so the DELETE returns 401 — the server will expire the session anyway. Recording
+                #    it would latch `_tools_broken` and disable mail for the container's whole life.
+                # None of these is an actual tool invocation, so never surface them to the user.
+                benign = method == "GET" or method == "DELETE" or response.status_code == 405
                 if benign:
                     logger.info(
-                        "Agent 365 benign HTTP %s %s from %s (transport negotiation; ignored)",
+                        "Agent 365 benign HTTP %s %s from %s (transport negotiation / session "
+                        "termination; ignored)",
                         response.status_code,
                         method,
                         url,
