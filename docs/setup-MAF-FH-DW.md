@@ -19,9 +19,11 @@ does **not** use the Responses/Invocations protocols — it runs the **same Bot 
 - **Docker** (only for the optional local `azd` agent commands; the image itself is built in
   ACR by the scripts).
 - Roles: **Owner** on the subscription, **Azure AI User / Cognitive Services User**, a
-  **Tenant Admin** for org-wide configuration/consent, and **Agent ID Administrator** (or **Agent
-  ID Developer**) — the latter is **required** to write the blueprint's `inheritablePermissions`
-  (§8.1); **Global Administrator alone is not enough** for that specific operation.
+  **Tenant Admin** for org-wide configuration/consent, and **Agent ID Developer** (or **Agent ID
+  Administrator**) — **required** to write the blueprint's `inheritablePermissions` (§8.1). This is
+  documented: the `a365 setup permissions mcp` help states *"Required role: Agent ID Developer;
+  Global Administrator for tenant-wide OAuth2 consent"*, so **Global Administrator covers only the
+  OAuth2 consent**, not the inheritable-permission write (confirmed here as a `403`).
 - Region must support **Foundry hosted agents** (e.g. eastus2, polandcentral — see the
   [region list](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd)).
 
@@ -359,11 +361,21 @@ API** (`5a807f24-…`). This mirrors what `a365 setup permissions mcp` does for 
 > so there is **no "Grant admin consent" button** for Mail there. The fix is the blueprint
 > `inheritablePermissions` above, not the admin center.
 
-> **⚠️ Privilege required.** Writing the blueprint `inheritablePermissions` needs the **Agent ID
-> Administrator** (or **Agent ID Developer**) directory role — **Global Administrator alone returns
-> `403 Authorization_RequestDenied` (Insufficient privileges)**. The identity that runs the deploy
-> (postprovision step 4) or the recovery below must hold that role. `a365 setup permissions mcp` is
-> the Global-Admin-sufficient alternative (it performs the same configuration).
+> **⚠️ Privilege required (documented, not just observed).** The `a365 setup permissions mcp` help
+> states *"Required role: **Agent ID Developer**; Global Administrator for tenant-wide OAuth2
+> consent"*, and the [Entra prerequisites](https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints)
+> list **Agent ID Developer/Administrator**. So writing the blueprint `inheritablePermissions` needs
+> that role — **Global Administrator alone returns `403 Authorization_RequestDenied`** (confirmed in
+> this lab). Give the identity that runs the deploy (postprovision step 4) or the recovery below the
+> **Agent ID Developer** role.
+>
+> **Why not `a365 setup permissions mcp` for FH-DW?** That command *is* Global-Admin-sufficient (it
+> acts through the Microsoft-managed **Agent 365 CLI** first-party app), **but it resolves the
+> blueprint by the display name `"<agent-name> Blueprint"`** and therefore **does not find the
+> Foundry-created MAIB** (verified: `--dry-run` → *"Blueprint 'agentframeworkFH-DW2-agent Blueprint'
+> not found in Entra"*, `Blueprint: (null)`). FH-DW's blueprint is a Foundry `ManagedAgentIdentityBlueprint`
+> (app `ed641b63…`, name `…-maib`), so the raw-Graph path below — which targets it by **blueprint id**
+> — is the FH-DW route.
 
 > **Recovering an already-deployed agent** whose instances hit `AADSTS65001` on Mail. In hardened
 > tenants the terminal often can't reach Graph at all — `az`/`az rest` return the CAE
