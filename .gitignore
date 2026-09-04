@@ -52,6 +52,9 @@ ui/config.js
 **/bin/
 **/obj/
 
+# --- Companion DOCX (screenshots expose environment-specific details) -------
+docs-companion/
+
 # --- OS / editor noise ------------------------------------------------------
 .DS_Store
 Thumbs.db
