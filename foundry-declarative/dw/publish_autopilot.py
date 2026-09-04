@@ -103,6 +103,11 @@ def dw_publish(token: str, asset: dict) -> dict:
         "developerWebsiteUrl": "https://azure.microsoft.com",
         "privacyUrl": "https://privacy.microsoft.com",
         "termsOfUseUrl": "https://www.microsoft.com/legal/terms-of-use",
+        # NOTE: this AzureML agent-asset path (publishAsDigitalWorker) does NOT honor
+        # optionalPermissionScopes — the field is silently ignored, so MCP tool scopes (e.g. Mail)
+        # never reach the blueprint. To declare inheritable MCP scopes for a DW, publish via the
+        # agent endpoint ({project}/agents/<name>/microsoft365/publish, publishAsAutopilot=true) with
+        # optionalPermissionScopes, as foundry-hosted/dw/scripts/publish-digital-worker.ps1 does.
         "useAgenticUserTemplate": True,
         "agenticUserTemplate": {
             "Id": "digitalWorkerTemplate",

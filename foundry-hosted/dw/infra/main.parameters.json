@@ -11,6 +11,9 @@
     "agentIdentityBlueprintClientId": {
       "value": "${AGENT_IDENTITY_BLUEPRINT_CLIENT_ID}"
     },
+    "agentName": {
+      "value": "${AGENT_NAME}"
+    },
     "botName": {
       "value": "${AGENT_BOT_NAME}"
     }

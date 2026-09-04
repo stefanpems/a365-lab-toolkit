@@ -18,12 +18,11 @@ does **not** use the Responses/Invocations protocols — it runs the **same Bot 
 - **azd** (`winget install Microsoft.Azd`) + `az login` + `azd auth login`.
 - **Docker** (only for the optional local `azd` agent commands; the image itself is built in
   ACR by the scripts).
-- Roles: **Owner** on the subscription, **Azure AI User / Cognitive Services User**, a
-  **Tenant Admin** for org-wide configuration/consent, and **Agent ID Developer** (or **Agent ID
-  Administrator**) — **required** to write the blueprint's `inheritablePermissions` (§8.1). This is
-  documented: the `a365 setup permissions mcp` help states *"Required role: Agent ID Developer;
-  Global Administrator for tenant-wide OAuth2 consent"*, so **Global Administrator covers only the
-  OAuth2 consent**, not the inheritable-permission write (confirmed here as a `403`).
+- Roles: **Owner** on the subscription, **Azure AI User / Cognitive Services User**, and a
+  **Global Administrator** (Tenant Admin) for org-wide configuration/consent. No Agent-ID directory
+  role is needed: the instances' MCP tool scopes (incl. Mail) are declared at publish time via
+  `optionalPermissionScopes` and the **platform** configures the blueprint's inheritable permissions
+  at admin approval — you never `PATCH` the blueprint yourself (§8.1).
 - Region must support **Foundry hosted agents** (e.g. eastus2, polandcentral — see the
   [region list](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd)).
 
@@ -89,13 +88,14 @@ orchestrates the five pieces:
    (`agent-creation-script.ps1`).
 3. **Publish the digital worker** to Microsoft 365 via the Foundry API
    (`publish-digital-worker.ps1`) — creates the hireable DW with the blueprint id + DW
-   metadata.
-4. **OAuth2 grants + inheritable permissions** for the blueprint
-   (`create-blueprintsp-oauth2-grants.ps1`): it (a) admin-consents the MCP/APX scopes on the
-   blueprint SP **and** (b) configures the blueprint's **`inheritablePermissions`** so every hired
-   **instance** inherits the MCP tool scopes (incl. `McpServers.Mail.All`). **Both** are required —
-   without (b), instances get `AADSTS65001 consent_required` on the Mail token and report *"I
-   cannot send emails"* (see §8.1).
+   metadata, and **declares the MCP tool scopes** the instances need via `optionalPermissionScopes`
+   (incl. `McpServers.Mail.All`). At admin approval the **platform** uses these to configure the
+   blueprint's inheritable permissions, so every hired **instance** inherits them — without this,
+   instances get `AADSTS65001 consent_required` on the Mail token and report *"I cannot send
+   emails"* (see §8.1).
+4. **OAuth2 grants** for the blueprint (`create-blueprintsp-oauth2-grants.ps1`): admin-consents the
+   MCP/APX scopes on the blueprint **service principal**. (It does **not** touch the blueprint's
+   `inheritablePermissions` — that is platform-managed, driven by step 3's `optionalPermissionScopes`.)
 5. **Add the current user as blueprint owner** (`add-current-user-as-blueprint-owner.ps1`).
 
 Infra also provisions an **Azure Bot Service** that relays M365 activity to the Foundry
@@ -338,70 +338,80 @@ identity** (own mailbox) and/or OBO for a requesting user. Add servers via
 `ToolingManifest.json` and grant blueprint permissions (`a365 setup permissions mcp` +
 admin consent) exactly as for the ACA agents.
 
-### 8.1 Why instances can send mail — inheritable permissions (AADSTS65001)
+### 8.1 Why instances can send mail — declared publish scopes (AADSTS65001)
 
-An autopilot **instance** is its own agent identity, separate from the blueprint. Two things must
-be in place for an instance to get a Mail (or any MCP) token:
+An autopilot **instance** is its own agent identity, separate from the blueprint. For an instance to
+get a Mail (or any MCP tool) token, the blueprint must expose the resource's scopes as
+**inheritable permissions** — otherwise the instance's token exchange fails with
+**`AADSTS65001` (`consent_required`)** for app `<instance>` and the agent replies *"I cannot send
+emails at the moment."*
 
-1. **Admin consent** of the scope on the **blueprint** SP (an `oauth2PermissionGrant`,
-   `AllPrincipals`).
-2. The blueprint's **`inheritablePermissions`** must include the resource app so **instances
-   inherit** the scope — otherwise the instance's token exchange fails with
-   **`AADSTS65001` (`consent_required`)** for app `<instance>` and the agent replies *"I cannot
-   send emails at the moment."*
+**You do not (and must not) configure the blueprint directly.** The autopilot blueprint that Foundry
+creates is a **platform-managed** application (`type: System`): user tokens cannot `PATCH` its
+`inheritablePermissions` (every attempt returns `403 Authorization_RequestDenied`, even with the
+Agent ID Administrator role — the app is not customer-modifiable). Microsoft's guidance is explicit:
+*"Customers should not PATCH the blueprint as part of the normal deployment or publication workflow."*
 
-`create-blueprintsp-oauth2-grants.ps1` (postprovision step 4) now does **both**: it POSTs
-`applications/microsoft.graph.agentIdentityBlueprint/<id>/inheritablePermissions` (`kind:
-allAllowed`) for **Agent 365 Tools** (`ea9ffc3e-…`, the MCP/Mail scopes) and the **Messaging Bot
-API** (`5a807f24-…`). This mirrors what `a365 setup permissions mcp` does for the ACA agents. Ref:
-[Configure inheritable permissions for agent identity blueprints](https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints).
+Instead, the required tool scopes are **declared at publish time** and the **platform configures the
+blueprint's inheritable permissions for you at admin approval**:
 
-> **The admin center won't help here.** The agent's **Permissions** tab lists only the *declared*
-> permissions (Observability + `AgentData.ReadWrite`); the MCP/Mail scopes are granted out-of-band,
-> so there is **no "Grant admin consent" button** for Mail there. The fix is the blueprint
-> `inheritablePermissions` above, not the admin center.
+1. **`publish-digital-worker.ps1`** (postprovision step 3) sends an **`optionalPermissionScopes`**
+   field in the Microsoft 365 publish body:
 
-> **⚠️ Privilege required (documented, not just observed).** The `a365 setup permissions mcp` help
-> states *"Required role: **Agent ID Developer**; Global Administrator for tenant-wide OAuth2
-> consent"*, and the [Entra prerequisites](https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints)
-> list **Agent ID Developer/Administrator**. So writing the blueprint `inheritablePermissions` needs
-> that role — **Global Administrator alone returns `403 Authorization_RequestDenied`** (confirmed in
-> this lab). Give the identity that runs the deploy (postprovision step 4) or the recovery below the
-> **Agent ID Developer** role.
+   ```powershell
+   optionalPermissionScopes = @(
+       @{ resourceAppId = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"   # Agent 365 Tools (MCP)
+          scopes        = @("McpServers.Mail.All", "McpServersMetadata.Read.All") }
+   )
+   ```
+
+   `McpServers.Mail.All` is the Mail tool; `McpServersMetadata.Read.All` is required alongside any MCP
+   tool for tool/metadata discovery (the ACA DW declares the same pair). Add one entry per resource
+   app / scope your tools need (e.g. `McpServers.Calendar.All`, `McpServers.Teams.All`).
+
+   > **⚠️ Endpoint matters.** `optionalPermissionScopes` is honored **only** by the Foundry **agent**
+   > publish endpoint (`{project}/agents/<name>/microsoft365/publish` with `publishAsAutopilot=true`).
+   > The older **AzureML agent-asset** endpoint (`…api.azureml.ms/agent-asset/…/microsoft365/publish`
+   > with `publishAsDigitalWorker=true`) **silently ignores** the field — the publish succeeds but the
+   > scopes never appear in the admin center **Permissions** tab and instances still hit `AADSTS65001`.
+   > `publish-digital-worker.ps1` uses the agent endpoint for this reason.
+
+2. **Admin approval (the "Publish new agent" wizard)** — after publish, an admin approves the agent
+   in the **Microsoft 365 admin center** (**Agents → Requests → open the request → Publish**). Two
+   steps in this wizard are **mandatory and easy to miss**:
+
+   - **Apply template** — pick a **custom policy template that has a valid Agent 365 License**
+     assigned. The **Default policy template** shows *"Create a custom template and select an Agent
+     365 License. Autopilot agents require a valid Agent 365 License to create and use instances"* and
+     lists **`0 of 0 licenses available`** — selecting it **blocks instance creation**. Create the
+     custom template under **Agents → Settings → Templates** (assign a Microsoft Agent 365 license),
+     then select it here.
+   - **Accept permissions** — on the **Review permissions** step, click **Grant admin consent** for
+     the org. Under **Agent Tools** the declared delegated scopes must be listed — **`Mail MCP Server
+     All`** (`McpServers.Mail.All`) and **`Read All Mcp Server Metadata`** (`McpServersMetadata.Read.All`)
+     — and consented. **This consent is what makes the platform configure the blueprint's inheritable
+     permissions**, so every hired instance inherits them. Without it, the scopes stay unconsented and
+     instances hit `AADSTS65001`. **Grant admin consent** opens an Entra dialog — *"Allow agents created
+     from this blueprint to access data?"* — that lists everything the blueprint's agents will be able
+     to do (**Access agent data**, **Mail MCP Server All**, **Read All Mcp Server Metadata**, **Enable
+     Agent 365 Telemetry**, **Sign you in and read your profile**); click **Allow** to consent them all.
+
+3. **Hire (or re-hire) an instance** — new instances inherit the scopes at hire time. An instance
+   hired **before** the scope was approved will **not** retroactively gain it; hire a fresh instance.
+
+> **Changing the declared scopes later?** Bump the publish version so the endpoint accepts the new
+> metadata (it rejects re-publishing an already-published version):
 >
-> **Why not `a365 setup permissions mcp` for FH-DW?** That command *is* Global-Admin-sufficient (it
-> acts through the Microsoft-managed **Agent 365 CLI** first-party app), **but it resolves the
-> blueprint by the display name `"<agent-name> Blueprint"`** and therefore **does not find the
-> Foundry-created MAIB** (verified: `--dry-run` → *"Blueprint 'agentframeworkFH-DW2-agent Blueprint'
-> not found in Entra"*, `Blueprint: (null)`). FH-DW's blueprint is a Foundry `ManagedAgentIdentityBlueprint`
-> (app `ed641b63…`, name `…-maib`), so the raw-Graph path below — which targets it by **blueprint id**
-> — is the FH-DW route.
+> ```powershell
+> $env:PUBLISH_APP_VERSION = "1.0.1"   # any value greater than the last published one
+> ./scripts/publish-digital-worker.ps1 -AgentGuid <agent_guid>
+> ```
+>
+> Then re-approve in the admin center and re-hire. `create-blueprintsp-oauth2-grants.ps1`
+> (postprovision step 4) only admin-consents the scopes on the blueprint **service principal** and
+> the APX `AgentData.ReadWrite` scope — it deliberately does **not** touch the blueprint's
+> `inheritablePermissions` (that is the platform's job, driven by the publish `optionalPermissionScopes`).
 
-> **Recovering an already-deployed agent** whose instances hit `AADSTS65001` on Mail. In hardened
-> tenants the terminal often can't reach Graph at all — `az`/`az rest` return the CAE
-> `TokenCreatedWithOutdatedPolicies` challenge (a plain `az login` doesn't clear it), **device-code**
-> sign-in may be **disabled** by Conditional Access, and the **WAM** sign-in window is hidden behind
-> other windows. The reliable path is then **entirely in the browser**:
->
-> 1. **Assign the role** — [Entra admin center](https://entra.microsoft.com) → **Roles & admins** →
->    **Agent ID Administrator** → add your admin account.
-> 2. **Add the inheritable scope** in [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer)
->    (sign in as that admin; consent `Application.ReadWrite.All` when prompted):
->    - `GET https://graph.microsoft.com/v1.0/applications/microsoft.graph.agentIdentityBlueprint?$filter=appId eq '<blueprint-client-id>'` → copy the `id`.
->    - `POST https://graph.microsoft.com/v1.0/applications/microsoft.graph.agentIdentityBlueprint/<id>/inheritablePermissions`
->      ```json
->      { "resourceAppId": "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1",
->        "inheritableScopes": { "@odata.type": "#microsoft.graph.allAllowedScopes", "kind": "allAllowed" },
->        "inheritableRoles":  { "@odata.type": "#microsoft.graph.noRoles",         "kind": "none" } }
->      ```
->      (`noRoles` matters — Agent 365 Tools exposes delegated *scopes*, not app roles; requesting
->      `allAllowedRoles` also 403s.)
-> 3. **Recreate the instance** (hire a new one) so it inherits the scope at hire time; existing
->    instances may also pick it up on their next token.
->
-> If the terminal *can* reach Graph, **Microsoft Graph PowerShell** (`Connect-MgGraph`, which handles
-> CAE claims challenges natively — unlike `az`) does the same `POST`. `az`/`az rest` to Graph do **not**
-> work in a CAE-challenged tenant.
 
 ## 9. Verify
 

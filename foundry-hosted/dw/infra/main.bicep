@@ -33,9 +33,12 @@ param cognitiveServicesSku string = 'S0'
 @allowed(['Basic', 'Standard', 'Premium'])
 param containerRegistrySku string = 'Basic'
 
-param agentName string = 'agentframeworkFH-DW2-agent'
+@description('Agent name. Overridable via the AGENT_NAME azd var; falls back to the sample default when empty (e.g. on a fresh clone).')
+param agentName string = ''
 
-param maibName string = '${agentName}-maib'
+var effectiveAgentName = empty(agentName) ? 'agentframeworkFH-DW2-agent' : agentName
+
+var maibName = '${effectiveAgentName}-maib'
 
 // =================================================================================================
 // Bot Service module parameters
@@ -46,8 +49,8 @@ Azure tenants, so the default appends a resource-group hash to avoid collisions 
 deployments of this sample (e.g. the reference lab). Override via azd var AGENT_BOT_NAME.''')
 param botName string = ''
 
-@description('Display name of the bot')
-param botDisplayName string = '${agentName} Bot'
+// Display name of the bot.
+var botDisplayName = '${effectiveAgentName} Bot'
 
 // Globally-unique bot handle (2-42 chars). Falls back to a hashed default when not supplied.
 var effectiveBotName = empty(botName) ? 'fhdw-bot-${uniqueString(resourceGroup().id)}' : botName
@@ -130,7 +133,7 @@ module botService 'modules/botservice.bicep' = {
     botName: effectiveBotName
     displayName: botDisplayName
     msaAppId: blueprintClientId
-    endpoint: 'https://${accountName}.services.ai.azure.com/api/projects/${projectName}/agents/${agentName}/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview'
+    endpoint: 'https://${accountName}.services.ai.azure.com/api/projects/${projectName}/agents/${effectiveAgentName}/endpoint/protocols/activityProtocol?api-version=2025-05-15-preview'
     botServiceSku: botServiceSku
   }
 }
@@ -172,7 +175,7 @@ output ACCOUNT_NAME string = accountName
 
 output PROJECT_NAME string = projectName
 
-output AGENT_NAME string = agentName
+output AGENT_NAME string = effectiveAgentName
 
 output TENANT_ID string = tenant().tenantId
 

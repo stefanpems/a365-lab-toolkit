@@ -1,6 +1,8 @@
 #!/usr/bin/env pwsh
 param(
-    [Parameter(Mandatory = $true)]
+    # Kept for backward compatibility with post-provision.ps1. The agent endpoint identifies the
+    # agent by name in the URL, so the agent GUID is not part of the publish body.
+    [Parameter(Mandatory = $false)]
     [string]$AgentGuid
 )
 
@@ -11,24 +13,43 @@ Write-Host "Starting publish-digital-worker script..."
 # AZURE_LOCATION is a default azd environment variable
 Write-Host "Resources were deployed to: location $env:LOCATION blueprintId $env:AGENT_IDENTITY_BLUEPRINT_ID subscriptionId $env:SUBSCRIPTION_ID agentName $env:AGENT_NAME agentVersion $env:AGENT_VERSION"
 
-# Construct JSON body based on Microsoft365PublishRequest
-# NOTE: appPublishScope must stay in sync with the endpoint authorization scheme set in
-# agent-creation-script.ps1: "Tenant" -> "BotServiceTenant"; "Shared"/"Personal" -> "BotServiceRbac".
-# A mismatch breaks the Bot Service -> Foundry relay (403 "no valid bot service token").
+# Publish app version. Overridable via PUBLISH_APP_VERSION so the DW can be re-published with a
+# bumped version (the endpoint rejects re-publishing an already-published version). Bump this
+# whenever you change publish metadata such as optionalPermissionScopes.
+$appVersion = if ($env:PUBLISH_APP_VERSION) { $env:PUBLISH_APP_VERSION } else { "1.0.0" }
+
+# Publish via the AGENT endpoint (publishAsAutopilot). This is the only publish path that honors
+# `optionalPermissionScopes` — the older AzureML agent-asset endpoint (publishAsDigitalWorker)
+# silently ignores that field, so the MCP tool scopes never reach the blueprint and instances hit
+# AADSTS65001 on Mail. `publishScope` = "Tenant" must match the endpoint authorization scheme set in
+# agent-creation-script.ps1 ("BotServiceTenant"); a mismatch breaks the Bot Service -> Foundry relay.
+$agentPublishUrl = "$($env:AZURE_AI_PROJECT_ENDPOINT)/agents/$($env:AGENT_NAME)/microsoft365/publish?api-version=2025-11-15-preview"
+
 $body = @{
-    agentGuid           = $AgentGuid
-    botId               = $env:AGENT_IDENTITY_BLUEPRINT_ID
-    publishAsDigitalWorker = $true
-    appPublishScope     = "Tenant"
-    subscriptionId      = $env:SUBSCRIPTION_ID
-    agentName           = $env:AGENT_NAME
-    appVersion          = "1.0.0"
+    agentDisplayName         = $env:AGENT_NAME
+    publishAsAutopilot       = $true
+    publishScope             = "Tenant"
+    appVersion               = $appVersion
+    canRespondWithoutMention = $true
     shortDescription    = "Foundry A365 Agent deployed via Azure Developer CLI"
     fullDescription     = "A Foundry A365 agent example that demonstrates integration with Microsoft 365 and Azure Cognitive Services."
     developerName       = "Azure Developer"
     developerWebsiteUrl = "https://azure.microsoft.com"
     privacyUrl          = "https://privacy.microsoft.com"
     termsOfUseUrl       = "https://www.microsoft.com/legal/terms-of-use"
+    # optionalPermissionScopes declares the Microsoft 365 delegated (MCP tool) scopes the hired
+    # instances need. On this AGENT endpoint the PLATFORM uses them at admin approval to configure the
+    # managed agent identity blueprint's INHERITABLE permissions, so every hired instance inherits
+    # them. Without this the instance's token exchange for the tool fails with AADSTS65001 and the
+    # agent reports "I cannot send emails". Do NOT PATCH the blueprint directly (it is platform-managed).
+    # ea9ffc3e-... = Agent 365 Tools (MCP). McpServers.Mail.All = the Mail tool; McpServersMetadata.Read.All
+    # is required alongside it for MCP tool/metadata discovery (matches the ACA DW's declared scopes).
+    optionalPermissionScopes = @(
+        @{
+            resourceAppId = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
+            scopes        = @("McpServers.Mail.All", "McpServersMetadata.Read.All")
+        }
+    )
     useAgenticUserTemplate = $true
     agenticUserTemplate = @{
             Id                         = "digitalWorkerTemplate"
@@ -44,15 +65,14 @@ $jsonBody = $body | ConvertTo-Json -Depth 10
 $aiAzureToken = az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv
 
 
-Write-Host "Sending Microsoft 365 publish request (this submits the agent blueprint for admin approval in the Microsoft 365 admin center)..."
+Write-Host "Sending Microsoft 365 publish request to $agentPublishUrl (this submits the agent blueprint for admin approval in the Microsoft 365 admin center)..."
 Write-Host "JSON Body:"
 Write-Host $jsonBody
 
-$workspaceName = "$($env:ACCOUNT_NAME)@$($env:PROJECT_NAME)@AML"
 # Send POST request
 
 try{
-    $response = Invoke-RestMethod -Uri "https://$($env:LOCATION).api.azureml.ms/agent-asset/v2.0/subscriptions/$($env:SUBSCRIPTION_ID)/resourceGroups/$($env:AZURE_RESOURCE_GROUP)/providers/Microsoft.MachineLearningServices/workspaces/$($workspaceName)/microsoft365/publish" `
+    $response = Invoke-RestMethod -Uri $agentPublishUrl `
     -Method Post `
     -Headers @{
         "Content-Type" = "application/json"
