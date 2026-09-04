@@ -86,8 +86,12 @@ orchestrates the five pieces:
 3. **Publish the digital worker** to Microsoft 365 via the Foundry API
    (`publish-digital-worker.ps1`) — creates the hireable DW with the blueprint id + DW
    metadata.
-4. **OAuth2 grants** for the blueprint SP so inheritable scopes work
-   (`create-blueprintsp-oauth2-grants.ps1`).
+4. **OAuth2 grants + inheritable permissions** for the blueprint
+   (`create-blueprintsp-oauth2-grants.ps1`): it (a) admin-consents the MCP/APX scopes on the
+   blueprint SP **and** (b) configures the blueprint's **`inheritablePermissions`** so every hired
+   **instance** inherits the MCP tool scopes (incl. `McpServers.Mail.All`). **Both** are required —
+   without (b), instances get `AADSTS65001 consent_required` on the Mail token and report *"I
+   cannot send emails"* (see §8.1).
 5. **Add the current user as blueprint owner** (`add-current-user-as-blueprint-owner.ps1`).
 
 Infra also provisions an **Azure Bot Service** that relays M365 activity to the Foundry
@@ -329,6 +333,36 @@ As an AI teammate, the DW reaches Work IQ tools through the Tool Gateway with it
 identity** (own mailbox) and/or OBO for a requesting user. Add servers via
 `ToolingManifest.json` and grant blueprint permissions (`a365 setup permissions mcp` +
 admin consent) exactly as for the ACA agents.
+
+### 8.1 Why instances can send mail — inheritable permissions (AADSTS65001)
+
+An autopilot **instance** is its own agent identity, separate from the blueprint. Two things must
+be in place for an instance to get a Mail (or any MCP) token:
+
+1. **Admin consent** of the scope on the **blueprint** SP (an `oauth2PermissionGrant`,
+   `AllPrincipals`).
+2. The blueprint's **`inheritablePermissions`** must include the resource app so **instances
+   inherit** the scope — otherwise the instance's token exchange fails with
+   **`AADSTS65001` (`consent_required`)** for app `<instance>` and the agent replies *"I cannot
+   send emails at the moment."*
+
+`create-blueprintsp-oauth2-grants.ps1` (postprovision step 4) now does **both**: it POSTs
+`applications/microsoft.graph.agentIdentityBlueprint/<id>/inheritablePermissions` (`kind:
+allAllowed`) for **Agent 365 Tools** (`ea9ffc3e-…`, the MCP/Mail scopes) and the **Messaging Bot
+API** (`5a807f24-…`). This mirrors what `a365 setup permissions mcp` does for the ACA agents. Ref:
+[Configure inheritable permissions for agent identity blueprints](https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints).
+
+> **The admin center won't help here.** The agent's **Permissions** tab lists only the *declared*
+> permissions (Observability + `AgentData.ReadWrite`); the MCP/Mail scopes are granted out-of-band,
+> so there is **no "Grant admin consent" button** for Mail there. The fix is the blueprint
+> `inheritablePermissions` above, not the admin center.
+
+> **Recovering an already-deployed agent** whose instances hit `AADSTS65001` on Mail: re-run
+> `pwsh -File .\scripts\create-blueprintsp-oauth2-grants.ps1` (idempotent; needs a Global-Admin
+> **Graph** token — if `az` returns the CAE `TokenCreatedWithOutdatedPolicies` challenge, run
+> `az login --scope https://graph.microsoft.com/.default` first). Existing instances pick up the
+> inherited scope on their next token; if one stays stuck, **recreate the instance** so it inherits
+> at hire time.
 
 ## 9. Verify
 

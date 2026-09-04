@@ -99,3 +99,53 @@ catch {
         throw
     }
 }
+
+
+# ---------------------------------------------------------------------------
+# INHERITABLE permissions on the blueprint.
+#
+# The oauth2PermissionGrants above consent the BLUEPRINT service principal, but each hired
+# autopilot INSTANCE is a SEPARATE agent identity. Without inheritable permissions the
+# instance's delegated-token exchange for the MCP scopes fails with
+#   AADSTS65001 (consent_required) for app '<instance>'
+# and the agent reports "I cannot send emails at the moment". Configuring inheritablePermissions
+# on the blueprint makes every instance inherit the resource's scopes/roles. This is what
+# `a365 setup permissions mcp` does for the ACA agents. Ref:
+# https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints
+# ---------------------------------------------------------------------------
+$blueprintAppObjectId = az ad app show --id $env:AGENT_IDENTITY_BLUEPRINT_ID --query id -o tsv
+if ([string]::IsNullOrEmpty($blueprintAppObjectId)) {
+    throw "Failed to get blueprint application object id for $($env:AGENT_IDENTITY_BLUEPRINT_ID)"
+}
+
+# Resource apps whose scopes instances must inherit: Agent 365 Tools (MCP incl. Mail) + APX.
+foreach ($resId in @($prodMCPAppId, $apxAppId)) {
+    $inheritBody = @"
+{
+  "resourceAppId": "$resId",
+  "inheritableScopes": { "@odata.type": "#microsoft.graph.allAllowedScopes", "kind": "allAllowed" },
+  "inheritableRoles": { "@odata.type": "#microsoft.graph.allAllowedRoles", "kind": "allAllowed" }
+}
+"@
+    try {
+        Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/applications/microsoft.graph.agentIdentityBlueprint/$blueprintAppObjectId/inheritablePermissions" `
+            -Method Post `
+            -Headers @{
+                "Content-Type"  = "application/json"
+                "Accept"        = "application/json"
+                "OData-Version" = "4.0"
+                "Authorization" = "Bearer $($graphToken)"
+            } `
+            -Body $inheritBody | Out-Null
+        Write-Host "Inheritable permissions configured for resource $resId."
+    }
+    catch {
+        $msg = "$($_.ErrorDetails.Message)"
+        if ($msg -like "*already exist*" -or $msg -like "*conflict*" -or $msg -like "*duplicate*") {
+            Write-Host "Inheritable permissions already configured for $resId  ignoring."
+        }
+        else {
+            Write-Host "WARNING: could not set inheritable permissions for ${resId}: $msg"
+        }
+    }
+}
