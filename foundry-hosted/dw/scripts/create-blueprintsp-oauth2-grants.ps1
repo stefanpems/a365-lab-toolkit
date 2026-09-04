@@ -109,22 +109,29 @@ catch {
 # instance's delegated-token exchange for the MCP scopes fails with
 #   AADSTS65001 (consent_required) for app '<instance>'
 # and the agent reports "I cannot send emails at the moment". Configuring inheritablePermissions
-# on the blueprint makes every instance inherit the resource's scopes/roles. This is what
+# on the blueprint makes every instance inherit the resource's scopes. This is what
 # `a365 setup permissions mcp` does for the ACA agents. Ref:
 # https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints
+#
+# PRIVILEGE: writing inheritablePermissions requires the caller to hold the **Agent ID
+# Administrator** (or Agent ID Developer) directory role. Global Administrator ALONE returns
+# 403 Authorization_RequestDenied. Ensure the deploy identity has that role (or run
+# `a365 setup permissions mcp`, which is Global-Admin-sufficient).
 # ---------------------------------------------------------------------------
 $blueprintAppObjectId = az ad app show --id $env:AGENT_IDENTITY_BLUEPRINT_ID --query id -o tsv
 if ([string]::IsNullOrEmpty($blueprintAppObjectId)) {
     throw "Failed to get blueprint application object id for $($env:AGENT_IDENTITY_BLUEPRINT_ID)"
 }
 
-# Resource apps whose scopes instances must inherit: Agent 365 Tools (MCP incl. Mail) + APX.
+# Resource apps whose SCOPES instances must inherit: Agent 365 Tools (MCP incl. Mail) + APX.
+# These expose delegated scopes, not app roles, so inherit scopes only (noRoles) — requesting
+# allAllowedRoles here returns 403.
 foreach ($resId in @($prodMCPAppId, $apxAppId)) {
     $inheritBody = @"
 {
   "resourceAppId": "$resId",
   "inheritableScopes": { "@odata.type": "#microsoft.graph.allAllowedScopes", "kind": "allAllowed" },
-  "inheritableRoles": { "@odata.type": "#microsoft.graph.allAllowedRoles", "kind": "allAllowed" }
+  "inheritableRoles": { "@odata.type": "#microsoft.graph.noRoles", "kind": "none" }
 }
 "@
     try {

@@ -18,8 +18,10 @@ does **not** use the Responses/Invocations protocols — it runs the **same Bot 
 - **azd** (`winget install Microsoft.Azd`) + `az login` + `azd auth login`.
 - **Docker** (only for the optional local `azd` agent commands; the image itself is built in
   ACR by the scripts).
-- Roles: **Owner** on the subscription, **Azure AI User / Cognitive Services User**, and a
-  **Tenant Admin** for org-wide configuration/consent.
+- Roles: **Owner** on the subscription, **Azure AI User / Cognitive Services User**, a
+  **Tenant Admin** for org-wide configuration/consent, and **Agent ID Administrator** (or **Agent
+  ID Developer**) — the latter is **required** to write the blueprint's `inheritablePermissions`
+  (§8.1); **Global Administrator alone is not enough** for that specific operation.
 - Region must support **Foundry hosted agents** (e.g. eastus2, polandcentral — see the
   [region list](https://learn.microsoft.com/azure/foundry/agents/quickstarts/quickstart-hosted-agent?pivots=azd)).
 
@@ -357,12 +359,37 @@ API** (`5a807f24-…`). This mirrors what `a365 setup permissions mcp` does for 
 > so there is **no "Grant admin consent" button** for Mail there. The fix is the blueprint
 > `inheritablePermissions` above, not the admin center.
 
-> **Recovering an already-deployed agent** whose instances hit `AADSTS65001` on Mail: re-run
-> `pwsh -File .\scripts\create-blueprintsp-oauth2-grants.ps1` (idempotent; needs a Global-Admin
-> **Graph** token — if `az` returns the CAE `TokenCreatedWithOutdatedPolicies` challenge, run
-> `az login --scope https://graph.microsoft.com/.default` first). Existing instances pick up the
-> inherited scope on their next token; if one stays stuck, **recreate the instance** so it inherits
-> at hire time.
+> **⚠️ Privilege required.** Writing the blueprint `inheritablePermissions` needs the **Agent ID
+> Administrator** (or **Agent ID Developer**) directory role — **Global Administrator alone returns
+> `403 Authorization_RequestDenied` (Insufficient privileges)**. The identity that runs the deploy
+> (postprovision step 4) or the recovery below must hold that role. `a365 setup permissions mcp` is
+> the Global-Admin-sufficient alternative (it performs the same configuration).
+
+> **Recovering an already-deployed agent** whose instances hit `AADSTS65001` on Mail. In hardened
+> tenants the terminal often can't reach Graph at all — `az`/`az rest` return the CAE
+> `TokenCreatedWithOutdatedPolicies` challenge (a plain `az login` doesn't clear it), **device-code**
+> sign-in may be **disabled** by Conditional Access, and the **WAM** sign-in window is hidden behind
+> other windows. The reliable path is then **entirely in the browser**:
+>
+> 1. **Assign the role** — [Entra admin center](https://entra.microsoft.com) → **Roles & admins** →
+>    **Agent ID Administrator** → add your admin account.
+> 2. **Add the inheritable scope** in [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer)
+>    (sign in as that admin; consent `Application.ReadWrite.All` when prompted):
+>    - `GET https://graph.microsoft.com/v1.0/applications/microsoft.graph.agentIdentityBlueprint?$filter=appId eq '<blueprint-client-id>'` → copy the `id`.
+>    - `POST https://graph.microsoft.com/v1.0/applications/microsoft.graph.agentIdentityBlueprint/<id>/inheritablePermissions`
+>      ```json
+>      { "resourceAppId": "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1",
+>        "inheritableScopes": { "@odata.type": "#microsoft.graph.allAllowedScopes", "kind": "allAllowed" },
+>        "inheritableRoles":  { "@odata.type": "#microsoft.graph.noRoles",         "kind": "none" } }
+>      ```
+>      (`noRoles` matters — Agent 365 Tools exposes delegated *scopes*, not app roles; requesting
+>      `allAllowedRoles` also 403s.)
+> 3. **Recreate the instance** (hire a new one) so it inherits the scope at hire time; existing
+>    instances may also pick it up on their next token.
+>
+> If the terminal *can* reach Graph, **Microsoft Graph PowerShell** (`Connect-MgGraph`, which handles
+> CAE claims challenges natively — unlike `az`) does the same `POST`. `az`/`az rest` to Graph do **not**
+> work in a CAE-challenged tenant.
 
 ## 9. Verify
 
