@@ -1,21 +1,21 @@
 #requires -Version 5.1
 # Deploy the AI Teammate agent "AgentFrameworkDWSample" to Azure Container Apps.
-# Region fissa: polandcentral (verificata con capacity). Riusa il LAW agentframework-logs.
-# Uso:
+# Fixed region: polandcentral (verified with capacity). Reuses the LAW agentframework-logs.
+# Usage:
 #   .\deploy-aca-DW.ps1 -ClientSecret '<blueprint client secret in cleartext>'
-# Il secret NON e' hardcoded: recuperabile con 'a365 setup blueprint --show-secret'.
+# The secret is NOT hardcoded: retrieve it with 'a365 setup blueprint --show-secret'.
 param(
     [Parameter(Mandatory = $true)]
     [string]$ClientSecret
 )
 $ErrorActionPreference = 'Stop'
 
-# Console UTF-8: evita UnicodeEncodeError (cp1252) nello streaming log di 'az acr build'.
+# Console UTF-8: avoids UnicodeEncodeError (cp1252) in the 'az acr build' log stream.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
 
-# ============================ Parametri ============================
+# ============================ Parameters ============================
 $RG        = "agentframework-DW-rg-pl"
 # NB: Container App names must be lowercase (Azure does not allow uppercase).
 $APP       = "agentframework-dw-sample"
@@ -24,41 +24,41 @@ $LOC       = "polandcentral"
 $IMAGE_TAG = "v1"
 $IMAGE     = "agentframework-dw-sample:$IMAGE_TAG"
 
-# Log Analytics workspace da RIUSARE (creato nella sessione precedente)
+# Log Analytics workspace to REUSE (created in a previous session)
 $LAW_RG    = "agentframework-rg-pl"
 $LAW_NAME  = "agentframework-logs"
 # ==================================================================
 
-# --- 1. Provider (idempotente) ---
+# --- 1. Providers (idempotent) ---
 az provider register -n Microsoft.App --wait
 az provider register -n Microsoft.OperationalInsights --wait
 az provider register -n Microsoft.ContainerRegistry --wait
 
-# --- 2. Resource group DW ---
+# --- 2. DW resource group ---
 if ((az group exists -n $RG) -ne "true") {
-    Write-Host "Creo il resource group '$RG' in '$LOC'..." -ForegroundColor Cyan
+    Write-Host "Creating resource group '$RG' in '$LOC'..." -ForegroundColor Cyan
     az group create -n $RG -l $LOC | Out-Null
 }
 
-# --- 3. Recupera credenziali del LAW da riusare ---
-Write-Host "Recupero credenziali del Log Analytics workspace '$LAW_NAME'..." -ForegroundColor Cyan
+# --- 3. Fetch the credentials of the LAW to reuse ---
+Write-Host "Fetching credentials of Log Analytics workspace '$LAW_NAME'..." -ForegroundColor Cyan
 $lawId  = az monitor log-analytics workspace show -g $LAW_RG -n $LAW_NAME --query customerId -o tsv
 $lawKey = az monitor log-analytics workspace get-shared-keys -g $LAW_RG -n $LAW_NAME --query primarySharedKey -o tsv
 
 # --- 4. Container Apps environment (log-analytics = reused LAW) ---
 $envExists = az containerapp env show -n $ENVNAME -g $RG --query name -o tsv 2>$null
 if (-not $envExists) {
-    Write-Host "Creo l'environment ACA '$ENVNAME' collegato al LAW '$LAW_NAME'..." -ForegroundColor Cyan
+    Write-Host "Creating ACA environment '$ENVNAME' linked to LAW '$LAW_NAME'..." -ForegroundColor Cyan
     az containerapp env create -n $ENVNAME -g $RG -l $LOC `
         --logs-destination log-analytics `
         --logs-workspace-id $lawId --logs-workspace-key $lawKey | Out-Null
 }
 
-# --- 5. Azure Container Registry + build immagine dal Dockerfile ---
+# --- 5. Azure Container Registry + build image from the Dockerfile ---
 $acrName = az acr list -g $RG --query "[0].name" -o tsv 2>$null
 if (-not $acrName) {
     $acrName = "afdwacr" + (Get-Random -Minimum 10000 -Maximum 99999)
-    Write-Host "Creo l'ACR '$acrName'..." -ForegroundColor Cyan
+    Write-Host "Creating ACR '$acrName'..." -ForegroundColor Cyan
     az acr create -n $acrName -g $RG --sku Basic --admin-enabled true | Out-Null
 }
 Write-Host "Building image '$IMAGE' via ACR '$acrName'..." -ForegroundColor Cyan
@@ -68,7 +68,7 @@ $acrServer = az acr show -n $acrName -g $RG --query loginServer -o tsv
 $acrUser   = az acr credential show -n $acrName -g $RG --query username -o tsv
 $acrPass   = az acr credential show -n $acrName -g $RG --query "passwords[0].value" -o tsv
 
-# --- 6. Config blueprint + credenziali LLM ---
+# --- 6. Blueprint config + LLM credentials ---
 $cfg      = Get-Content a365.generated.config.json | ConvertFrom-Json
 $clientId = $cfg.agentBlueprintId
 $tenantId = az account show --query tenantId -o tsv

@@ -23,6 +23,24 @@ Examples for prefix `contoso-sales`: `contoso-sales-ACA-OBO`, `contoso-sales-FH-
 | SPA app registration | `<prefix>-ui-spa` | `contoso-sales-ui-spa` |
 | Static Web App | `<prefix>-ui` | `contoso-sales-ui` |
 
+### Registry display name — the `" Agent"` suffix (cosmetic, not controllable)
+The a365 CLI lists ACA agents in the Registry with a trailing `" Agent"` (e.g. `a1730-ACA-OBO` is
+shown as **`a1730-ACA-OBO Agent`**). This is added by the CLI at registration time, not by our
+`a365.config.json`, and does not affect the blueprint (`… Blueprint`) or identity (`… Identity`)
+names. Do not attempt to strip it via the plan — it cannot be set there.
+
+### DW visibility in the Registry
+ACA-DW and FH-DW do **not** auto-appear in the Registry like OBO/S2S. ACA-DW becomes visible only
+after `a365 publish --aiteammate --agent-name "<name>"` regenerates `manifest/manifest.zip` for THIS
+blueprint and the user uploads it in the M365 admin center (Agents → Upload custom agent), then a user
+hires it in Teams. FH-DW appears after the admin-center approval of its azd-published request.
+
+### FH-DW naming (different from the others)
+The FH-DW sample hardcodes the agent name in **Bicep and scripts** (not `azure.yaml`). The scaffolder
+rewrites every occurrence to `<prefix>-FH-DW`. If a pre-existing lab agent (e.g.
+`agentframeworkFH-DW2-agent`) is reused instead of a clean provision, the Registry will show the old
+name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
+
 ## HARD validation rules (block, don't warn)
 1. **DW ≤ 30 characters.** The blueprint display name and Teams/M365 `name.short` are **rejected
    above 30 chars**. Verified in [docs/setup-MAF-ACA-DW.md](../../../../docs/setup-MAF-ACA-DW.md).

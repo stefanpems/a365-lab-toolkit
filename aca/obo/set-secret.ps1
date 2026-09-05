@@ -8,10 +8,10 @@ $APP = "agentframework-obo-sample"
 $IMG = "ca80215d4590acr.azurecr.io/agentframework-obo-sample:v3"
 
 $sec = Read-Host "Paste the CLEARTEXT blueprint client secret (from 'a365 setup blueprint --show-secret')"
-if ([string]::IsNullOrWhiteSpace($sec)) { throw "Secret vuoto: interrompo." }
-Write-Host ("Lunghezza secret: {0} caratteri" -f $sec.Length) -ForegroundColor DarkGray
+if ([string]::IsNullOrWhiteSpace($sec)) { throw "Empty secret: aborting." }
+Write-Host ("Secret length: {0} characters" -f $sec.Length) -ForegroundColor DarkGray
 
-Write-Host "1) Imposto il secret ACA 'blueprint-secret'..." -ForegroundColor Cyan
+Write-Host "1) Setting the ACA secret 'blueprint-secret'..." -ForegroundColor Cyan
 az containerapp secret set -n $APP -g $RG --secrets "blueprint-secret=$sec" -o none
 
 Write-Host "2) Updating the Container App (image v3, normal startup command, secret via secretref)..." -ForegroundColor Cyan

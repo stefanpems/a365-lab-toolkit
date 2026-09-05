@@ -34,7 +34,9 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 ### 2. Solution basics (one screen)
 - **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as
   `<prefix>-<hosting>-<identity>` where hosting ∈ {ACA, FH, FD}, identity ∈ {OBO, S2S, DW}.
-- **Tenant / Subscription** — auto-detected (`az account show`); user only confirms or picks another.
+- **Tenant / Subscription** — run `az account show`, **present the detected tenant id+name and
+  subscription id+name, and have the user confirm or pick another**. Never proceed silently; these
+  values are written ONLY to the gitignored `a365-deployment-plan.json` — never hard-coded elsewhere.
 - **Preferred region** — one value; validated per service in step 4.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.
@@ -46,7 +48,9 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
 - Any **ACA** → Azure OpenAI account + model deployment; auth = **Managed Identity (default)** or
   API key (fallback, entered in the terminal, never chat).
 - Any **FH** → Foundry project new/existing + chat model deployment.
-- Any **FD** → pre-existing Foundry project (or one created in this same run by an FH variant).
+- Any **FD** → Foundry project: **the wizard can CREATE one** (AIServices account + project + model)
+  if none is selected; reuse the FH project if an FH variant is also chosen; or reuse an existing one
+  if the user prefers. FD does not strictly require a pre-existing project.
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.
 - **UI** → if exposing OBO: Mail consent (`McpServers.Mail.All`); if exposing ACA-S2S: blueprint
@@ -78,7 +82,27 @@ when a UI is requested, and prints the exact next commands. It performs **no clo
 no deploys**. Use `-ValidateOnly` to check a plan without writing. Print the next commands for the
 user to run; never auto-run destructive deploys.
 
+## 7. Deployment execution (only after scaffolding is confirmed)
+- **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +
+  placeholder `config.js`); then, as each OBO/S2S agent goes live, add its tab, redeploy the UI, wire
+  `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user they can test it now.
+- **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
+  at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
+- **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),
+  show a bold ⛔ ACTION REQUIRED banner naming which terminal (and how to focus it via the Terminal
+  panel dropdown / `N Hidden Terminals`), what to type, and where to get the value
+  (`a365 setup blueprint --show-secret`). Secrets are typed by the user, never relayed.
+- **Browser sign-in + admin consent** happens for ACA `a365 setup`, `azd auth login`, SPA consent,
+  and first UI-tab use. Announce it each time; the post-accept "We couldn't connect to that service"
+  page is expected and safe to ignore.
+- **`ext_UtilityInsights` prompt** during ACA/DW setup → answer **N** (optional MCP absent in tenant;
+  `az ad sp create` failure is harmless).
+- **Parallelization.** Serial only: `a365 setup`, secret/y-N/endpoint prompts, browser consent. May
+  overlap: `azd`/`az acr build`/RBAC waits/`pip install`. Gate by free RAM (≤ `floor((freeMB-300)/300)`
+  concurrent units, keep ≥300 MB free) and ASK the user before parallelizing.
+
 ## Safety
 - No secrets in chat or in the plan. See the "Credentials" section in
   [references/variant-matrix.md](./references/variant-matrix.md).
 - Confirm before any cloud-mutating step. The generic `deploy-aca.ps1` deletes its RG by default.
+- Everything written to disk (files, logs, configs, comments) is in **English**.

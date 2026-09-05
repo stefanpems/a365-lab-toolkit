@@ -4,10 +4,10 @@ Technical verification of the deployed agent — exercises the SAME code as the 
 
 Modes:
   --llm    (default) LLM access test: builds OpenAIChatCompletionClient +
-           Agent esattamente come agent.py e fa un round-trip reale.
+           Agent exactly like agent.py and performs a real round-trip.
   --health Also checks the /api/health endpoint of the cloud instance.
 
-Uso:
+Usage:
   .venv\\Scripts\\python.exe verify_deploy.py --llm
 """
 import argparse
@@ -27,10 +27,10 @@ MAIL_MCP_URL = "https://agent365.svc.cloud.microsoft/agents/servers/mcp_MailTool
 
 
 def _load_llm_config() -> dict:
-    """Risolve la config Azure OpenAI con gli stessi nomi usati dal container.
+    """Resolve the Azure OpenAI config using the same names as the container.
 
-    Prova prima .env (creato dal deploy task, nomi AZURE_OPENAI_*),
-    poi env/.env.playground.user (nomi SECRET_/_NAME) come fallback.
+    Tries .env first (created by the deploy task, AZURE_OPENAI_* names),
+    then env/.env.playground.user (SECRET_/_NAME names) as a fallback.
     """
     load_dotenv(".env")
     load_dotenv("env/.env.playground.user")
@@ -63,7 +63,7 @@ async def test_llm() -> bool:
     from agent_framework.openai import OpenAIChatCompletionClient
 
     cfg = _load_llm_config()
-    print("== Test 1: accesso LLM (Azure OpenAI) ==")
+    print("== Test 1: LLM access (Azure OpenAI) ==")
     print(f"   endpoint   : {cfg['endpoint']}")
     print(f"   deployment : {cfg['deployment']}")
     print(f"   api_version: {cfg['api_version']}")
@@ -82,10 +82,10 @@ async def test_llm() -> bool:
     print(f"   prompt     : {prompt}")
     resp = await agent.run(prompt)
     text = (resp.text or "").strip()
-    print(f"   risposta   : {text!r}")
+    print(f"   reply      : {text!r}")
 
     ok = "LLM-OK-42" in text
-    print(f"   esito      : {'PASS' if ok else 'FAIL'}")
+    print(f"   result     : {'PASS' if ok else 'FAIL'}")
     return ok
 
 
@@ -102,11 +102,11 @@ async def test_health() -> bool:
         ok = r.status_code == 200
         print(f"   status     : {r.status_code}")
         print(f"   body       : {r.text}")
-        print(f"   esito      : {'PASS' if ok else 'FAIL'}")
+        print(f"   result     : {'PASS' if ok else 'FAIL'}")
         return ok
     except Exception as e:
         print(f"   error      : {e}")
-        print("   esito      : FAIL")
+        print("   result     : FAIL")
         return False
 
 
@@ -127,7 +127,7 @@ def _decode_jwt_payload(token: str) -> dict:
 
 
 def _load_obo_token() -> str:
-    """Legge il bearer token OBO da env (SECRET_BEARER_TOKEN / BEARER_TOKEN)."""
+    """Read the OBO bearer token from env (SECRET_BEARER_TOKEN / BEARER_TOKEN)."""
     load_dotenv(".env")
     load_dotenv("env/.env.playground.user")
     return (
@@ -148,7 +148,7 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
     # --- 2.1 User auth (OBO): inspect the token ---
     token = _load_obo_token()
     if not token:
-        print("   [FAIL] Nessun bearer token OBO (SECRET_BEARER_TOKEN vuoto). Rigenera con refresh-bearer-token.")
+        print("   [FAIL] No OBO bearer token (SECRET_BEARER_TOKEN empty). Regenerate with refresh-bearer-token.")
         return False
     claims = _decode_jwt_payload(token)
     upn = claims.get("preferred_username") or claims.get("upn") or claims.get("unique_name") or "?"
@@ -159,9 +159,9 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
     print(f"      audience : {aud}")
     print(f"      scopes   : {scp}")
     if "McpServers.Mail" not in str(scp):
-        print("      [WARN] Lo scope non contiene McpServers.Mail — il tool Mail potrebbe non essere accessibile.")
+        print("      [WARN] The scope does not contain McpServers.Mail — the Mail tool may not be accessible.")
 
-    # --- 2.2/2.3 Connessione MCP + agente + invio email ---
+    # --- 2.2/2.3 MCP connection + agent + send email ---
     cfg = _load_llm_config()
     chat_client = OpenAIChatCompletionClient(
         azure_endpoint=cfg["endpoint"], api_key=cfg["api_key"],
@@ -187,19 +187,19 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
     try:
         async with mcp:
             # 2.2 list tools
-            print("   [2.2 accesso tool OBO]")
+            print("   [2.2 OBO tool access]")
             try:
                 tools = await mcp.list_tools() if hasattr(mcp, "list_tools") else None
                 if tools:
                     names = [getattr(t, "name", str(t)) for t in tools]
-                    print(f"      tool disponibili: {names}")
+                    print(f"      available tools: {names}")
                 else:
                     print("      (list_tools not available; proceeding with the agent)")
             except Exception as le:
                 print(f"      [WARN] list_tools: {le}")
 
-            # 2.3 LLM + tool: invio email
-            print("   [2.3 LLM + tool: invio email]")
+            # 2.3 LLM + tool: send email
+            print("   [2.3 LLM + tool: send email]")
             agent = Agent(client=chat_client, tools=[mcp], instructions=instructions)
             prompt = (
                 f"Send an email to {email} with subject \"{subject}\" and body \"{body}\". "
@@ -208,7 +208,7 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
             print(f"      prompt   : {prompt}")
             resp = await agent.run(prompt)
             text = (resp.text or "").strip()
-            print(f"      risposta : {text}")
+            print(f"      reply    : {text}")
             ok = "EMAIL-SENT" in text.upper() or "sent" in text.lower()
     except Exception as e:
         print(f"   [FAIL] Error during the MCP/OBO test: {type(e).__name__}: {e}")
@@ -216,21 +216,21 @@ async def test_mcp_obo(email: str, subject: str, body: str) -> bool:
     finally:
         await http_client.aclose()
 
-    print(f"   esito      : {'PASS' if ok else 'FAIL'}")
+    print(f"   result     : {'PASS' if ok else 'FAIL'}")
     return ok
 
 
 async def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--llm", action="store_true", help="Test accesso LLM")
-    parser.add_argument("--health", action="store_true", help="Test /api/health cloud")
-    parser.add_argument("--mcp", action="store_true", help="Test MCP Mail via OBO (invio email)")
-    parser.add_argument("--email", default="stefanpe@microsoft.com", help="Destinatario email di test")
-    parser.add_argument("--subject", default="Test da AgentFrameworkSample", help="Oggetto email")
+    parser.add_argument("--llm", action="store_true", help="LLM access test")
+    parser.add_argument("--health", action="store_true", help="Cloud /api/health test")
+    parser.add_argument("--mcp", action="store_true", help="MCP Mail via OBO test (send email)")
+    parser.add_argument("--email", default="stefanpe@microsoft.com", help="Test email recipient")
+    parser.add_argument("--subject", default="Test from AgentFrameworkSample", help="Email subject")
     parser.add_argument("--body", default="This is a test email sent by the agent via MCP (OBO).", help="Email body")
     args = parser.parse_args()
 
-    # default se nessun flag: solo --llm
+    # default if no flag: --llm only
     any_flag = args.llm or args.health or args.mcp
     run_llm = args.llm or not any_flag
 

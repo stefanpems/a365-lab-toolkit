@@ -107,7 +107,7 @@ def validate_user_token(token: str) -> dict:
 def obo_exchange_for_mail(user_token: str) -> str:
     """On-Behalf-Of: exchanges the user token for a Mail MCP token (aud Agent 365 Tools).
 
-    Usa le credenziali del blueprint (service connection) come confidential client. Il token
+    Uses the blueprint credentials (service connection) as a confidential client. The
     resulting token is delegated for the signed-in user, so the Mail MCP acts on THEIR mailbox.
     """
     import msal

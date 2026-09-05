@@ -30,11 +30,16 @@ Exactly **8** supported variants. FD-DW is not supported.
 - Chat model deployment name.
 
 ### Any FD
-- **Pre-existing** Foundry project endpoint + deployed model (or reuse an FH project from this run).
+- Foundry project + deployed model. Resolve in this priority: (1) **reuse the FH project** if an FH
+  variant is also selected; (2) **create one** (AIServices account + project + chat-model deployment)
+  if the user has none; (3) **reuse an existing** project if the user prefers. A pre-existing project
+  is NOT required — the wizard can create it.
 
 ### Any DW (ACA-DW / FH-DW)
 - Confirm Frontier / Agent 365 enrollment + license capacity.
 - Policy-template choice (portal step — surface as a checkpoint).
+- ACA-DW `a365 setup` shows an `ext_UtilityInsights — Provision via 'az ad sp create'? [y/N]` prompt:
+  answer **N** (optional custom MCP, usually absent; the `az ad sp create` failure is harmless).
 
 ### UI (if selected)
 - New UI: name (default `<prefix>-ui`), local-only or Azure Static Web App (+ SWA region).
