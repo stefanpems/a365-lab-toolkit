@@ -1,0 +1,34 @@
+{
+  "$comment": "Agent 365 deployment plan — SECRET-FREE. Generated/edited by the Agent 365 Provisioner wizard. Schema: .github/skills/agent365-wizard/references/deployment-plan-schema.md",
+  "version": 1,
+  "solution": {
+    "prefix": "<SOLUTION_PREFIX>",
+    "tenantId": "<TENANT_ID>",
+    "subscriptionId": "<SUBSCRIPTION_ID>",
+    "region": "<AZURE_REGION>",
+    "resourceGroupStrategy": "isolated",
+    "sharedResourceGroup": "<SOLUTION_PREFIX>-rg"
+  },
+  "agents": [
+    {
+      "type": "ACA-OBO",
+      "name": "<SOLUTION_PREFIX>-ACA-OBO",
+      "displayNames": {
+        "blueprint": "<SOLUTION_PREFIX>-ACA-OBO Blueprint",
+        "identity": "<SOLUTION_PREFIX>-ACA-OBO Identity"
+      },
+      "resourceGroup": "<SOLUTION_PREFIX>-ACA-OBO-rg",
+      "ai": { "kind": "azure-openai", "account": "<AOAI_ACCOUNT>", "deployment": "gpt-4.1", "auth": "managed-identity" },
+      "tools": []
+    }
+  ],
+  "ui": {
+    "mode": "none",
+    "name": "<SOLUTION_PREFIX>-ui",
+    "hosting": "static-web-app",
+    "swaRegion": "<AZURE_REGION>",
+    "existing": { "spaAppId": "", "origin": "", "staticWebApp": "" },
+    "expose": [],
+    "permissions": { "mailConsent": false, "s2sAudience": false, "foundryAccess": [] }
+  }
+}

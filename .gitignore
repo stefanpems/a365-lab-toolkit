@@ -20,6 +20,9 @@
 **/a365.config.json
 # Web SPA runtime config (SPA app id, tenant authority, agent endpoints/scopes)
 ui/config.js
+# Provisioning wizard: tenant-specific plan + generated scaffolding output
+a365-deployment-plan.json
+generated/
 # Backups / historical copies of config that may hold secrets
 **/*.OLD.json
 **/*bak*.json
