@@ -56,6 +56,7 @@ $MAP = @{
 $errors = New-Object System.Collections.Generic.List[string]
 $prefix = $plan.solution.prefix
 if (-not $prefix) { $errors.Add('solution.prefix is required.') }
+elseif ($prefix -notmatch '^[a-z]') { $errors.Add("solution.prefix '$prefix' must start with a lowercase letter (Azure Container Apps / managed identities reject names starting with a digit or symbol).") }
 if (-not $plan.solution.region) { $errors.Add('solution.region is required.') }
 if (-not $plan.agents -or $plan.agents.Count -eq 0) { $errors.Add('at least one agent is required.') }
 
@@ -149,7 +150,9 @@ foreach ($a in $plan.agents) {
                 Set-Content -LiteralPath $deployPath -Value $txt
             }
             $reuse = if ($plan.solution.resourceGroupStrategy -eq 'shared') { ' -ReuseEnv' } else { '' }
-            $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg <AOAI_RG> -AoaiAcc $($a.ai.account)$reuse")
+            # DW agents prompt for the optional 'ext_UtilityInsights' custom MCP (may be absent in the tenant) and defer the messaging endpoint until the container is deployed.
+            $dwNote = if ($a.type -eq 'ACA-DW') { "   # DW: answer N at the 'ext_UtilityInsights' prompt (optional custom MCP — add only when wiring it); after the container deploys, register the endpoint: a365 setup blueprint --endpoint-only --messaging-endpoint https://<fqdn>/api/messages" } else { '' }
+            $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg <AOAI_RG> -AoaiAcc $($a.ai.account)$reuse$dwNote")
         }
         'fh' {
             # azure.yaml: rename the service + kind name to the planned agent name.
@@ -163,20 +166,57 @@ foreach ($a in $plan.agents) {
                 $envPath = Join-Path $dst '.env'
                 if ($a.foundryProject) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $a.foundryProject }
                 Set-EnvValue -Path $envPath -Key 'AZURE_AI_MODEL_DEPLOYMENT_NAME' -Value $a.ai.deployment
+                $proto = if ($a.type -eq 'FH-S2S') { 'responses' } else { 'invocations' }
+                # azd provision (FH-OBO/S2S) does NOT create the model deployment nor grant data-plane RBAC:
+                # after provision, create the model in the generated account + grant Cognitive Services User, then deploy.
+                $fhDep = "cd `"$dst`"; azd env new $($a.name); azd env set AZURE_SUBSCRIPTION_ID $($plan.solution.subscriptionId); azd env set AZURE_TENANT_ID $($plan.solution.tenantId); azd env set AZURE_LOCATION $($plan.solution.region); azd env set AZURE_RESOURCE_GROUP $($a.resourceGroup); azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME $($a.ai.deployment); azd provision"
+                $fhModel = "`$acct=(az cognitiveservices account list -g $($a.resourceGroup) --query `"[?kind=='AIServices'].name | [0]`" -o tsv); az cognitiveservices account deployment create -n `$acct -g $($a.resourceGroup) --deployment-name $($a.ai.deployment) --model-name $($a.ai.deployment) --model-version 2025-04-14 --model-format OpenAI --sku-name GlobalStandard --sku-capacity 20"
+                $fhRole = "az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope (az cognitiveservices account show -n `$acct -g $($a.resourceGroup) --query id -o tsv)"
+                $nextCommands.Add("$fhDep; $fhModel; $fhRole; azd deploy   # protocol: $proto  (adjust --model-version if not gpt-4.1; RBAC propagates ~2-5min)")
             }
-            $proto = if ($a.type -eq 'FH-S2S') { 'responses' } else { 'invocations' }
-            $nextCommands.Add("cd `"$dst`"; azd env new $($a.name); azd env set AZURE_SUBSCRIPTION_ID $($plan.solution.subscriptionId); azd env set AZURE_TENANT_ID $($plan.solution.tenantId); azd env set AZURE_LOCATION $($plan.solution.region); azd env set AZURE_RESOURCE_GROUP $($a.resourceGroup); azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME $($a.ai.deployment); azd provision; azd deploy   # protocol: $proto")
+            else {
+                # FH-DW hardcodes the agent name in Bicep + scripts (NOT azure.yaml). Rewrite every
+                # occurrence to the planned name so DW matches the <prefix>-FH-DW scheme like the others.
+                $dwFiles = @(
+                    'infra\main.bicep', 'infra\main.json', 'infra\main.parameters.json',
+                    'scripts\create-agent-blueprint.ps1', 'scripts\read-logs.ps1', 'scripts\roll-instrumented-version.ps1'
+                )
+                foreach ($rel in $dwFiles) {
+                    $fp = Join-Path $dst $rel
+                    if (Test-Path -LiteralPath $fp) {
+                        (Get-Content -LiteralPath $fp -Raw).Replace('agentframeworkFH-DW2-agent', $a.name) | Set-Content -LiteralPath $fp
+                    }
+                }
+                # Solution A (governed subscription): the ARM deploymentScript that creates the managed
+                # agent identity blueprint needs shared-key storage, which tenant policy may block
+                # (KeyBasedAuthenticationNotPermitted). Instead of a policy waiver, create the blueprint
+                # OUT-OF-BAND via an Entra ID call between two provisions (see scripts/create-agent-blueprint.ps1).
+                $envSet = "azd env new $($a.name); azd env set AZURE_SUBSCRIPTION_ID $($plan.solution.subscriptionId); azd env set AZURE_TENANT_ID $($plan.solution.tenantId); azd env set AZURE_LOCATION $($plan.solution.region); azd env set AZURE_RESOURCE_GROUP $($a.resourceGroup); azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME $($a.ai.deployment)"
+                $nextCommands.Add("cd `"$dst`"; $envSet; azd provision   # 1st provision: creates account/project/ACR/model (the blueprint deploymentScript step FAILS under a shared-key storage policy — expected)")
+                $nextCommands.Add("cd `"$dst`"; pwsh -File .\scripts\create-agent-blueprint.ps1 -Subscription $($plan.solution.subscriptionId) -ResourceGroup $($a.resourceGroup) -AgentName $($a.name)   # Solution A: MAIB via Entra ID (no storage/shared-key), grants Cognitive Services User, sets AGENT_IDENTITY_BLUEPRINT_CLIENT_ID")
+                $nextCommands.Add("cd `"$dst`"; azd provision   # 2nd provision: deploymentScript SKIPPED; finishes Bot + post-provision (agent version, grants, publish)")
+            }
         }
         'fd' {
             $envPath = Join-Path $dst '.env'
-            if ($a.foundryProject) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $a.foundryProject }
+            $fp = $a.foundryProject
+            if ($fp -and $fp -notmatch '/api/projects/') {
+                # Prompt-agent SDK needs the PROJECT endpoint (…/api/projects/<project>), not the account endpoint. Derive it (read-only az).
+                $acctName = ([uri]$fp).Host.Split('.')[0]
+                $proj = az rest --method get --url "https://management.azure.com/subscriptions/$($plan.solution.subscriptionId)/resourceGroups/$($a.resourceGroup)/providers/Microsoft.CognitiveServices/accounts/$acctName/projects?api-version=2025-04-01-preview" --query "value[0].name" -o tsv 2>$null
+                if ($proj) { if ($proj -like '*/*') { $proj = $proj.Split('/')[-1] }; $fp = "https://$acctName.services.ai.azure.com/api/projects/$proj"; Write-Host "    FD project endpoint derived: $fp" -ForegroundColor DarkGray }
+                else { Write-Host "    WARN $($a.name): set FOUNDRY_PROJECT_ENDPOINT manually to https://<acct>.services.ai.azure.com/api/projects/<project>" -ForegroundColor Yellow }
+            }
+            if ($fp) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $fp }
             Set-EnvValue -Path $envPath -Key 'FOUNDRY_MODEL_NAME' -Value $a.ai.deployment
             Set-EnvValue -Path $envPath -Key 'AGENT_NAME' -Value $a.name
             if ($a.type -eq 'FD-OBO') {
                 Set-EnvValue -Path $envPath -Key 'AZURE_TENANT_ID' -Value $plan.solution.tenantId
                 Set-EnvValue -Path $envPath -Key 'CLIENT_APP_ID' -Value '<YOUR_AGENT365_CLI_PUBLIC_CLIENT_APP_ID>'
             }
-            $nextCommands.Add("cd `"$dst`"; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py")
+            # FD deploy authors an agent version -> needs Cognitive Services User on the reused Foundry account.
+            $fdGrant = "az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope (az cognitiveservices account show -n $($a.ai.account) -g $($a.resourceGroup) --query id -o tsv)"
+            $nextCommands.Add("cd `"$dst`"; $fdGrant; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py   # RBAC propagates ~2-5min")
         }
     }
     Write-Host "  scaffolded $($a.type) -> generated\$($a.name)" -ForegroundColor Cyan
@@ -215,7 +255,7 @@ if ($plan.ui.mode -in @('create', 'attach')) {
     "// Generated by scaffold-from-plan.ps1 — fill <PLACEHOLDER> FQDNs/endpoints after each agent deploys.`nwindow.APP_CONFIG = $json;" |
         Set-Content -LiteralPath (Join-Path $uiDst 'config.js')
     Write-Host "  scaffolded UI ($($plan.ui.mode)) -> generated\ui\config.js ($($uiAgents.Count) tab(s))" -ForegroundColor Cyan
-    $nextCommands.Add("# UI: register the SPA app (redirect https://<swa-host> + http://localhost:3000), fill config.js FQDNs, then deploy per docs/setup-web-ui.md")
+    $nextCommands.Add("# UI: create SWA (az staticwebapp create -l eastus2 --sku Free; westeurope may reject new customers), register the SPA app (redirect https://<swa-host> + http://localhost:3000), fill config.js, deploy per docs/setup-web-ui.md, then set UI_ALLOWED_ORIGINS (+ UI_AUDIENCE=<s2s-app-id> for ACA-S2S) on the ACA containers.")
 }
 
 # ---------------------------------------------------------------- summary

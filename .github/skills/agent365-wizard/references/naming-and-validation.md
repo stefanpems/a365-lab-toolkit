@@ -28,6 +28,9 @@ Examples for prefix `contoso-sales`: `contoso-sales-ACA-OBO`, `contoso-sales-FH-
    above 30 chars**. Verified in [docs/setup-MAF-ACA-DW.md](../../../../docs/setup-MAF-ACA-DW.md).
    For any DW variant, validate the display name length and offer a short form (drop " Blueprint",
    shorten the prefix) before proceeding.
+1a. **Prefix must start with a lowercase letter** (`^[a-z]`). Azure Container Apps and managed
+   identities **reject** names starting with a digit or symbol, so a prefix like `1730` produces the
+   invalid container app `1730-aca-obo`. Enforced in `scaffold-from-plan.ps1`.
 2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
 3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
    account + model (FH), and Free-tier Static Web Apps (UI) before committing.
