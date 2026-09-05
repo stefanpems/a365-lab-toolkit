@@ -23,8 +23,7 @@ agent365-agentframework-samples/
 │  └─ dw/                    # MAF-FH-DW    — container hosted agent + Azure Bot Service
 └─ foundry-declarative/      # Foundry Declarative (prompt) agents — platform-run, no container
    ├─ obo/                   # MAF-FD-OBO   — Mail MCP + per-request token (structured input)
-   ├─ s2s/                   # MAF-FD-S2S   — own identity, conversational
-   └─ dw/                    # MAF-FD-DW    — published as a Digital Worker (autopilot)
+   └─ s2s/                   # MAF-FD-S2S   — own identity, conversational
 ```
 
 | Type | Folder | Setup guide |
@@ -37,8 +36,15 @@ agent365-agentframework-samples/
 | MAF-FH-DW   | [foundry-hosted/dw](foundry-hosted/dw)   | [docs/setup-MAF-FH-DW.md](docs/setup-MAF-FH-DW.md) |
 | MAF-FD-OBO  | [foundry-declarative/obo](foundry-declarative/obo) | [docs/setup-MAF-FD-OBO.md](docs/setup-MAF-FD-OBO.md) |
 | MAF-FD-S2S  | [foundry-declarative/s2s](foundry-declarative/s2s) | [docs/setup-MAF-FD-S2S.md](docs/setup-MAF-FD-S2S.md) |
-| MAF-FD-DW   | [foundry-declarative/dw](foundry-declarative/dw)   | [docs/setup-MAF-FD-DW.md](docs/setup-MAF-FD-DW.md) |
 | Web SPA UI  | [ui](ui) | [docs/setup-web-ui.md](docs/setup-web-ui.md) |
+
+> **⛔ MAF-FD-DW is not available (platform limitation).** A Foundry **prompt/declarative agent
+> cannot be published as an Agent 365 autopilot Digital Worker** — a hired instance is permanently
+> silent in Teams by design. Per Microsoft Learn, **only Foundry _hosted_ agents can be published as
+> autopilot blueprints**
+> ([Supported agent types](https://learn.microsoft.com/azure/foundry/agents/concepts/agent-365-integration#supported-agent-types)).
+> For a Teams Digital Worker use **[MAF-FH-DW](docs/setup-MAF-FH-DW.md)**; a declarative agent remains
+> fully usable through the Responses API (**MAF-FD-OBO**, **MAF-FD-S2S**).
 
 ## Security & configuration
 

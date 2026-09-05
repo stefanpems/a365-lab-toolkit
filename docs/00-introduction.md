@@ -28,7 +28,8 @@ Agents are named `<framework>-<env>-<auth>`:
 | `<auth>` | **OBO** \| **S2S** \| **DW** | Identity/authentication model: **O**n-**B**ehalf-**O**f a user, **S**ervice-**to**-**S**ervice (application), or **D**igital **W**orker (AI teammate with its own user identity) |
 
 So the types are: `MAF-ACA-OBO`, `MAF-ACA-S2S`, `MAF-ACA-DW`, `MAF-FH-OBO`, `MAF-FH-S2S`,
-`MAF-FH-DW`, plus the Foundry Declarative variants `MAF-FD-OBO`, `MAF-FD-S2S`, `MAF-FD-DW`.
+`MAF-FH-DW`, plus the Foundry Declarative variants `MAF-FD-OBO` and `MAF-FD-S2S` (the
+`MAF-FD-DW` autopilot variant is **not supported** — see the note below the mapping table).
 
 ### 1.1 Mapping to the first experiment
 
@@ -42,7 +43,14 @@ So the types are: `MAF-ACA-OBO`, `MAF-ACA-S2S`, `MAF-ACA-DW`, `MAF-FH-OBO`, `MAF
 | **MAF-FH-DW** | `agentframeworkFH-DW*-agent` | Foundry agent (container) + Azure Bot Service | Foundry Hosted (container) | Bot Framework `/api/messages` via Bot Service (Teams) | [setup-MAF-FH-DW.md](setup-MAF-FH-DW.md) |
 | **MAF-FD-OBO** | `agentframeworkFD-OBO-agent` | Foundry prompt agent (managed blueprint) | Foundry Declarative | project **Responses** (`/openai/v1/responses`) + Mail MCP | [setup-MAF-FD-OBO.md](setup-MAF-FD-OBO.md) |
 | **MAF-FD-S2S** | `agentframeworkFD-S2S-agent` | Foundry prompt agent | Foundry Declarative | project **Responses** (own identity) | [setup-MAF-FD-S2S.md](setup-MAF-FD-S2S.md) |
-| **MAF-FD-DW** | `agentframeworkFD-DW*-agent` | Foundry prompt agent → Digital Worker + Azure Bot Service | Foundry Declarative (autopilot publish) | Teams (activity protocol via Bot Service) | [setup-MAF-FD-DW.md](setup-MAF-FD-DW.md) |
+
+> **⛔ MAF-FD-DW is not available (platform limitation).** A Foundry prompt/declarative agent
+> cannot be published as an Agent 365 autopilot Digital Worker; a hired instance is permanently
+> silent in Teams by design. Per Microsoft Learn, **only Foundry _hosted_ agents can be published
+> as autopilot blueprints**
+> ([Supported agent types](https://learn.microsoft.com/azure/foundry/agents/concepts/agent-365-integration#supported-agent-types)).
+> Use [MAF-FH-DW](setup-MAF-FH-DW.md) for a Teams Digital Worker; a declarative agent remains fully
+> usable through the Responses API ([MAF-FD-OBO](setup-MAF-FD-OBO.md), [MAF-FD-S2S](setup-MAF-FD-S2S.md)).
 
 > The tenant/subscription/region values in the setup guides are the ones used in the first
 > experiment. Treat them as **examples** and substitute your own. Host the Foundry agents (FH
@@ -425,8 +433,7 @@ agent365-agentframework-samples/
 │  └─ dw/                    ← MAF-FH-DW   (container + Bot Service)
 └─ foundry-declarative/
    ├─ obo/                   ← MAF-FD-OBO  (prompt agent, Mail MCP)
-   ├─ s2s/                   ← MAF-FD-S2S  (prompt agent, own identity)
-   └─ dw/                    ← MAF-FD-DW   (prompt agent → Digital Worker)
+   └─ s2s/                   ← MAF-FD-S2S  (prompt agent, own identity)
 ```
 
 Each setup guide starts by cloning this repo and `cd`-ing into the relevant folder. Follow

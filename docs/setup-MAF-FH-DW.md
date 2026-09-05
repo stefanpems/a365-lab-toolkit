@@ -213,6 +213,12 @@ In Microsoft Teams → **Apps → Agents for your team** → find your agent →
 instance**. Each instance is an **agent user** with its own mailbox, OneDrive, and Teams
 presence.
 
+The M365 Copilot store's **Create** action can complete without a useful confirmation and without
+adding the instance under **Your agents**. Before retrying, verify the authoritative state in
+**Admin center → Agents → `<agent template>` → Instances**. The hired instance is an agent user,
+not another Agent Store app; find it by name/alias in Teams. Registry **Available** can precede
+end-to-end Teams message routing.
+
 ### 6.1 Give instances a mailbox + full O365 — add **Microsoft 365 E7** on the Licenses tab
 
 The AI-teammate policy template only assigns the **minimum** — **Frontier for Autopilots (no
@@ -230,9 +236,32 @@ mailbox / O365 resources**. To make each new instance get a **mailbox + OneDrive
 > **Why the Licenses tab and not the template wizard.** You **cannot** add E5/E7 while *creating*
 > the policy template (the **Save hangs** — same gotcha as [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md)
 > §7.1). Adding E5/E7 **here**, on the deployed agent's **Licenses** tab, works. Assign the
-> licenses **before** hiring so instances inherit the mailbox + O365 from creation. Existing
-> instances can be licensed per-instance (Instances → `<instance>` → Licenses) — see
-> [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) §8.
+> licenses **before** hiring so instances inherit the mailbox + O365 from creation.
+
+> **Known MAC bug (observed 2026-09-05).** The current
+> **Instances → `<instance>` → Licenses** route can replace the complete Agents page with only
+> *"An error occurred."* The failure occurs client-side before a license request is issued and was
+> reproduced on FH-DW. Do not use per-instance licensing as the repeatable path in
+> this preview. Correct the **template** license set, then delete and re-hire an incorrectly licensed
+> instance.
+
+> **Exhaustion and stale counts.** If any selected product reaches zero availability, the template
+> says *"You have run out of licenses"*, Add instance is disabled, and the store rejects new hires.
+> Check Frontier, Teams Enterprise, and E7/E5 separately. Deleted instances release their products
+> asynchronously, and an already-open Licenses flyout may continue showing the old count; close and
+> reopen it or refresh the Registry before concluding that cleanup failed.
+
+### 6.1.1 Delete unused instances and release their licenses
+
+1. **Agents → All agents** → open the **agent template** row (the row with an instance count).
+2. **Instances** → select the exact name/alias → **Permanently delete** → **Delete instance**.
+3. Verify it disappears from Instances and wait for all assigned products to return to the tenant
+   pool. Preserve any instance not explicitly selected for cleanup.
+
+Do not delete only the Entra object and do not select the similarly named Foundry resource row. In
+the validated cleanup, deleting FH-DW3 instances `AFDHDW3I1` through `AFDHDW3I3` preserved
+`AFDHDW3I4` and returned three Teams Enterprise seats. The open template flyout still displayed
+`0 of 50` until refreshed even though fresh tenant inventory already reported 3 available.
 
 ### 6.2 Model access — every instance identity must be able to call the model
 
@@ -313,8 +342,7 @@ az role assignment list --subscription $sub --scope $scope --include-inherited `
 
 > **Scope of this issue.** This affects **FH-DW only**. **ACA-DW** authenticates the model call with
 > the Container App's *own* fixed managed identity (one grant covers all instances; the per-instance
-> agentic identity is used only for the Mail token), and **FD-DW** is declarative (the platform
-> handles inference). Neither needs per-instance model RBAC.
+> agentic identity is used only for the Mail token), so it doesn't need per-instance model RBAC.
 
 ## 7. Observability
 

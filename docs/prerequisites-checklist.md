@@ -16,13 +16,13 @@ This document deliberately distinguishes:
 
 | Scope | Agent types |
 | --- | --- |
-| **ALL** | All nine agent variants |
+| **ALL** | All eight agent variants |
 | **ACA** | MAF-ACA-OBO, MAF-ACA-S2S, MAF-ACA-DW |
 | **FH** | MAF-FH-OBO, MAF-FH-S2S, MAF-FH-DW |
-| **FD** | MAF-FD-OBO, MAF-FD-S2S, MAF-FD-DW |
+| **FD** | MAF-FD-OBO, MAF-FD-S2S |
 | **OBO** | MAF-ACA-OBO, MAF-FH-OBO, MAF-FD-OBO |
 | **S2S** | MAF-ACA-S2S, MAF-FH-S2S, MAF-FD-S2S |
-| **DW** | MAF-ACA-DW, MAF-FH-DW, MAF-FD-DW |
+| **DW** | MAF-ACA-DW, MAF-FH-DW |
 | **Web UI** | Optional SPA used with OBO and S2S agents; not used by DW agents |
 
 When a row names a more specific scope, that scope takes precedence over these groups.
@@ -106,8 +106,6 @@ When a row names a more specific scope, that scope takes precedence over these g
   Microsoft Agent 365 entitlement, including an eligible M365 E7 / Frontier Suite offer.
 - [ ] **[ACA-DW, FH-DW] Mandatory per instance** Capacity is available for the Agent 365 /
   `Frontier for AI Teammates` license assigned through the AI-teammate policy template.
-- [ ] **[FD-DW] Mandatory per instance** Capacity is available for `Microsoft 365 Frontier
-  for Autopilot`, assigned by the own-identity policy template during approval.
 - [ ] **[DW] Recommended for full functionality** Confirm the required Microsoft 365 E5,
   Teams Enterprise, and Microsoft 365 Copilot entitlements for the intended mailbox, Teams,
   OneDrive, and Copilot experience.
@@ -126,7 +124,7 @@ When a row names a more specific scope, that scope takes precedence over these g
   `Microsoft.OperationalInsights` can be registered in the subscription.
 - [ ] **[FH, FD]** Resource providers `Microsoft.CognitiveServices` and
   `Microsoft.MachineLearningServices` can be registered in the subscription.
-- [ ] **[FH-DW, FD-DW]** Resource provider `Microsoft.BotService` can be registered.
+- [ ] **[FH-DW]** Resource provider `Microsoft.BotService` can be registered.
 - [ ] **[FH]** The selected region supports Foundry hosted agents and the required model.
 - [ ] **[ACA]** The selected region has Azure Container Apps environment capacity.
 
@@ -166,7 +164,6 @@ The following are normally outputs of the setup, not prerequisites:
 | FH-OBO / FH-S2S | Foundry hosted agent and versions; `azd provision` can create/select supporting Foundry resources |
 | FH-DW | Foundry account/project, model deployment, ACR, Bot Service, monitoring, identities, hosted agent |
 | FD-OBO / FD-S2S | Prompt-agent definition/version in the selected existing Foundry project |
-| FD-DW | Prompt-agent version and Bot Service; the Foundry project/model must already exist |
 | Web UI | SPA app registration and, when selected, Azure Static Web App |
 
 ## 4. Permissions in the target tenant
@@ -181,7 +178,7 @@ the next section.
 - [ ] **[ACA]** A **Global Administrator** is available for all organization-wide admin
   consent prompts. Using a Global Administrator as the operator satisfies both requirements
   but is not required for every command.
-- [ ] **[FH-DW, FD-DW]** A tenant administrator is available to approve and activate the
+- [ ] **[FH-DW]** A tenant administrator is available to approve and activate the
   published Digital Worker in the Microsoft 365 admin center.
 - [ ] **[DW]** A Global Administrator is available to accept the Agent 365 terms, apply the
   own-identity policy template, accept permissions, and authorize instance creation.
@@ -250,9 +247,6 @@ the next section.
   current Bicep/post-provision flow to create resources and role assignments.
 - [ ] **[FD-OBO, FD-S2S]** The operator has **Foundry User** on the project and **Cognitive
   Services User** on the Foundry account.
-- [ ] **[FD-DW]** The operator has **Foundry User** on the project and **Azure Bot Service
-  Contributor**, Contributor, or Owner on the resource group that contains the Foundry
-  account.
 - [ ] **[Provider registration]** The operator has `*/register/action` for each required
   resource provider, or an administrator has registered the providers in advance.
 
@@ -293,6 +287,5 @@ These are implementation assumptions in the current repository, not platform pre
   [MAF-ACA-DW](setup-MAF-ACA-DW.md)
 - [MAF-FH-OBO](setup-MAF-FH-OBO.md), [MAF-FH-S2S](setup-MAF-FH-S2S.md),
   [MAF-FH-DW](setup-MAF-FH-DW.md)
-- [MAF-FD-OBO](setup-MAF-FD-OBO.md), [MAF-FD-S2S](setup-MAF-FD-S2S.md),
-  [MAF-FD-DW](setup-MAF-FD-DW.md)
+- [MAF-FD-OBO](setup-MAF-FD-OBO.md), [MAF-FD-S2S](setup-MAF-FD-S2S.md)
 - [Web UI](setup-web-ui.md)

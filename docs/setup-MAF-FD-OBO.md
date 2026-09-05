@@ -6,9 +6,8 @@
 > Consumed from the web SPA. Reference implementation: **`agentframeworkFD-OBO-agent`**
 > (folder [foundry-declarative/obo](../foundry-declarative/obo)).
 
-See [00-introduction.md](00-introduction.md) for concepts and
-[setup-MAF-FD-DW.md](setup-MAF-FD-DW.md) for the shared Foundry-project/naming notes (use a
-**neutral** project name that hosts FH *and* FD agents).
+See [00-introduction.md](00-introduction.md) for concepts. Use a **neutral** Foundry **project**
+name that hosts FH *and* FD agents of any type; only the agent name carries the type.
 
 ---
 

@@ -41,7 +41,14 @@ concepts reference, not a competing entry page.
 | MAF-FH-DW | Foundry Hosted (container + Bot Service) | Digital Worker (AI teammate) | [setup-MAF-FH-DW.md](setup-MAF-FH-DW.md) |
 | MAF-FD-OBO | Foundry Declarative (prompt agent) | On-Behalf-Of | [setup-MAF-FD-OBO.md](setup-MAF-FD-OBO.md) |
 | MAF-FD-S2S | Foundry Declarative (prompt agent) | Service-to-Service | [setup-MAF-FD-S2S.md](setup-MAF-FD-S2S.md) |
-| MAF-FD-DW | Foundry Declarative (prompt agent → autopilot) | Digital Worker | [setup-MAF-FD-DW.md](setup-MAF-FD-DW.md) |
+
+> **⛔ MAF-FD-DW is not available (platform limitation).** A Foundry **prompt/declarative agent
+> cannot be published as an Agent 365 autopilot Digital Worker**; a hired instance is permanently
+> silent in Teams by design. Per Microsoft Learn, **only Foundry _hosted_ agents can be published as
+> autopilot blueprints**
+> ([Supported agent types](https://learn.microsoft.com/azure/foundry/agents/concepts/agent-365-integration#supported-agent-types)).
+> Use **[MAF-FH-DW](setup-MAF-FH-DW.md)** for a Teams Digital Worker; a declarative agent remains fully
+> usable through the Responses API ([MAF-FD-OBO](setup-MAF-FD-OBO.md), [MAF-FD-S2S](setup-MAF-FD-S2S.md)).
 
 ## Web UI
 
