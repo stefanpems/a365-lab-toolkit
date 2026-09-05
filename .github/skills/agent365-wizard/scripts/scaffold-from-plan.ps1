@@ -153,6 +153,10 @@ foreach ($a in $plan.agents) {
             # DW agents prompt for the optional 'ext_UtilityInsights' custom MCP (may be absent in the tenant) and defer the messaging endpoint until the container is deployed.
             $dwNote = if ($a.type -eq 'ACA-DW') { "   # DW: answer N at the 'ext_UtilityInsights' prompt (optional custom MCP — add only when wiring it); after the container deploys, register the endpoint: a365 setup blueprint --endpoint-only --messaging-endpoint https://<fqdn>/api/messages" } else { '' }
             $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg <AOAI_RG> -AoaiAcc $($a.ai.account)$reuse$dwNote")
+            if ($a.type -eq 'ACA-DW') {
+                # DW publish: register the real endpoint, regenerate the package for THIS blueprint, then upload it in the admin center.
+                $nextCommands.Add("cd `"$dst`"; a365 setup blueprint --endpoint-only --messaging-endpoint https://<ACA_DW_FQDN>/api/messages; a365 publish --aiteammate --agent-name `"$($a.name)`"   # answer n + Enter at the manifest prompts; then upload manifest\manifest.zip at admin.microsoft.com > Agents > All agents > Upload custom agent (Publish/Activate), then users hire in Teams")
+            }
         }
         'fh' {
             # azure.yaml: rename the service + kind name to the planned agent name.

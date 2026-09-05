@@ -201,19 +201,20 @@ a365 setup blueprint --endpoint-only `
 
 ## 6. Publish the AI teammate package
 
-For AI teammates, `a365 publish` really produces a package:
+For AI teammates, `a365 publish` really produces a package (the `--agent-name` flag is **required**):
 
 ```powershell
-a365 publish --aiteammate
+a365 publish --aiteammate --agent-name "<agent-name>"
 ```
 
 - Emits `manifest/` (`manifest.json` with an `agenticUserTemplates` block →
   `agenticUserTemplateManifest.json`, icons) and `manifest/manifest.zip`.
-- `a365 publish` **regenerates `name.short`/`name.full` from `agentBlueprintDisplayName`** and
-  prompts *"Open manifest in your default editor now? (Y/n)"* if `name.short` is **> 30 chars**.
-  Keep the blueprint display name ≤ 30 (see §2, e.g. `AgentFramework DW Sample`) so this never
-  triggers; otherwise answer **Y** and shorten `name.short`/`name.full` before packaging. Also
-  give a real `description`.
+- It **always** prints the manifest fields and prompts *"Open manifest in your default editor now?
+  (Y/n)"* — answer **n** if the defaults are fine, then press **Enter** at *"Press Enter when you
+  have finished editing…"* to package. Answer **Y** only to edit `name.short`/`name.full`/`description`
+  first.
+- `a365 publish` **regenerates `name.short`/`name.full` from `agentBlueprintDisplayName`**; keep the
+  blueprint display name ≤ 30 chars (see §2) so `name.short` stays valid.
 
 ## 7. Upload, register, activate (admin center — browser)
 
