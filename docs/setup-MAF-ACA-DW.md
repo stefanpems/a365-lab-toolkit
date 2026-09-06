@@ -447,6 +447,13 @@ a notification when the set up process is complete."*
 > The same token-refresh fix is applied to the **MAF-ACA-OBO** and **MAF-ACA-S2S** samples (same
 > latent memoization); redeploy those images too if their containers are long-lived.
 
+> **These lessons generalize to ANY Work IQ MCP** (Calendar, Teams, SharePoint, OneDrive, User,
+> Word, Copilot), not just Mail — every Work IQ server shares the same resource
+> (`ea9ffc3e-…`) and token lifecycle. When you attach another Work IQ MCP to an agent (e.g. via the
+> provisioning wizard's `a365 develop add-mcp-servers`), reuse the same fixes. The full per-variant
+> difficulty→fix matrix and the generic vs. Mail-specific breakdown are consolidated in
+> [.github/skills/agent365-wizard/references/workiq-mcp-integration.md](../.github/skills/agent365-wizard/references/workiq-mcp-integration.md).
+
 ## 10. Verify
 
 Interact with the agent user directly in **Teams** (1:1 chat / @mention), by **email**, or via

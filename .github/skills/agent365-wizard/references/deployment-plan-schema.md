@@ -37,7 +37,10 @@ gitignored.
         "enrollmentConfirmed": false,
         "policyTemplate": "<name-or-todo>"
       },
-      "tools": []                          // RESERVED — future custom MCP tool registration
+      "tools": ["mcp_MailTools"]           // registered MCP server uniqueNames to attach (ACA/FH).
+                                             // Defaults to ["mcp_MailTools"] (Work IQ Mail, today's behavior);
+                                             // add other Work IQ (mcp_*) / custom (ext_*) servers, or [] to drop Mail.
+                                             // FD agents leave this [] (they wire tools in agent_config.py).
     }
   ],
   "ui": {
@@ -73,8 +76,12 @@ gitignored.
 ```
 
 ## Rules
-- `agents[].tools` stays `[]` unless the custom MCP is attached; when attached, the scaffolder does it
-  via `a365 develop add-mcp-servers` (not by editing the plan).
+- `agents[].tools` lists the **registered MCP server uniqueNames** to attach to that agent via
+  `a365 develop add-mcp-servers` (Work IQ `mcp_*`, custom `ext_*`, or any approved third-party). It
+  defaults to `["mcp_MailTools"]` (Work IQ Mail — the samples' current behavior); set `[]` to make Mail
+  optional, or add more servers. **FD agents keep it `[]`** (prompt agents wire tools in
+  `agent_config.py`, not via the manifest). Reusing a non-Mail Work IQ tool follows the same auth/token
+  lessons — see [workiq-mcp-integration.md](./workiq-mcp-integration.md).
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, `name` must be ≤ 12 chars,
   start with a letter and be alphanumeric — the registered names are `ext_<Name>Anon` / `ext_<Name>Auth`
   and must stay ≤ 20 chars. `attachTo` may list only ACA-* and FH-* agent types (FD is unsupported).

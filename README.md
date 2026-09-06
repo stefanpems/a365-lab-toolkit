@@ -7,6 +7,18 @@ across three hosting/dev models — **Azure Container Apps (ACA)**, **Foundry Ho
 
 > Full concepts and step-by-step setup guides are in **[docs/](docs/README.md)**.
 
+## What this lab is
+
+This is a hands-on **lab** that provisions a set of **Microsoft Agent Framework (MAF)** agents, a shared
+web UI, and optional **test MCP servers**, all integrated into **Microsoft Agent 365**. A provisioning
+wizard agent (see [.github/agents/](.github/agents)) scaffolds and deploys the whole thing. It has two goals:
+
+- **For IT admins** — exercise Agent 365 end to end with agents across different **hosting models**
+  (ACA, Foundry Hosted, Foundry Declarative), **authentication models** (OBO, S2S, Digital Worker), and
+  **tool integrations** (Work IQ MCP servers + custom test MCP servers).
+- **For developers** — start from **modifiable agents already integrated with Agent 365** and grow them
+  into more extensive prototypes.
+
 ## Repository layout
 
 ```

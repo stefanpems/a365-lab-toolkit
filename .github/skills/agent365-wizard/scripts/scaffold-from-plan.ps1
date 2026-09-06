@@ -96,6 +96,16 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
     }
 }
 
+# agents[].tools validation (registered MCP server unique names to attach, e.g. mcp_MailTools, ext_Foo).
+foreach ($a in $plan.agents) {
+    foreach ($tool in @($a.tools)) {
+        if ($tool -notmatch '^(mcp_|ext_)') { $errors.Add("$($a.name): tool '$tool' must be a registered server unique name starting with 'mcp_' or 'ext_' (see 'a365 develop list-available').") }
+    }
+    if (($a.type -like 'FD-*') -and (@($a.tools).Count -gt 0)) {
+        $errors.Add("$($a.name): FD (prompt) agents do not attach tools via ToolingManifest/add-mcp-servers; leave 'tools' empty (the FD sample wires its tools in agent_config.py).")
+    }
+}
+
 if ($errors.Count -gt 0) {
     Write-Host "Plan validation FAILED:" -ForegroundColor Red
     $errors | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
@@ -107,6 +117,8 @@ if ($ValidateOnly) { exit 0 }
 # ---------------------------------------------------------------- scaffolding
 New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
 $nextCommands = New-Object System.Collections.Generic.List[string]
+# agent-name -> set of MCP server unique names to attach (Work IQ / catalog / custom). Emitted once at the end.
+$attachByAgent = @{}
 
 function Set-EnvValue {
     param([string]$Path, [string]$Key, [string]$Value)
@@ -320,14 +332,38 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
         $extName = if ($srv -eq 'anon') { "ext_${name}Anon" } else { "ext_${name}Auth" }
         $nextCommands.Add("cd `"$mcpDst`"; # edit register-$srv.json: replace <MCP_FQDN> with the deployed FQDN, then: a365 develop-mcp register-external-mcp-server -f .\register-$srv.json --dry-run; a365 develop-mcp register-external-mcp-server -f .\register-$srv.json   # a tenant admin then approves '$extName' in the M365 admin center (Agents > Requested)")
     }
-    $extList = (@($servers | ForEach-Object { if ($_ -eq 'anon') { "ext_${name}Anon" } else { "ext_${name}Auth" } })) -join ' '
+    $extList = (@($servers | ForEach-Object { if ($_ -eq 'anon') { "ext_${name}Anon" } else { "ext_${name}Auth" } }))
     foreach ($t in @($plan.customMcp.attachTo)) {
         $ag = $plan.agents | Where-Object { $_.type -eq $t } | Select-Object -First 1
         if (-not $ag) { continue }
-        $nextCommands.Add("cd `"$(Join-Path $OutRoot $ag.name)`"; a365 develop add-mcp-servers $extList; a365 setup permissions mcp --agent-name `"$($ag.name)`"   # attach the custom MCP to $($ag.name) (after the server is approved)")
+        # Accumulate the custom ext_ servers; the unified attach section emits one command per agent.
+        if (-not $attachByAgent.ContainsKey($ag.name)) { $attachByAgent[$ag.name] = New-Object System.Collections.Generic.List[string] }
+        $extList | ForEach-Object { if ($attachByAgent[$ag.name] -notcontains $_) { $attachByAgent[$ag.name].Add($_) } }
     }
     if ($plan.customMcp.propagateToGraph) {
         $nextCommands.Add("# propagate_to_graph: on the ext_${name}Auth app add Microsoft Graph delegated 'User.Read' + admin consent + a client secret, then redeploy deploy-mcp.ps1 with -AuthClientId/-AuthTenantId (secret entered in the terminal). See custom-mcp/README.md.")
+    }
+}
+
+# ---------------------------------------------------------------- MCP tool attachment (Work IQ / catalog / custom)
+# For each ACA-*/FH-* agent, attach the selected registered MCP servers via the documented flow:
+#   a365 develop add-mcp-servers <uniqueName...>   (writes ToolingManifest.json; scope/audience from the catalog)
+#   a365 setup permissions mcp --agent-name <name> (Global Admin grants the OAuth2 grants to the blueprint)
+# The samples ship ToolingManifest.json with mcp_MailTools; if the plan's tools omit it, remove it.
+# Reuse the Work IQ MCP token lessons (references/workiq-mcp-integration.md) for any non-Mail Work IQ tool.
+foreach ($a in $plan.agents) {
+    if ($a.type -like 'FD-*') { continue }  # FD prompt agents wire tools in agent_config.py, not via add-mcp-servers
+    $tools = @($a.tools)
+    $extras = @($tools | Where-Object { $_ -and $_ -ne 'mcp_MailTools' })
+    if ($attachByAgent.ContainsKey($a.name)) { $extras += @($attachByAgent[$a.name] | Where-Object { $extras -notcontains $_ }) }
+    $agentDir = Join-Path $OutRoot $a.name
+    if ($extras.Count -gt 0) {
+        $note = if ($a.type -like 'FH-*') { '   # FH sample code currently wires only Mail — a non-Mail Work IQ tool also needs the code generalization in references/workiq-mcp-integration.md' } else { '   # ACA turn path is manifest-driven — Work IQ token/refresh lessons already apply generically' }
+        $nextCommands.Add("cd `"$agentDir`"; a365 develop add-mcp-servers $($extras -join ' '); a365 setup permissions mcp --agent-name `"$($a.name)`"$note")
+    }
+    # Mail is shipped in the sample manifest; drop it if the plan explicitly excludes it.
+    if (($tools.Count -gt 0) -and ($tools -notcontains 'mcp_MailTools')) {
+        $nextCommands.Add("cd `"$agentDir`"; a365 develop remove-mcp-servers mcp_MailTools; a365 setup permissions mcp --agent-name `"$($a.name)`"   # Mail deselected for this agent")
     }
 }
 

@@ -65,6 +65,21 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
   per-registration): NoAuth for `/anon/mcp`, EntraOAuth for `/auth/mcp`. Admin approval of each
   registered server happens in the M365 admin center (not CLI).
 
+### Registered MCP tools per agent (Work IQ / catalog / third-party)
+For each **ACA-*/FH-*** agent, which registered MCP servers should it use? (FD excluded — prompt agents
+wire tools in `agent_config.py`.)
+- Source the choices **live** from `a365 develop list-available` (shows Work IQ `mcp_*`, approved custom
+  `ext_*`, and third-party). Present a multi-select with **`mcp_MailTools` pre-selected** (preserves the
+  samples' current behavior); deselect it to make Mail optional.
+- Allow a **free-text** entry for any additional registered `uniqueName` (must start with `mcp_` or
+  `ext_`); warn if it is not in `list-available` (not registered/approved yet).
+- Writes `agents[].tools`. The scaffolder emits `a365 develop add-mcp-servers <uniqueName…>` +
+  `a365 setup permissions mcp` per agent (and `remove-mcp-servers mcp_MailTools` if Mail is deselected).
+- **Reuse the Work IQ token lessons** for any non-Mail Work IQ tool — see
+  [workiq-mcp-integration.md](./workiq-mcp-integration.md). ACA-OBO/DW are manifest-driven (generic, it
+  just works); ACA-S2S can't use delegated Work IQ tools (LLM-only); FH/FD samples wire only Mail in
+  code today, so a non-Mail Work IQ tool needs the code generalization noted in that reference.
+
 ## Do NOT ask (discover / derive / fixed)
 - Blueprint / identity / container / bot / app-reg names → derived from the prefix.
 - Log Analytics workspace names, endpoints, app IDs, blueprint IDs → discovered post-deploy.

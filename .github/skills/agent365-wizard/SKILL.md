@@ -1,6 +1,6 @@
 ---
 name: agent365-wizard
-description: 'Provisioning wizard for the Agent 365 Agent Framework samples. Use when creating/planning one or more of the 8 supported variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), adding the companion web UI, attaching OBO/S2S agents to a new or existing UI, or (future) registering a custom MCP tool in Agent 365. Provides the variant matrix, minimal-question interview flow, naming/validation rules, a secret-free deployment-plan schema, and a read-only discovery script.'
+description: 'Provisioning wizard for the Agent 365 × MAF lab (the A365 Lab Provisioner agent). Use when creating/planning one or more of the 8 supported variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), adding the companion web UI, deploying/registering the sample custom MCP servers, or attaching registered MCP tools (Work IQ / custom) to agents. Provides the variant matrix, minimal-question interview flow, naming/validation rules, a secret-free deployment-plan schema, and a read-only discovery script.'
 argument-hint: "start | plan | scaffold"
 ---
 
@@ -8,7 +8,7 @@ argument-hint: "start | plan | scaffold"
 
 Interview the user with the **minimum** questions, produce a **secret-free** deployment plan, then
 generate per-variant scaffolding from templates. Companion agent:
-[agent365-provisioner.agent.md](../../agents/agent365-provisioner.agent.md).
+[a365-lab-provisioner.agent.md](../../agents/a365-lab-provisioner.agent.md).
 
 ## Supported variants (exactly 8)
 `ACA-OBO`, `ACA-S2S`, `ACA-DW`, `FH-OBO`, `FH-S2S`, `FH-DW`, `FD-OBO`, `FD-S2S`.
@@ -35,8 +35,11 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan. `<Name>` is
    the **unique per-copy key** (Azure resources `<name>-mcp-*`, folder `generated/custom-mcp-<name>/`,
    registrations all derive from it) — to create N coexisting copies each run needs a different `<Name>`;
-   check the tenant (`a365 develop list-available`) and ask again if it collides.
-
+   check the tenant (`a365 develop list-available`) and ask again if it collides.5. **Registered MCP tools** (per ACA-*/FH-* agent) — multi-select of servers from
+   `a365 develop list-available` (Work IQ `mcp_*` + custom `ext_*` + third-party), with `mcp_MailTools`
+   **pre-selected** (deselect to make Mail optional), plus free-text for other registered `uniqueName`s.
+   Writes `agents[].tools`. FD agents keep `tools: []`. Reuse the token lessons in
+   [references/workiq-mcp-integration.md](./references/workiq-mcp-integration.md) for any Work IQ MCP.
 ### 2. Solution basics (one screen)
 - **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as
   `<prefix>-<hosting>-<identity>` where hosting ∈ {ACA, FH, FD}, identity ∈ {OBO, S2S, DW}.
@@ -87,7 +90,8 @@ deploy-script constants** (RG / region / app / env are hardcoded, not parameters
 `generated/ui/config.js` when a UI is requested, scaffolds `generated/custom-mcp/` with filled
 `register-anon.json` / `register-auth.json` when `customMcp.enabled`, and prints the exact next
 commands (deploy MCP → register servers → `a365 develop add-mcp-servers` + `a365 setup permissions mcp`
-per attached agent). It performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to
+per attached agent, including each agent's selected `agents[].tools` and dropping `mcp_MailTools` when
+Mail is deselected). It performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to
 check a plan without writing. Print the next commands for the user to run; never auto-run destructive
 deploys.
 
