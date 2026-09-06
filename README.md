@@ -1,23 +1,35 @@
-# Agent 365 × Microsoft Agent Framework — sample agents
+# Agent 365 agent lab (`a365-agent-lab`) — custom agents integrated with Microsoft Agent 365
 
-A family of test agents built on the **Microsoft Agent Framework (MAF)** and integrated with
-**Microsoft Agent 365**, spanning three authentication models (OBO, S2S, Digital Worker)
-across three hosting/dev models — **Azure Container Apps (ACA)**, **Foundry Hosted (FH)**, and
-**Foundry Declarative / prompt agents (FD)** — plus a shared web UI.
+A lab of custom agents integrated with **Microsoft Agent 365**, spanning three authentication models
+(OBO, S2S, Digital Worker) across three hosting/dev models — **Azure Container Apps (ACA)**,
+**Foundry Hosted (FH)**, and **Foundry Declarative / prompt agents (FD)** — plus a shared web UI.
+The sample agents are currently built with the **Microsoft Agent Framework (MAF)** — a pragmatic
+starting point, **not** the objective. The lab is **framework-agnostic by design** (see the vision below).
 
 > Full concepts and step-by-step setup guides are in **[docs/](docs/README.md)**.
 
 ## What this lab is
 
-This is a hands-on **lab** that provisions a set of **Microsoft Agent Framework (MAF)** agents, a shared
-web UI, and optional **test MCP servers**, all integrated into **Microsoft Agent 365**. A provisioning
-wizard agent (see [.github/agents/](.github/agents)) scaffolds and deploys the whole thing. It has two goals:
+This is a hands-on **lab** that provisions a set of **custom agents**, a shared web UI, and optional
+**test MCP servers**, all integrated into **Microsoft Agent 365**. A provisioning wizard agent (the
+**A365 Lab Provisioner**, see [.github/agents/](.github/agents)) scaffolds and deploys the whole thing.
+It has two goals:
 
 - **For IT admins** — exercise Agent 365 end to end with agents across different **hosting models**
   (ACA, Foundry Hosted, Foundry Declarative), **authentication models** (OBO, S2S, Digital Worker), and
   **tool integrations** (Work IQ MCP servers + custom test MCP servers).
 - **For developers** — start from **modifiable agents already integrated with Agent 365** and grow them
   into more extensive prototypes.
+
+> **Framework-agnostic by design (vision).** The Agent 365 integration — the agent identity/blueprint,
+> the tooling/MCP gateway, and the messaging endpoint — does **not** depend on MAF. MAF was chosen
+> opportunistically to get started; the intent is to extend the lab to provision agents built with
+> **other frameworks** (e.g. **LangChain**, **Semantic Kernel**). The agent-type naming already carries
+> a `<framework>` segment (today `MAF-…`), so new frameworks slot in as `LC-…`, `SK-…`, etc. under the
+> same hosting/identity structure, reusing the same auth/token patterns
+> ([workiq-mcp-integration.md](.github/skills/agent365-wizard/references/workiq-mcp-integration.md)).
+> ACA and FH are the natural hosts for code frameworks; FD (declarative prompt agents) is
+> platform-run and framework-independent by nature.
 
 ## Repository layout
 

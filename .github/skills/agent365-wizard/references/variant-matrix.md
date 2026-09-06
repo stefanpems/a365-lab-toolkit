@@ -80,6 +80,14 @@ wire tools in `agent_config.py`.)
   just works); ACA-S2S can't use delegated Work IQ tools (LLM-only); FH/FD samples wire only Mail in
   code today, so a non-Mail Work IQ tool needs the code generalization noted in that reference.
 
+## Future direction — multi-framework (vision, not yet implemented)
+Today all 8 variants are **MAF** (`MAF-ACA-OBO`, …). The Agent 365 integration is framework-agnostic
+(identity, MCP gateway, messaging), so the lab is meant to grow a **framework** dimension: per-framework
+source folders (e.g. `aca-langchain/…`), a `framework` field in the plan (default `maf`), and variant IDs
+like `LC-ACA-OBO` / `SK-FH-S2S`. ACA and FH are the natural hosts for code frameworks; FD (declarative
+prompt agents) is framework-independent. The token/auth lessons in workiq-mcp-integration.md apply
+unchanged to any framework. Not yet implemented — vision only.
+
 ## Do NOT ask (discover / derive / fixed)
 - Blueprint / identity / container / bot / app-reg names → derived from the prefix.
 - Log Analytics workspace names, endpoints, app IDs, blueprint IDs → discovered post-deploy.

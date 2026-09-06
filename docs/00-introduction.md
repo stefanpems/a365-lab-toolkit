@@ -4,8 +4,10 @@
 > complete the [central prerequisites checklist](prerequisites-checklist.md) before using this
 > conceptual reference or an agent-specific setup guide.
 >
-> Introduction and conceptual reference for a family of **nine** test agents built on the
-> **Microsoft Agent Framework (MAF)** and integrated with **Microsoft Agent 365**.
+> Introduction and conceptual reference for a family of **nine** test agents integrated with
+> **Microsoft Agent 365**. The samples are currently built with the **Microsoft Agent Framework
+> (MAF)** — the **starting** framework, not the objective; the lab is framework-agnostic and the
+> `<framework>` naming segment (§1) anticipates other frameworks (e.g. LangChain, Semantic Kernel).
 >
 > This document is written to be **reusable**: it describes the agent types generically so
 > the same patterns can be reproduced in other tenants/environments with different names. A
@@ -23,7 +25,7 @@ Agents are named `<framework>-<env>-<auth>`:
 
 | Segment | Values | Meaning |
 | --- | --- | --- |
-| `<framework>` | **MAF** | Microsoft Agent Framework (Python) |
+| `<framework>` | **MAF** (today; `LC` / `SK` / … planned) | Agent framework used to build the agent. **MAF** (Microsoft Agent Framework, Python) is the current sample; the segment is framework-neutral by design because the Agent 365 integration (identity, MCP gateway, messaging) doesn't depend on it, so other frameworks (e.g. LangChain `LC`, Semantic Kernel `SK`) can be added later. |
 | `<env>` | **ACA** \| **FH** \| **FD** | Hosting/dev model: **A**zure **C**ontainer **A**pps (A365-SDK-hosted), **F**oundry **H**osted (container), or **F**oundry **D**eclarative (prompt agent, platform-run) |
 | `<auth>` | **OBO** \| **S2S** \| **DW** | Identity/authentication model: **O**n-**B**ehalf-**O**f a user, **S**ervice-**to**-**S**ervice (application), or **D**igital **W**orker (AI teammate with its own user identity) |
 
