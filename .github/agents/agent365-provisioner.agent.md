@@ -132,6 +132,12 @@ per registration, not per tool):
 Rules and mechanics (grounded in MS Learn):
 - **Naming**: registered names must start with `ext_` and be **≤ 20 chars** → ask `<Name>` **≤ 12 chars**
   (`^[A-Za-z][A-Za-z0-9]*$`); validate the length when asking. `ext_<Name>Anon`/`ext_<Name>Auth`.
+- **`<Name>` is the unique per-copy key**: all Azure resources (`<name>-mcp-rg`/`-ca`/`-cae`, lowercased),
+  the scaffold folder (`generated/custom-mcp-<name>/`) and both registrations derive from it. To support
+  calling the wizard N times and creating N coexisting copies, **each run needs a different `<Name>`**.
+  Before writing the plan, **check the tenant for a collision** (`a365 develop list-available`, or the
+  M365 admin center Agents → Tools); if `ext_<Name>Anon`/`ext_<Name>Auth` already exists, ask for another
+  `<Name>` (or append a short suffix). Do not overwrite an existing registration silently.
 - **Register**: `a365 develop-mcp register-external-mcp-server -f register-anon.json` (and `-auth`).
   Then a **tenant admin approves each server in the M365 admin center** (Agents → Requested) — CLI
   approval was removed. BYO MCP is **preview**; republishing a new version isn't supported (re-register

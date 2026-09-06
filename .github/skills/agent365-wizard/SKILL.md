@@ -32,7 +32,10 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    sample [custom-mcp/](../../../custom-mcp/README.md). If not None, also ask for `<Name>` (**max 12
    chars**, `^[A-Za-z][A-Za-z0-9]*$` → registered as `ext_<Name>Anon` / `ext_<Name>Auth`, ≤ 20), a
    publisher name, which **ACA-*/FH-*** agents to attach to (FD excluded), and whether to enable
-   `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan.
+   `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan. `<Name>` is
+   the **unique per-copy key** (Azure resources `<name>-mcp-*`, folder `generated/custom-mcp-<name>/`,
+   registrations all derive from it) — to create N coexisting copies each run needs a different `<Name>`;
+   check the tenant (`a365 develop list-available`) and ask again if it collides.
 
 ### 2. Solution basics (one screen)
 - **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as

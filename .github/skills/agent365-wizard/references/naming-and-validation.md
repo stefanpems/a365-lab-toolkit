@@ -57,6 +57,11 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
    `ext_<Name>Anon` and `ext_<Name>Auth`, so `4 (ext_) + <Name> + 4 (Anon/Auth) ≤ 20` → `<Name> ≤ 12`.
    The wizard MUST ask for `<Name>` telling the user the max length is 12. `customMcp.attachTo` may
    contain only ACA-* / FH-* agent types (FD prompt agents attach tools via a different mechanism).
+   `<Name>` is the **unique per-copy key**: all Azure resources (`<name>-mcp-rg` / `-ca` / `-cae`,
+   lowercased), the scaffold folder (`generated/custom-mcp-<name>/`) and the registrations derive from
+   it. For N coexisting copies each run needs a **different, unique `<Name>`** — the wizard checks the
+   tenant (`a365 develop list-available`, or the M365 admin center Agents → Tools) and asks for another
+   name if `ext_<Name>Anon`/`ext_<Name>Auth` already exists.
 
 ## ACA deploy-script facts (critical for scaffolding)
 Verified in the sample scripts — the wizard must account for these:

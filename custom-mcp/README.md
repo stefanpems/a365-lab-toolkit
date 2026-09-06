@@ -15,6 +15,12 @@ The two servers are split by **authentication type**, because in Agent 365 the a
 `<Name>` is chosen by the provisioning wizard. Registered server names must start with `ext_` and be
 **≤ 20 characters**, so `<Name>` is limited to **≤ 12 characters** (`ext_` = 4 + `Anon`/`Auth` = 4).
 
+`<Name>` is also the **unique per-copy key**: the wizard derives the Azure resources
+(`<name>-mcp-rg` / `<name>-mcp-ca` / `<name>-mcp-cae`, lowercased), the scaffold folder
+(`generated/custom-mcp-<name>/`) and both registrations from it. To run the wizard multiple times and
+keep several copies side by side, give each a **different `<Name>`** (the wizard checks the tenant for
+an existing `ext_<Name>*` before registering).
+
 > **Lab only.** The ingress is public and the server performs no authorization of its own. Do not
 > expose real data. The `/auth` tools decode the incoming token **without** verifying its signature —
 > a production server must validate signature, issuer and audience.

@@ -276,18 +276,20 @@ if ($plan.ui.mode -in @('create', 'attach')) {
 
 # ---------------------------------------------------------------- custom MCP
 if ($plan.customMcp -and $plan.customMcp.enabled) {
+    $name      = $plan.customMcp.name
+    # Every per-copy identifier derives from the (unique) <Name>, so N copies never collide.
+    $mcpSlug   = ($name -replace '[^A-Za-z0-9]', '').ToLower()
     $mcpSrc = Join-Path $repoRoot 'custom-mcp'
-    $mcpDst = Join-Path $OutRoot 'custom-mcp'
+    $mcpDst = Join-Path $OutRoot "custom-mcp-$mcpSlug"
     if (Test-Path -LiteralPath $mcpDst) { Remove-Item -LiteralPath $mcpDst -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $mcpDst | Out-Null
     $null = robocopy $mcpSrc $mcpDst /E /XD '.venv' '__pycache__' /XF '*.pyc' '.env' /NFL /NDL /NJH /NJS /NP /NC /NS
 
-    $name      = $plan.customMcp.name
     $publisher = if ($plan.customMcp.publisher) { $plan.customMcp.publisher } else { 'Contoso' }
     $mcpRegion = if ($plan.customMcp.region) { $plan.customMcp.region } else { $plan.solution.region }
-    $mcpRg     = if ($plan.customMcp.resourceGroup) { $plan.customMcp.resourceGroup } else { "$prefix-mcp-rg" }
-    $mcpApp    = "$prefix-mcp-ca"
-    $mcpEnv    = "$prefix-mcp-cae"
+    $mcpRg     = if ($plan.customMcp.resourceGroup) { $plan.customMcp.resourceGroup } else { "$mcpSlug-mcp-rg" }
+    $mcpApp    = "$mcpSlug-mcp-ca"
+    $mcpEnv    = "$mcpSlug-mcp-cae"
     $servers   = @($plan.customMcp.servers); if (-not $servers) { $servers = @('anon', 'auth') }
 
     # Rewrite the hardcoded constants in deploy-mcp.ps1.
@@ -298,6 +300,7 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
         $txt = [regex]::Replace($txt, '(\$APP\s*=\s*)"[^"]*"',     "`$1`"$mcpApp`"")
         $txt = [regex]::Replace($txt, '(\$ENVNAME\s*=\s*)"[^"]*"', "`$1`"$mcpEnv`"")
         $txt = [regex]::Replace($txt, '(\$LOC\s*=\s*)"[^"]*"',     "`$1`"$mcpRegion`"")
+        $txt = [regex]::Replace($txt, '(\$IMAGE\s*=\s*)"[^"]*"',   "`$1`"$mcpSlug-mcp:1.0.0`"")
         Set-Content -LiteralPath $depPath -Value $txt
     }
 

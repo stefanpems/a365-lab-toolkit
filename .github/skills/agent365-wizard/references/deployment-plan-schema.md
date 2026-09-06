@@ -61,10 +61,10 @@ gitignored.
   },
   "customMcp": {                            // optional sample custom MCP server (custom-mcp/)
     "enabled": false,
-    "name": "<Name>",                       // <= 12 chars, starts with a letter, alphanumeric
+    "name": "<Name>",                       // <= 12 chars, starts with a letter, alphanumeric; UNIQUE per copy
     "publisher": "<Publisher>",             // registration metadata, e.g. Contoso
     "servers": ["anon", "auth"],           // which servers to register (subset of anon/auth)
-    "resourceGroup": "<prefix>-mcp-rg",
+    "resourceGroup": "<name>-mcp-rg",       // defaults to <name>-mcp-rg (derives from Name, not prefix)
     "region": "<azure-region>",
     "attachTo": [],                         // agent types to attach to (ACA-*/FH-* only; FD excluded)
     "propagateToGraph": false               // enable the advanced On-Behalf-Of Graph test
@@ -78,6 +78,11 @@ gitignored.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, `name` must be ≤ 12 chars,
   start with a letter and be alphanumeric — the registered names are `ext_<Name>Anon` / `ext_<Name>Auth`
   and must stay ≤ 20 chars. `attachTo` may list only ACA-* and FH-* agent types (FD is unsupported).
+- **`customMcp.name` is the unique per-copy key.** Every copy identifier derives from it (lowercased):
+  Azure resources `<name>-mcp-rg` / `<name>-mcp-ca` / `<name>-mcp-cae`, the scaffold folder
+  `generated/custom-mcp-<name>/`, and the `ext_<Name>Anon` / `ext_<Name>Auth` registrations. To run the
+  wizard N times and create N coexisting copies, give each a **different `name`** (the wizard checks the
+  tenant for an existing `ext_<Name>*` and asks for another if it collides).
 - DW entries require `displayNames.blueprint` length ≤ 30 (see naming-and-validation.md).
 - Anything discoverable post-deploy (FQDN, blueprint/app IDs, endpoints) is **omitted** from the plan
   and resolved at scaffold/deploy time.
