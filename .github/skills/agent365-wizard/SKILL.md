@@ -33,6 +33,10 @@ The scaffolder is a thin router ([scripts/scaffold-from-plan.ps1](./scripts/scaf
 that dot-sources per-family modules under [scripts/modules/](./scripts/modules); the sub-skills point
 back to it as the single execution entry point.
 
+**Verify the cross-reference web** after editing any skill, agent or doc:
+[scripts/check-links.ps1](./scripts/check-links.ps1) (read-only) asserts every local Markdown link
+across `docs/`, the skills and the agent resolves — run it before committing structural changes.
+
 ## Procedure
 
 ### 0. Confirm the Copilot runtime model

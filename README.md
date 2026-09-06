@@ -80,6 +80,37 @@ propagation to Microsoft Graph. The provisioning wizard can deploy, register and
 > For a Teams Digital Worker use **[MAF-FH-DW](docs/setup-MAF-FH-DW.md)**; a declarative agent remains
 > fully usable through the Responses API (**MAF-FD-OBO**, **MAF-FD-S2S**).
 
+### Provisioning tooling (the A365 Lab Provisioner)
+You don't need this to run a pre-built agent, but the wizard that scaffolds and deploys the lab lives
+under `.github/`. The agent [.github/agents/a365-lab-provisioner.agent.md](.github/agents/a365-lab-provisioner.agent.md)
+orchestrates focused **skills**; the scaffolder is a thin router that dot-sources per-family/component
+modules and writes everything under the gitignored `generated/`.
+
+```
+a365-agent-lab/
+├─ .github/
+│  ├─ agents/
+│  │  └─ a365-lab-provisioner.agent.md    # the wizard agent (entry point)
+│  └─ skills/
+│     ├─ agent365-wizard/                 # orchestrator: interview, plan, validation, discovery
+│     │  ├─ references/                   # variant matrix, naming/validation, plan schema, Work IQ MCP
+│     │  └─ scripts/
+│     │     ├─ scaffold-from-plan.ps1     # thin ROUTER (validates the plan, dot-sources the modules)
+│     │     ├─ discover-environment.ps1   # read-only environment discovery
+│     │     ├─ check-links.ps1            # read-only Markdown link-integrity verifier
+│     │     └─ modules/                   # per-family/component scaffolders (aca/fh/fd/ui/mcp/tools)
+│     ├─ agent365-aca-agents/             # ACA-OBO/S2S/DW sub-skill
+│     ├─ agent365-foundry-hosted-agents/  # FH-OBO/S2S/DW sub-skill
+│     ├─ agent365-foundry-prompt-agents/  # FD-OBO/S2S sub-skill
+│     ├─ agent365-web-ui/                 # shared web SPA sub-skill
+│     └─ agent365-custom-mcp/             # sample custom MCP sub-skill
+├─ a365-deployment-plan.json              # secret-free wizard plan (gitignored)
+└─ generated/                             # wizard output (gitignored): per-agent folders + ui/config.js
+```
+
+Each family/component sub-skill references the canonical `docs/` guide instead of duplicating it; see
+[.github/skills/agent365-wizard/SKILL.md](.github/skills/agent365-wizard/SKILL.md) for the flow.
+
 ## Security & configuration
 
 **No secrets are committed to this repository.** Local secrets and machine-generated
