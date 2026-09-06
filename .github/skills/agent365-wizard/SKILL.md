@@ -20,6 +20,19 @@ tooling, hosting and endpoint types.
 - "Create / provision / deploy an agent", "new Agent 365 agent", "add the web UI", "wizard".
 - Planning a multi-variant rollout in one tenant/subscription.
 
+## Sub-skills (load the ones the selection needs)
+This wizard owns the interview, discovery, plan and validation. Family/component detail lives in
+focused sub-skills; load each only when its area is in scope, and never duplicate the canonical docs:
+- **[agent365-aca-agents](../agent365-aca-agents/SKILL.md)** — ACA-OBO/S2S/DW.
+- **[agent365-foundry-hosted-agents](../agent365-foundry-hosted-agents/SKILL.md)** — FH-OBO/S2S/DW.
+- **[agent365-foundry-prompt-agents](../agent365-foundry-prompt-agents/SKILL.md)** — FD-OBO/S2S.
+- **[agent365-web-ui](../agent365-web-ui/SKILL.md)** — the shared web SPA.
+- **[agent365-custom-mcp](../agent365-custom-mcp/SKILL.md)** — the optional sample custom MCP.
+
+The scaffolder is a thin router ([scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1))
+that dot-sources per-family modules under [scripts/modules/](./scripts/modules); the sub-skills point
+back to it as the single execution entry point.
+
 ## Procedure
 
 ### 0. Confirm the Copilot runtime model
@@ -101,8 +114,9 @@ Emit `a365-deployment-plan.json` at the repo root from
 Then ask: **Save plan** / **Generate scaffolding** / **Cancel**.
 
 ### 6. Scaffold (only on confirmation)
-Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1). It validates the plan
-(DW ≤30-char, lowercase container names, shared-RG/ACA safety, `customMcp.name` ≤12-char), copies each
+Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) — a thin **router** that
+dot-sources the per-family/component modules under [scripts/modules/](./scripts/modules). It validates
+the plan (DW ≤30-char, lowercase container names, shared-RG/ACA safety, `customMcp.name` ≤12-char), copies each
 variant sample into `generated/<agent-name>/`, fills the tenant-specific config, **rewrites the ACA
 deploy-script constants** (RG / region / app / env are hardcoded, not parameters), generates
 `generated/ui/config.js` when a UI is requested, scaffolds `generated/custom-mcp/` with filled

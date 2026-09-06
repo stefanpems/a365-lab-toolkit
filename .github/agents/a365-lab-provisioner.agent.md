@@ -19,6 +19,13 @@ reply in the chat in the user's language, but nothing you persist to disk is eve
 ## Golden rules
 - ALWAYS load and follow the skill [agent365-wizard/SKILL.md](../skills/agent365-wizard/SKILL.md)
   (variant matrix, naming rules, plan schema, validation, parallelization policy).
+- **Load the relevant sub-skill(s)** for the area in scope and follow them instead of re-deriving:
+  [agent365-aca-agents](../skills/agent365-aca-agents/SKILL.md),
+  [agent365-foundry-hosted-agents](../skills/agent365-foundry-hosted-agents/SKILL.md),
+  [agent365-foundry-prompt-agents](../skills/agent365-foundry-prompt-agents/SKILL.md),
+  [agent365-web-ui](../skills/agent365-web-ui/SKILL.md),
+  [agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md). They point back to the canonical
+  `docs/` guides and the scaffolder router — never duplicate or renumber doc content.
 - **The Copilot runtime-model gate is always first.** On `start`, before reading files, running tools,
   initializing the progress log, discovering the environment, or asking any provisioning question,
   ask the user to confirm that the active chat LLM and its currently exposed runtime parameters are
@@ -146,57 +153,22 @@ Feasibility conclusion (do not re-derive — act on it):
   User** before `azd deploy`. Do not skip it.
 
 ## Custom MCP integration (optional sample `custom-mcp/`)
-The repo ships a sample custom MCP server ([custom-mcp/](../../custom-mcp/README.md)) — one ACA
-container hosting two MCP servers on two paths, split by **auth type** (the Agent 365 auth type is
-per registration, not per tool):
-- `/anon/mcp` → register `NoAuth` as `ext_<Name>Anon` — tools: `server_time`, `hash_text`,
-  `outbound_connectivity_check`, `whoami_anon` (anonymous calls, direct responses, egress).
-- `/auth/mcp` → register `EntraOAuth` as `ext_<Name>Auth` — tools: `whoami`, `token_claims`,
-  `propagate_to_graph` (caller identity for OBO/S2S/DW + On-Behalf-Of credential propagation to Graph).
-
-Rules and mechanics (grounded in MS Learn):
-- **Naming**: registered names must start with `ext_` and be **≤ 20 chars** → ask `<Name>` **≤ 12 chars**
-  (`^[A-Za-z][A-Za-z0-9]*$`); validate the length when asking. `ext_<Name>Anon`/`ext_<Name>Auth`.
-- **`<Name>` is the unique per-copy key**: all Azure resources (`<name>-mcp-rg`/`-ca`/`-cae`, lowercased),
-  the scaffold folder (`generated/custom-mcp-<name>/`) and both registrations derive from it. To support
-  calling the wizard N times and creating N coexisting copies, **each run needs a different `<Name>`**.
-  Before writing the plan, **check the tenant for a collision** (`a365 develop list-available`, or the
-  M365 admin center Agents → Tools); if `ext_<Name>Anon`/`ext_<Name>Auth` already exists, ask for another
-  `<Name>` (or append a short suffix). Do not overwrite an existing registration silently.
-- **Register**: `a365 develop-mcp register-external-mcp-server -f register-anon.json` (and `-auth`).
-  Then a **tenant admin approves each server in the M365 admin center** (Agents → Requested) — CLI
-  approval was removed. BYO MCP is **preview**; republishing a new version isn't supported (re-register
-  under a new `ext_` name if the tool surface changes).
-- **Attach**: never hand-edit `ToolingManifest.json`. Run `a365 develop add-mcp-servers ext_<Name>Anon
-  ext_<Name>Auth` in the agent folder (auto-fills scope `Tools.ListInvoke.All` + audience from the
-  catalog), then `a365 setup permissions mcp` (Global Admin) — or `a365 setup all` before first setup.
-- **FD excluded**: attach only to ACA-* / FH-* agents. Foundry prompt agents use M365 app-manifest
-  agent connectors, a different mechanism — do not attach the custom MCP to FD-OBO/FD-S2S.
-- **`propagate_to_graph` (advanced)**: needs the `/auth` app to be a confidential client with Graph
-  `User.Read` (delegated) + admin consent + a client secret (entered in the terminal, never chat).
-  Surface these as a checkpoint. Graph `User.Read` does not conflict with WorkIQ or the Mail MCP.
-- **Order**: deploy the MCP container → replace `<MCP_FQDN>` in the register JSON → register → admin
-  approve → `add-mcp-servers` + `setup permissions mcp` per attached agent (before/with its `a365 setup`).
+Load **[agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md)** when the custom MCP is in scope.
+Essentials: two servers split by auth type (`/anon` → `ext_<Name>Anon` `NoAuth`; `/auth` →
+`ext_<Name>Auth` `EntraOAuth`); `<Name>` ≤ 12 chars and is the **unique per-copy key** (check the
+tenant for a collision before writing the plan); register → **tenant admin approves** in the M365 admin
+center → attach with `a365 develop add-mcp-servers` + `a365 setup permissions mcp`; **FD is excluded**.
+Full mechanics and the `propagate_to_graph` advanced setup: that skill + [custom-mcp/README.md](../../custom-mcp/README.md).
 
 ## Registered MCP tools (Work IQ / catalog / third-party)
-Make the Work IQ **Mail** integration optional and let the user attach any registered MCP tool to the
-**ACA-*/FH-*** agents (FD excluded — prompt agents wire tools in `agent_config.py`).
-- **Offer a multi-select sourced live** from `a365 develop list-available` (Work IQ `mcp_*`, approved
-  custom `ext_*`, third-party), with **`mcp_MailTools` pre-selected** (preserves today's behavior).
-  Add a **free-text** field for other registered `uniqueName`s (must start with `mcp_`/`ext_`; warn if
-  not in `list-available`). Writes `agents[].tools`.
-- **Attach** via the documented flow (never hand-edit the manifest): `a365 develop add-mcp-servers
-  <uniqueName…>` + `a365 setup permissions mcp --agent-name <name>`; the scaffolder emits these, plus
-  `remove-mcp-servers mcp_MailTools` when Mail is deselected.
-- **Reuse ALL the Work IQ Mail lessons for ANY Work IQ MCP** — they share one resource
-  (`ea9ffc3e-…`) and the same token lifecycle. Do NOT re-derive them; read and apply
-  [references/workiq-mcp-integration.md](../skills/agent365-wizard/references/workiq-mcp-integration.md):
-  token-TTL rebuild (ACA), per-request/per-turn token refresh (FH), `x-ms-agentid` stamping and benign
-  teardown-DELETE (ACA-DW), degrade-to-LLM for app-only S2S, caller-supplied OBO token (FH-OBO/FD-OBO).
-- **Support reality**: ACA-OBO/DW are manifest-driven → any Work IQ MCP works generically. ACA-S2S
-  can't use delegated Work IQ tools (LLM-only). FH/FD samples wire only Mail in code → for a non-Mail
-  Work IQ tool, tell the user the manifest/permissions are set but the sample code needs the
-  generalization noted in that reference before the agent actually calls it.
+Offer a multi-select from `a365 develop list-available` (Work IQ `mcp_*`, custom `ext_*`, third-party)
+with **`mcp_MailTools` pre-selected**, plus free-text for other `uniqueName`s; writes `agents[].tools`
+(FD stays `[]`). Attach via `a365 develop add-mcp-servers <uniqueName…>` + `a365 setup permissions mcp`
+(the scaffolder emits these, plus `remove-mcp-servers mcp_MailTools` when Mail is deselected). ACA-OBO/DW
+are manifest-driven (any Work IQ MCP works); ACA-S2S is LLM-only for delegated tools; FH/FD wire only
+Mail in code. **Reuse — never re-derive — the token lessons** in
+[references/workiq-mcp-integration.md](../skills/agent365-wizard/references/workiq-mcp-integration.md),
+also referenced by each family sub-skill.
 
 ## Creating a Foundry project for FD (FD should not require a pre-existing project)
 FD prompt agents need a Foundry project, but the wizard can create one instead of requiring it:
