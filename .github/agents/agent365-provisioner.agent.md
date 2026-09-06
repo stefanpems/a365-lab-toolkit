@@ -61,7 +61,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 ## Flow (in order)
 1. **Select variants** (multi-select checkbox: the 8 variants). Then **UI mode** (single-select:
    No UI / Create new / Attach to existing). If a UI is chosen, multi-select the **OBO/S2S** agents
-   to expose (DW is excluded — it routes via Teams/Outlook, not the SPA).
+   to expose (DW is excluded — it routes via Teams/Outlook, not the SPA). Then **Custom MCP**
+   (single-select: None / Anonymous only / Authenticated only / Both); if not None, ask `<Name>`
+   (**max 12 chars**), a publisher, which **ACA-*/FH-*** agents to attach to (FD excluded), and
+   whether to enable `propagate_to_graph`. See "Custom MCP integration" below.
 2. **Confirm environment explicitly** — run `az account show` and PRESENT the detected **tenant id +
    name** and **subscription id + name**, then ask the user to confirm or pick another. Do not
    proceed silently. These go only into the gitignored plan.
@@ -116,6 +119,33 @@ Feasibility conclusion (do not re-derive — act on it):
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does NOT create the model deployment or
   grant data-plane RBAC. The generated next-command creates the model and grants **Cognitive Services
   User** before `azd deploy`. Do not skip it.
+
+## Custom MCP integration (optional sample `custom-mcp/`)
+The repo ships a sample custom MCP server ([custom-mcp/](../../custom-mcp/README.md)) — one ACA
+container hosting two MCP servers on two paths, split by **auth type** (the Agent 365 auth type is
+per registration, not per tool):
+- `/anon/mcp` → register `NoAuth` as `ext_<Name>Anon` — tools: `server_time`, `hash_text`,
+  `outbound_connectivity_check`, `whoami_anon` (anonymous calls, direct responses, egress).
+- `/auth/mcp` → register `EntraOAuth` as `ext_<Name>Auth` — tools: `whoami`, `token_claims`,
+  `propagate_to_graph` (caller identity for OBO/S2S/DW + On-Behalf-Of credential propagation to Graph).
+
+Rules and mechanics (grounded in MS Learn):
+- **Naming**: registered names must start with `ext_` and be **≤ 20 chars** → ask `<Name>` **≤ 12 chars**
+  (`^[A-Za-z][A-Za-z0-9]*$`); validate the length when asking. `ext_<Name>Anon`/`ext_<Name>Auth`.
+- **Register**: `a365 develop-mcp register-external-mcp-server -f register-anon.json` (and `-auth`).
+  Then a **tenant admin approves each server in the M365 admin center** (Agents → Requested) — CLI
+  approval was removed. BYO MCP is **preview**; republishing a new version isn't supported (re-register
+  under a new `ext_` name if the tool surface changes).
+- **Attach**: never hand-edit `ToolingManifest.json`. Run `a365 develop add-mcp-servers ext_<Name>Anon
+  ext_<Name>Auth` in the agent folder (auto-fills scope `Tools.ListInvoke.All` + audience from the
+  catalog), then `a365 setup permissions mcp` (Global Admin) — or `a365 setup all` before first setup.
+- **FD excluded**: attach only to ACA-* / FH-* agents. Foundry prompt agents use M365 app-manifest
+  agent connectors, a different mechanism — do not attach the custom MCP to FD-OBO/FD-S2S.
+- **`propagate_to_graph` (advanced)**: needs the `/auth` app to be a confidential client with Graph
+  `User.Read` (delegated) + admin consent + a client secret (entered in the terminal, never chat).
+  Surface these as a checkpoint. Graph `User.Read` does not conflict with WorkIQ or the Mail MCP.
+- **Order**: deploy the MCP container → replace `<MCP_FQDN>` in the register JSON → register → admin
+  approve → `add-mcp-servers` + `setup permissions mcp` per attached agent (before/with its `a365 setup`).
 
 ## Creating a Foundry project for FD (FD should not require a pre-existing project)
 FD prompt agents need a Foundry project, but the wizard can create one instead of requiring it:

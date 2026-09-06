@@ -30,5 +30,15 @@
     "existing": { "spaAppId": "", "origin": "", "staticWebApp": "" },
     "expose": [],
     "permissions": { "mailConsent": false, "s2sAudience": false, "foundryAccess": [] }
+  },
+  "customMcp": {
+    "enabled": false,
+    "name": "<MCP_NAME>",
+    "publisher": "<PUBLISHER>",
+    "servers": ["anon", "auth"],
+    "resourceGroup": "<SOLUTION_PREFIX>-mcp-rg",
+    "region": "<AZURE_REGION>",
+    "attachTo": [],
+    "propagateToGraph": false
   }
 }

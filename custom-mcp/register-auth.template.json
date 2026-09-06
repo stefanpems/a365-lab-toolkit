@@ -1,0 +1,16 @@
+{
+  "$comment": "Registration payload for the AUTHENTICATED sample MCP server. Filled by the wizard scaffolder. Register with: a365 develop-mcp register-external-mcp-server -f register-auth.json. EntraOAuth requires an Entra app exposing the remoteScopes API scope (see README.md 'Advanced: propagate_to_graph setup').",
+  "serverName": "ext_<NAME>Auth",
+  "serverUrl": "https://<MCP_FQDN>/auth/mcp",
+  "authType": "EntraOAuth",
+  "description": "Agent 365 sample tools (authenticated): caller identity inspection and On-Behalf-Of credential propagation to Microsoft Graph.",
+  "publisherName": "<PUBLISHER>",
+  "tools": [
+    { "name": "whoami", "description": "Decode the Entra token and report the caller identity (OBO user, S2S app, or Digital Worker)." },
+    { "name": "token_claims", "description": "Return the full decoded claim set from the incoming Entra token." },
+    { "name": "propagate_to_graph", "description": "On-Behalf-Of exchange to Microsoft Graph (User.Read) and GET /me — tests delegated credential propagation." }
+  ],
+  "remoteScopes": "api://<AUTH_APP_ID>/access_as_agent",
+  "externalOAuth": null,
+  "apiKey": null
+}

@@ -28,8 +28,11 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 2. **Companion UI** — single-select: *No UI* / *Create new UI* / *Attach to existing UI*.
 3. If a UI is chosen — multi-select of the **OBO/S2S** agents to expose (exclude DW: they route via
    Teams/Outlook/Office, not the SPA — see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).
-4. Note only: a **custom MCP tool** registration in Agent 365 is a planned future step; reserve the
-   `tools:` field in the plan but do not ask about it yet.
+4. **Custom MCP** (single-select): *None* / *Anonymous only* / *Authenticated only* / *Both* — the
+   sample [custom-mcp/](../../../custom-mcp/README.md). If not None, also ask for `<Name>` (**max 12
+   chars**, `^[A-Za-z][A-Za-z0-9]*$` → registered as `ext_<Name>Anon` / `ext_<Name>Auth`, ≤ 20), a
+   publisher name, which **ACA-*/FH-*** agents to attach to (FD excluded), and whether to enable
+   `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan.
 
 ### 2. Solution basics (one screen)
 - **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as
@@ -75,12 +78,15 @@ Then ask: **Save plan** / **Generate scaffolding** / **Cancel**.
 
 ### 6. Scaffold (only on confirmation)
 Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1). It validates the plan
-(DW ≤30-char, lowercase container names, shared-RG/ACA safety), copies each variant sample into
-`generated/<agent-name>/`, fills the tenant-specific config, **rewrites the ACA deploy-script
-constants** (RG / region / app / env are hardcoded, not parameters), generates `generated/ui/config.js`
-when a UI is requested, and prints the exact next commands. It performs **no cloud mutations and runs
-no deploys**. Use `-ValidateOnly` to check a plan without writing. Print the next commands for the
-user to run; never auto-run destructive deploys.
+(DW ≤30-char, lowercase container names, shared-RG/ACA safety, `customMcp.name` ≤12-char), copies each
+variant sample into `generated/<agent-name>/`, fills the tenant-specific config, **rewrites the ACA
+deploy-script constants** (RG / region / app / env are hardcoded, not parameters), generates
+`generated/ui/config.js` when a UI is requested, scaffolds `generated/custom-mcp/` with filled
+`register-anon.json` / `register-auth.json` when `customMcp.enabled`, and prints the exact next
+commands (deploy MCP → register servers → `a365 develop add-mcp-servers` + `a365 setup permissions mcp`
+per attached agent). It performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to
+check a plan without writing. Print the next commands for the user to run; never auto-run destructive
+deploys.
 
 ## 7. Deployment execution (only after scaffolding is confirmed)
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +

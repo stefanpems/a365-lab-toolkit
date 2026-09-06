@@ -52,6 +52,11 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
 2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
 3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
    account + model (FH), and Free-tier Static Web Apps (UI) before committing.
+4. **Custom MCP name (`customMcp.name`) ≤ 12 characters**, starts with a letter, alphanumeric only.
+   Agent 365 registered server names must start with `ext_` and be **≤ 20 chars**; the sample derives
+   `ext_<Name>Anon` and `ext_<Name>Auth`, so `4 (ext_) + <Name> + 4 (Anon/Auth) ≤ 20` → `<Name> ≤ 12`.
+   The wizard MUST ask for `<Name>` telling the user the max length is 12. `customMcp.attachTo` may
+   contain only ACA-* / FH-* agent types (FD prompt agents attach tools via a different mechanism).
 
 ## ACA deploy-script facts (critical for scaffolding)
 Verified in the sample scripts — the wizard must account for these:

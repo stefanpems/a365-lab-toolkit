@@ -13,6 +13,7 @@ across three hosting/dev models — **Azure Container Apps (ACA)**, **Foundry Ho
 agent365-agentframework-samples/
 ├─ docs/                     # Documentation: intro + one setup guide per agent type + web UI
 ├─ ui/                       # MSAL web SPA (Azure Static Web Apps) for the OBO/S2S agents
+├─ custom-mcp/               # Optional sample custom MCP server (anonymous + authenticated) for tool tests
 ├─ aca/                      # Azure Container Apps (A365-SDK-hosted) agents
 │  ├─ obo/                   # MAF-ACA-OBO  — acts on behalf of the signed-in user
 │  ├─ s2s/                   # MAF-ACA-S2S  — acts as its own application identity
@@ -37,6 +38,15 @@ agent365-agentframework-samples/
 | MAF-FD-OBO  | [foundry-declarative/obo](foundry-declarative/obo) | [docs/setup-MAF-FD-OBO.md](docs/setup-MAF-FD-OBO.md) |
 | MAF-FD-S2S  | [foundry-declarative/s2s](foundry-declarative/s2s) | [docs/setup-MAF-FD-S2S.md](docs/setup-MAF-FD-S2S.md) |
 | Web SPA UI  | [ui](ui) | [docs/setup-web-ui.md](docs/setup-web-ui.md) |
+
+### Optional: custom MCP tool sample
+[custom-mcp/](custom-mcp/README.md) is an optional **bring-your-own MCP server** sample you can attach
+to the ACA and FH agents to test Agent 365 tool behavior. One container hosts two MCP servers, split
+by authentication type (the auth type is chosen per registration): `/anon/mcp` (register as `NoAuth`)
+for anonymous calls, direct responses and outbound connectivity, and `/auth/mcp` (register as
+`EntraOAuth`) for caller-identity inspection (OBO / S2S / Digital Worker) and On-Behalf-Of credential
+propagation to Microsoft Graph. The provisioning wizard can deploy, register and attach it; see
+[custom-mcp/README.md](custom-mcp/README.md).
 
 > **⛔ MAF-FD-DW is not available (platform limitation).** A Foundry **prompt/declarative agent
 > cannot be published as an Agent 365 autopilot Digital Worker** — a hired instance is permanently

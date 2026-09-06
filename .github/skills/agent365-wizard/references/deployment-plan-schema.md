@@ -58,12 +58,26 @@ gitignored.
       "s2sAudience": false,                // true if ACA-S2S is exposed (sets UI_AUDIENCE)
       "foundryAccess": []                  // if any FH/FD agent is exposed
     }
+  },
+  "customMcp": {                            // optional sample custom MCP server (custom-mcp/)
+    "enabled": false,
+    "name": "<Name>",                       // <= 12 chars, starts with a letter, alphanumeric
+    "publisher": "<Publisher>",             // registration metadata, e.g. Contoso
+    "servers": ["anon", "auth"],           // which servers to register (subset of anon/auth)
+    "resourceGroup": "<prefix>-mcp-rg",
+    "region": "<azure-region>",
+    "attachTo": [],                         // agent types to attach to (ACA-*/FH-* only; FD excluded)
+    "propagateToGraph": false               // enable the advanced On-Behalf-Of Graph test
   }
 }
 ```
 
 ## Rules
-- `agents[].tools` stays `[]` until the future MCP step; keep the field so plans are forward-compatible.
+- `agents[].tools` stays `[]` unless the custom MCP is attached; when attached, the scaffolder does it
+  via `a365 develop add-mcp-servers` (not by editing the plan).
+- `customMcp.enabled` is optional and defaults to `false`. When `true`, `name` must be ≤ 12 chars,
+  start with a letter and be alphanumeric — the registered names are `ext_<Name>Anon` / `ext_<Name>Auth`
+  and must stay ≤ 20 chars. `attachTo` may list only ACA-* and FH-* agent types (FD is unsupported).
 - DW entries require `displayNames.blueprint` length ≤ 30 (see naming-and-validation.md).
 - Anything discoverable post-deploy (FQDN, blueprint/app IDs, endpoints) is **omitted** from the plan
   and resolved at scaffold/deploy time.

@@ -20,6 +20,9 @@
 **/a365.config.json
 # Web SPA runtime config (SPA app id, tenant authority, agent endpoints/scopes)
 ui/config.js
+# Custom MCP filled registration payloads (environment-specific FQDN); *.template.json stays tracked.
+custom-mcp/register-anon.json
+custom-mcp/register-auth.json
 # Provisioning wizard: tenant-specific plan + generated scaffolding output
 a365-deployment-plan.json
 generated/

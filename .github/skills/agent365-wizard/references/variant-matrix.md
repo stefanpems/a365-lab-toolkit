@@ -49,6 +49,19 @@ Exactly **8** supported variants. FD-DW is not supported.
 - If exposing ACA-S2S → blueprint scope `api://<s2s-app-id>/access_agent_as_user` + `UI_AUDIENCE`.
 - If exposing FH/FD → users/groups to grant Foundry access.
 
+### Custom MCP (optional — sample `custom-mcp/`)
+Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If anything but None:
+- **`<Name>`** for the servers, **max 12 characters** (registered as `ext_<Name>Anon` /
+  `ext_<Name>Auth`; `ext_` + name + `Anon`/`Auth` must stay ≤ 20). Validate length + `^[A-Za-z][A-Za-z0-9]*$`.
+- **Publisher** name (registration metadata, e.g. `Contoso`).
+- **Attach to**: multi-select of the deployed **ACA-*/FH-*** agents (FD excluded — prompt agents use a
+  different tool-attachment mechanism).
+- **`propagate_to_graph`** (auth server only): enable the advanced On-Behalf-Of Graph test? If yes,
+  surface the Entra prerequisites (confidential client + Graph `User.Read` + admin consent) as a checkpoint.
+- One ACA container hosts both servers on two paths; registration is per-server (auth type is
+  per-registration): NoAuth for `/anon/mcp`, EntraOAuth for `/auth/mcp`. Admin approval of each
+  registered server happens in the M365 admin center (not CLI).
+
 ## Do NOT ask (discover / derive / fixed)
 - Blueprint / identity / container / bot / app-reg names → derived from the prefix.
 - Log Analytics workspace names, endpoints, app IDs, blueprint IDs → discovered post-deploy.
