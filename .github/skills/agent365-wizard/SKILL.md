@@ -22,6 +22,24 @@ tooling, hosting and endpoint types.
 
 ## Procedure
 
+### 0. Confirm the Copilot runtime model
+This is the **first action on `start`**, before repository reads, tool calls, progress-log setup,
+environment discovery, or provisioning questions. Use one single-select question:
+**Confirm and continue** / **Change model or parameters** / **Cancel**.
+
+- Present the active chat LLM and relevant runtime parameters (such as reasoning effort) only when
+  VS Code exposes their values. Mark unavailable values as unknown; never infer or fabricate them.
+- State that **reasoning effort High is recommended** for this complex, long-running, multi-step
+  provisioning and validation workflow. If High is unavailable or not selected, show an explicit
+  warning and recommend selecting High, choosing a model that supports it, or using the highest
+  available effort. Permit continuation only after the user explicitly acknowledges the warning.
+- If the user chooses **Change model or parameters**, STOP. Direct them to the chat model picker and
+  its model configuration controls, then have them invoke `start` again after making the change.
+- A wizard instruction cannot programmatically replace the LLM of an already-running chat. The
+  companion custom agent therefore does not pin `model` or `reasoning-effort` in frontmatter; the
+  settings supported by the selected VS Code model/provider remain authoritative.
+- Never treat a confirmation from before a model/settings change as valid for the restarted run.
+
 ### 1. Select what to create
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 8 variants (mark DW/FH as "requires Frontier/Foundry").
