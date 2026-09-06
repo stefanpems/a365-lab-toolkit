@@ -22,7 +22,7 @@ wizard agent (see [.github/agents/](.github/agents)) scaffolds and deploys the w
 ## Repository layout
 
 ```
-agent365-agentframework-samples/
+a365-agent-lab/
 ├─ docs/                     # Documentation: intro + one setup guide per agent type + web UI
 ├─ ui/                       # MSAL web SPA (Azure Static Web Apps) for the OBO/S2S agents
 ├─ custom-mcp/               # Optional sample custom MCP server (anonymous + authenticated) for tool tests

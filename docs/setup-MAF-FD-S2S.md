@@ -13,8 +13,8 @@ See [00-introduction.md](00-introduction.md) for concepts and
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/agent365-agentframework-samples.git
-cd agent365-agentframework-samples/foundry-declarative/s2s
+git clone https://github.com/<your-org>/a365-agent-lab.git
+cd a365-agent-lab/foundry-declarative/s2s
 python -m venv .venv ; .\.venv\Scripts\Activate.ps1 ; pip install -r requirements.txt
 copy .env.template .env
 ```

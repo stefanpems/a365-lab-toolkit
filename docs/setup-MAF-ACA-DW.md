@@ -55,8 +55,8 @@ Dynamics 365) — see §8 / the license-cleanup note; the removal must happen at
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/agent365-agentframework-samples.git
-cd agent365-agentframework-samples/aca/dw
+git clone https://github.com/<your-org>/a365-agent-lab.git
+cd a365-agent-lab/aca/dw
 uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
 ```
 

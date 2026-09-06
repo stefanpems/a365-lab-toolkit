@@ -35,8 +35,8 @@ name that hosts FH *and* FD agents of any type; only the agent name carries the 
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/agent365-agentframework-samples.git
-cd agent365-agentframework-samples/foundry-declarative/obo
+git clone https://github.com/<your-org>/a365-agent-lab.git
+cd a365-agent-lab/foundry-declarative/obo
 python -m venv .venv ; .\.venv\Scripts\Activate.ps1 ; pip install -r requirements.txt
 copy .env.template .env   # edit: project endpoint, model, agent name
 ```

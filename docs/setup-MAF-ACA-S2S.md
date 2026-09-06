@@ -23,8 +23,8 @@ Dockerfile/UTF-8 details are identical.
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/agent365-agentframework-samples.git
-cd agent365-agentframework-samples/aca/s2s
+git clone https://github.com/<your-org>/a365-agent-lab.git
+cd a365-agent-lab/aca/s2s
 uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
 ```
 

@@ -13,8 +13,8 @@ This guide highlights the S2S differences.
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/agent365-agentframework-samples.git
-cd agent365-agentframework-samples/foundry-hosted/s2s
+git clone https://github.com/<your-org>/a365-agent-lab.git
+cd a365-agent-lab/foundry-hosted/s2s
 ```
 
 Same layout as MAF-FH-OBO (`main.py`, `foundry_agent.py`, `requirements.txt`, `azure.yaml`,
