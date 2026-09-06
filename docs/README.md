@@ -1,13 +1,14 @@
-# Agent 365 × Agent Framework — sample agents documentation
+# Agent 365 agent lab — documentation
 
 > **Before starting any setup:** read and complete the
 > **[central prerequisites checklist](prerequisites-checklist.md)** for the target tenant,
 > Azure subscription, and deployment workstation.
 
-Documentation for a family of test agents built on the **Microsoft Agent Framework** and
-integrated with **Microsoft Agent 365**, spanning three authentication models (OBO, S2S,
-Digital Worker) across three hosting/dev models: **Azure Container Apps (ACA)**, **Foundry
-Hosted (FH)**, and **Foundry Declarative / prompt agents (FD)**.
+Documentation for a lab of custom agents integrated with **Microsoft Agent 365**, spanning three
+authentication models (OBO, S2S, Digital Worker) across three hosting/dev models: **Azure Container
+Apps (ACA)**, **Foundry Hosted (FH)**, and **Foundry Declarative / prompt agents (FD)**. The sample
+agents are currently built with the **Microsoft Agent Framework (MAF)** — a pragmatic starting point,
+not the objective; the lab is framework-agnostic (see the README vision).
 
 This README is the documentation entry point. The introduction is a deeper architecture and
 concepts reference, not a competing entry page.

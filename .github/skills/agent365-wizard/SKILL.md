@@ -1,6 +1,6 @@
 ---
 name: agent365-wizard
-description: 'Provisioning wizard for the Agent 365 × MAF lab (the A365 Lab Provisioner agent). Use when creating/planning one or more of the 8 supported variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), adding the companion web UI, deploying/registering the sample custom MCP servers, or attaching registered MCP tools (Work IQ / custom) to agents. Provides the variant matrix, minimal-question interview flow, naming/validation rules, a secret-free deployment-plan schema, and a read-only discovery script.'
+description: 'Provisioning wizard for the Agent 365 agent lab (the A365 Lab Provisioner agent; sample agents currently built with MAF). Use when creating/planning one or more of the 8 supported variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), adding the companion web UI, deploying/registering the sample custom MCP servers, or attaching registered MCP tools (Work IQ / custom) to agents. Provides the variant matrix, minimal-question interview flow, naming/validation rules, a secret-free deployment-plan schema, and a read-only discovery script.'
 argument-hint: "start | plan | scaffold"
 ---
 

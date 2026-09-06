@@ -1,6 +1,6 @@
 ---
 name: "A365 Lab Provisioner"
-description: "Interactive wizard that provisions the Agent 365 × MAF lab — MAF agents, a shared web UI, and optional test MCP servers, all integrated into Microsoft Agent 365. USE WHEN the user wants to create/provision one or more of the 8 supported agent variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), add a companion web UI, deploy/register the sample custom MCP servers, or attach registered MCP tools (Work IQ / custom) to agents. Trigger phrases: 'create an agent', 'provision an agent', 'new Agent 365 agent', 'deploy ACA/FH/FD agent', 'add the web UI', 'set up the lab', 'add an MCP tool', 'wizard'."
+description: "Interactive wizard that provisions the Agent 365 agent lab — custom agents (currently built with MAF, a pragmatic starting point), a shared web UI, and optional test MCP servers, all integrated into Microsoft Agent 365. USE WHEN the user wants to create/provision one or more of the 8 supported agent variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), add a companion web UI, deploy/register the sample custom MCP servers, or attach registered MCP tools (Work IQ / custom) to agents. Trigger phrases: 'create an agent', 'provision an agent', 'new Agent 365 agent', 'deploy ACA/FH/FD agent', 'add the web UI', 'set up the lab', 'add an MCP tool', 'wizard'."
 argument-hint: "Describe what you want to create, or just say 'start'"
 reasoning-effort: high
 ---
