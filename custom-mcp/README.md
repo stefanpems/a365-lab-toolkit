@@ -97,6 +97,20 @@ a365 develop-mcp register-external-mcp-server -f .\register-anon.json
 a365 develop-mcp register-external-mcp-server -f .\register-auth.json
 ```
 
+> ⛔ **Deploy the auth server BEFORE registering it, and confirm it already serves the OAuth
+> Protected Resource Metadata.** Agent 365 captures the auth type into the Power Platform **connector
+> at registration time** by probing the server. If the `EntraOAuth` server isn't serving its PRM +
+> `401` challenge when you register, the connector is created **NoAuth** and the gateway will forever
+> forward only `x-ms-client-*` identity headers (never a bearer token) — re-registration is then the
+> only fix. `deploy-mcp.ps1` enables the challenge by default (`MCP_OAUTH_CHALLENGE` defaults to on for
+> the auth container) and sets `MCP_AUTH_TENANT_ID`, so the correct order is simply **deploy → verify
+> → register**. Verify before registering:
+>
+> ```powershell
+> # Must return 200 with "authorization_servers" pointing at your tenant's v2.0 issuer:
+> Invoke-RestMethod "https://<auth-fqdn>/.well-known/oauth-protected-resource"
+> ```
+
 After each registration, a **tenant administrator approves** the server in the Microsoft 365 admin
 center (Agents → Requested). CLI-based approval was removed; approval is admin-center only.
 

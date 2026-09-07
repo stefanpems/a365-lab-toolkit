@@ -30,6 +30,14 @@ not duplicate or renumber it here.**
   (`serverUrl` must be a single-segment root `https://<fqdn>/mcp`) → `a365 develop-mcp
   register-external-mcp-server` → a **tenant admin approves** each server in the M365 admin center
   (Agents → Tools → Requests; CLI approval was removed) → attach per agent.
+- ⛔ **For the AUTH (EntraOAuth) server, the deploy → register order is load-bearing.** Agent 365
+  captures the auth type into the Power Platform **connector at registration time** by probing the
+  server. The auth server MUST already be serving its OAuth Protected Resource Metadata + `401`
+  challenge when you register, or the connector is created **NoAuth** and the gateway forwards only
+  `x-ms-client-*` identity headers (never a bearer token) forever — the only fix is re-registration.
+  `deploy-mcp.ps1` enables this by default (`MCP_OAUTH_CHALLENGE` on + `MCP_AUTH_TENANT_ID` set on the
+  auth container). Before running `register-external-mcp-server -f register-auth.json`, verify
+  `Invoke-RestMethod https://<auth-fqdn>/.well-known/oauth-protected-resource` → `200`.
 - ⛔ **At Approve, warn the user LOUDLY about a blocked browser pop-up.** Admin consent opens
   popup(s); if the browser **blocks** them (a "pop-up blocked" icon in the address bar) the approval
   **silently hangs/fails and is easy to miss**. Tell the user in bold to allow pop-ups and retry.

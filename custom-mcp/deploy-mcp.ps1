@@ -95,13 +95,18 @@ function Deploy-McpContainer {
 }
 
 # propagate_to_graph credentials go on the AUTH container only.
-$authEnv = @()
+# The AUTH server also advertises OAuth 2.0 Protected Resource Metadata (RFC 9728) so the Agent 365
+# gateway forwards a caller bearer token. The PRM needs the tenant id + scope, so set them ALWAYS
+# (independent of the optional propagate_to_graph secret) BEFORE the server is registered — the
+# gateway captures the auth type into the Power Platform connector at registration time.
+$authTenant = if ($AuthTenantId) { $AuthTenantId } else { az account show --query tenantId -o tsv @SubArg }
+$authEnv = @("MCP_AUTH_TENANT_ID=$authTenant", "MCP_AUTH_SCOPE=access_as_agent")
 if ($AuthClientId -and $AuthTenantId) {
     $secret = Read-Host "Enter the auth app client secret for propagate_to_graph (leave blank to skip)" -AsSecureString
     $plain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
         [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret))
     if ($plain) {
-        $authEnv = @("MCP_AUTH_CLIENT_ID=$AuthClientId", "MCP_AUTH_TENANT_ID=$AuthTenantId", "MCP_AUTH_CLIENT_SECRET=$plain")
+        $authEnv += @("MCP_AUTH_CLIENT_ID=$AuthClientId", "MCP_AUTH_CLIENT_SECRET=$plain")
     }
 }
 

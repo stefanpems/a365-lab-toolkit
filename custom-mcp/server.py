@@ -445,13 +445,15 @@ def build_single(server, label):
     container at '/mcp' — selected via MCP_SERVER_MODE. GET '/' and '/health' are provided by
     _add_probes (the EntraOAuth approval validation probes the root for reachability before '/mcp').
 
-    For the auth (EntraOAuth) server, set MCP_OAUTH_CHALLENGE=true to advertise OAuth 2.0 Protected
-    Resource Metadata (RFC 9728) and challenge unauthenticated calls with 401 — this is what makes
-    the Agent 365 gateway perform the On-Behalf-Of exchange and forward the caller's bearer token
-    (in `Authorization`) instead of only the x-ms-client-* identity headers.
+    For the auth (EntraOAuth) server this ON by default: the server advertises OAuth 2.0 Protected
+    Resource Metadata (RFC 9728) and challenges unauthenticated calls with 401. This MUST be live
+    BEFORE the server is registered — Agent 365 captures the auth type into the Power Platform
+    connector at registration time, so a server that isn't serving the PRM yet gets a NoAuth connector
+    and the gateway then forwards only x-ms-client-* identity headers (never a bearer token). Set
+    MCP_OAUTH_CHALLENGE=false only to deliberately test the auth server as NoAuth.
     """
     app = server.http_app(path="/mcp")
-    if label == "auth" and os.environ.get("MCP_OAUTH_CHALLENGE", "").strip().lower() == "true":
+    if label == "auth" and os.environ.get("MCP_OAUTH_CHALLENGE", "true").strip().lower() != "false":
         app = _wrap_oauth_challenge(app)
     return app
 
