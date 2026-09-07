@@ -144,44 +144,72 @@ already includes the MCP permissions step. What each step does (validated):
 > tools via M365 app-manifest agent connectors, not `ToolingManifest.json`, so the wizard attaches the
 > custom MCP only to ACA and FH agents.
 
-### Testing the attached tools (and why the SPA tabs can't)
+### Testing the attached tools — the connection model (READ THIS)
 
 Depending on the wizard choice each agent attaches **0, 1, or 2** custom servers (anon and/or auth),
 so a given agent may expose the anon tools, the auth tools, both, or none — plus Mail. Whatever is in
 `ToolingManifest.json` is what the runtime loads.
 
-⚠️ **The shared web UI (SPA) tabs do NOT exercise the custom tools — this is a hard Entra constraint,
-not a bug.** The SPA `/chat` endpoints use simplified, TurnContext-free paths (OBO wires only the Mail
-MCP; S2S wires no MCP tools) because:
+**How a BYO custom tool is reached (Agent 365 gateway + Power Platform connection):**
 
-- Each custom server is reached through the Agent 365 gateway
-  (`https://agent365.svc.cloud.microsoft/agents/servers/<name>`) with a token whose **audience is that
-  server's BYO app** (from `ToolingManifest.json`: anon `f828a86c…`, auth `898a9ac6…`, scope
-  `Tools.ListInvoke.All`) — **not** the Mail audience `ea9ffc3e…`. The Mail `mail_token` does not
-  cover the custom servers.
-- The SDK mints that per-audience token via `auth.exchange_token()` — the **agentic** flow — which
-  requires a **Bot Framework `TurnContext`**. The SPA endpoints have none.
-- The blueprint is an **agentic application**, so it **cannot** mint app-only
-  (`client_credentials` → `AADSTS82001`) or On-Behalf-Of (`jwt-bearer` → `AADSTS82002`) tokens for
-  those audiences either. There is no SPA-side shortcut.
+1. The agent calls the server through the **Agent 365 gateway**
+   (`https://agent365.svc.cloud.microsoft/agents/servers/<name>`) with a token whose **audience is that
+   server's BYO app** (from `ToolingManifest.json`: anon `f828a86c…`, auth `898a9ac6…`, scope
+   `Tools.ListInvoke.All`) — **not** the Mail audience `ea9ffc3e…`.
+2. Each registered `ext_*` server is backed by a **Power Platform connector** (`shared_tc-ext_<name>…`).
+   Before the tools work, a **one-time connection** must exist, **owned by the identity that invokes**.
+   On the first call the gateway exposes a single `initialize_server` handshake tool whose response is:
+   *"This server is not yet set up. Ask the user to visit the following URL to complete setup:
+   `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext_<name>…&environmentName=…`"*.
+   The user opens that URL once and creates the connection; then the real tools surface
+   (`tools/list_changed`).
 
-**So custom tools are exercised via the AGENTIC / Bot Framework path** (`process_user_message` →
-`McpToolRegistrationService.add_tool_servers_to_agent`, which does the per-audience agentic exchange
-with the `TurnContext`). Test them by messaging the agent on its Bot Framework surface (Teams / the
-`/api/messages` endpoint), e.g. the Digital Worker in Teams — not from the SPA tabs.
+**Which agents can use custom tools — and why (verified with hard evidence):**
 
-**To sanity-check a custom server in isolation**, call its standalone container `/mcp` directly (the
-`/anon` server is `NoAuth`, so no token is needed) — a healthy anon server lists its tools and
-`server_time` returns the **real current** UTC time. If the SPA answers with a past date or a wrong
-hash, the tool was **not** called (the model hallucinated) — expected on the SPA tabs.
+| Agent kind | Invokes the gateway as… | Custom tools? |
+|---|---|---|
+| **OBO** (ACA/FH/FD) | the **signed-in user's own delegated token** (the SPA acquires one per audience) | ✅ **Works** — the user owns the connection they created, so identities match |
+| **S2S** (ACA/FH/FD) | its **own agent application** | ❌ Blocked in preview |
+| **DW** (ACA/FH) | an **`#microsoft.graph.agentUser`** (a projection of the user, e.g. `4ee6a63d…`) — **not** the regular user | ❌ Blocked in preview |
 
-#### `smoke-test.py` — invoke a server's tools directly from a script
+The block for DW/S2S is **not a bug in this repo**: the Power Platform connection is owned by whoever
+signs in at `make.powerapps.com` (the **regular user**, e.g. `745ff0eb…`), but a DW invokes as the
+**agentUser** and an S2S as the **agent app** — different identities with **no** connection, and these
+connectors **cannot be shared** (`modifyPermissions` → `403 ConnectionSharingNotAllowed`). An agent
+identity also can't sign in to `make.powerapps.com` to create its own. So **OBO is the demonstrable
+path**: the agent invokes as the user, and the user owns the connection. (This matches the Microsoft
+docs, whose supported BYO surfaces — Copilot Studio, VS Code, Claude Code, GitHub Copilot CLI — are all
+user-driven.)
+
+**How the OBO SPA path is wired** (so a user can exercise custom tools from the web UI):
+
+- `ui/config.js` gives each OBO agent a `customScopes` map (`{ <audience>: "<audience>/Tools.ListInvoke.All" }`).
+- `ui/app.js` (`callAcaChat`) acquires a **delegated user token per custom audience** and sends them in
+  the request body as `tokens` (audience → token), alongside the Mail token.
+- The ACA-OBO host `/chat` builds the `{audience: token}` map; `agent.run_obo_mail_chat` reads
+  `ToolingManifest.json` and wires **every** server with the user's per-audience token (unique
+  `tool_name_prefix` so the per-server `initialize_server` handshakes don't collide), then activates
+  each BYO server via `initialize_server`. FH-OBO (`main.py` + `foundry_agent.py`) uses the same
+  `tokens` map.
+
+⚠️ **Multiple consent prompts on first use — tell the user.** The SPA acquires one token per custom
+audience; each new scope triggers an MSAL **consent redirect** that reloads the page and **clears the
+chat**. With two custom servers the user may need to **re-enter the same prompt up to three times**
+(anon consent → auth consent → answer). After the first consent the tokens are cached and it stops. A
+future improvement is to request all custom scopes at login.
+
+**Auth (EntraOAuth) server — caller identity comes from gateway headers.** The gateway forwards the
+caller identity as `x-ms-client-*` headers (`x-ms-client-principal-id`, `x-ms-client-app-id`,
+`x-ms-client-tenant-id`), not always as an `Authorization` bearer token. The sample `whoami` /
+`token_claims` tools therefore report the caller from those headers when no token is forwarded.
+
+#### `smoke-test.py` — invoke a server's tools directly from a script (isolation test)
 
 [`smoke-test.py`](smoke-test.py) is a small MCP client (the Python equivalent of
 `rg-mcp-demo/smoke-test.mjs`): it opens a Streamable HTTP session to a `/mcp` endpoint, lists the
-tools and calls each with sample arguments, printing the real results. It reaches the server directly
-(not through the Agent 365 gateway), so it isolates the tool + server-auth from the agent path. This
-is the script mechanism to verify invocation regardless of the SPA/agent constraints above.
+tools and calls each with sample arguments. It reaches the server's **own** container directly (not the
+gateway), so it isolates the tool implementation from the gateway/connection path — useful to confirm a
+server is healthy independently of Agent 365.
 
 ```powershell
 $py = "C:\ghcp_nosync\a365sdk\agent365-agentframework-python\.venv\Scripts\python.exe"
@@ -189,18 +217,14 @@ $py = "C:\ghcp_nosync\a365sdk\agent365-agentframework-python\.venv\Scripts\pytho
 # Anonymous (NoAuth) server — works immediately, no token:
 & $py smoke-test.py --url https://<anon-fqdn>/mcp
 
-# Authenticated (EntraOAuth) server — needs a token for its resource. Consent the CLI once, then:
-az login --tenant <tenant-id> --scope "api://<auth-app-id>/.default"
-$tok = az account get-access-token --resource "api://<auth-app-id>" --query accessToken -o tsv
-& $py smoke-test.py --url https://<auth-fqdn>/mcp --token $tok
-# ...or acquire a user token interactively with a public client:
+# Authenticated (EntraOAuth) server — needs a token for its resource:
 & $py smoke-test.py --url https://<auth-fqdn>/mcp --client-id <public-client-id> --scope api://<auth-app-id>/access_as_agent --tenant <tenant-id>
 ```
 
-> Note: a **NoAuth** custom MCP is also directly reachable from a browser SPA (subject to CORS) — this
-> is the "call the MCP directly from a web app" pattern. It does **not** contradict the constraint
-> above: that constraint is about making the **agent** call the tool through the gateway, which is a
-> different (agentic-token) path.
+> This direct call is a health check only; it bypasses the Agent 365 gateway and its governance. The
+> lab's goal is to exercise the tools **through the gateway** from the app the user interacts with — use
+> the OBO SPA tab for that.
+
 
 
 ## Advanced: `propagate_to_graph` setup

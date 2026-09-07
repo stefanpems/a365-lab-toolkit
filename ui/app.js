@@ -246,10 +246,26 @@
     const token = await acquireToken(agent.scope);
     if (!token) return null; // redirect in progress
 
+    // OBO agents with attached custom MCP servers: also acquire a delegated USER token for each
+    // custom server's audience and pass them, so the agent reaches the BYO ext_* servers through
+    // the Agent 365 gateway AS THE USER — matching the Power Platform connection the user created
+    // for each server (that identity match is why OBO works and DW/S2S do not).
+    const tokens = {};
+    if (agent.customScopes) {
+      for (const [audience, scope] of Object.entries(agent.customScopes)) {
+        const ct = await acquireToken(scope);
+        if (ct === null) return null; // token interaction (redirect) in progress
+        tokens[audience] = ct;
+      }
+    }
+
+    const body = { message, history };
+    if (Object.keys(tokens).length) body.tokens = tokens;
+
     const res = await fetch(agent.apiBase.replace(/\/$/, "") + "/chat", {
       method: "POST",
       headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
-      body: JSON.stringify({ message, history })
+      body: JSON.stringify(body)
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");

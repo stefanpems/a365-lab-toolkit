@@ -242,40 +242,60 @@ auth_mcp = FastMCP(
 
 @auth_mcp.tool
 def whoami() -> dict[str, Any]:
-    """Report which identity is calling this tool, decoded from the Entra token.
+    """Report which identity is calling this tool.
 
-    The Agent 365 gateway forwards an Entra ID bearer token when the server is
-    registered with auth-type EntraOAuth. This tool decodes that token and
-    summarizes the caller so you can see, empirically, who authenticates for each
-    agent identity model:
-      - OBO agent          -> delegated token, carries the signed-in user's claims
-      - S2S agent          -> app-only token (app roles, no user)
-      - Digital Worker     -> delegated token carrying the agent's OWN user identity
+    The Agent 365 gateway identifies the caller in one of two ways, both handled here:
+      - it forwards an Entra ID **bearer token** (decoded + classified below), and/or
+      - it forwards **caller-identity headers** (``x-ms-client-principal-id`` = the
+        caller object id, ``x-ms-client-app-id`` = the calling app, ``x-ms-client-tenant-id``).
+    You can see, empirically, who authenticates for each agent identity model:
+      - OBO agent      -> the signed-in user (principal id = the user)
+      - S2S agent      -> the agent application
+      - Digital Worker -> the agent's own (agent) user identity
     """
+    headers = get_http_headers()
+    gateway_caller = {
+        "principal_id": headers.get("x-ms-client-principal-id"),
+        "app_id": headers.get("x-ms-client-app-id"),
+        "tenant_id": headers.get("x-ms-client-tenant-id"),
+        "principal_name": headers.get("x-ms-client-principal-name"),
+    }
     token = _bearer_token()
     if not token:
         return {
-            "error": "No Authorization header was forwarded.",
-            "hint": (
-                "Register this server with auth-type EntraOAuth so the Agent 365 "
-                "gateway attaches a caller token."
+            "authorization_token_forwarded": False,
+            "note": (
+                "The gateway did not forward a bearer token; reporting the caller from the "
+                "gateway identity headers instead."
             ),
+            "gateway_caller": gateway_caller,
+            "received_header_names": sorted(headers.keys()),
         }
-    claims = _decode_jwt_claims(token)
-    return _classify_identity(claims)
+    result = _classify_identity(_decode_jwt_claims(token))
+    result["authorization_token_forwarded"] = True
+    result["gateway_caller"] = gateway_caller
+    return result
 
 
 @auth_mcp.tool
 def token_claims() -> dict[str, Any]:
-    """Return the full set of decoded claims from the incoming Entra token.
+    """Return the decoded claims from the incoming Entra token, or the gateway
+    caller-identity headers when no bearer token is forwarded.
 
     Companion to 'whoami' for deeper inspection. The signature is NOT verified
     (lab sample); a production server must validate it.
     """
+    headers = get_http_headers()
     token = _bearer_token()
     if not token:
-        return {"error": "No Authorization header was forwarded."}
-    return {"claims": _decode_jwt_claims(token)}
+        return {
+            "authorization_token_forwarded": False,
+            "gateway_caller_headers": {
+                k: v for k, v in headers.items() if k.lower().startswith("x-ms-client-")
+            },
+            "received_header_names": sorted(headers.keys()),
+        }
+    return {"authorization_token_forwarded": True, "claims": _decode_jwt_claims(token)}
 
 
 @auth_mcp.tool
