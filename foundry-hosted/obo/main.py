@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from foundry_agent import run_obo_turn
+from foundry_agent import MAIL_MCP_RESOURCE, run_obo_turn
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -32,11 +32,13 @@ app = InvocationAgentServerHost()
 async def handle_invoke(request: Request):
     """Handle one OBO turn.
 
-    The invocation must supply the user's delegated Mail MCP token. We accept it as:
-      1. `mail_token` in the JSON body (preferred; token audience = Agent 365 Tools), or
-      2. the `Authorization: Bearer <token>` header (if the caller invokes the agent
-         endpoint with a Mail-MCP-audience token).
-    And the user text as `message` (or `input`).
+    The invocation supplies the user's delegated MCP token(s) and the user text
+    (`message` or `input`). Tokens can be provided as:
+      1. `tokens`: a JSON object mapping each MCP resource AUDIENCE to a delegated user
+         token (preferred when custom ext_* servers are attached — each server has its
+         own audience in ToolingManifest.json), or
+      2. `mail_token`: a single delegated Agent 365 Tools token (Mail only, back-compat), or
+      3. the `Authorization: Bearer <token>` header (treated as the Mail-audience token).
     """
     try:
         data = await request.json()
@@ -47,24 +49,34 @@ async def handle_invoke(request: Request):
     if not user_message:
         return Response("Missing 'message' in request body", status_code=400)
 
+    # Preferred: an audience->token map covering Mail and any attached custom servers.
+    tokens = data.get("tokens") if isinstance(data.get("tokens"), dict) else {}
+    tokens = {k: v for k, v in tokens.items() if v}
+
+    # Back-compat: a single Mail token in the body or the Authorization header.
     mail_token = data.get("mail_token")
     if not mail_token:
         authz = request.headers.get("Authorization", "")
         if authz.lower().startswith("bearer "):
             mail_token = authz[7:].strip()
-    if not mail_token:
+    if mail_token:
+        tokens.setdefault(MAIL_MCP_RESOURCE, mail_token)
+
+    if not tokens:
         return Response(
-            "Missing user token: provide 'mail_token' (delegated Agent 365 Tools token) "
-            "in the body or an Authorization bearer header.",
+            "Missing user token: provide 'tokens' (audience->delegated token map) or "
+            "'mail_token' (delegated Agent 365 Tools token) in the body, or an "
+            "Authorization bearer header.",
             status_code=401,
         )
 
     try:
-        reply = await run_obo_turn(user_message, mail_token)
+        reply = await run_obo_turn(user_message, tokens)
         return JSONResponse({"response": reply})
     except Exception as e:  # noqa: BLE001 - surface a clean error to the caller
         logger.error("OBO turn failed: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)
+
 
 
 if __name__ == "__main__":

@@ -21,7 +21,9 @@ Design notes (grounded in Microsoft Learn):
 """
 
 import base64
+import contextlib
 import json
+import logging
 import os
 
 import httpx
@@ -29,9 +31,26 @@ from agent_framework import Agent, MCPStreamableHTTPTool
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 
+logger = logging.getLogger("obo-foundry-agent")
+
 # Agent 365 Mail MCP (from ToolingManifest.json)
 MAIL_MCP_URL = "https://agent365.svc.cloud.microsoft/agents/servers/mcp_MailTools"
 MAIL_MCP_RESOURCE = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"  # Agent 365 Tools
+
+# ToolingManifest.json lists every attached MCP server (Mail + any registered ext_* custom
+# servers) with its gateway URL and the token AUDIENCE the gateway expects for that server.
+_MANIFEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ToolingManifest.json")
+
+
+def _load_manifest_servers() -> list[dict]:
+    """Return the mcpServers entries from ToolingManifest.json (empty on any error)."""
+    try:
+        with open(_MANIFEST_PATH, encoding="utf-8") as f:
+            return (json.load(f) or {}).get("mcpServers", []) or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Could not read ToolingManifest.json: %s", e)
+        return []
+
 
 AGENT_PROMPT = """You are a helpful assistant that acts ON BEHALF OF the signed-in user.
 
@@ -77,25 +96,32 @@ def _identity_from_jwt(token: str) -> dict:
         return {}
 
 
-async def run_obo_turn(message: str, mail_token: str, instructions: str | None = None) -> str:
-    """Run one OBO turn with the Mail MCP opened using the signed-in user's token.
+async def run_obo_turn(message: str, tokens, instructions: str | None = None) -> str:
+    """Run one OBO turn, wiring every attached MCP server from ToolingManifest.json.
 
-    `mail_token` must be a delegated user token whose audience is the Agent 365 Tools
-    resource (MAIL_MCP_RESOURCE). The caller/client is responsible for acquiring it
-    (e.g. the SPA acquires a token for the Mail MCP resource and passes it in). A naive
-    confidential-client OBO (jwt-bearer) exchange fails for agentic apps with
-    AADSTS82002 — use the Agent 365 delegated flow to obtain this token.
+    ``tokens`` maps each server's token AUDIENCE (from the manifest) to a delegated user
+    bearer token for that resource, e.g. ``{MAIL_MCP_RESOURCE: "<mail token>", "f828a86c…":
+    "<anon token>"}``. For backward compatibility a plain string is treated as the Mail
+    token. The caller (e.g. the SPA) is responsible for acquiring each delegated token: an
+    agentic app cannot mint app-only (AADSTS82001) or OBO (AADSTS82002) tokens, so each
+    audience needs its own user-consented token.
 
-    The Mail MCP tool is entered via `async with` so its streamable-HTTP session is
-    properly initialized and torn down around the agent run.
+    Every server whose audience has a token is opened via ``async with`` and wired into the
+    agent. Each server gets a unique ``tool_name_prefix`` (its name) so identical function
+    names across servers — notably the Agent 365 gateway's ``initialize_server`` handshake
+    tool exposed for every external ``ext_*`` server — do not collide into a
+    'Duplicate tool name' error.
     """
+    if isinstance(tokens, str):
+        tokens = {MAIL_MCP_RESOURCE: tokens}
+    tokens = {k: v for k, v in (tokens or {}).items() if v}
+
     credential = DefaultAzureCredential()
     client = _foundry_client(credential)
 
-    # Inject the signed-in user's verified identity (from the delegated token) into the
-    # instructions so the agent can answer "who am I / what's my name" like the ACA agents.
+    # Personalize from the Mail-audience token when present (verified sign-in identity).
     effective_instructions = instructions or AGENT_PROMPT
-    identity = _identity_from_jwt(mail_token)
+    identity = _identity_from_jwt(tokens.get(MAIL_MCP_RESOURCE, "")) if tokens.get(MAIL_MCP_RESOURCE) else {}
     if identity.get("name") or identity.get("username"):
         lines = []
         if identity.get("name"):
@@ -110,24 +136,52 @@ async def run_obo_turn(message: str, mail_token: str, instructions: str | None =
             "their name is, answer from this profile."
         )
 
-    bearer = mail_token if mail_token.lower().startswith("bearer ") else f"Bearer {mail_token}"
-    http_client = httpx.AsyncClient(headers={"Authorization": bearer}, timeout=90)
-    mail_tool = MCPStreamableHTTPTool(
-        name="mcp_MailTools",
-        url=MAIL_MCP_URL,
-        http_client=http_client,
-        description="Microsoft 365 Mail tools (acting on behalf of the signed-in user)",
-    )
+    http_clients: list[httpx.AsyncClient] = []
+    tools: list[MCPStreamableHTTPTool] = []
+    for s in _load_manifest_servers():
+        name = s.get("mcpServerName") or s.get("mcpServerUniqueName")
+        url = s.get("url")
+        audience = s.get("audience")
+        if not (name and url and audience):
+            continue
+        token = tokens.get(audience)
+        if not token:
+            logger.info("Skipping MCP server '%s' — no delegated token for audience %s", name, audience)
+            continue
+        bearer = token if token.lower().startswith("bearer ") else f"Bearer {token}"
+        hc = httpx.AsyncClient(headers={"Authorization": bearer}, timeout=90)
+        http_clients.append(hc)
+        tools.append(
+            MCPStreamableHTTPTool(
+                name=name,
+                url=url,
+                http_client=hc,
+                description=f"MCP tools from {name}",
+                # Unique prefix so per-server 'initialize_server' handshakes don't collide.
+                tool_name_prefix=name,
+            )
+        )
+
     try:
-        async with mail_tool:
+        async with contextlib.AsyncExitStack() as stack:
+            connected: list[MCPStreamableHTTPTool] = []
+            for t in tools:
+                try:
+                    await stack.enter_async_context(t)
+                    connected.append(t)
+                except Exception as e:  # noqa: BLE001 - skip a server that fails to connect
+                    logger.warning("MCP server '%s' failed to connect: %s", getattr(t, "name", "?"), e)
             agent = Agent(
                 client=client,
                 instructions=effective_instructions,
-                tools=[mail_tool],
+                tools=connected,
                 # Foundry hosting persists conversation history; avoid duplicating it.
                 default_options={"store": False},
             )
             result = await agent.run(message)
             return result.text or "I couldn't process your request at this time."
     finally:
-        await http_client.aclose()
+        for hc in http_clients:
+            with contextlib.suppress(Exception):
+                await hc.aclose()
+
