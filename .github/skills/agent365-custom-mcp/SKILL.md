@@ -77,6 +77,11 @@ not duplicate or renumber it here.**
   path** (Teams / `/api/messages`, e.g. the Digital Worker), or hit a server's standalone `/mcp`
   container directly. Tell-tale of a NON-call on the SPA: `server_time` returns a past date or the
   hash is wrong (the model hallucinated).
+- **`Duplicate tool name 'initialize_server'` after attaching 2+ custom servers (agentic/Teams path).**
+  The gateway exposes an `initialize_server` handshake tool for **every** `ext_*` server, so 2+ of them
+  collide and the turn fails. Fix: unique `tool_name_prefix` per server **before it connects** — the
+  ACA sample's `agent.py._namespace_mcp_tools()` (after `add_tool_servers_to_agent`) does this
+  generically; rebuild the image after.
 - **`propagate_to_graph` (advanced)**: needs the `/auth` app to be a confidential client with Graph
   `User.Read` (delegated) + admin consent + a client secret (entered in the terminal, never chat).
   Graph `User.Read` does not conflict with Work IQ or the Mail MCP.

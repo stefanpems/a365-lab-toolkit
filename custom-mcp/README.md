@@ -258,6 +258,15 @@ overlap with the Mail MCP (`McpServers.Mail.All`) or Work IQ.
   Approving the `auth` server walks through **three** admin-consent popups granting **five** app
   consents: (1) `A365Proxy` + `BYO`, (2) `RemoteProxy` + `Resource`, (3) `BYO`. Accept every one (and
   allow blocked pop-ups). The `anon` (NoAuth) server needs far fewer.
+- **After attaching, the agent turn fails with `Duplicate tool name 'initialize_server'` (agentic /
+  Teams path).** The Agent 365 gateway exposes a handshake tool named `initialize_server` for **every**
+  registered external (`ext_*`) MCP server, so attaching **2+** custom servers gives duplicate function
+  names and `agent_framework` rejects the run (first-party servers like Mail expose real tool names, so
+  the collision only appears once 2+ `ext_*` are attached). Fix: give each MCP server a unique
+  `tool_name_prefix` **before it connects/lists tools**. The ACA sample does this in
+  `agent.py._namespace_mcp_tools()` (called right after `add_tool_servers_to_agent`, iterating
+  `tool_service._connected_servers`); it is generic for 0/1/2 attached servers. Rebuild the agent image
+  after the code change.
 
 ## Project structure
 

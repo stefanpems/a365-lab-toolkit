@@ -299,6 +299,9 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
                 )
 
             if self.agent:
+                # Namespace each MCP server's functions BEFORE they connect/list tools, so
+                # identical function names across servers do not collide at run time.
+                self._namespace_mcp_tools()
                 logger.info("✅ MCP setup completed")
                 self.mcp_servers_initialized = True
                 self._mcp_setup_at = _time.monotonic()
@@ -308,6 +311,42 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
 
         except Exception as e:
             logger.error(f"MCP setup error: {e}")
+
+    def _namespace_mcp_tools(self):
+        """Give each MCP server a unique ``tool_name_prefix`` so identical function
+        names across servers don't collide into a 'Duplicate tool name' ValueError.
+
+        The Agent 365 gateway exposes a handshake tool named ``initialize_server`` for
+        EVERY registered external (BYO ``ext_*``) MCP server, so attaching 2+ custom
+        servers yields duplicate ``initialize_server`` functions and the agent turn
+        fails. Prefixing with the (unique) server name makes every exposed function
+        name unique. Generic for 0..N attached servers; safe when only Mail is present.
+        Must run BEFORE the tools connect (load_tools reads tool_name_prefix while
+        building names), which is the case right after add_tool_servers_to_agent.
+        """
+        seen: set[str] = set()
+        servers = list(getattr(self.tool_service, "_connected_servers", []) or [])
+        for tool in servers:
+            name = getattr(tool, "name", None)
+            if not name or not hasattr(tool, "tool_name_prefix"):
+                continue
+            prefix, n = name, 1
+            while prefix in seen:
+                n += 1
+                prefix = f"{name}_{n}"
+            seen.add(prefix)
+            try:
+                if getattr(tool, "tool_name_prefix", None) == prefix:
+                    continue
+                tool.tool_name_prefix = prefix
+                # If functions were already loaded unprefixed, clear so they reload prefixed.
+                loaded = getattr(tool, "_functions", None)
+                if loaded:
+                    loaded.clear()
+            except Exception as e:
+                logger.warning("🔧 Could not namespace MCP tool '%s': %s", name, e)
+        if seen:
+            logger.info("🔧 Namespaced %d MCP server(s) with a unique tool_name_prefix", len(seen))
 
     async def _log_mcp_functions(self):
         """DIAGNOSTIC: log the tool functions each MCP server actually exposes to the LLM.
