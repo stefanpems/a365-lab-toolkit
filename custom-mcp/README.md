@@ -144,6 +144,37 @@ already includes the MCP permissions step. What each step does (validated):
 > tools via M365 app-manifest agent connectors, not `ToolingManifest.json`, so the wizard attaches the
 > custom MCP only to ACA and FH agents.
 
+### Testing the attached tools (and why the SPA tabs can't)
+
+Depending on the wizard choice each agent attaches **0, 1, or 2** custom servers (anon and/or auth),
+so a given agent may expose the anon tools, the auth tools, both, or none — plus Mail. Whatever is in
+`ToolingManifest.json` is what the runtime loads.
+
+⚠️ **The shared web UI (SPA) tabs do NOT exercise the custom tools — this is a hard Entra constraint,
+not a bug.** The SPA `/chat` endpoints use simplified, TurnContext-free paths (OBO wires only the Mail
+MCP; S2S wires no MCP tools) because:
+
+- Each custom server is reached through the Agent 365 gateway
+  (`https://agent365.svc.cloud.microsoft/agents/servers/<name>`) with a token whose **audience is that
+  server's BYO app** (from `ToolingManifest.json`: anon `f828a86c…`, auth `898a9ac6…`, scope
+  `Tools.ListInvoke.All`) — **not** the Mail audience `ea9ffc3e…`. The Mail `mail_token` does not
+  cover the custom servers.
+- The SDK mints that per-audience token via `auth.exchange_token()` — the **agentic** flow — which
+  requires a **Bot Framework `TurnContext`**. The SPA endpoints have none.
+- The blueprint is an **agentic application**, so it **cannot** mint app-only
+  (`client_credentials` → `AADSTS82001`) or On-Behalf-Of (`jwt-bearer` → `AADSTS82002`) tokens for
+  those audiences either. There is no SPA-side shortcut.
+
+**So custom tools are exercised via the AGENTIC / Bot Framework path** (`process_user_message` →
+`McpToolRegistrationService.add_tool_servers_to_agent`, which does the per-audience agentic exchange
+with the `TurnContext`). Test them by messaging the agent on its Bot Framework surface (Teams / the
+`/api/messages` endpoint), e.g. the Digital Worker in Teams — not from the SPA tabs.
+
+**To sanity-check a custom server in isolation**, call its standalone container `/mcp` directly (the
+`/anon` server is `NoAuth`, so no token is needed) — a healthy anon server lists its tools and
+`server_time` returns the **real current** UTC time. If the SPA answers with a past date or a wrong
+hash, the tool was **not** called (the model hallucinated) — expected on the SPA tabs.
+
 ## Advanced: `propagate_to_graph` setup
 
 `propagate_to_graph` needs the `/auth` server's Entra app to be a **confidential client** that can

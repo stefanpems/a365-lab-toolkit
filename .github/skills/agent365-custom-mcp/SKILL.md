@@ -66,6 +66,17 @@ not duplicate or renumber it here.**
     Mail MCP** — a non-Mail custom server won't be called until the code is generalized (see
     `references/workiq-mcp-integration.md`). **FD agents are excluded** (no `ToolingManifest.json`).
   - The scaffolder emits these next-commands.
+- **Attach count is per-agent 0/1/2**: each agent attaches the anon and/or auth server per the wizard
+  choice, so an agent may expose the anon tools, the auth tools, both, or none (plus Mail). The
+  runtime loads whatever is in `ToolingManifest.json`.
+- **Testing the tools — the SPA tabs CANNOT exercise custom tools (hard Entra constraint).** The web
+  UI `/chat` paths are TurnContext-free and simplified (OBO = Mail only; S2S = no MCP tools). Custom
+  servers need a **per-audience agentic token** minted by `auth.exchange_token()` with a Bot Framework
+  `TurnContext`; the SPA has none, and an agentic app can't mint app-only (`AADSTS82001`) or OBO
+  (`AADSTS82002`) tokens for those audiences. So test custom tools via the **agentic / Bot Framework
+  path** (Teams / `/api/messages`, e.g. the Digital Worker), or hit a server's standalone `/mcp`
+  container directly. Tell-tale of a NON-call on the SPA: `server_time` returns a past date or the
+  hash is wrong (the model hallucinated).
 - **`propagate_to_graph` (advanced)**: needs the `/auth` app to be a confidential client with Graph
   `User.Read` (delegated) + admin consent + a client secret (entered in the terminal, never chat).
   Graph `User.Read` does not conflict with Work IQ or the Mail MCP.
