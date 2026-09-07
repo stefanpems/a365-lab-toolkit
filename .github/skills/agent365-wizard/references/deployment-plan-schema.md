@@ -69,7 +69,7 @@ gitignored.
     "servers": ["anon", "auth"],           // which servers to register (subset of anon/auth)
     "resourceGroup": "<name>-mcp-rg",       // defaults to <name>-mcp-rg (derives from Name, not prefix)
     "region": "<azure-region>",
-    "attachTo": [],                         // agent types to attach to (ACA-*/FH-* only; FD excluded)
+    "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO); S2S/DW blocked (see Rules)
     "propagateToGraph": false               // enable the advanced On-Behalf-Of Graph test
   }
 }
@@ -84,7 +84,12 @@ gitignored.
   lessons — see [workiq-mcp-integration.md](./workiq-mcp-integration.md).
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, `name` must be ≤ 12 chars,
   start with a letter and be alphanumeric — the registered names are `ext_<Name>Anon` / `ext_<Name>Auth`
-  and must stay ≤ 20 chars. `attachTo` may list only ACA-* and FH-* agent types (FD is unsupported).
+  and must stay ≤ 20 chars. `attachTo` may list **only OBO agents** (`ACA-OBO` / `FH-OBO` / `FD-OBO`).
+  A BYO server reached through the gateway needs a one-time Power Platform connection **owned by the
+  invoking identity**, and only an OBO agent invokes as the signed-in user who owns it. **S2S** (own app
+  identity) and **DW** (projected `agentUser` identity) invoke as a non-user identity that can't own — nor
+  be granted (preview: `ConnectionSharingNotAllowed`) — that connection (S2S also can't mint the custom
+  audience token from the SPA: `AADSTS82001`/`82002`). Known preview limitation, not an unfinished feature.
 - **`customMcp.name` is the unique per-copy key.** The Azure resources `<name>-mcp-rg` / `<name>-mcp-ca` /
   `<name>-mcp-cae` and the `ext_<Name>Anon` / `ext_<Name>Auth` registrations derive from it (lowercased).
   The scaffold folder is `generated/<prefix>-mcp/` (from `solution.prefix`, like the UI folder). To run the

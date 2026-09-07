@@ -129,7 +129,8 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    No UI / Create new / Attach to existing). If a UI is chosen, multi-select the **OBO/S2S** agents
    to expose (DW is excluded — it routes via Teams/Outlook, not the SPA). Then **Custom MCP**
    (single-select: None / Anonymous only / Authenticated only / Both); if not None, ask `<Name>`
-   (**max 12 chars**), a publisher, which **ACA-*/FH-*** agents to attach to (FD excluded), and
+   (**max 12 chars**), a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only —
+   S2S/DW are blocked: they can't own the per-user Power Platform connection a BYO server needs), and
    whether to enable `propagate_to_graph`. See "Custom MCP integration" below. Finally, per **ACA-*/FH-***
    agent, ask which **registered MCP tools** to attach (multi-select from `a365 develop list-available`,
    `mcp_MailTools` pre-selected; free-text for other `uniqueName`s). See "Registered MCP tools" below.
@@ -190,7 +191,10 @@ Load **[agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md)** when the 
 Essentials: two servers split by auth type (`/anon` → `ext_<Name>Anon` `NoAuth`; `/auth` →
 `ext_<Name>Auth` `EntraOAuth`); `<Name>` ≤ 12 chars and is the **unique per-copy key** (check the
 tenant for a collision before writing the plan); register → **tenant admin approves** in the M365 admin
-center → attach with `a365 develop add-mcp-servers` + `a365 setup permissions mcp`; **FD is excluded**.
+center → attach to **OBO agents only** (ACA-OBO/FH-OBO via `a365 develop add-mcp-servers` + `a365 setup
+permissions mcp`; FD-OBO via `CUSTOM_MCP_SERVERS_JSON` in its `.env`). **S2S and DW are blocked** — a
+non-user (own app / `agentUser`) identity can't own the per-user Power Platform connection a BYO server
+needs (`ConnectionSharingNotAllowed`; S2S also can't mint the token from the SPA).
 Full mechanics and the `propagate_to_graph` advanced setup: that skill + [custom-mcp/README.md](../../custom-mcp/README.md).
 
 ## Registered MCP tools (Work IQ / catalog / third-party)

@@ -14,7 +14,7 @@ function Invoke-ScaffoldToolAttachment {
         if ($attachByAgent.ContainsKey($a.name)) { $extras += @($attachByAgent[$a.name] | Where-Object { $extras -notcontains $_ }) }
         $agentDir = Join-Path $OutRoot $a.name
         if ($extras.Count -gt 0) {
-            $note = if ($a.type -like 'FH-*') { '   # FH sample code currently wires only Mail — a non-Mail Work IQ tool also needs the code generalization in references/workiq-mcp-integration.md' } else { '   # ACA turn path is manifest-driven — Work IQ token/refresh lessons already apply generically' }
+            $note = if ($a.type -like 'FH-*') { '   # FH-OBO code is manifest-driven for custom ext_ MCP (wires every ToolingManifest.json server with its per-audience token + BYO initialize_server activation); a non-Mail Work IQ tool may still need the generalization in references/workiq-mcp-integration.md' } else { '   # ACA turn path is manifest-driven — Work IQ token/refresh lessons already apply generically' }
             $nextCommands.Add("cd `"$agentDir`"; a365 develop add-mcp-servers $($extras -join ' '); a365 setup permissions mcp --agent-name `"$($a.name)`"$note")
             $nextCommands.Add("#   ^ 'setup permissions mcp' opens a BROWSER for admin consent: tell the user to grant ALL 3 additional admin consents requested there. IGNORE the final page message 'Try that again using a different browser / We couldn't connect to that service...' — consent still succeeds and the CLI detects it (waits up to 180s).")
             $redeploy = if ($a.type -like 'FH-*') { 'azd deploy' } else { 'rebuild the image (az acr build) + az containerapp update, or run the agent''s deploy-aca*.ps1' }

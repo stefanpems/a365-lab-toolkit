@@ -56,7 +56,9 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
    Agent 365 registered server names must start with `ext_` and be **≤ 20 chars**; the sample derives
    `ext_<Name>Anon` and `ext_<Name>Auth`, so `4 (ext_) + <Name> + 4 (Anon/Auth) ≤ 20` → `<Name> ≤ 12`.
    The wizard MUST ask for `<Name>` telling the user the max length is 12. `customMcp.attachTo` may
-   contain only ACA-* / FH-* agent types (FD prompt agents attach tools via a different mechanism).
+   contain **only OBO agent types** (`ACA-OBO` / `FH-OBO` / `FD-OBO`); S2S and DW are blocked because a
+   BYO server needs a Power Platform connection owned by the invoking identity and only an OBO agent
+   invokes as the connection-owning user (known preview limitation — see the schema Rules).
    `<Name>` is the **unique per-copy key**: all Azure resources (`<name>-mcp-rg` / `-ca` / `-cae`,
    lowercased) and the registrations derive from it; the scaffold folder is `generated/<prefix>-mcp/`
    (from `solution.prefix`). For N coexisting copies each run needs a **different, unique `<Name>`** — the wizard checks the

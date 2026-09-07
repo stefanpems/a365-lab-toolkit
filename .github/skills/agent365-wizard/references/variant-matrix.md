@@ -1,6 +1,8 @@
 # Variant matrix — inputs, tooling, hosting
 
-Exactly **8** supported variants. FD-DW is not supported.
+Exactly **8** supported variants. **FD-DW is not supported**: a Digital Worker runs on a Bot Framework /
+Teams messaging surface (a hosted container exposing `/api/messages`), but a Foundry declarative (prompt)
+agent is platform-run with no container, code or endpoint and cannot host it — use ACA-DW or FH-DW.
 
 | Variant | Hosting | Identity | Setup tool | Config | Endpoint | Needs Frontier | UI-exposable |
 |---------|---------|----------|-----------|--------|----------|----------------|--------------|
@@ -57,8 +59,12 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
   (`generated/<prefix>-mcp/`, from `solution.prefix`) and the registrations all derive from it. For N coexisting copies use
   a different `<Name>` each run and check the tenant (`a365 develop list-available`) for collisions.
 - **Publisher** name (registration metadata, e.g. `Contoso`).
-- **Attach to**: multi-select of the deployed **ACA-*/FH-*** agents (FD excluded — prompt agents use a
-  different tool-attachment mechanism).
+- **Attach to**: multi-select of the deployed **OBO** agents only (`ACA-OBO` / `FH-OBO` / `FD-OBO`).
+  S2S and DW are **not offered**: a BYO server needs a Power Platform connection owned by the invoking
+  identity, and only an OBO agent invokes as the signed-in user who owns it — S2S (own app identity) and
+  DW (projected `agentUser` identity) can neither own it nor be granted it (preview:
+  `ConnectionSharingNotAllowed`), and S2S also can't mint the custom-audience token from the SPA
+  (`AADSTS82001`/`82002`). Known preview limitation.
 - **`propagate_to_graph`** (auth server only): enable the advanced On-Behalf-Of Graph test? If yes,
   surface the Entra prerequisites (confidential client + Graph `User.Read` + admin consent) as a checkpoint.
 - One ACA container hosts both servers on two paths; registration is per-server (auth type is
@@ -66,8 +72,9 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
   registered server happens in the M365 admin center (not CLI).
 
 ### Registered MCP tools per agent (Work IQ / catalog / third-party)
-For each **ACA-*/FH-*** agent, which registered MCP servers should it use? (FD excluded — prompt agents
-wire tools in `agent_config.py`.)
+For each **ACA-*/FH-*** agent, which registered MCP servers should it use? (This `add-mcp-servers`
+multi-select is ACA/FH only — FD prompt agents wire tools in `agent_config.py`; for a custom BYO server,
+FD-OBO uses `CUSTOM_MCP_SERVERS_JSON`, see **Custom MCP** above.)
 - Source the choices **live** from `a365 develop list-available` (shows Work IQ `mcp_*`, approved custom
   `ext_*`, and third-party). Present a multi-select with **`mcp_MailTools` pre-selected** (preserves the
   samples' current behavior); deselect it to make Mail optional.

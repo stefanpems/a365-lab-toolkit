@@ -65,7 +65,11 @@ if (-not $plan.solution.region) { $errors.Add('solution.region is required.') }
 if (-not $plan.agents -or $plan.agents.Count -eq 0) { $errors.Add('at least one agent is required.') }
 
 foreach ($a in $plan.agents) {
-    if (-not $MAP.ContainsKey($a.type)) { $errors.Add("unknown agent type '$($a.type)'."); continue }
+    if (-not $MAP.ContainsKey($a.type)) {
+        if ($a.type -eq 'FD-DW') { $errors.Add("agent type 'FD-DW' is not supported: a Digital Worker runs on a Bot Framework / Teams messaging surface (a hosted container exposing /api/messages), but a Foundry declarative (prompt) agent is platform-run with no container, code or endpoint and cannot host that surface. Use ACA-DW or FH-DW for a Digital Worker.") }
+        else { $errors.Add("unknown agent type '$($a.type)' (supported: ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S).") }
+        continue
+    }
     if (-not $a.name) { $errors.Add("agent of type $($a.type) is missing 'name'.") }
     # ACA container app name must be lowercase.
     if ($a.type -like 'ACA-*') {
@@ -95,7 +99,7 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
     elseif ($mcpName -notmatch '^[A-Za-z][A-Za-z0-9]*$') { $errors.Add("customMcp.name '$mcpName' must start with a letter and contain only letters/digits.") }
     elseif ($mcpName.Length -gt 12) { $errors.Add("customMcp.name '$mcpName' is $($mcpName.Length) chars (max 12; ext_<Name>Anon/Auth must stay <= 20).") }
     foreach ($t in @($plan.customMcp.attachTo)) {
-        if ($t -like 'FD-*') { $errors.Add("customMcp.attachTo '$t': FD (prompt) agents are not supported for custom MCP attachment (they use M365 app-manifest agent connectors).") }
+        if ($t -notlike '*-OBO') { $errors.Add("customMcp.attachTo '$t': custom (BYO) MCP works only on OBO agents (ACA-OBO / FH-OBO / FD-OBO). A BYO server reached through the Agent 365 gateway needs a one-time Power Platform connection OWNED BY THE INVOKING IDENTITY; only an OBO agent invokes as the signed-in user who owns that connection. An S2S (own app identity) or DW (projected agentUser identity) agent invokes as a NON-USER identity that can neither own that connection nor be granted it (sharing is refused in preview with ConnectionSharingNotAllowed 403); S2S also can't mint a custom-audience token from the SPA path (AADSTS82001 app-only / AADSTS82002 OBO). This is a known preview platform limitation, not an unfinished feature.") }
         elseif (-not ($plan.agents | Where-Object { $_.type -eq $t })) { $errors.Add("customMcp.attachTo '$t' is not among the planned agents.") }
     }
 }
@@ -104,6 +108,7 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
 foreach ($a in $plan.agents) {
     foreach ($tool in @($a.tools)) {
         if ($tool -notmatch '^(mcp_|ext_)') { $errors.Add("$($a.name): tool '$tool' must be a registered server unique name starting with 'mcp_' or 'ext_' (see 'a365 develop list-available').") }
+        elseif (($tool -like 'ext_*') -and ($a.type -notlike '*-OBO')) { $errors.Add("$($a.name): custom BYO server '$tool' can attach only to an OBO agent. An S2S/DW agent invokes as a non-user (own app / agentUser) identity that can't own the Power Platform connection a BYO server needs (ConnectionSharingNotAllowed) — use an *-OBO agent. Work IQ 'mcp_*' servers are fine on any agent.") }
     }
     if (($a.type -like 'FD-*') -and (@($a.tools).Count -gt 0)) {
         $errors.Add("$($a.name): FD (prompt) agents do not attach tools via ToolingManifest/add-mcp-servers; leave 'tools' empty (the FD sample wires its tools in agent_config.py).")

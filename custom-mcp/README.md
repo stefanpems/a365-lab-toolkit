@@ -149,14 +149,20 @@ already includes the MCP permissions step. What each step does (validated):
   (`Successfully updated ToolingManifest.json / Total servers in manifest: N`).
 - Step 2 configures permissions for the resource apps it finds — the Mail resource plus each attached
   server's **BYO** app (`Tools.ListInvoke.All`) — and grants delegated consent via the browser.
-- **ACA agents work end-to-end**: the runtime registers every server in `ToolingManifest.json`, so no
-  code change is needed. **FH agents**: attach updates the manifest + consent, but the FH sample
-  **code hardcodes only the Mail MCP** — a non-Mail custom server isn't called until the code is
-  generalized (see the FH integration reference). Redeploy is required either way.
+- **Custom MCP is supported only on OBO agents** (`ACA-OBO` / `FH-OBO` / `FD-OBO`). The OBO samples are
+  manifest-driven: ACA-OBO and FH-OBO wire every `ToolingManifest.json` server with its per-audience
+  delegated user token (+ the BYO `initialize_server` activation); FD-OBO declares each server in
+  `deploy_agent.py` from `CUSTOM_MCP_SERVERS_JSON`. Redeploy the agent after attaching so the new
+  manifest / agent version loads.
 
-> **FD (prompt) agents are not supported** for this flow. Foundry declarative/prompt agents attach
-> tools via M365 app-manifest agent connectors, not `ToolingManifest.json`, so the wizard attaches the
-> custom MCP only to ACA and FH agents.
+> ⛔ **S2S and DW can't use custom MCP (known preview limitation).** A BYO server reached through the
+> Agent 365 gateway needs a one-time Power Platform connection **owned by the invoking identity**. Only
+> an **OBO** agent invokes as the **signed-in user**, who owns that connection. An **S2S** agent (own app
+> identity) and a **DW** agent (projected `agentUser` identity) invoke as a **non-user identity** that
+> can't own — nor be granted (preview: `ConnectionSharingNotAllowed` 403) — the user's connection, so the
+> gateway reports the server "not set up". S2S additionally can't mint a delegated token for the custom
+> audience from the SPA path (`AADSTS82001` app-only / `AADSTS82002` OBO). This is a platform limitation,
+> not a missing feature.
 
 ### Testing the attached tools — the connection model (READ THIS)
 
@@ -183,7 +189,7 @@ so a given agent may expose the anon tools, the auth tools, both, or none — pl
 | Agent kind | Invokes the gateway as… | Custom tools? |
 |---|---|---|
 | **OBO** (ACA/FH/FD) | the **signed-in user's own delegated token** (the SPA acquires one per audience) | ✅ **Works** — the user owns the connection they created, so identities match |
-| **S2S** (ACA/FH/FD) | its **own agent application** | ❌ Blocked in preview |
+| **S2S** (ACA/FH/FD) | its **own agent application** (and can't mint a custom-audience token from the SPA path: `AADSTS82001` app-only / `AADSTS82002` OBO) | ❌ Blocked in preview |
 | **DW** (ACA/FH) | an **`#microsoft.graph.agentUser`** (a projection of the user, e.g. `4ee6a63d…`) — **not** the regular user | ❌ Blocked in preview |
 
 The block for DW/S2S is **not a bug in this repo**: the Power Platform connection is owned by whoever
@@ -194,6 +200,15 @@ identity also can't sign in to `make.powerapps.com` to create its own. So **OBO 
 path**: the agent invokes as the user, and the user owns the connection. (This matches the Microsoft
 docs, whose supported BYO surfaces — Copilot Studio, VS Code, Claude Code, GitHub Copilot CLI — are all
 user-driven.)
+
+> **FD-OBO caveat (declarative model) — for troubleshooting.** A Foundry prompt agent has **no
+> server-side code**, so it can't run the `initialize_server` + `load_tools` activation the ACA/FH-OBO
+> samples use to surface BYO tools. Its custom tools surface only when the one-time Power Platform
+> connection **already exists** (OBO reuses the connection created for ACA/FH-OBO — same user). If an
+> FD-OBO custom tool doesn't fire, confirm the connection exists at `make.powerapps.com/connectionsMcp`;
+> the FD prompt (`agent_config.py`) also instructs the model to call `initialize_server` first if a
+> server still reports it needs setup. In this lab the tools surfaced on the first try because the
+> connection already existed.
 
 **How the OBO SPA path is wired** (so a user can exercise custom tools from the web UI):
 

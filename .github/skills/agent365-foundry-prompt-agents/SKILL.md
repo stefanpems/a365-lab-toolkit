@@ -29,5 +29,8 @@ per-variant guides — do not duplicate or renumber them:**
 
 ## Tools
 FD prompt agents attach tools via `agent_config.py` (M365 app-manifest connectors), **not** via
-`add-mcp-servers` / `ToolingManifest.json`. FD-S2S ships with no tools. The Mail token lessons are in
+`add-mcp-servers` / `ToolingManifest.json`. For a custom BYO MCP server, **FD-OBO** declares each server
+in `deploy_agent.py` from `CUSTOM_MCP_SERVERS_JSON` (the SPA passes the per-server token as a structured
+input). **FD-S2S** ships with no tools and can't use custom MCP (own identity can't own the Power
+Platform connection). The Mail token lessons are in
 [workiq-mcp-integration.md](../agent365-wizard/references/workiq-mcp-integration.md).

@@ -77,7 +77,9 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 4. **Custom MCP** (single-select): *None* / *Anonymous only* / *Authenticated only* / *Both* — the
    sample [custom-mcp/](../../../custom-mcp/README.md). If not None, also ask for `<Name>` (**max 12
    chars**, `^[A-Za-z][A-Za-z0-9]*$` → registered as `ext_<Name>Anon` / `ext_<Name>Auth`, ≤ 20), a
-   publisher name, which **ACA-*/FH-*** agents to attach to (FD excluded), and whether to enable
+   publisher name, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
+   blocked: they can't own the per-user Power Platform connection a BYO server needs; see
+   custom-mcp/README.md), and whether to enable
    `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan. `<Name>` is
    the **unique per-copy key** (Azure resources `<name>-mcp-*`, folder `generated/<prefix>-mcp/`,
    registrations all derive from it) — to create N coexisting copies each run needs a different `<Name>`;

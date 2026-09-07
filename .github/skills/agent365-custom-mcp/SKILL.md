@@ -10,8 +10,12 @@ deploy, register and attach detail is in [custom-mcp/README.md](../../../custom-
 not duplicate or renumber it here.**
 
 ## When to use
-- Testing a bring-your-own MCP tool against the ACA / FH sample agents (FD is **excluded** — prompt
-  agents wire tools via M365 app-manifest connectors, not `ToolingManifest.json`).
+- Testing a bring-your-own MCP tool against the **OBO** sample agents (`ACA-OBO` / `FH-OBO` / `FD-OBO`).
+  **S2S and DW are blocked** (known preview limitation): a BYO server needs a one-time Power Platform
+  connection owned by the invoking identity, and only an OBO agent invokes as the signed-in user who
+  owns it — S2S (own app identity) / DW (projected `agentUser` identity) can't own or be granted it
+  (`ConnectionSharingNotAllowed`); S2S also can't mint the custom-audience token from the SPA
+  (`AADSTS82001`/`82002`).
 
 ## What it owns
 - The `customMcp.*` block of the plan and the scaffolded `generated/<prefix>-mcp/` copy

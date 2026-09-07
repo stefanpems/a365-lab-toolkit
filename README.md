@@ -65,10 +65,11 @@ a365-agent-lab/
 
 ### Optional: custom MCP tool sample
 [custom-mcp/](custom-mcp/README.md) is an optional **bring-your-own MCP server** sample you can attach
-to the ACA and FH agents to test Agent 365 tool behavior. One container hosts two MCP servers, split
+to the **OBO** agents (ACA-OBO / FH-OBO / FD-OBO) to test Agent 365 tool behavior. One container hosts two MCP servers, split
 by authentication type (the auth type is chosen per registration): `/anon/mcp` (register as `NoAuth`)
 for anonymous calls, direct responses and outbound connectivity, and `/auth/mcp` (register as
-`EntraOAuth`) for caller-identity inspection (OBO / S2S / Digital Worker) and On-Behalf-Of credential
+`EntraOAuth`) for caller-identity inspection (the signed-in user, via an OBO agent — S2S/DW can't reach
+BYO servers through the gateway) and On-Behalf-Of credential
 propagation to Microsoft Graph. The provisioning wizard can deploy, register and attach it; see
 [custom-mcp/README.md](custom-mcp/README.md).
 
