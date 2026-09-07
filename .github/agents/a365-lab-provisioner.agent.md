@@ -117,7 +117,15 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
   replace the LLM of an already-running chat. Do not continue on a confirmation made before a change.
   This agent intentionally does not pin `model` or `reasoning-effort` in frontmatter, so the user's
   supported VS Code/provider settings remain authoritative.
-1. **Select variants** (multi-select checkbox: the 8 variants). Then **UI mode** (single-select:
+1. **Confirm tenant + subscription explicitly — first question after the runtime gate, no exceptions.**
+   Before variant selection or any other question, run `az account show` and PRESENT the detected
+   **tenant id + name** and **subscription id + name**, then **always ask the user to confirm those
+   values or enter the correct target Tenant ID and Subscription ID** — exactly as the provisioning
+   scripts require `AZURE_TENANT_ID` + `AZURE_SUBSCRIPTION_ID`; never rely on the ambient `az` context
+   alone. Pin the subscription (`az account set --subscription <id>`) and assert the tenant
+   (`az account show --query tenantId` == the entered id); abort on mismatch. These go only into the
+   gitignored plan. This guards the shared, concurrently-flipping `az`/Graph context.
+2. **Select variants** (multi-select checkbox: the 8 variants). Then **UI mode** (single-select:
    No UI / Create new / Attach to existing). If a UI is chosen, multi-select the **OBO/S2S** agents
    to expose (DW is excluded — it routes via Teams/Outlook, not the SPA). Then **Custom MCP**
    (single-select: None / Anonymous only / Authenticated only / Both); if not None, ask `<Name>`
@@ -125,9 +133,6 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    whether to enable `propagate_to_graph`. See "Custom MCP integration" below. Finally, per **ACA-*/FH-***
    agent, ask which **registered MCP tools** to attach (multi-select from `a365 develop list-available`,
    `mcp_MailTools` pre-selected; free-text for other `uniqueName`s). See "Registered MCP tools" below.
-2. **Confirm environment explicitly** — run `az account show` and PRESENT the detected **tenant id +
-   name** and **subscription id + name**, then ask the user to confirm or pick another. Do not
-   proceed silently. These go only into the gitignored plan.
 3. **Solution basics** — solution prefix (must start with a lowercase letter), region, RG strategy
    (isolated `<agent>-rg` default, or shared `<prefix>-rg`).
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:

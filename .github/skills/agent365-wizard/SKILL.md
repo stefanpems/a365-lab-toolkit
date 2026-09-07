@@ -57,7 +57,18 @@ environment discovery, or provisioning questions. Use one single-select question
   settings supported by the selected VS Code model/provider remain authoritative.
 - Never treat a confirmation from before a model/settings change as valid for the restarted run.
 
-### 1. Select what to create
+### 1. Confirm the target tenant and subscription
+Immediately after the runtime gate — before variant selection, discovery, or any other question —
+**always explicitly ask the user for the target Tenant ID and Subscription ID**, exactly as the
+provisioning scripts require (`AZURE_TENANT_ID` + `AZURE_SUBSCRIPTION_ID`). Do not rely on the ambient
+`az` context alone: run `az account show`, PRESENT the detected tenant id+name and subscription id+name,
+and have the user confirm those values or enter the correct ones. Then pin them (`az account set
+--subscription <id>`) and assert the tenant (`az account show --query tenantId` == the entered id);
+abort on mismatch. These values are written ONLY to the gitignored `a365-deployment-plan.json`. This
+guards the shared, concurrently-flipping `az`/Graph context (see the parallel-session note in
+[references/naming-and-validation.md](./references/naming-and-validation.md)).
+
+### 2. Select what to create
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 8 variants (mark DW/FH as "requires Frontier/Foundry").
 2. **Companion UI** — single-select: *No UI* / *Create new UI* / *Attach to existing UI*.
@@ -75,19 +86,16 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    **pre-selected** (deselect to make Mail optional), plus free-text for other registered `uniqueName`s.
    Writes `agents[].tools`. FD agents keep `tools: []`. Reuse the token lessons in
    [references/workiq-mcp-integration.md](./references/workiq-mcp-integration.md) for any Work IQ MCP.
-### 2. Solution basics (one screen)
+### 3. Solution basics (one screen)
 - **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as
   `<prefix>-<hosting>-<identity>` where hosting ∈ {ACA, FH, FD}, identity ∈ {OBO, S2S, DW}.
-- **Tenant / Subscription** — run `az account show`, **present the detected tenant id+name and
-  subscription id+name, and have the user confirm or pick another**. Never proceed silently; these
-  values are written ONLY to the gitignored `a365-deployment-plan.json` — never hard-coded elsewhere.
-- **Preferred region** — one value; validated per service in step 4.
+- **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.
   - *Shared*: one RG `<prefix>-rg` (editable). For ACA this is allowed ONLY with resource-safe
     scripts or `-ReuseEnv` — see [references/naming-and-validation.md](./references/naming-and-validation.md).
 
-### 3. Conditional questions (ask only what the selection requires)
+### 4. Conditional questions (ask only what the selection requires)
 Driven by [references/variant-matrix.md](./references/variant-matrix.md):
 - Any **ACA** → Azure OpenAI account + model deployment; auth = **Managed Identity (default)** or
   API key (fallback, entered in the terminal, never chat).
@@ -103,21 +111,21 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
 Do NOT ask for: Log Analytics names, endpoints, app/blueprint IDs, fixed first-party scopes,
 localhost redirect URIs, API versions, descriptions — these are discovered, derived, or fixed.
 
-### 4. Discover + review
+### 5. Discover + review
 Run the read-only [scripts/discover-environment.ps1](./scripts/discover-environment.ps1) to populate
 defaults (tenant, subscription, AOAI accounts, Foundry projects, region capacity). Present ONE
 review screen with every derived name and resource, all editable. Enforce naming/validation from
 [references/naming-and-validation.md](./references/naming-and-validation.md) — especially the DW
 blueprint/`name.short` **≤ 30 characters** hard rule.
 
-### 5. Write the plan
+### 6. Write the plan
 Emit `a365-deployment-plan.json` at the repo root from
 [assets/deployment-plan.template.json](./assets/deployment-plan.template.json). It is **secret-free**
 (resource references only) and gitignored. Schema:
 [references/deployment-plan-schema.md](./references/deployment-plan-schema.md).
 Then ask: **Save plan** / **Generate scaffolding** / **Cancel**.
 
-### 6. Scaffold (only on confirmation)
+### 7. Scaffold (only on confirmation)
 Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) — a thin **router** that
 dot-sources the per-family/component modules under [scripts/modules/](./scripts/modules). It validates
 the plan (DW ≤30-char, lowercase container names, shared-RG/ACA safety, `customMcp.name` ≤12-char), copies each
@@ -131,7 +139,7 @@ Mail is deselected). It performs **no cloud mutations and runs no deploys**. Use
 check a plan without writing. Print the next commands for the user to run; never auto-run destructive
 deploys.
 
-## 7. Deployment execution (only after scaffolding is confirmed)
+## 8. Deployment execution (only after scaffolding is confirmed)
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +
   placeholder `config.js`); then, as each OBO/S2S agent goes live, add its tab, redeploy the UI, wire
   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user they can test it now.
