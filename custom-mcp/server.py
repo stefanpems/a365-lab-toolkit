@@ -407,6 +407,7 @@ def build_app():
 
     return Starlette(
         routes=[
+            Route("/", health),
             Route("/health", health),
             Mount("/anon", app=anon_app),
             Mount("/auth", app=auth_app),
@@ -416,23 +417,32 @@ def build_app():
 
 
 def build_single(server, label):
-    """Serve ONE MCP server at the ROOT path '/mcp' (plus '/health').
+    """Serve ONE MCP server at the ROOT path '/mcp'.
 
     Agent 365 registration builds a proxy connector from the serverUrl and fails with
     'HTTP 400: Bad Request' when the MCP endpoint is under a multi-segment path such as
-    '/anon/mcp'. A single-segment root '/mcp' (as used by the reference servers) works, so
-    each server is deployed in its OWN container at '/mcp' — selected via MCP_SERVER_MODE.
+    '/anon/mcp'. A single-segment root '/mcp' works, so each server is deployed in its OWN
+    container at '/mcp' — selected via MCP_SERVER_MODE. GET '/' and '/health' are provided by
+    _add_probes (the EntraOAuth approval validation probes the root for reachability before '/mcp').
     """
-    from starlette.routing import Route
+    return server.http_app(path="/mcp")
+
+
+def _add_probes(server, label):
+    """Register GET '/' and '/health' -> 200 on the FastMCP server. custom_route is the reliable
+    way to add HTTP routes; inserting into the app returned by http_app() does NOT register the
+    root route. Must run before http_app() is called (i.e. at import, below)."""
     from starlette.responses import JSONResponse
 
-    single = server.http_app(path="/mcp")
+    async def _probe(_request):
+        return JSONResponse({"status": "ok", "server": label, "mcp": "/mcp"})
 
-    async def health(_request):
-        return JSONResponse({"status": "ok", "server": label, "path": "/mcp"})
+    server.custom_route("/", methods=["GET"])(_probe)
+    server.custom_route("/health", methods=["GET"])(_probe)
 
-    single.router.routes.insert(0, Route("/health", health))
-    return single
+
+_add_probes(anon_mcp, "anon")
+_add_probes(auth_mcp, "auth")
 
 
 # MCP_SERVER_MODE selects which server this container hosts (registration needs a single

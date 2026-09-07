@@ -74,6 +74,23 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 - Steps that trigger it: ACA `a365 setup` delegated admin-consent; `azd auth login`; SPA
   admin-consent; and the first use of each web-UI tab (incremental consent).
 
+> ⛔ **BLOCKED-POPUP WARNING — CALL IT OUT LOUDLY, EVERY TIME (especially at MCP-server approval).**
+> When the admin **approves an MCP server** in the M365 admin center (Agents → Tools → Requests →
+> Approve), the browser opens **one or more admin-consent popups**. If the browser **blocks the popup**
+> (a small "pop-up blocked" icon/notice in the address bar), the **entire approval silently stalls or
+> fails** — and it is **very easy to miss**. Before the user clicks Approve, tell them **in bold**:
+> **"Watch the address bar for a 'pop-up blocked' notification — if it appears, allow pop-ups for this
+> site and retry, otherwise the approval will hang or fail without an obvious reason."** Repeat this for
+> every MCP approval and every admin-consent popup.
+
+> ⛔ **AUTH (EntraOAuth) MCP approval = 5 consent requests across 3 sign-in popups — TELL THE USER THIS
+> UP FRONT so they don't think it's an error.** Approving the authenticated sample MCP walks through
+> **three** admin-consent popups (three logons), granting **five** app consents in total:
+> **(1)** `A365Proxy` + `BYO`; **(2)** `RemoteProxy` + `Resource`; **(3)** `BYO`. The user must **accept
+> every one** (and allow blocked pop-ups). The anonymous (NoAuth) MCP needs far fewer. State clearly:
+> "You will see 3 sign-in popups / 5 consent grants for the authenticated MCP — this is expected;
+> accept all of them."
+
 ## Flow (in order)
 0. **Confirm the Copilot runtime model — first action, no exceptions.** Show the active chat model and
   relevant runtime parameters (for example reasoning effort) when VS Code exposes them; otherwise

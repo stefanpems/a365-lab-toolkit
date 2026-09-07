@@ -175,16 +175,30 @@ overlap with the Mail MCP (`McpServers.Mail.All`) or WorkIQ.
   cleaned up" but does **not** roll back the Entra proxy apps (and sometimes leaves Power Platform
   connectors), which then cause a retry `400`. Run `cleanup-registration.ps1 -Name <Name>
   -Subscription <sub> -TenantId <tenant>` before retrying.
+- **EntraOAuth (`auth`) Approve fails with a generic "Couldn't approve … Try again", and the container
+  log shows only `GET / … 404`.** The EntraOAuth approval validation probes the server **root `/`** for
+  reachability before `/mcp`; if root returns 404 it gives up. The server must answer **`GET / → 200`**
+  (this repo registers `/` and `/health` via FastMCP `custom_route`; note that inserting a route into
+  the app returned by `http_app()` does **not** register the root route).
+- ⛔ **Blocked browser pop-up at Approve — check the address bar.** Approving opens admin-consent
+  popup(s). If the browser **blocks** them (a "pop-up blocked" icon/notice appears in the address bar),
+  the approval **silently hangs or fails** and it is easy to miss. **Allow pop-ups for the site and
+  retry.**
+- **Authenticated (EntraOAuth) approval = 5 consent requests in 3 sign-in popups — this is expected.**
+  Approving the `auth` server walks through **three** admin-consent popups granting **five** app
+  consents: (1) `A365Proxy` + `BYO`, (2) `RemoteProxy` + `Resource`, (3) `BYO`. Accept every one (and
+  allow blocked pop-ups). The `anon` (NoAuth) server needs far fewer.
 
 ## Project structure
 
 ```
 custom-mcp/
-├── server.py                    # both MCP servers (/anon, /auth) + combined ASGI app
+├── server.py                    # anon + auth MCP servers; MCP_SERVER_MODE selects one at root /mcp
 ├── requirements.txt             # fastmcp, httpx, uvicorn, msal
 ├── Dockerfile                   # image for ACA
 ├── .dockerignore
-├── deploy-mcp.ps1               # resource-safe ACA deployment
+├── deploy-mcp.ps1               # resource-safe ACA deployment (one container per server, single replica)
+├── cleanup-registration.ps1     # remove orphaned proxy apps/connectors from a failed registration
 ├── register-anon.template.json  # NoAuth registration payload (filled by the wizard)
 ├── register-auth.template.json  # EntraOAuth registration payload (filled by the wizard)
 └── README.md

@@ -26,9 +26,25 @@ not duplicate or renumber it here.**
   lowercased), the scaffold folder and both registrations derive from it. To create N coexisting
   copies, each run needs a **different** `<Name>`; check the tenant (`a365 develop list-available` /
   admin center) and ask again if `ext_<Name>*` already exists — never overwrite silently.
-- **Order**: deploy the MCP container → replace `<MCP_FQDN>` in the register JSON → `a365 develop-mcp
+- **Order**: deploy the MCP container(s) → replace the per-server FQDN in the register JSON
+  (`serverUrl` must be a single-segment root `https://<fqdn>/mcp`) → `a365 develop-mcp
   register-external-mcp-server` → a **tenant admin approves** each server in the M365 admin center
-  (Agents → Requested; CLI approval was removed) → attach per agent.
+  (Agents → Tools → Requests; CLI approval was removed) → attach per agent.
+- ⛔ **At Approve, warn the user LOUDLY about a blocked browser pop-up.** Admin consent opens
+  popup(s); if the browser **blocks** them (a "pop-up blocked" icon in the address bar) the approval
+  **silently hangs/fails and is easy to miss**. Tell the user in bold to allow pop-ups and retry.
+- ⛔ **The AUTH (EntraOAuth) MCP approval shows 5 consent requests across 3 sign-in popups — say so up
+  front so it isn't mistaken for an error.** Three logons grant five app consents: **(1)** `A365Proxy`
+  + `BYO`, **(2)** `RemoteProxy` + `Resource`, **(3)** `BYO`. The user must accept **all** of them. The
+  anonymous (NoAuth) MCP needs far fewer.
+- **Approval gotchas (server-side validation runs on Approve):** one container **per server** at root
+  `/mcp` (a multi-segment path like `/anon/mcp` fails registration with `HTTP 400` on the proxy
+  connector); each container **single replica** (`min=max=1`, or the MCP session breaks with "Session
+  not found" and Approve spins forever); the server must answer **`GET /` → 200** (the EntraOAuth
+  validation probes root before `/mcp`); if Approve errors "Couldn't complete consent", a backing
+  proxy app (e.g. `ext_<Name>*-PublicClients`) may lack a **service principal** — create it and grant
+  admin consent for the delegated scopes. If `az ad` is CAE-blocked, use Microsoft Graph PowerShell.
+  See [custom-mcp/README.md](../../../custom-mcp/README.md) "Troubleshooting".
 - **Attach** (never hand-edit `ToolingManifest.json`): `a365 develop add-mcp-servers ext_<Name>Anon
   ext_<Name>Auth` in the agent folder, then `a365 setup permissions mcp` (Global Admin) — or
   `a365 setup all` before first setup. The scaffolder emits these next-commands.
