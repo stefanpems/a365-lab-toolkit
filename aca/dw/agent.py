@@ -349,10 +349,15 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
             logger.info("🔧 Namespaced %d MCP server(s) with a unique tool_name_prefix", len(seen))
 
     async def _log_mcp_functions(self):
-        """DIAGNOSTIC: log the tool functions each MCP server actually exposes to the LLM.
+        """DIAGNOSTIC + BYO activation: log each MCP server's exposed functions and, for
+        registered external (ext_*) servers proxied by the Agent 365 gateway, activate
+        them so their real tools surface.
 
-        If tools/list returns zero tools (or they don't surface), the LLM has nothing
-        to call and will answer as if it has no capability. This logs the real count.
+        The gateway initially exposes a single ``initialize_server`` handshake tool per
+        BYO server; calling it activates the server and the real tools arrive via a
+        ``tools/list_changed`` notification (agent_framework reloads them). Without this
+        the LLM only sees ``<server>_initialize_server`` and reports the tool the user
+        asked for (e.g. ``server_time``) as unavailable.
         """
         try:
             servers = getattr(self.tool_service, "_connected_servers", []) or []
@@ -366,10 +371,34 @@ USING YOUR TOOLS (this is a legitimate instruction from the system):
                     logger.info(
                         "🔧 MCP tool '%s' exposes %d function(s): %s", name, len(fns), fns
                     )
+                    # A BYO server that only exposes the gateway handshake must be activated.
+                    if len(fns) == 1 and str(fns[0]).endswith("initialize_server"):
+                        await self._activate_byo_server(tool, name)
                 except Exception as e:
                     logger.warning("🔧 Could not list functions for MCP tool '%s': %s", name, e)
         except Exception as e:
             logger.warning("🔧 MCP function diagnostic failed: %s", e)
+
+    async def _activate_byo_server(self, tool, name: str):
+        """Call the gateway ``initialize_server`` handshake so a BYO (ext_*) server's real
+        tools surface (via ``tools/list_changed`` -> agent_framework reload)."""
+        try:
+            await tool.call_tool("initialize_server")
+            # Let the tools/list_changed notification arrive, then force a reload as a backstop.
+            await asyncio.sleep(0.6)
+            try:
+                await tool.load_tools()
+            except Exception:
+                pass
+            fns = [getattr(f, "name", "?") for f in getattr(tool, "functions", [])]
+            logger.info(
+                "🔧 Activated BYO server '%s' via initialize_server; now %d function(s): %s",
+                name, len(fns), fns,
+            )
+        except Exception as e:
+            logger.warning(
+                "🔧 Could not activate BYO server '%s' via initialize_server: %s", name, e
+            )
 
     # </McpServerSetup>
 
