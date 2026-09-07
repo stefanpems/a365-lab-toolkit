@@ -43,26 +43,53 @@ def main() -> None:
         headers={"Authorization": "{{mail_token}}"},
     )
 
+    tools = [mail_tool]
+    structured_inputs = {
+        # Optional so the agent can be invoked for pure Q&A without a token; required
+        # (in practice) only when the user asks for a mail action. Optional inputs MUST
+        # carry a default_value (else the API rejects with "Must be specified for optional
+        # inputs"); the empty default yields an empty Authorization header when no token
+        # is supplied — harmless because the Mail tool is only called for mail actions.
+        "mail_token": StructuredInputDefinition(
+            description=(
+                "Delegated Microsoft 365 Mail token for the signed-in user, formatted "
+                "as 'Bearer <jwt>'. Audience = Agent 365 Tools, scope McpServers.Mail.All."
+            ),
+            required=False,
+            default_value="",
+            schema={"type": "string"},
+        ),
+    }
+
+    # Custom (BYO) MCP servers (cfg.CUSTOM_MCP_SERVERS from CUSTOM_MCP_SERVERS_JSON): one MCPTool
+    # per server whose Authorization header is the per-request structured input {{<input>}}, plus
+    # a matching StructuredInputDefinition. The SPA sends the same <input> names (config.js
+    # obo-fd "customInputs"). All calls go through the Agent 365 gateway, on behalf of the user.
+    for s in cfg.CUSTOM_MCP_SERVERS:
+        label, url, token_input = s["label"], s["url"], s["input"]
+        tools.append(
+            MCPTool(
+                server_label=label,
+                server_url=url,
+                require_approval="never",
+                headers={"Authorization": "{{" + token_input + "}}"},
+            )
+        )
+        structured_inputs[token_input] = StructuredInputDefinition(
+            description=(
+                f"Delegated user token (formatted as 'Bearer <jwt>') for the custom MCP server "
+                f"'{label}', audience = its BYO resource app, scope Tools.ListInvoke.All."
+            ),
+            required=False,
+            default_value="",
+            schema={"type": "string"},
+        )
+
     definition = PromptAgentDefinition(
         model=cfg.MODEL,
         instructions=cfg.AGENT_PROMPT,
-        tools=[mail_tool],
-        structured_inputs={
-            # Optional so the agent can be invoked for pure Q&A without a token; required
-            # (in practice) only when the user asks for a mail action. Optional inputs MUST
-            # carry a default_value (else the API rejects with "Must be specified for optional
-            # inputs"); the empty default yields an empty Authorization header when no token
-            # is supplied — harmless because the Mail tool is only called for mail actions.
-            "mail_token": StructuredInputDefinition(
-                description=(
-                    "Delegated Microsoft 365 Mail token for the signed-in user, formatted "
-                    "as 'Bearer <jwt>'. Audience = Agent 365 Tools, scope McpServers.Mail.All."
-                ),
-                required=False,
-                default_value="",
-                schema={"type": "string"},
-            ),
-        },
+        tools=tools,
+        structured_inputs=structured_inputs,
     )
 
     agent = project.agents.create_version(agent_name=cfg.AGENT_NAME, definition=definition)

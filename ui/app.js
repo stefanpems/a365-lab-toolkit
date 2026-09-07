@@ -397,11 +397,23 @@
       input: input,
       agent_reference: { name: agent.agentName, type: "agent_reference" }
     };
+    const structuredInputs = {};
     if (agent.mailScope) {
       const mailToken = await acquireToken(agent.mailScope);
       if (!mailToken) return null; // redirect in progress
-      body.structured_inputs = { mail_token: "Bearer " + mailToken };
+      structuredInputs.mail_token = "Bearer " + mailToken;
     }
+    // Custom (BYO) MCP servers: one delegated token per structured input name (config.js
+    // obo-fd "customInputs": { <input>: <scope> }) so the declarative agent reaches each
+    // server through the Agent 365 gateway on behalf of the signed-in user.
+    if (agent.customInputs) {
+      for (const [inputName, scope] of Object.entries(agent.customInputs)) {
+        const ct = await acquireToken(scope);
+        if (!ct) return null; // redirect in progress
+        structuredInputs[inputName] = "Bearer " + ct;
+      }
+    }
+    if (Object.keys(structuredInputs).length) body.structured_inputs = structuredInputs;
 
     const doPost = () => fetch(agent.endpoint, {
       method: "POST",

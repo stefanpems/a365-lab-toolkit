@@ -97,6 +97,15 @@ window.APP_CONFIG = {
       endpointScope: "https://ai.azure.com/.default",
       agentName: "<YOUR_FD_OBO_AGENT_NAME>",
       mailScope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All"
+      // OPTIONAL — custom (BYO) MCP servers attached to this declarative agent. Unlike ACA/FH
+      // (body.tokens), a declarative agent receives tokens as STRUCTURED INPUTS: the KEY is the
+      // structured input NAME (must match deploy_agent.py CUSTOM_MCP_SERVERS "input" and the
+      // {{<input>}} header template) and the VALUE is the delegated scope the SPA acquires.
+      // Uncomment and add a trailing comma to the mailScope line above when you use it:
+      // ,"customInputs": {
+      //   "anon_token": "<YOUR_ANON_BYO_APP_ID>/Tools.ListInvoke.All",
+      //   "auth_token": "<YOUR_AUTH_BYO_APP_ID>/Tools.ListInvoke.All"
+      // }
     },
     {
       // Foundry DECLARATIVE (prompt) agent — S2S (own identity).
