@@ -79,7 +79,7 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    chars**, `^[A-Za-z][A-Za-z0-9]*$` → registered as `ext_<Name>Anon` / `ext_<Name>Auth`, ≤ 20), a
    publisher name, which **ACA-*/FH-*** agents to attach to (FD excluded), and whether to enable
    `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan. `<Name>` is
-   the **unique per-copy key** (Azure resources `<name>-mcp-*`, folder `generated/custom-mcp-<name>/`,
+   the **unique per-copy key** (Azure resources `<name>-mcp-*`, folder `generated/<prefix>-mcp/`,
    registrations all derive from it) — to create N coexisting copies each run needs a different `<Name>`;
    check the tenant (`a365 develop list-available`) and ask again if it collides.5. **Registered MCP tools** (per ACA-*/FH-* agent) — multi-select of servers from
    `a365 develop list-available` (Work IQ `mcp_*` + custom `ext_*` + third-party), with `mcp_MailTools`
@@ -131,7 +131,7 @@ dot-sources the per-family/component modules under [scripts/modules/](./scripts/
 the plan (DW ≤30-char, lowercase container names, shared-RG/ACA safety, `customMcp.name` ≤12-char), copies each
 variant sample into `generated/<agent-name>/`, fills the tenant-specific config, **rewrites the ACA
 deploy-script constants** (RG / region / app / env are hardcoded, not parameters), generates
-`generated/ui/config.js` when a UI is requested, scaffolds `generated/custom-mcp/` with filled
+`generated/<prefix>-ui/config.js` when a UI is requested, scaffolds `generated/<prefix>-mcp/` with filled
 `register-anon.json` / `register-auth.json` when `customMcp.enabled`, and prints the exact next
 commands (deploy MCP → register servers → `a365 develop add-mcp-servers` + `a365 setup permissions mcp`
 per attached agent, including each agent's selected `agents[].tools` and dropping `mcp_MailTools` when

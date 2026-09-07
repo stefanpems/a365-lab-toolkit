@@ -105,7 +105,7 @@ a365-agent-lab/
 │     ├─ agent365-web-ui/                 # shared web SPA sub-skill
 │     └─ agent365-custom-mcp/             # sample custom MCP sub-skill
 ├─ a365-deployment-plan.json              # secret-free wizard plan (gitignored)
-└─ generated/                             # wizard output (gitignored): per-agent folders + ui/config.js
+└─ generated/                             # wizard output (gitignored): per-agent folders + <prefix>-ui/config.js
 ```
 
 Each family/component sub-skill references the canonical `docs/` guide instead of duplicating it; see

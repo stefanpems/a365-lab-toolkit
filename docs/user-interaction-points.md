@@ -20,7 +20,7 @@ next-commands. It is organized as a **common pre-flight** followed by **per-vari
 | **`az login`** into the **target** tenant, then confirm subscription + tenant | **Terminal** (interactive browser) | On multi-tenant machines re-pin `az account set --subscription <TARGET>` and verify `az ad signed-in-user show` before every `az ad`/Graph call |
 | Tooling present: `a365`, `azd`, `python`, `npx` | Automatic check | Install anything missing |
 | **Plan review + approval** (derived names, blockers such as prefix/DW-length/shared-RG) | **Chat** ("Go") | Prefix must start with a lowercase letter; DW blueprint display name ≤ 30 chars |
-| **Scaffold confirmation** | **Chat** | Generates `generated/<agent>/` + `generated/ui/config.js`; no cloud changes |
+| **Scaffold confirmation** | **Chat** | Generates `generated/<agent>/` + `generated/<prefix>-ui/config.js`; no cloud changes |
 
 ---
 

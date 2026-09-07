@@ -14,7 +14,7 @@ not duplicate or renumber it here.**
   agents wire tools via M365 app-manifest connectors, not `ToolingManifest.json`).
 
 ## What it owns
-- The `customMcp.*` block of the plan and the scaffolded `generated/custom-mcp-<name>/` copy
+- The `customMcp.*` block of the plan and the scaffolded `generated/<prefix>-mcp/` copy
   (module [scaffold.mcp.ps1](../agent365-wizard/scripts/modules/scaffold.mcp.ps1)).
 
 ## Mechanics (grounded in MS Learn)

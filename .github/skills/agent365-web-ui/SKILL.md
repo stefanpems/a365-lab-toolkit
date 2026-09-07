@@ -14,13 +14,14 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
 
 ## What it owns
 - The `ui.*` block of the deployment plan (mode, expose[], permissions).
-- The generated `generated/ui/config.js` (one tab per exposed OBO/S2S agent — **DW is never exposed**;
+- The generated `generated/<prefix>-ui/config.js` (one tab per exposed OBO/S2S agent — **DW is never exposed**;
   it routes via Teams/Outlook).
 
 ## Flow
 1. **Scaffold** the config via the wizard router (no cloud writes):
    [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1) → module
-   [scaffold.ui.ps1](../agent365-wizard/scripts/modules/scaffold.ui.ps1) emits `generated/ui/config.js`.
+   [scaffold.ui.ps1](../agent365-wizard/scripts/modules/scaffold.ui.ps1) emits
+   `generated/<prefix>-ui/config.js`, where `<prefix>` is `solution.prefix` from the deployment plan.
 2. **Deploy UI first, integrate incrementally.** Stand up the SWA shell with a placeholder `config.js`;
    then, as each OBO/S2S agent goes live, add its tab, redeploy, and wire origins.
 3. **Follow the canonical steps** for the SPA app registration, Entra consent (AllPrincipals), Azure

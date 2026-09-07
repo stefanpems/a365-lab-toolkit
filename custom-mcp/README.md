@@ -25,7 +25,7 @@ in memory per replica, so 2+ replicas break the approval's server validation wit
 
 `<Name>` is also the **unique per-copy key**: the wizard derives the Azure resources
 (`<name>-mcp-rg` / `<name>-mcp-ca` / `<name>-mcp-cae`, lowercased), the scaffold folder
-(`generated/custom-mcp-<name>/`) and both registrations from it. To run the wizard multiple times and
+(`generated/<prefix>-mcp/`, from `solution.prefix`) and both registrations from it. To run the wizard multiple times and
 keep several copies side by side, give each a **different `<Name>`** (the wizard checks the tenant for
 an existing `ext_<Name>*` before registering).
 

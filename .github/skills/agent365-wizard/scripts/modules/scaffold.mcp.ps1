@@ -1,14 +1,15 @@
-# Optional sample custom MCP (custom-mcp/): copy the sample to a per-copy folder derived from the
-# unique <Name>, rewrite the deploy-mcp.ps1 constants, fill the register-*.json from the templates,
+# Optional sample custom MCP (custom-mcp/): copy the sample to the per-run folder <prefix>-mcp,
+# rewrite the deploy-mcp.ps1 constants, fill the register-*.json from the templates,
 # and emit deploy/register next-commands. Accumulates ext_ servers into $attachByAgent for the
 # unified tool-attachment pass. Reads $plan / $repoRoot / $OutRoot / $nextCommands / $attachByAgent.
 
 function Invoke-ScaffoldCustomMcp {
     $name      = $plan.customMcp.name
-    # Every per-copy identifier derives from the (unique) <Name>, so N copies never collide.
+    # Azure resources and ext_ registrations derive from the (unique) <Name>, so N copies never collide.
     $mcpSlug   = ($name -replace '[^A-Za-z0-9]', '').ToLower()
+    $mcpFolderName = "$($plan.solution.prefix)-mcp"
     $mcpSrc = Join-Path $repoRoot 'custom-mcp'
-    $mcpDst = Join-Path $OutRoot "custom-mcp-$mcpSlug"
+    $mcpDst = Join-Path $OutRoot $mcpFolderName
     if (Test-Path -LiteralPath $mcpDst) { Remove-Item -LiteralPath $mcpDst -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $mcpDst | Out-Null
     $null = robocopy $mcpSrc $mcpDst /E /XD '.venv' '__pycache__' /XF '*.pyc' '.env' /NFL /NDL /NJH /NJS /NP /NC /NS
@@ -43,7 +44,7 @@ function Invoke-ScaffoldCustomMcp {
         $j = (Get-Content -LiteralPath $tmpl -Raw).Replace('<NAME>', $name).Replace('<PUBLISHER>', $publisher)
         Set-Content -LiteralPath (Join-Path $mcpDst "register-$srv.json") -Value $j
     }
-    Write-Host "  scaffolded custom MCP -> generated\custom-mcp (servers: $($servers -join ', '))" -ForegroundColor Cyan
+    Write-Host "  scaffolded custom MCP -> generated\$mcpFolderName (servers: $($servers -join ', '))" -ForegroundColor Cyan
 
     # Next-commands: deploy -> register (after admin approval) -> attach per agent.
     $graphArgs = if ($plan.customMcp.propagateToGraph) { " -AuthClientId <AUTH_APP_ID> -AuthTenantId $($plan.solution.tenantId)" } else { '' }

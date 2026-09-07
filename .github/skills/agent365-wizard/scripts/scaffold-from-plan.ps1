@@ -6,7 +6,7 @@
   Reads a SECRET-FREE JSON plan (a365-deployment-plan.json) and, for each agent, copies the matching
   repo sample into generated/<agent-name>/ and fills its tenant-specific config from the plan. It
   parameterizes the ACA deploy script constants (RG / region / app / env — they are HARDCODED in the
-  samples, not parameters) and generates generated/ui/config.js when a UI is requested.
+    samples, not parameters) and generates generated/<prefix>-ui/config.js when a UI is requested.
 
   This script performs NO cloud mutations and runs NO deploys. It only reads the repo and writes
   under generated/. It prints the exact next commands for the user to run.

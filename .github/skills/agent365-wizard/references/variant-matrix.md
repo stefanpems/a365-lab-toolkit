@@ -54,7 +54,7 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
 - **`<Name>`** for the servers, **max 12 characters** (registered as `ext_<Name>Anon` /
   `ext_<Name>Auth`; `ext_` + name + `Anon`/`Auth` must stay ≤ 20). Validate length + `^[A-Za-z][A-Za-z0-9]*$`.
   `<Name>` is the **unique per-copy key** — Azure resources (`<name>-mcp-*`), the scaffold folder
-  (`generated/custom-mcp-<name>/`) and the registrations all derive from it. For N coexisting copies use
+  (`generated/<prefix>-mcp/`, from `solution.prefix`) and the registrations all derive from it. For N coexisting copies use
   a different `<Name>` each run and check the tenant (`a365 develop list-available`) for collisions.
 - **Publisher** name (registration metadata, e.g. `Contoso`).
 - **Attach to**: multi-select of the deployed **ACA-*/FH-*** agents (FD excluded — prompt agents use a

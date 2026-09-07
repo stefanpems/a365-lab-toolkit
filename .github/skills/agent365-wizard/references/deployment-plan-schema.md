@@ -85,9 +85,9 @@ gitignored.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, `name` must be ≤ 12 chars,
   start with a letter and be alphanumeric — the registered names are `ext_<Name>Anon` / `ext_<Name>Auth`
   and must stay ≤ 20 chars. `attachTo` may list only ACA-* and FH-* agent types (FD is unsupported).
-- **`customMcp.name` is the unique per-copy key.** Every copy identifier derives from it (lowercased):
-  Azure resources `<name>-mcp-rg` / `<name>-mcp-ca` / `<name>-mcp-cae`, the scaffold folder
-  `generated/custom-mcp-<name>/`, and the `ext_<Name>Anon` / `ext_<Name>Auth` registrations. To run the
+- **`customMcp.name` is the unique per-copy key.** The Azure resources `<name>-mcp-rg` / `<name>-mcp-ca` /
+  `<name>-mcp-cae` and the `ext_<Name>Anon` / `ext_<Name>Auth` registrations derive from it (lowercased).
+  The scaffold folder is `generated/<prefix>-mcp/` (from `solution.prefix`, like the UI folder). To run the
   wizard N times and create N coexisting copies, give each a **different `name`** (the wizard checks the
   tenant for an existing `ext_<Name>*` and asks for another if it collides).
 - DW entries require `displayNames.blueprint` length ≤ 30 (see naming-and-validation.md).

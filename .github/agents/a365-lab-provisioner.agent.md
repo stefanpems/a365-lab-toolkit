@@ -142,7 +142,7 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
 6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
 7. **Scaffold** — run [scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1);
-   it writes `generated/<agent>/` + `generated/ui/config.js` and prints the exact next commands.
+  it writes `generated/<agent>/` + `generated/<prefix>-ui/config.js` and prints the exact next commands.
 8. **Deploy (only on confirmation)** — follow the ordering and parallelization policy below.
 
 ## Deploy ordering — UI first, then integrate incrementally
