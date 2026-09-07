@@ -18,7 +18,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-# ============================ Parametri ============================
+# ============================ Parameters ============================
 $RG      = "agentframework-OBO-rg-pl"
 $APP     = "agentframework-obo-sample"
 $ENVNAME = "agentframework-OBO-env"
@@ -168,5 +168,5 @@ Write-Host "Deploy complete." -ForegroundColor Green
 Write-Host "Messaging endpoint: https://$fqdn/api/messages"
 Write-Host "Health:             https://$fqdn/api/health"
 Write-Host ""
-Write-Host "Registra l'endpoint sul blueprint con:"
+Write-Host "Register the endpoint on the blueprint with:"
 Write-Host "  a365 setup blueprint --endpoint-only --messaging-endpoint `"https://$fqdn/api/messages`""

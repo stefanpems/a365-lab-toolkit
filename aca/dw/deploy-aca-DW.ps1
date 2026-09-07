@@ -169,9 +169,9 @@ if ($AOAI_ACC -and $AOAI_RG) {
 # --- 8. Output URL + next step ---
 $fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv @SubArg
 Write-Host ""
-Write-Host "Deploy completato." -ForegroundColor Green
+Write-Host "Deploy complete." -ForegroundColor Green
 Write-Host "Messaging endpoint: https://$fqdn/api/messages"
 Write-Host "Health:             https://$fqdn/api/health"
 Write-Host ""
-Write-Host "Prossimo passo: registra l'endpoint sul blueprint:"
+Write-Host "Next step: register the endpoint on the blueprint:"
 Write-Host "  a365 setup blueprint --endpoint-only --messaging-endpoint `"https://$fqdn/api/messages`""

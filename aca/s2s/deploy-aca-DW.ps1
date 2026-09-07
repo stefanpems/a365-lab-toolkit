@@ -78,7 +78,7 @@ Get-Content env/.env.playground.user |
     Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } |
     ForEach-Object { $k, $v = $_ -split '=', 2; $m[$k.Trim()] = $v.Trim() }
 
-# --- 7. Crea/aggiorna la Container App ---
+# --- 7. Create/update the Container App ---
 Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
 $appExists = az containerapp show -n $APP -g $RG --query name -o tsv 2>$null
 if ($appExists) {
@@ -114,12 +114,12 @@ else {
             "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=$tenantId" | Out-Null
 }
 
-# --- 8. Output URL + prossimo passo ---
+# --- 8. Output URL + next step ---
 $fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv
 Write-Host ""
-Write-Host "Deploy completato." -ForegroundColor Green
+Write-Host "Deploy complete." -ForegroundColor Green
 Write-Host "Messaging endpoint: https://$fqdn/api/messages"
 Write-Host "Health:             https://$fqdn/api/health"
 Write-Host ""
-Write-Host "Prossimo passo: registra l'endpoint sul blueprint:"
+Write-Host "Next step: register the endpoint on the blueprint:"
 Write-Host "  a365 setup blueprint --endpoint-only --messaging-endpoint `"https://$fqdn/api/messages`""
