@@ -290,7 +290,19 @@
       body.mail_token = mailToken;
     }
 
-    // Per-user server session id: Foundry sessions are bound to the creating identity,
+    // OBO agents with attached custom MCP servers: acquire a delegated USER token per custom
+    // audience and pass them as `tokens` so the agent reaches the BYO ext_* servers through the
+    // Agent 365 gateway AS THE USER (matching the user's Power Platform connection).
+    const tokens = {};
+    if (agent.customScopes) {
+      for (const [audience, scope] of Object.entries(agent.customScopes)) {
+        const ct = await acquireToken(scope);
+        if (ct === null) return null; // token interaction (redirect) in progress
+        tokens[audience] = ct;
+      }
+    }
+    if (Object.keys(tokens).length) body.tokens = tokens;
+
     // so a fixed/shared id would give "session_not_accessible" (403) to other users.
     const acct = getAccount();
     const uid = (acct && (acct.localAccountId || acct.homeAccountId)) || "anon";

@@ -449,9 +449,20 @@ class GenericAgentHost:
                 except Exception as e:
                     logger.warning(f"/chat OBO exchange failed: {e}")
                     return json_response({"error": "OBO exchange failed"}, status=403)
-            logger.info(f"\U0001f4ac /chat (OBO) from '{display_name}'")
+            # Per-audience delegated token map: Mail + any custom-server tokens the SPA acquired
+            # (audience -> user token). The custom tokens let the agent reach BYO ext_* servers
+            # through the Agent 365 gateway AS THE USER, matching the user's Power Platform
+            # connection (the reason OBO works and DW/S2S don't — see repo docs).
+            MAIL_MCP_RESOURCE = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
+            tokens = {MAIL_MCP_RESOURCE: mail_token}
+            extra = body.get("tokens")
+            if isinstance(extra, dict):
+                for aud, tok in extra.items():
+                    if aud and tok:
+                        tokens[aud] = tok
+            logger.info(f"\U0001f4ac /chat (OBO) from '{display_name}' with {len(tokens)} MCP token(s)")
             reply = await self.agent_instance.run_obo_mail_chat(
-                message, mail_token, display_name, username
+                message, tokens, display_name, username
             )
             return json_response({"reply": reply})
 
