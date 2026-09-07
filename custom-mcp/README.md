@@ -175,6 +175,34 @@ with the `TurnContext`). Test them by messaging the agent on its Bot Framework s
 `server_time` returns the **real current** UTC time. If the SPA answers with a past date or a wrong
 hash, the tool was **not** called (the model hallucinated) — expected on the SPA tabs.
 
+#### `smoke-test.py` — invoke a server's tools directly from a script
+
+[`smoke-test.py`](smoke-test.py) is a small MCP client (the Python equivalent of
+`rg-mcp-demo/smoke-test.mjs`): it opens a Streamable HTTP session to a `/mcp` endpoint, lists the
+tools and calls each with sample arguments, printing the real results. It reaches the server directly
+(not through the Agent 365 gateway), so it isolates the tool + server-auth from the agent path. This
+is the script mechanism to verify invocation regardless of the SPA/agent constraints above.
+
+```powershell
+$py = "C:\ghcp_nosync\a365sdk\agent365-agentframework-python\.venv\Scripts\python.exe"
+
+# Anonymous (NoAuth) server — works immediately, no token:
+& $py smoke-test.py --url https://<anon-fqdn>/mcp
+
+# Authenticated (EntraOAuth) server — needs a token for its resource. Consent the CLI once, then:
+az login --tenant <tenant-id> --scope "api://<auth-app-id>/.default"
+$tok = az account get-access-token --resource "api://<auth-app-id>" --query accessToken -o tsv
+& $py smoke-test.py --url https://<auth-fqdn>/mcp --token $tok
+# ...or acquire a user token interactively with a public client:
+& $py smoke-test.py --url https://<auth-fqdn>/mcp --client-id <public-client-id> --scope api://<auth-app-id>/access_as_agent --tenant <tenant-id>
+```
+
+> Note: a **NoAuth** custom MCP is also directly reachable from a browser SPA (subject to CORS) — this
+> is the "call the MCP directly from a web app" pattern. It does **not** contradict the constraint
+> above: that constraint is about making the **agent** call the tool through the gateway, which is a
+> different (agentic-token) path.
+
+
 ## Advanced: `propagate_to_graph` setup
 
 `propagate_to_graph` needs the `/auth` server's Entra app to be a **confidential client** that can
