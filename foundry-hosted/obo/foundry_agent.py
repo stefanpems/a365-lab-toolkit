@@ -20,6 +20,7 @@ Design notes (grounded in Microsoft Learn):
   See: https://learn.microsoft.com/microsoft-agent-365/developer/identity#authentication-flows
 """
 
+import asyncio
 import base64
 import contextlib
 import json
@@ -171,6 +172,19 @@ async def run_obo_turn(message: str, tokens, instructions: str | None = None) ->
                     connected.append(t)
                 except Exception as e:  # noqa: BLE001 - skip a server that fails to connect
                     logger.warning("MCP server '%s' failed to connect: %s", getattr(t, "name", "?"), e)
+            # Activate BYO servers that only expose the gateway 'initialize_server' handshake:
+            # calling it (the one-time Power Platform connection already exists for the invoking
+            # user) surfaces the real tools via tools/list_changed. Mail and already-active
+            # servers expose more than one function and are left untouched.
+            for t in connected:
+                try:
+                    fns = [getattr(f, "name", "") for f in getattr(t, "functions", [])]
+                    if len(fns) == 1 and str(fns[0]).endswith("initialize_server"):
+                        await t.call_tool("initialize_server")
+                        await asyncio.sleep(0.6)
+                        await t.load_tools()
+                except Exception as e:  # noqa: BLE001 - a server that can't activate is skipped
+                    logger.warning("Activation of MCP server '%s' failed: %s", getattr(t, "name", "?"), e)
             agent = Agent(
                 client=client,
                 instructions=effective_instructions,

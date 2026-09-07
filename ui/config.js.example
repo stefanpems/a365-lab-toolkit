@@ -33,7 +33,17 @@ window.APP_CONFIG = {
       description: "OBO agent. /chat uses the user's delegated Mail token and sends email from their mailbox.",
       apiBase: "https://<YOUR_ACA_OBO_FQDN>",
       // First-party Agent 365 Tools Mail scope — keep as-is.
-      scope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All"
+      scope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All",
+      // OPTIONAL — only if you attached custom (BYO) MCP servers to this agent.
+      // One entry per attached ext_* server: the KEY is the server's token AUDIENCE (the
+      // BYO resource app id from ToolingManifest.json) and the VALUE is the delegated scope
+      // the SPA acquires for it. app.js acquires each token and sends them as body.tokens so
+      // the agent reaches the servers through the Agent 365 gateway (the user must have
+      // created the one-time Power Platform connection for each server, as themselves).
+      customScopes: {
+        "<YOUR_ANON_BYO_APP_ID>": "<YOUR_ANON_BYO_APP_ID>/Tools.ListInvoke.All",
+        "<YOUR_AUTH_BYO_APP_ID>": "<YOUR_AUTH_BYO_APP_ID>/Tools.ListInvoke.All"
+      }
     },
     {
       // Foundry Hosted Agent (OBO) — Invocations protocol.
@@ -47,6 +57,13 @@ window.APP_CONFIG = {
       endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/agents/<YOUR_FH_OBO_AGENT_NAME>/endpoint/protocols/invocations?api-version=v1",
       endpointScope: "https://ai.azure.com/.default",
       mailScope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All",
+      // OPTIONAL — custom (BYO) MCP servers attached to this Foundry Hosted OBO agent.
+      // Same shape as the ACA-OBO entry: audience -> delegated scope. app.js sends them as
+      // body.tokens; the agent wires each ToolingManifest.json server with the matching token.
+      customScopes: {
+        "<YOUR_ANON_BYO_APP_ID>": "<YOUR_ANON_BYO_APP_ID>/Tools.ListInvoke.All",
+        "<YOUR_AUTH_BYO_APP_ID>": "<YOUR_AUTH_BYO_APP_ID>/Tools.ListInvoke.All"
+      },
       // Prefix for a PER-USER server session id (see app.js). Foundry sessions are bound
       // to the identity that created them, so a fixed/shared id causes
       // "session_not_accessible" (403) for other users.
