@@ -144,10 +144,6 @@ deploys.
 - **Browser sign-in + admin consent** happens for ACA `a365 setup`, `azd auth login`, SPA consent,
   and first UI-tab use. Announce it each time; the post-accept "We couldn't connect to that service"
   page is expected and safe to ignore.
-- ⛔ **Blocked browser pop-up at MCP-server approval — warn the user LOUDLY.** Approving an MCP server
-  (Agents → Tools → Requests → Approve) opens admin-consent popup(s); a **blocked pop-up** (small icon
-  in the address bar) makes the approval **silently hang/fail** and is easy to miss. Before Approve,
-  tell the user in bold to allow pop-ups for the site and retry if blocked.
 - **`ext_UtilityInsights` prompt** during ACA/DW setup → answer **N** (optional MCP absent in tenant;
   `az ad sp create` failure is harmless).
 - **Parallelization.** Serial only: `a365 setup`, secret/y-N/endpoint prompts, browser consent. May
