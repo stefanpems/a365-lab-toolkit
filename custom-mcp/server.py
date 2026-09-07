@@ -415,7 +415,37 @@ def build_app():
     )
 
 
-app = build_app()
+def build_single(server, label):
+    """Serve ONE MCP server at the ROOT path '/mcp' (plus '/health').
+
+    Agent 365 registration builds a proxy connector from the serverUrl and fails with
+    'HTTP 400: Bad Request' when the MCP endpoint is under a multi-segment path such as
+    '/anon/mcp'. A single-segment root '/mcp' (as used by the reference servers) works, so
+    each server is deployed in its OWN container at '/mcp' — selected via MCP_SERVER_MODE.
+    """
+    from starlette.routing import Route
+    from starlette.responses import JSONResponse
+
+    single = server.http_app(path="/mcp")
+
+    async def health(_request):
+        return JSONResponse({"status": "ok", "server": label, "path": "/mcp"})
+
+    single.router.routes.insert(0, Route("/health", health))
+    return single
+
+
+# MCP_SERVER_MODE selects which server this container hosts (registration needs a single
+# '/mcp' path — see build_single): 'anon' -> anon at /mcp, 'auth' -> auth at /mcp. Any other
+# value (default) serves BOTH at /anon/mcp + /auth/mcp for local exploration only (NOT
+# registerable in Agent 365).
+_mode = os.environ.get("MCP_SERVER_MODE", "").strip().lower()
+if _mode == "anon":
+    app = build_single(anon_mcp, "anon")
+elif _mode == "auth":
+    app = build_single(auth_mcp, "auth")
+else:
+    app = build_app()
 
 
 if __name__ == "__main__":

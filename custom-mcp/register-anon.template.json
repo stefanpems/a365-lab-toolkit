@@ -1,9 +1,9 @@
 {
   "$comment": "Registration payload for the ANONYMOUS sample MCP server. Filled by the wizard scaffolder. Register with: a365 develop-mcp register-external-mcp-server -f register-anon.json",
   "serverName": "ext_<NAME>Anon",
-  "serverUrl": "https://<MCP_FQDN>/anon/mcp",
+  "serverUrl": "https://<MCP_ANON_FQDN>/mcp",
   "authType": "NoAuth",
-  "description": "Agent 365 sample tools (anonymous): direct responses and outbound connectivity tests.",
+  "description": "Agent 365 sample tools (anonymous): direct responses + connectivity tests.",
   "publisherName": "<PUBLISHER>",
   "tools": [
     { "name": "server_time", "description": "Return the current date/time from the server clock (self-contained)." },

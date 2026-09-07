@@ -1,16 +1,24 @@
 # Agent 365 sample custom MCP server
 
-A single container that hosts **two** Model Context Protocol (MCP) servers over streamable HTTP so you
-can test how a **custom (bring-your-own) MCP tool** behaves when attached to the Agent 365 sample
-agents in this repo (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW).
+One image that provides **two** Model Context Protocol (MCP) servers (anonymous + authenticated) over
+streamable HTTP, so you can test how a **custom (bring-your-own) MCP tool** behaves when attached to
+the Agent 365 sample agents in this repo (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW).
 
-The two servers are split by **authentication type**, because in Agent 365 the auth type is chosen
-**per registration**, not per tool:
+The two servers are split by **authentication type** (in Agent 365 the auth type is chosen **per
+registration**, not per tool). Each server is deployed as its **own container** and exposed at the
+**root path `/mcp`** — Agent 365 registration builds a proxy connector from the server URL and fails
+with `HTTP 400: Bad Request` when the MCP endpoint sits under a multi-segment path such as `/anon/mcp`.
+The binary selects which server to host via the `MCP_SERVER_MODE` environment variable
+(`anon` | `auth`; unset serves both under `/anon/mcp` + `/auth/mcp` for LOCAL exploration only — that
+layout is **not** registerable in Agent 365).
 
-| Path | Register with auth-type | Registered name | Purpose |
-|------|-------------------------|-----------------|---------|
-| `/anon/mcp` | `NoAuth` | `ext_<Name>Anon` | Anonymous calls, direct responses, outbound connectivity |
-| `/auth/mcp` | `EntraOAuth` | `ext_<Name>Auth` | Caller-identity inspection + credential propagation |
+| Container (`MCP_SERVER_MODE`) | Endpoint | Register with auth-type | Registered name |
+|-------------------------------|----------|-------------------------|-----------------|
+| `anon` | `https://<anon-fqdn>/mcp` | `NoAuth` | `ext_<Name>Anon` |
+| `auth` | `https://<auth-fqdn>/mcp` | `EntraOAuth` | `ext_<Name>Auth` |
+
+Each container runs a **single replica** (`min=max=1`): FastMCP streamable-HTTP keeps the MCP session
+in memory per replica, so 2+ replicas break the approval's server validation with `Session not found`.
 
 `<Name>` is chosen by the provisioning wizard. Registered server names must start with `ext_` and be
 **≤ 20 characters**, so `<Name>` is limited to **≤ 12 characters** (`ext_` = 4 + `Anon`/`Auth` = 4).
@@ -68,9 +76,11 @@ Test with MCP Inspector (`npx @modelcontextprotocol/inspector`) using the **Stre
 .\deploy-mcp.ps1 -Subscription <SUBSCRIPTION_ID>
 ```
 
-The script is resource-safe (creates the RG / environment / registry if missing, never deletes) and
-prints the public `/anon/mcp` and `/auth/mcp` endpoints. To enable `propagate_to_graph`, also pass
-`-AuthClientId <appId> -AuthTenantId <tenantId>` (see the advanced section below).
+The script is resource-safe (creates the RG / environment / registry if missing, never deletes). It
+builds one image and deploys **one container per server** (`anon`, `auth`), each a **single replica**
+serving its MCP server at root `/mcp`, and prints each server's `https://<fqdn>/mcp` endpoint. To
+enable `propagate_to_graph`, also pass `-AuthClientId <appId> -AuthTenantId <tenantId>` (the secret is
+entered in the terminal and applied to the **auth** container only — see the advanced section below).
 
 ## 3. Register in Agent 365
 
@@ -78,11 +88,12 @@ Registration uses the [`a365 develop-mcp register-external-mcp-server`](https://
 command. The wizard fills `register-anon.json` / `register-auth.json` from the templates.
 
 ```powershell
-# Anonymous server (NoAuth)
+# Anonymous server (NoAuth): set serverUrl = https://<anon-fqdn>/mcp in register-anon.json
 a365 develop-mcp register-external-mcp-server -f .\register-anon.json --dry-run
 a365 develop-mcp register-external-mcp-server -f .\register-anon.json
 
-# Authenticated server (EntraOAuth) — see the advanced setup below first
+# Authenticated server (EntraOAuth): FIRST create the resource app (see the advanced section),
+# set remoteScopes = api://<resource-appId>/access_as_agent and serverUrl = https://<auth-fqdn>/mcp
 a365 develop-mcp register-external-mcp-server -f .\register-auth.json
 ```
 
@@ -116,8 +127,19 @@ found in `ToolingManifest.json`, so no code change is needed.
 `propagate_to_graph` needs the `/auth` server's Entra app to be a **confidential client** that can
 perform On-Behalf-Of to Microsoft Graph:
 
-1. Register the `/auth` server with `EntraOAuth` (the CLI creates the app registrations and exposes the
-   `api://<appId>/access_as_agent` scope used as `remoteScopes`).
+1. Create the **resource app** that `remoteScopes` points at — the CLI does **not** create it (it only
+   creates the proxy / public-client apps). Expose the `access_as_agent` scope on it and put
+   `api://<appId>/access_as_agent` in `register-auth.json` `remoteScopes`:
+   ```powershell
+   $appId = az ad app create --display-name "ext_<Name>Auth-Resource" --sign-in-audience AzureADMyOrg --query appId -o tsv
+   az ad sp create --id $appId
+   # then set identifierUris = api://$appId and expose an oauth2PermissionScope 'access_as_agent'
+   # (Entra portal > Expose an API, or a Graph PATCH of the application).
+   ```
+   If `az ad` is blocked by Continuous Access Evaluation (`TokenCreatedWithOutdatedPolicies`) in a
+   hardened tenant, use Microsoft Graph PowerShell instead: `Connect-MgGraph -Scopes
+   Application.ReadWrite.All,Directory.ReadWrite.All` then `Invoke-MgGraphRequest` (higher-level
+   `Get-MgApplication` may hit an assembly-version conflict — raw `Invoke-MgGraphRequest` avoids it).
 2. On that app, add **Microsoft Graph → Delegated → `User.Read`** and grant **admin consent**.
 3. Create a **client secret** on that app.
 4. Deploy with the client id / tenant id and enter the secret in the terminal:
@@ -128,6 +150,31 @@ perform On-Behalf-Of to Microsoft Graph:
 
 Graph `User.Read` is a minimal, standalone scope on this dedicated app registration — it does not
 overlap with the Mail MCP (`McpServers.Mail.All`) or WorkIQ.
+
+## Troubleshooting registration & approval
+
+- **`HTTP 400: Bad Request` — "Failed to create connector shared_ext_<Name>...P"** at registration.
+  The Agent 365 backend builds a proxy connector from the server URL and rejects a **multi-segment**
+  path. Register each server at a single-segment **root `/mcp`** (this repo deploys one container per
+  server for exactly this reason). The MCP handshake succeeding at `/anon/mcp` is **not** enough — the
+  connector build still fails.
+- **`Short description exceeds the maximum length of 80 characters`.** Keep `description` ≤ 80 chars in
+  `register-*.json` (the templates already are).
+- **Approve spins forever (no error).** The container had **> 1 replica**. FastMCP keeps the MCP
+  session in memory per replica, so the approval's `initialize` + follow-up calls hit different
+  replicas → `Session not found`. `deploy-mcp.ps1` pins each container to a single replica
+  (`--min-replicas 1 --max-replicas 1`); if you deployed manually, set it too.
+- **"Couldn't complete consent for one or more apps backing this MCP server."** One of the apps the
+  CLI created (typically `ext_<Name>Anon-PublicClients`) may have **no service principal**, so the
+  portal cannot record its admin consent. Create the missing SP and grant admin consent for the
+  backing apps' delegated scopes (`Tools.ListInvoke.All` on the BYO app, `PlatformRuntime.Internal.All`
+  on Agent Tools), then retry Approve. If `az ad` is CAE-blocked, do it via Microsoft Graph PowerShell
+  (`Invoke-MgGraphRequest` to `POST /servicePrincipals` and `POST /oauth2PermissionGrants` with
+  `consentType: AllPrincipals`).
+- **Failed registration leaves orphans.** On failure the CLI prints "All created resources have been
+  cleaned up" but does **not** roll back the Entra proxy apps (and sometimes leaves Power Platform
+  connectors), which then cause a retry `400`. Run `cleanup-registration.ps1 -Name <Name>
+  -Subscription <sub> -TenantId <tenant>` before retrying.
 
 ## Project structure
 
