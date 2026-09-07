@@ -203,6 +203,33 @@ caller identity as `x-ms-client-*` headers (`x-ms-client-principal-id`, `x-ms-cl
 `x-ms-client-tenant-id`), not always as an `Authorization` bearer token. The sample `whoami` /
 `token_claims` tools therefore report the caller from those headers when no token is forwarded.
 
+> **Why the gateway forwards identity headers but not a bearer token (verified).** Per the Microsoft
+> docs ([Secure an MCP server with Entra ID](https://learn.microsoft.com/entra/agent-id/secure-mcp-server-with-entra-id)),
+> the Agent 365 Tooling Gateway attaches a caller token only when the MCP server drives the standard
+> OAuth flow: it must serve **OAuth 2.0 Protected Resource Metadata** (RFC 9728) at
+> `/.well-known/oauth-protected-resource` and answer **`401` with a `WWW-Authenticate: Bearer
+> resource_metadata="…"`** header on unauthenticated requests. Only then does the gateway request a
+> token (performing the On-Behalf-Of exchange for the server's `remoteScopes` resource) and re-call
+> with `Authorization: Bearer`.
+>
+> **Root cause (verified with runtime logs).** Adding the PRM + `401` to the *running* server is **not
+> enough**: the auth type is captured **at registration time** into the Power Platform **connector**
+> that the gateway actually talks to. Because this sample server did **not** serve the PRM when it was
+> first registered, its connector was created effectively **NoAuth** (the connection shows an empty
+> `authenticatedUser`), so at runtime the gateway/connector calls `/mcp` and gets `200` **without ever
+> issuing the `401` OAuth handshake** — it just forwards the `x-ms-client-*` identity headers. `whoami`
+> still reports the correct caller from those headers (for OBO, the signed-in user's object id).
+>
+> **To get a real forwarded token** you must: (1) make the server serve the PRM + `401` challenge
+> (this repo does, behind `MCP_OAUTH_CHALLENGE=true` on the auth container — see `build_single` /
+> `_wrap_oauth_challenge` in [`server.py`](server.py)); **then** (2) **re-register** the server with
+> `a365 develop-mcp register-external-mcp-server` so a fresh **EntraOAuth** connector is built against
+> the now-discoverable PRM; (3) re-approve it; (4) re-create the Power Platform connection (which now
+> performs the OAuth sign-in). Only after the connector is EntraOAuth does the gateway do the OBO and
+> forward `Authorization: Bearer`.
+
+
+
 #### `smoke-test.py` — invoke a server's tools directly from a script (isolation test)
 
 [`smoke-test.py`](smoke-test.py) is a small MCP client (the Python equivalent of

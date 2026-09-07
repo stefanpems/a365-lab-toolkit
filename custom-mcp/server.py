@@ -444,8 +444,77 @@ def build_single(server, label):
     '/anon/mcp'. A single-segment root '/mcp' works, so each server is deployed in its OWN
     container at '/mcp' — selected via MCP_SERVER_MODE. GET '/' and '/health' are provided by
     _add_probes (the EntraOAuth approval validation probes the root for reachability before '/mcp').
+
+    For the auth (EntraOAuth) server, set MCP_OAUTH_CHALLENGE=true to advertise OAuth 2.0 Protected
+    Resource Metadata (RFC 9728) and challenge unauthenticated calls with 401 — this is what makes
+    the Agent 365 gateway perform the On-Behalf-Of exchange and forward the caller's bearer token
+    (in `Authorization`) instead of only the x-ms-client-* identity headers.
     """
-    return server.http_app(path="/mcp")
+    app = server.http_app(path="/mcp")
+    if label == "auth" and os.environ.get("MCP_OAUTH_CHALLENGE", "").strip().lower() == "true":
+        app = _wrap_oauth_challenge(app)
+    return app
+
+
+def _wrap_oauth_challenge(app):
+    """ASGI wrapper that makes an MCP server look like an OAuth 2.0 protected resource.
+
+    - Serves the Protected Resource Metadata (RFC 9728) at
+      '/.well-known/oauth-protected-resource'.
+    - Answers '401' with a 'WWW-Authenticate: Bearer resource_metadata="…"' header on
+      unauthenticated '/mcp' requests, so the Agent 365 Tooling Gateway requests a token
+      (OBO for the server's remoteScopes resource) and re-calls with 'Authorization: Bearer'.
+
+    Token validation is intentionally NOT enforced here (lab sample) — the point is to make the
+    gateway attach the caller token so `whoami`/`token_claims` can decode it. A production server
+    MUST validate the token (issuer, audience, signature).
+    """
+    import json as _json
+
+    tenant = os.environ.get("MCP_AUTH_TENANT_ID", "organizations")
+    scope = os.environ.get("MCP_AUTH_SCOPE", "access_as_agent")
+
+    def _base_url(headers: dict) -> str:
+        host = headers.get(b"host", b"").decode() or ""
+        proto = headers.get(b"x-forwarded-proto", b"https").decode().split(",")[0].strip()
+        return f"{proto}://{host}" if host else ""
+
+    async def wrapped(scope_dict, receive, send):
+        if scope_dict.get("type") != "http":
+            await app(scope_dict, receive, send)
+            return
+        path = scope_dict.get("path", "")
+        headers = {k.lower(): v for k, v in (scope_dict.get("headers") or [])}
+        base = _base_url(headers)
+
+        if path == "/.well-known/oauth-protected-resource":
+            body = _json.dumps(
+                {
+                    "resource": base or "/",
+                    "authorization_servers": [f"https://login.microsoftonline.com/{tenant}/v2.0"],
+                    "scopes_supported": [scope],
+                    "bearer_methods_supported": ["header"],
+                }
+            ).encode()
+            await send({"type": "http.response.start", "status": 200,
+                        "headers": [(b"content-type", b"application/json")]})
+            await send({"type": "http.response.body", "body": body})
+            return
+
+        if path.startswith("/mcp") and b"authorization" not in headers:
+            www = (
+                f'Bearer resource_metadata="{base}/.well-known/oauth-protected-resource", '
+                f'scope="{scope}"'
+            ).encode()
+            await send({"type": "http.response.start", "status": 401,
+                        "headers": [(b"www-authenticate", www), (b"content-type", b"application/json")]})
+            await send({"type": "http.response.body", "body": b'{"error":"unauthorized"}'})
+            return
+
+        await app(scope_dict, receive, send)
+
+    return wrapped
+
 
 
 def _add_probes(server, label):
