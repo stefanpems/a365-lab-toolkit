@@ -23,6 +23,7 @@ is attached and the agent sends mail from its OWN mailbox (the agent user), exac
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Any, Optional
@@ -50,6 +51,20 @@ MAIL_MCP_SCOPE = f"{MAIL_MCP_RESOURCE}/.default"
 # Azure OpenAI scope for the chat client bearer token (Cognitive Services data plane).
 AOAI_SCOPE = "https://cognitiveservices.azure.com/.default"
 AOAI_API_VERSION_DEFAULT = "2025-04-01-preview"
+
+# ToolingManifest.json lists every attached MCP server (Mail + any registered ext_* custom
+# servers) with its gateway URL and the token AUDIENCE the gateway expects for that server.
+_MANIFEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ToolingManifest.json")
+
+
+def _load_manifest_servers() -> list[dict]:
+    """Return the mcpServers entries from ToolingManifest.json (empty on any error)."""
+    try:
+        with open(_MANIFEST_PATH, encoding="utf-8") as f:
+            return (json.load(f) or {}).get("mcpServers", []) or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Could not read ToolingManifest.json: %s", e)
+        return []
 
 _SECURITY_RULES = """
 CRITICAL SECURITY RULES - NEVER VIOLATE THESE:
@@ -127,16 +142,19 @@ class FoundryDigitalWorkerAgent(AgentInterface):
 
         self._credential = DefaultAzureCredential()
         self._mail_enabled = os.getenv("DW_ENABLE_MAIL", "false").lower() == "true"
-        self._mail_tool: Optional[MCPStreamableHTTPTool] = None
         self._agent: Optional[Agent] = None
         # Set lazily once we build the chat client, and reused when (re)building the
-        # agent after the Mail MCP connects mid-turn.
+        # agent after the MCP servers connect mid-turn.
         self._client: Optional[Any] = None
-        # Current agentic-user token for the Mail MCP (exchanged per turn from the
-        # turn's Authorization). Read by _AgentTokenAuth on every Mail request.
-        self._mail_token: Optional[str] = None
-        # Once the Mail MCP connection fails hard (e.g. the agent identity is not
-        # authorized), stop retrying every turn to avoid added latency.
+        # Connected MCP tools (Mail + any attached ext_* custom servers) and their persistent
+        # HTTP clients, built lazily on the first turn.
+        self._mcp_tools: list[MCPStreamableHTTPTool] = []
+        self._mcp_clients: list[httpx.AsyncClient] = []
+        # Current agentic-user token per server AUDIENCE (exchanged per turn from the turn's
+        # Authorization). Read by each server's _AgentTokenAuth on every request.
+        self._mcp_tokens: dict[str, str] = {}
+        # Once an MCP connection fails hard (e.g. the agent identity is not authorized),
+        # stop retrying every turn to avoid added latency.
         self._mail_runtime_disabled = False
 
     # ------------------------------------------------------------------
@@ -192,79 +210,113 @@ class FoundryDigitalWorkerAgent(AgentInterface):
             self._deployment,
         )
 
-    async def _ensure_mail_connected(
+    async def _ensure_mcp_connected(
         self,
         auth: Optional[Authorization],
         auth_handler_name: Optional[str],
         context: Optional[TurnContext],
     ) -> None:
-        """Open the Mail MCP using the turn's agentic-user token (idempotent, non-fatal).
+        """Open every MCP server in ToolingManifest.json using the turn's agentic tokens.
 
-        The Mail tools require a DELEGATED agentic-user token (carrying the
-        ``McpServers.Mail.All`` scope consented to the blueprint), NOT an app-only
-        token. We exchange it from the turn's Authorization handler each turn and
-        keep it fresh for the persistent MCP HTTP client.
+        Each server needs a DELEGATED agentic-user token for its own AUDIENCE
+        (``McpServers.Mail.All`` for Mail; ``Tools.ListInvoke.All`` for ext_* custom
+        servers), NOT an app-only token. We exchange one per server from the turn's
+        Authorization handler each turn and keep it fresh for that server's persistent
+        HTTP client. Each server gets a unique ``tool_name_prefix`` so the Agent 365
+        gateway's per-server ``initialize_server`` handshake tools don't collide.
+        Mail stays opt-in via ``DW_ENABLE_MAIL``; custom servers are always attempted.
         """
-        if not self._mail_enabled or self._mail_runtime_disabled:
+        if self._mail_runtime_disabled:
             return
         if auth is None or context is None or not auth_handler_name:
             return
 
-        # Refresh the agentic Mail token for this turn.
-        try:
-            exchanged = await auth.exchange_token(
-                context,
-                scopes=[MAIL_MCP_SCOPE],
-                auth_handler_id=auth_handler_name,
-            )
-            self._mail_token = getattr(exchanged, "token", None)
-        except Exception as ex:
-            logger.warning("⚠️ Could not exchange the agentic Mail token: %s", ex)
+        servers = _load_manifest_servers()
+
+        def _wanted(name: Optional[str]) -> bool:
+            # Mail is opt-in; every other (custom) server is always attempted.
+            return self._mail_enabled if name == "mcp_MailTools" else bool(name)
+
+        # Refresh a per-audience agentic token for every wanted server this turn.
+        for s in servers:
+            name = s.get("mcpServerName") or s.get("mcpServerUniqueName")
+            audience = s.get("audience")
+            if not (name and audience) or not _wanted(name):
+                continue
+            try:
+                exchanged = await auth.exchange_token(
+                    context,
+                    scopes=[f"{audience}/.default"],
+                    auth_handler_id=auth_handler_name,
+                )
+                token = getattr(exchanged, "token", None)
+                if token:
+                    self._mcp_tokens[audience] = token
+            except Exception as ex:
+                logger.warning(
+                    "⚠️ Could not exchange the agentic token for '%s' (aud %s): %s",
+                    name, audience, ex,
+                )
+
+        # Already built the tools — the refreshed tokens above keep them valid.
+        if self._mcp_tools:
             return
 
-        if not self._mail_token:
-            logger.warning("⚠️ Empty agentic Mail token; skipping Mail MCP connection.")
-            return
+        for s in servers:
+            name = s.get("mcpServerName") or s.get("mcpServerUniqueName")
+            url = s.get("url")
+            audience = s.get("audience")
+            if not (name and url and audience) or not _wanted(name):
+                continue
+            if audience not in self._mcp_tokens:
+                logger.warning("⚠️ No agentic token for '%s'; skipping.", name)
+                continue
+            try:
+                http_client = httpx.AsyncClient(
+                    auth=_AgentTokenAuth(lambda aud=audience: self._mcp_tokens.get(aud)),
+                    timeout=90,
+                )
+                tool = MCPStreamableHTTPTool(
+                    name=name,
+                    url=url,
+                    http_client=http_client,
+                    description=f"MCP tools from {name}",
+                    # Unique prefix so per-server 'initialize_server' handshakes don't collide.
+                    tool_name_prefix=name,
+                )
+                await tool.__aenter__()
+                self._mcp_tools.append(tool)
+                self._mcp_clients.append(http_client)
+                logger.info("✅ MCP server '%s' connected (agentic-user token)", name)
+            except Exception as ex:
+                logger.warning("⚠️ MCP server '%s' unavailable (%s); skipping.", name, ex)
 
-        # Already connected — the refreshed token above is enough.
-        if self._mail_tool is not None:
-            return
-
-        try:
-            http_client = httpx.AsyncClient(
-                auth=_AgentTokenAuth(lambda: self._mail_token), timeout=90
-            )
-            mail_tool = MCPStreamableHTTPTool(
-                name="mcp_MailTools",
-                url=MAIL_MCP_URL,
-                http_client=http_client,
-                description="Microsoft 365 Mail tools (the agent's own mailbox)",
-            )
-            await mail_tool.__aenter__()
-            self._mail_tool = mail_tool
-            # Rebuild the agent so it now has the Mail tool and the mail-aware prompt.
+        if self._mcp_tools:
+            has_mail = any(getattr(t, "name", "") == "mcp_MailTools" for t in self._mcp_tools)
             self._agent = Agent(
                 client=self._client,
-                instructions=MAIL_PROMPT,
-                tools=[mail_tool],
+                instructions=MAIL_PROMPT if has_mail else NO_MAIL_PROMPT,
+                tools=list(self._mcp_tools),
             )
-            logger.info("✅ Mail MCP tool connected (agentic-user token)")
-        except Exception as ex:
-            self._mail_tool = None
-            self._mail_runtime_disabled = True
-            logger.error(
-                "⚠️ Mail MCP tool unavailable (%s); continuing WITHOUT mail. The agent "
-                "still responds but cannot send email.",
-                ex,
+            logger.info(
+                "✅ Rebuilt agent with %d MCP tool(s): %s",
+                len(self._mcp_tools),
+                [getattr(t, "name", "?") for t in self._mcp_tools],
             )
 
     async def cleanup(self) -> None:
-        if self._mail_tool is not None:
+        for tool in self._mcp_tools:
             try:
-                await self._mail_tool.__aexit__(None, None, None)
+                await tool.__aexit__(None, None, None)
             except Exception as ex:  # pragma: no cover
-                logger.warning("Mail MCP cleanup failed: %s", ex)
-            self._mail_tool = None
+                logger.warning("MCP cleanup failed: %s", ex)
+        self._mcp_tools = []
+        for client in self._mcp_clients:
+            try:
+                await client.aclose()
+            except Exception:  # pragma: no cover
+                pass
+        self._mcp_clients = []
 
     # ------------------------------------------------------------------
     # Turn handling
@@ -286,8 +338,8 @@ class FoundryDigitalWorkerAgent(AgentInterface):
     ) -> str:
         if self._agent is None:
             await self.initialize()
-        # Lazily connect (and per-turn refresh the token for) the Mail MCP.
-        await self._ensure_mail_connected(auth, auth_handler_name, context)
+        # Lazily connect (and per-turn refresh the tokens for) all attached MCP servers.
+        await self._ensure_mcp_connected(auth, auth_handler_name, context)
         name = self._display_name(context)
         prompt = f"[Signed-in user: {name}]\n{message}" if name else message
         assert self._agent is not None
