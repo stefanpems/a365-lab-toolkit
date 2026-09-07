@@ -26,11 +26,14 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    (typically Frontier for Autopilots, Teams Enterprise, and M365 E7, but **verify all of them per
    agent and per instance** — they vary). License release must be **guaranteed**.
 
-## Two scripts (do not re-derive their logic)
+## Scripts (do not re-derive their logic)
 - [scripts/Discover-CleanupResources.ps1](./scripts/Discover-CleanupResources.ps1) — **READ-ONLY**.
   Enumerates matching resources for the chosen categories and writes `discovered.json`.
 - [scripts/Remove-CleanupResources.ps1](./scripts/Remove-CleanupResources.ps1) — **destructive**.
   Consumes the confirmed selection, deletes in dependency order, and writes a **persistent log**.
+- [scripts/Remove-GeneratedFolders.ps1](./scripts/Remove-GeneratedFolders.ps1) — **destructive, local FS**.
+  Recursively finds the outermost `generated/` folders whose name contains an agent / custom-MCP
+  identifier and (after the same checkbox review) deletes them with all content. `-List` is read-only.
 
 ## Mandatory rules
 - **Never delete without the checkbox review.** After discovery you ALWAYS present the identified
@@ -79,7 +82,16 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    Offer a **dry run first** with `-WhatIf` when the user is unsure. Resource-group deletion is async
    (`--no-wait`) by default; mention that RG deletion completes in the background (ACA environments can
    take 20-40 min) — pass `-WaitForRg` only if the user wants to block.
-8. **Report** — summarize successes/errors, released licenses, and point to the persistent log and
+8. **Remove local `generated/` folders (optional)** — after the cloud deletion, ask (single-select
+   Yes/No) whether to also delete the local scaffolding folders for the cleaned resources. If yes, run
+   `Remove-GeneratedFolders.ps1 -List -Identifiers <NameFilter>[,<McpNameFilter>]` to discover the
+   outermost `generated/` folders whose name contains those identifier strings (recursive — today
+   directly under `generated/`, tomorrow inside grouping subfolders; the audit folder is excluded; the
+   web-UI folder is a future identifier). Present the candidates in a **checkbox review**, write the
+   confirmed subset to `folders.selection.json`, then run `Remove-GeneratedFolders.ps1 -SelectionPath …
+   -Force` (logged to the same `deletion.log`). This is a hard, non-recoverable delete (`generated/` is
+   gitignored). Offer `-WhatIf` if the user is unsure.
+9. **Report** — summarize successes/errors, released licenses, and point to the persistent log and
    `result.json`. For async RG deletions, give the verification command (`az group exists -n <rg>`).
 
 ## Presenting instances and licenses

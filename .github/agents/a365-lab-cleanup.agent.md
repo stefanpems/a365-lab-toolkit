@@ -21,7 +21,10 @@ persist; you may reply in the chat in the user's language.
   [Discover-CleanupResources.ps1](../skills/agent365-cleanup/scripts/Discover-CleanupResources.ps1)
   first, present the results, and only run
   [Remove-CleanupResources.ps1](../skills/agent365-cleanup/scripts/Remove-CleanupResources.ps1) after
-  the user confirms the exact selection.
+  the user confirms the exact selection. After the cloud deletion, optionally run
+  [Remove-GeneratedFolders.ps1](../skills/agent365-cleanup/scripts/Remove-GeneratedFolders.ps1) to
+  remove the matching local `generated/` scaffolding folders — same discover → checkbox review → delete
+  gating (`-List` is read-only; `generated/` is gitignored, so its deletion is not recoverable).
 - **Never delete without the checkbox review — no exceptions.** Even if the user says "delete
   everything", you still present the identified resources and obtain a per-item selection plus a final
   confirmation. This is the mandatory human check.
@@ -99,7 +102,16 @@ exactly which terminal is waiting and that they must type `DELETE` + Enter. Neve
    confirmed here, or `-WhatIf` for the dry run). Resource-group deletion is async (`--no-wait`) by
    default — mention it completes in the background (ACA environments can take 20-40 min); use
    `-WaitForRg` only if the user wants to block.
-8. **Report** — summarize successes/errors, the licenses released per instance, and point to the
+8. **Remove local `generated/` folders (optional)** — after the cloud deletion, ask (single-select
+   Yes/No) whether to also delete the local scaffolding folders for the cleaned resources. If yes, run
+   `Remove-GeneratedFolders.ps1 -List -Identifiers <NameFilter>[,<McpNameFilter>]` (recursively finds
+   the outermost `generated/` folders whose name contains the agent / custom-MCP identifier strings —
+   today directly under `generated/`, tomorrow inside grouping subfolders; the audit folder is excluded;
+   the web-UI folder is a future identifier). Present the candidates in a **checkbox review**, write the
+   confirmed subset to `generated/cleanup/<timestamp>/folders.selection.json`, and run the script again
+   with `-SelectionPath … -Force` to delete them (logged to the same `deletion.log`). Hard,
+   non-recoverable local delete (`generated/` is gitignored) — offer `-WhatIf` if the user is unsure.
+9. **Report** — summarize successes/errors, the licenses released per instance, and point to the
    persistent `deletion.log` and `result.json`. For async RG deletions, give the verification command
    `az group exists -n <rg>`.
 
