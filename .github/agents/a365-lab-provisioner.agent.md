@@ -72,7 +72,18 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
   **"Try that again using a different browser"** / **"This is not the right page"**. **This is
   expected and safe to ignore** — the CLI still detects that consent succeeded. Say this every time.
 - Steps that trigger it: ACA `a365 setup` delegated admin-consent; `azd auth login`; SPA
-  admin-consent; and the first use of each web-UI tab (incremental consent).
+  admin-consent; the first use of each web-UI tab (incremental consent); and **attaching a custom MCP
+  to an agent** (`a365 setup permissions mcp` — see the callout below).
+
+> ⛔ **ATTACH (`a365 setup permissions mcp`) = 3 additional admin consents — TELL THE USER.** When you
+> attach a custom MCP server to an agent, `a365 setup permissions mcp --agent-name <name>` opens a
+> browser and requests **3 additional admin consents** for the new servers' resource apps. Tell the
+> user **up front** to **grant all 3**, and to **ignore the final page message** *"Try that again using
+> a different browser — We couldn't connect to that service, likely because of settings put in place by
+> your IT team. Open Azure in a different Web browser to try again."*: consent still succeeds and the
+> CLI detects it (waits up to 180s). Watch for a blocked pop-up as always. After consent, **redeploy
+> the agent** (the new `ToolingManifest.json` is baked into the image at build time — a revision
+> restart alone keeps the old manifest).
 
 > ⛔ **BLOCKED-POPUP WARNING — CALL IT OUT LOUDLY, EVERY TIME (especially at MCP-server approval).**
 > When the admin **approves an MCP server** in the M365 admin center (Agents → Tools → Requests →

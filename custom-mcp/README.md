@@ -106,17 +106,39 @@ center (Agents → Requested). CLI-based approval was removed; approval is admin
 ## 4. Attach to an agent
 
 Attaching a registered server to one of the sample agents uses the documented tooling flow — you do
-**not** hand-edit `ToolingManifest.json`:
+**not** hand-edit `ToolingManifest.json`. Three steps, run from the agent folder:
 
 ```powershell
 cd generated\<agent-name>
-a365 develop add-mcp-servers ext_<Name>Anon ext_<Name>Auth   # writes ToolingManifest.json (scope/audience from the catalog)
-a365 setup permissions mcp                                    # Global Admin grants the OAuth2 grants to the blueprint
+
+# 1. Local, safe: updates ToolingManifest.json only (cached token, no cloud mutation, no prompt).
+a365 develop add-mcp-servers ext_<Name>Anon ext_<Name>Auth
+
+# 2. Global Admin: configures the blueprint's consent for the new servers' BYO resource apps
+#    (Tools.ListInvoke.All) and OPENS A BROWSER for admin consent.
+#    Watch for a BLOCKED POPUP. Grant ALL 3 additional admin consents requested in that window.
+#    IGNORE the final page message "Try that again using a different browser / We couldn't connect
+#    to that service..." — consent still succeeds and the CLI detects it (waits up to 180s).
+#    Allow popups, Accept, wait for "Consent granted".
+a365 setup permissions mcp --agent-name <agent-name>
+
+# 3. Redeploy the agent so the runtime loads the new manifest (baked into the image at build):
+#    ACA -> az acr build + az containerapp update (or the agent's deploy-aca*.ps1)
+#    FH  -> azd deploy
+#    A revision restart alone is NOT enough — the old image still has the old manifest.
 ```
 
 Run `a365 setup permissions mcp` **after** the blueprint exists; before initial setup, `a365 setup all`
-already includes the MCP permissions step. The sample agents' runtime already registers every server
-found in `ToolingManifest.json`, so no code change is needed.
+already includes the MCP permissions step. What each step does (validated):
+
+- Step 1 fetches the MCP server catalog and adds the servers to `ToolingManifest.json`
+  (`Successfully updated ToolingManifest.json / Total servers in manifest: N`).
+- Step 2 configures permissions for the resource apps it finds — the Mail resource plus each attached
+  server's **BYO** app (`Tools.ListInvoke.All`) — and grants delegated consent via the browser.
+- **ACA agents work end-to-end**: the runtime registers every server in `ToolingManifest.json`, so no
+  code change is needed. **FH agents**: attach updates the manifest + consent, but the FH sample
+  **code hardcodes only the Mail MCP** — a non-Mail custom server isn't called until the code is
+  generalized (see the FH integration reference). Redeploy is required either way.
 
 > **FD (prompt) agents are not supported** for this flow. Foundry declarative/prompt agents attach
 > tools via M365 app-manifest agent connectors, not `ToolingManifest.json`, so the wizard attaches the
@@ -140,16 +162,33 @@ perform On-Behalf-Of to Microsoft Graph:
    hardened tenant, use Microsoft Graph PowerShell instead: `Connect-MgGraph -Scopes
    Application.ReadWrite.All,Directory.ReadWrite.All` then `Invoke-MgGraphRequest` (higher-level
    `Get-MgApplication` may hit an assembly-version conflict — raw `Invoke-MgGraphRequest` avoids it).
-2. On that app, add **Microsoft Graph → Delegated → `User.Read`** and grant **admin consent**.
-3. Create a **client secret** on that app.
-4. Deploy with the client id / tenant id and enter the secret in the terminal:
+2. Add **Microsoft Graph → Delegated → `User.Read`** to that resource app and **grant admin consent**.
+   Portal: App registrations → the resource app → API permissions → Add → Microsoft Graph → Delegated →
+   `User.Read` → Add → **Grant admin consent**. Or via Graph PowerShell (works when `az ad` is
+   CAE-blocked): `PATCH` the app's `requiredResourceAccess` to add Graph
+   (`00000003-0000-0000-c000-000000000000`) scope `User.Read`
+   (`e1fe6dd8-ba31-4d61-89e7-88639da4683d`), then create an **AllPrincipals** `oauth2PermissionGrant`
+   from the resource app's SP to the Graph SP with `scope: "User.Read"`.
+3. Create a **client secret** on the resource app (Certificates & secrets → New client secret). Copy the
+   value **once** — you paste it into the terminal at deploy time; **never commit it**.
+4. Apply the client id / tenant id / secret to the **auth** container. On a fresh scaffold, re-run the
+   deploy (the secret is entered via `Read-Host`, never on the command line):
    ```powershell
-   .\deploy-mcp.ps1 -Subscription <SUB> -AuthClientId <authAppId> -AuthTenantId <tenantId>
+   .\deploy-mcp.ps1 -Subscription <SUB> -AuthClientId <resourceAppId> -AuthTenantId <tenantId>
    ```
-   The container reads `MCP_AUTH_CLIENT_ID`, `MCP_AUTH_TENANT_ID`, `MCP_AUTH_CLIENT_SECRET`.
+   For an **already-deployed** auth container (updating in place, without recreating), store the secret
+   as a container secret and reference it — paste the secret value directly into the first command:
+   ```powershell
+   az containerapp secret set -n <auth-app> -g <mcp-rg> --secrets mcp-auth-secret=<PASTE-SECRET-HERE>
+   az containerapp update -n <auth-app> -g <mcp-rg> --set-env-vars `
+     "MCP_AUTH_CLIENT_ID=<resourceAppId>" "MCP_AUTH_TENANT_ID=<tenantId>" `
+     "MCP_AUTH_CLIENT_SECRET=secretref:mcp-auth-secret"
+   ```
+   The server reads `MCP_AUTH_CLIENT_ID` / `MCP_AUTH_TENANT_ID` / `MCP_AUTH_CLIENT_SECRET`.
 
-Graph `User.Read` is a minimal, standalone scope on this dedicated app registration — it does not
-overlap with the Mail MCP (`McpServers.Mail.All`) or WorkIQ.
+`propagate_to_graph` is **optional** — `whoami` and `token_claims` inspect the caller identity without
+it. Graph `User.Read` is a minimal, standalone scope on this dedicated app registration — it does not
+overlap with the Mail MCP (`McpServers.Mail.All`) or Work IQ.
 
 ## Troubleshooting registration & approval
 

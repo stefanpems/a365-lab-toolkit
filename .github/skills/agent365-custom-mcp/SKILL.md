@@ -45,9 +45,27 @@ not duplicate or renumber it here.**
   proxy app (e.g. `ext_<Name>*-PublicClients`) may lack a **service principal** — create it and grant
   admin consent for the delegated scopes. If `az ad` is CAE-blocked, use Microsoft Graph PowerShell.
   See [custom-mcp/README.md](../../../custom-mcp/README.md) "Troubleshooting".
-- **Attach** (never hand-edit `ToolingManifest.json`): `a365 develop add-mcp-servers ext_<Name>Anon
-  ext_<Name>Auth` in the agent folder, then `a365 setup permissions mcp` (Global Admin) — or
-  `a365 setup all` before first setup. The scaffolder emits these next-commands.
+- **Attach** (three steps — never hand-edit `ToolingManifest.json`), run in the agent folder:
+  1. `a365 develop add-mcp-servers ext_<Name>Anon ext_<Name>Auth` — **local, safe** (updates
+     `ToolingManifest.json` only, uses the cached token, no cloud mutation, no prompt).
+  2. `a365 setup permissions mcp --agent-name <agent-name>` (Global Admin) — configures the
+     blueprint's consent for the new servers' BYO resource apps (`Tools.ListInvoke.All`) and
+     **opens a browser for admin consent**. ⛔ Tell the user explicitly: a **blocked popup** stalls
+     this, and they must **grant all 3 additional admin consents** requested in that window. ⛔ Also
+     tell them to **ignore the final page message** "Try that again using a different browser — We
+     couldn't connect to that service, likely because of settings put in place by your IT team. Open
+     Azure in a different Web browser to try again.": consent still succeeds and the CLI detects it
+     (waits up to 180s). Allow popups, Accept, wait for "Consent granted". (Or `a365 setup all`
+     before first setup.)
+  3. **Redeploy the agent** so the runtime loads the new manifest (the manifest is baked into the
+     image at build time): ACA → rebuild + `az containerapp update` (or the agent's `deploy-aca*.ps1`);
+     FH → `azd deploy`. A revision restart alone is **not** enough — the old image still has the old
+     manifest.
+  - **ACA agents** work end-to-end (the runtime registers every server in `ToolingManifest.json`).
+    **FH agents**: attach updates the manifest + consent, but the FH sample **code hardcodes only the
+    Mail MCP** — a non-Mail custom server won't be called until the code is generalized (see
+    `references/workiq-mcp-integration.md`). **FD agents are excluded** (no `ToolingManifest.json`).
+  - The scaffolder emits these next-commands.
 - **`propagate_to_graph` (advanced)**: needs the `/auth` app to be a confidential client with Graph
   `User.Read` (delegated) + admin consent + a client secret (entered in the terminal, never chat).
   Graph `User.Read` does not conflict with Work IQ or the Mail MCP.
