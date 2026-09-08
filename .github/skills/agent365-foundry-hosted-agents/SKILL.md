@@ -35,6 +35,18 @@ per-variant guides — do not duplicate or renumber them:**
   [setup-MAF-FH-DW.md](../../../docs/setup-MAF-FH-DW.md) §3 Path B.
 - **FH-DW per-instance identity**: route inference via the **project endpoint** (implicit access) so
   each hired instance can call the model without a per-instance role — see §6.2 of that guide.
+- **`azd deploy` times out on "Polling agent status … (creating)" — DIAGNOSE from the version, not azd.**
+  azd polls only ~30×/6 min then reports "agent deployment timed out (last status: creating)"; the real
+  outcome is on the hosted-agent **version object**. Query it (token for `https://ai.azure.com`):
+  `GET {project-endpoint}/agents/<name>?api-version=2025-05-15-preview` → `versions.latest.status` +
+  `.error.code`/`.error.message`. Config errors are SPECIFIC and fixable (`image_pull_failed`,
+  `AcrImageNotFound`, `InvalidAcrPullCredentials`, `DeploymentNotFound`, `SubscriptionIsNotRegistered`).
+  A **generic `ProvisioningError` ("Agent version provisioning failed. Please retry.")** is a **server-side
+  Foundry failure** (5xx → the docs say contact support), NOT a plan/scaffolder bug — verified on a09081
+  where FH-OBO **and** FH-S2S both failed with `ProvisioningError` while an identical config had deployed
+  fine the day before. Response: retry `azd deploy` (idempotent; a later attempt may succeed), try a
+  different region, or defer and retry later — do not "fix" the plan/code. The `/agents` (assistants)
+  LIST is empty for hosted agents; use `GET /agents/<name>` (singular) for status.
 
 ## Tools
 FH samples currently wire **only Mail** in code. Attaching a non-Mail Work IQ MCP also needs the code
