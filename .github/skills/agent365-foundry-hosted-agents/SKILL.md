@@ -47,20 +47,28 @@ per-variant guides — do not duplicate or renumber them:**
   failed"**. Interpret the error: SPECIFIC codes are fixable config/RBAC (`image_pull_failed`,
   `AcrImageNotFound`, `InvalidAcrPullCredentials`, `DeploymentNotFound`, `SubscriptionIsNotRegistered`); the
   `/agents` (assistants) LIST is empty for hosted agents.
-- **⛔ Persistent generic `ProvisioningError` ("Please retry") on a NEWLY-CREATED Foundry account = a
-  service-side hosted-agent build failure, NOT a plan/scaffolder/tooling bug — deploy into an EXISTING
-  working project instead of provisioning a new account.** Conclusive evidence (a09081, 2026-09-08, every
-  variable isolated): the **identical** agent code (same `content_hash`) deploys `active` in ~90 s in a
-  Foundry project created earlier (h2256, 2026-09-06), but every version `failed` with `ProvisioningError`
-  in accounts created that day — including one **freshly provisioned with the current azd 1.33 + agents
-  beta.13** (so it is NOT the old tooling), with the model deployment bound and RBAC granted. Account/
-  project ARM config (kind/sku/identity/`allowProjectManagement`/capabilityHosts/connections), account-scope
-  RBAC and project managed-identity roles were **byte-identical** between the working and failing projects;
-  the only difference was the account **creation date**. Do **not** "fix" identical-to-working code, re-grant
-  RBAC, change region, or wait for it to "activate later" (it never does — all a09081 versions stayed
-  `failed`). **Response:** deploy the FH agents into an existing hosted-agent-capable project via
-  `foundry.mode: reuse-existing` (see the Foundry-resource strategy below); that is both the rationalized
-  default and the resilient path when new-account provisioning is degraded.
+- **⛔ Persistent generic `ProvisioningError` ("Please retry") = a per-account service-side hosted-agent
+  build failure, NOT a plan/scaffolder/tooling/code bug — deploy into a KNOWN-GOOD project, and on failure
+  retry the deploy and/or re-provision a fresh account.** Conclusive evidence (a09081, 2026-09-08). First,
+  every LOCAL variable was isolated: the **identical** agent code (same `content_hash`) deploys `active` in
+  ~90 s in an earlier project (h2256, 2026-09-06), while every version `failed` in the original a09081
+  accounts — including one freshly provisioned with current azd 1.33 + agents beta.13 (so NOT old tooling),
+  model bound, RBAC granted; account/project ARM config (kind/sku/identity/`allowProjectManagement`/
+  capabilityHosts/connections), account-scope RBAC and project managed-identity roles were **byte-identical**
+  between the working and failing projects. Then a clean-room **A→H bisection** in a hello-world (each step
+  deployed to a good fresh account `hellofh2` and checked the single-version ITEM `.status`) took an echo
+  agent and added, one layer at a time, the real deps, module-level imports, the per-turn client, the model
+  call, the MCP handshake, a handler that returns **HTTP 500**, and finally the **full real agent under the
+  exact failing name `a09081-FH-OBO`** (uppercase + hyphens) — **all went `active`**. So provisioning
+  validates only **container startup** (any handler response 200/4xx/500 is tolerated) and the code, deps,
+  handler, model call, MCP path, HTTP status **and the agent name are all exonerated**. The sole remaining
+  variable is the **specific original account instance** being in a bad/transient service state — NOT "all
+  new accounts" (the fresh `hellofh2` works) and NOT a date-based regression. Do **not** "fix"
+  identical-to-working code, re-grant RBAC, change region, or wait for it to "activate later" (it never does
+  — all original a09081 versions stayed `failed`). **Response:** deploy the FH agents into a known-good
+  project via `foundry.mode: reuse-existing` (see the Foundry-resource strategy below); if provisioning a
+  new account fails, retry the deploy or re-provision a fresh account (very likely fine) rather than
+  treating new accounts as cursed.
 
 ## Foundry-resource strategy (`solution.foundry`)
 All FH **and** FD agents share ONE Foundry footprint defined by the optional `solution.foundry` block —
@@ -75,7 +83,7 @@ is unchanged). Two modes:
 - **`reuse-existing`**: every FH/FD agent deploys into an existing account+project you supply
   (`foundry.endpoint` / `foundry.account` / `foundry.existingResourceGroup`); the scaffolder writes that
   endpoint into each agent and emits **deploy-only** commands (no `azd provision`). This is the resilient
-  workaround when new-account hosted-agent provisioning is failing service-side, and the Lab Cleaner deletes
+  workaround when a specific account's hosted-agent provisioning is failing, and the Lab Cleaner deletes
   only the lab's agent objects from that project — never the user-owned account/project.
 
 ## Tools
