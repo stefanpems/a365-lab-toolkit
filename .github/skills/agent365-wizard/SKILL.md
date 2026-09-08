@@ -171,7 +171,8 @@ writing. Print the next commands for the user to run; never auto-run destructive
   test surface exists**: OBO/S2S only if a UI is present for that agent (UI mode `create`/`attach`);
   DW always (Teams). On **Test now**, print the exact per-MCP test prompts for THIS agent (from its
   `tools` + `customMcp.attachTo`) and where to run them — see the agent's "After each agent goes live"
-  section (OBO custom-auth `whoami` must return `authorization_token_forwarded: true`).
+  section (OBO custom-auth `whoami` must return `authorization_token_forwarded: true`; **S2S: never ask
+  the LLM to describe its own identity — it hallucinates — use an identity-agnostic prompt**).
 - **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
   at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),

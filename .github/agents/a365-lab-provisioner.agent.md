@@ -278,8 +278,15 @@ the signed-in user's address.
 - **OBO** — the custom **auth `whoami` MUST return `authorization_token_forwarded: true`** (delegated, YOUR
   `upn`). If it says `false`, that is a **bug** (see the custom-MCP skill: connector must be EntraOAuth AND
   the server must read headers with `get_http_headers(include_all=True)`), not a preview limitation.
-- **S2S** — app-only identity; the custom MCP and delegated Work IQ tools are **not attached** (by design).
-  Test = a general chat prompt to confirm the S2S agent responds (e.g. `Give me a one-sentence status.`).
+- **S2S** — app-only identity; the custom MCP and delegated Work IQ tools are **not attached** (by design),
+  so there is **no in-lab tool to introspect its real identity**. ⛔ **Do NOT ask the agent to describe its
+  own identity model** — an LLM does NOT know its runtime token and will confidently MISREPORT it (observed:
+  an S2S agent claimed it was *"acting on behalf of the signed-in user"*, which is the **OBO** model — the
+  chat merely reflects the signed-in UI session, not the agent's app-only downstream identity). Test instead
+  with an **identity-agnostic** prompt that needs no user context or tools, e.g. `Summarize the CAP theorem
+  in two sentences.`, purely to confirm the agent responds. Explain to the user that S2S's app-only identity
+  is what the agent uses for **downstream** calls (client-credentials of the blueprint app) and is shown
+  empirically only by the custom auth `whoami` — which OBO/DW can use but S2S cannot in this lab.
 - **DW** — test in **Teams** on the hired instance; the custom MCP is **not** available to DW (connection
   ownership limitation). Test Mail/Work IQ delegated as the agent's own user (e.g. `Send me a test email.`).
 
