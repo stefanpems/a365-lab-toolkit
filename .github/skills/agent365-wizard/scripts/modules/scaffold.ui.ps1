@@ -15,9 +15,11 @@ function Invoke-ScaffoldUi {
 
     # Custom (BYO) MCP: each attached OBO agent reaches the ext_ servers through the Agent 365 gateway
     # with a per-server delegated user token. The SPA needs each server's token AUDIENCE (BYO resource
-    # app id) to acquire that token: read it from the attached agents' ToolingManifest.json (written by
-    # 'a365 develop add-mcp-servers'). Empty until the servers are attached — RE-RUN this scaffolder
-    # after attaching so config.js gains customScopes (ACA/FH-OBO) / customInputs (FD-OBO).
+    # app id) to acquire that token. Sources, in order: (1) plan.customMcp.audiences (fill it with the
+    # ext_<name>Anon/Auth BYO app ids right after registration -> customScopes are produced on the FIRST
+    # scaffold, so EVERY OBO tab integrates the custom MCP immediately); (2) the attached agents'
+    # ToolingManifest.json (written by 'a365 develop add-mcp-servers'), which requires re-running this
+    # scaffolder after attaching. Prefer (1) so the custom tools are never left as "Mail only".
     $mcpEnabled = [bool]($plan.customMcp -and $plan.customMcp.enabled)
     $mcpName    = if ($mcpEnabled) { $McpBaseName } else { '' }  # derived from the solution prefix (not asked)
     $mcpAttach  = if ($mcpEnabled) { @($plan.customMcp.attachTo) } else { @() }
@@ -83,6 +85,6 @@ function Invoke-ScaffoldUi {
     Write-Host "  scaffolded UI ($($plan.ui.mode)) -> generated\$uiFolderName\config.js ($($uiAgents.Count) tab(s))" -ForegroundColor Cyan
     $nextCommands.Add("# UI: create SWA (az staticwebapp create -l eastus2 --sku Free; westeurope may reject new customers), register the SPA app (redirect https://<swa-host> + http://localhost:3000), fill config.js, deploy per docs/setup-web-ui.md, then set UI_ALLOWED_ORIGINS (+ UI_AUDIENCE=<s2s-app-id> for ACA-S2S) on the ACA containers.")
     if ($mcpEnabled -and (@($mcpAttach | Where-Object { $_ -eq 'ACA-OBO' -or $_ -eq 'FH-OBO' -or $_ -eq 'FD-OBO' }).Count -gt 0)) {
-        $nextCommands.Add("# UI + custom MCP: after you ATTACH the ext_ servers to the OBO agents (add-mcp-servers) / deploy FD-OBO with CUSTOM_MCP_SERVERS_JSON, RE-RUN this scaffolder so config.js gains customScopes (ACA/FH-OBO) / customInputs (FD-OBO) read from each agent's ToolingManifest.json, then redeploy the SPA. Each user also creates the one-time Power Platform connection per ext_ server (make.powerapps.com) as themselves; OBO reuses that connection across ACA/FH/FD. If 'npx @azure/static-web-apps-cli deploy' fails (exit 1), run the StaticSitesClient.exe uploader directly from the repo root: & <hash>\StaticSitesClient.exe upload --app ui --apiToken <tok> --skipAppBuild true (see docs/setup-web-ui.md).")
+        $nextCommands.Add("# UI + custom MCP (MANDATORY, not optional - every OBO agent must integrate its MCP tools immediately): fill plan.customMcp.audiences with the ext_${mcpName}Anon/Auth BYO app ids right after registration so config.js gets customScopes (ACA/FH-OBO) / customInputs (FD-OBO) automatically; otherwise attach first (add-mcp-servers) then RE-RUN this scaffolder to read them from each agent's ToolingManifest.json. Redeploy the SPA after. then, EACH USER MUST create the one-time Power Platform connection per ext_ server: the FIRST custom-tool call may return 'This server is not yet set up. Visit https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext-<...>&environmentName=<env>' - the agent MUST proactively tell the user to open that URL, create/update the connection as themselves, then retry (OBO reuses the connection across ACA/FH/FD). If 'npx @azure/static-web-apps-cli deploy' fails (exit 1), run StaticSitesClient.exe from the repo root: & <hash>\StaticSitesClient.exe upload --app <ui-folder> --apiToken <tok> --skipAppBuild true (see docs/setup-web-ui.md).")
     }
 }

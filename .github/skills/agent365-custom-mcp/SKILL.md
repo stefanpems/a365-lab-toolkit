@@ -113,14 +113,20 @@ not duplicate or renumber it here.**
 - **Attach count is per-agent 0/1/2**: each agent attaches the anon and/or auth server per the wizard
   choice, so an agent may expose the anon tools, the auth tools, both, or none (plus Mail). The
   runtime loads whatever is in `ToolingManifest.json`.
-- **Testing the tools — the SPA tabs CANNOT exercise custom tools (hard Entra constraint).** The web
-  UI `/chat` paths are TurnContext-free and simplified (OBO = Mail only; S2S = no MCP tools). Custom
-  servers need a **per-audience agentic token** minted by `auth.exchange_token()` with a Bot Framework
-  `TurnContext`; the SPA has none, and an agentic app can't mint app-only (`AADSTS82001`) or OBO
-  (`AADSTS82002`) tokens for those audiences. So test custom tools via the **agentic / Bot Framework
-  path** (Teams / `/api/messages`, e.g. the Digital Worker), or hit a server's standalone `/mcp`
-  container directly. Tell-tale of a NON-call on the SPA: `server_time` returns a past date or the
-  hash is wrong (the model hallucinated).
+- **Testing the tools — OBO tabs DO exercise custom tools from the SPA (with `customScopes` wired);
+  S2S/DW cannot.** For an **OBO** agent the SPA acquires a **delegated USER token per BYO audience**
+  (from `config.js` `customScopes` = `{ <audience>: "<audience>/Tools.ListInvoke.All" }`) and sends
+  them in the `/chat` body as `tokens`; the OBO host (`run_obo_mail_chat` / FH `run_obo_turn`) wires
+  **every** `ToolingManifest.json` server with its per-audience token, so `server_time`, `whoami`, etc.
+  run end-to-end through the Agent 365 gateway. This is verified (h2256, a09081). **So an OBO tab must
+  be shipped WITH `customScopes` — never "Mail only".** The **S2S** and **DW** tabs still can't: S2S
+  can't mint the custom-audience token from the SPA (`AADSTS82001`/`82002`) and DW isn't in the SPA at
+  all — test those via the agentic / Bot Framework path (Teams / `/api/messages`) if ever needed.
+  Tell-tale of a NON-call: `server_time` returns a **past** date or a wrong hash (the model
+  hallucinated because the tool wasn't actually invoked — check `customScopes` + the Power Platform
+  connection). Note the model may call the **anon** `whoami_anon` when asked generically for "whoami";
+  to see the authenticated caller identity, prompt it to call the **`ext_<name>Auth`** server's
+  `whoami` explicitly.
 - **`Duplicate tool name 'initialize_server'` after attaching 2+ custom servers (agentic/Teams path).**
   The gateway exposes an `initialize_server` handshake tool for **every** `ext_*` server, so 2+ of them
   collide and the turn fails. Fix: unique `tool_name_prefix` per server **before it connects** — the

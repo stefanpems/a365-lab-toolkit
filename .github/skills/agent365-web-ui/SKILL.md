@@ -34,3 +34,13 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
 - Always `node --check app.js ; node --check config.js` before deploying — one JS error breaks login.
 - After deploy, set `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE=<s2s-app-id>` for ACA-S2S) on the ACA
   containers so the browser origin is allowed (see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).
+- ⛔ **An OBO tab with a custom MCP attached MUST ship with `customScopes` (ACA/FH-OBO) or `customInputs`
+  (FD-OBO) — never "Mail only".** The SPA acquires a delegated user token per BYO audience from those
+  and the OBO host wires every manifest server, so the custom tools work from the first test. Fill the
+  audiences from `plan.customMcp.audiences` (set right after registration) or the agent's
+  `ToolingManifest.json`; wire them in the same `config.js` edit as the endpoint, then redeploy.
+- ⛔ **Tell the user, up front, to create the one-time Power Platform connection.** The first custom-tool
+  call may require the user to open
+  `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext_<name>…&environmentName=<env>`
+  and create/update the connection as themselves (the agent does not always surface this URL). OBO
+  reuses the connection across ACA/FH/FD.

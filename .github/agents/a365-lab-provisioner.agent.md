@@ -206,6 +206,24 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    static re-upload** — only `config.js` changes, no compilation), wire `UI_ALLOWED_ORIGINS` (+
    `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in the UI at
    `https://<swa-host>`." A working surface early and a testable increment per agent.
+   - ⛔ **Integrate the custom MCP into the tab IMMEDIATELY — never leave an OBO tab as "Mail only".**
+     When the agent is a `customMcp.attachTo` target, the `config.js` tab MUST include the custom-token
+     wiring so the custom tools work from the first test: **ACA-OBO/FH-OBO** get `customScopes`
+     (`{ <BYO-audience>: "<BYO-audience>/Tools.ListInvoke.All" }`), **FD-OBO** gets `customInputs`
+     (`anon_token`/`auth_token`). The audiences are the `ext_<name>Anon/Auth` **BYO app ids** — record
+     them into `plan.customMcp.audiences` right after registration so the scaffolder emits `customScopes`
+     automatically, or read them from the agent's `ToolingManifest.json` after `add-mcp-servers`. Wire
+     them in the SAME `config.js` edit as the endpoint, then redeploy. Do NOT ship an OBO tab with only
+     the Mail scope when a custom MCP is attached.
+   - ⛔ **Power Platform connection — a MANDATORY one-time USER action; announce it PROACTIVELY, do not
+     wait for the agent to surface it.** A BYO tool only returns data once the invoking user has created
+     the connector connection. On the first custom-tool call the agent MAY reply *"This server is not
+     yet set up. Visit `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext-<...>&environmentName=<env>`"* —
+     but it does **not always** surface it. So, as soon as an OBO agent's custom tools are wired, TELL
+     the user up front: *"the first time you invoke a custom tool you must open
+     `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext_<name>…&environmentName=<env>`
+     (the exact ids are per-run) and create/update the connection as yourself, then retry the prompt."*
+     OBO reuses the same connection across ACA/FH/FD (same user), so it is created once per `ext_` server.
 4. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
 
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
