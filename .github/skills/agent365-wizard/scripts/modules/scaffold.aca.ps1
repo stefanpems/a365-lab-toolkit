@@ -37,8 +37,8 @@ function Invoke-ScaffoldAcaAgent {
     # Custom ext_ servers are appended later by `a365 develop add-mcp-servers` (see scaffold.tools.ps1).
     Set-ToolingManifest -Path (Join-Path $dst 'ToolingManifest.json') -Tools @($a.tools)
     $reuse = if ($plan.solution.resourceGroupStrategy -eq 'shared') { ' -ReuseEnv' } else { '' }
-    # DW agents prompt for the optional 'ext_UtilityInsights' custom MCP (may be absent in the tenant) and defer the messaging endpoint until the container is deployed.
-    $dwNote = if ($a.type -eq 'ACA-DW') { "   # DW: answer N at the 'ext_UtilityInsights' prompt (optional custom MCP — add only when wiring it); after the container deploys, register the endpoint: a365 setup blueprint --endpoint-only --messaging-endpoint https://<fqdn>/api/messages" } else { '' }
+    # DW defers the messaging endpoint until the container is deployed (the FQDN is a post-deploy artifact).
+    $dwNote = if ($a.type -eq 'ACA-DW') { "   # DW: after the container deploys, register the endpoint: a365 setup blueprint --endpoint-only --messaging-endpoint https://<fqdn>/api/messages" } else { '' }
     $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg <AOAI_RG> -AoaiAcc $($a.ai.account)$reuse$dwNote")
     if ($a.type -eq 'ACA-DW') {
         # DW publish: register the real endpoint, regenerate the package for THIS blueprint, then upload it in the admin center.

@@ -37,7 +37,6 @@ next-commands. It is organized as a **common pre-flight** followed by **per-vari
 ### ACA-DW extra (Digital Worker / AI teammate)
 | Step | Where / how |
 | --- | --- |
-| Prompt **`ext_UtilityInsights — Provision via 'az ad sp create'? [y/N]`** | Answer **N** — it is an **optional custom MCP** that may be absent in the tenant; add it explicitly only when wiring that tool |
 | **Messaging endpoint URL** prompt | Leave **blank** the first time (container not deployed yet); after deploy re-run `a365 setup all --aiteammate` and paste the real `https://<fqdn>/api/messages` |
 | **Publish the manifest** | Run `a365 publish --aiteammate --agent-name "<agent-name>"` (the `--agent-name` flag is **required**; answer **n** then **Enter** at the manifest prompts) to regenerate `manifest/manifest.zip` for **this** blueprint, then in **M365 admin center → Copilot → Agents → + Add agent / Upload custom agent** upload `manifest.zip` (wizard: Upload → Publish to users/Activate → Apply template → Accept permissions → Review & finish → Publish) |
 | **Hire + license + policy** | **Portal / Teams** (manual) — the instance appears under **Instances** (or **Requests** if pending) only *after* publish + a user hire |

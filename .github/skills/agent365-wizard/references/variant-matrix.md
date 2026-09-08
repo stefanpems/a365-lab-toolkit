@@ -40,8 +40,6 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 ### Any DW (ACA-DW / FH-DW)
 - Confirm Frontier / Agent 365 enrollment + license capacity.
 - Policy-template choice (portal step — surface as a checkpoint).
-- ACA-DW `a365 setup` shows an `ext_UtilityInsights — Provision via 'az ad sp create'? [y/N]` prompt:
-  answer **N** (optional custom MCP, usually absent; the `az ad sp create` failure is harmless).
 
 ### UI (if selected)
 - New UI: name (default `<prefix>-ui`), local-only or Azure Static Web App (+ SWA region).
@@ -49,7 +47,11 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 - Agents to expose: multi-select of the OBO/S2S agents.
 - If exposing OBO → Mail consent `McpServers.Mail.All`.
 - If exposing ACA-S2S → blueprint scope `api://<s2s-app-id>/access_agent_as_user` + `UI_AUDIENCE`.
-- If exposing FH/FD → users/groups to grant Foundry access.
+- If exposing **FH or FD** (Foundry-based) → **who to authorize**: the user(s) and/or **group** to grant
+  **Cognitive Services User** on the Foundry account (the SPA calls the Foundry data plane, which checks
+  Azure RBAC). Accepts **multiple** entries; a **group** (name or object id) is recommended — grant the
+  role to the group once and manage membership there. **ACA agents need none** (they run on Container
+  Apps, no Foundry) — do not ask this for an ACA-only UI.
 
 ### Custom MCP (optional — sample `custom-mcp/`)
 Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If anything but None:

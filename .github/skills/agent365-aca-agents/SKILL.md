@@ -23,8 +23,6 @@ the per-variant guides — do not duplicate or renumber them:**
 3. Register the messaging endpoint after the container is up; verify `/api/health`.
 
 ## Known corrections (apply these)
-- **`ext_UtilityInsights` prompt** (`Provision via 'az ad sp create'? [y/N]`) → answer **N** (optional
-  custom MCP usually absent; the `az ad sp create` failure is harmless).
 - **`" Agent"` suffix** in the Registry (e.g. `<name> Agent`) is cosmetic CLI behavior — do not "fix" it.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload

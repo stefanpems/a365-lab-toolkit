@@ -6,14 +6,6 @@
       "url": "https://agent365.svc.cloud.microsoft/agents/servers/mcp_MailTools",
       "scope": "McpServers.Mail.All",
       "audience": "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
-    },
-    {
-      "mcpServerName": "ext_UtilityInsights",
-      "mcpServerUniqueName": "ext_UtilityInsights",
-      "url": "https://agent365.svc.cloud.microsoft/agents/servers/ext_UtilityInsights",
-      "scope": "Tools.ListInvoke.All",
-      "audience": "3e269bd2-a4b4-485d-9f3c-ea0f93502b2b",
-      "publisher": "863ee9e2-ebff-43d4-a0c8-4f224aefc536"
     }
   ]
 }

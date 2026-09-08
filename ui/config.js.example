@@ -1,5 +1,5 @@
 // ============================================================================
-// EXAMPLE runtime configuration for the Agent Framework Agents UI.
+// EXAMPLE runtime configuration for the Agent 365 Lab UI.
 // Copy this file to `config.js` and replace every <PLACEHOLDER> with your own
 // tenant/subscription values. `config.js` is gitignored (tenant-specific);
 // this `.example` is the tracked template.

@@ -164,9 +164,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      servers in parallel; each OBO agent integrates automatically **only if the servers are already
      approved** when it deploys, otherwise run the per-agent attach block later (the scaffolder emits it
      as a clearly-marked manual step). **S2S/DW never attach the custom MCP.**
-3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js`, redeploy the UI, wire
-   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in
-   the UI at `https://<swa-host>`." A working surface early and a testable increment per agent.
+3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js`, redeploy the UI (a **build-free
+   static re-upload** — only `config.js` changes, no compilation), wire `UI_ALLOWED_ORIGINS` (+
+   `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in the UI at
+   `https://<swa-host>`." A working surface early and a testable increment per agent.
 4. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
 
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
@@ -186,10 +187,6 @@ Feasibility conclusion (do not re-derive — act on it):
   interactive/secret steps strictly serial regardless.)" Only parallelize on a yes and within the gate.
 
 ## Known corrections from the first end-to-end run (apply these)
-- **`ext_UtilityInsights` provisioning prompt** (`Provision via 'az ad sp create'? [y/N]`): answer
-  **N**. It is an OPTIONAL custom MCP that is usually absent in the tenant; `az ad sp create` fails
-  with "The appId … does not reference a valid application object" — that failure is harmless, the
-  setup continues. Never answer `y` here.
 - **ACA `" Agent"` suffix**: the a365 CLI registers the agent in the Registry with a trailing
   `" Agent"` (e.g. `a1730-ACA-OBO Agent`). This is cosmetic CLI behavior, not from our config, and
   does not affect the blueprint/identity names. Do not try to "fix" it in the plan.

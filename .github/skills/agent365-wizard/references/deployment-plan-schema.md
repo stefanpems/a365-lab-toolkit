@@ -59,7 +59,7 @@ gitignored.
     "permissions": {
       "mailConsent": false,                // true if any OBO agent is exposed
       "s2sAudience": false,                // true if ACA-S2S is exposed (sets UI_AUDIENCE)
-      "foundryAccess": []                  // if any FH/FD agent is exposed
+      "foundryAccess": []                  // users/groups granted Cognitive Services User on the Foundry account; FH/FD only (not ACA); a group is recommended
     }
   },
   "customMcp": {                            // optional sample custom MCP server (custom-mcp/)

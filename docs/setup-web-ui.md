@@ -114,13 +114,13 @@ az ad app permission admin-consent --id $appId    # run as a TARGET-tenant admin
 > "Need admin approval", create an explicit **AllPrincipals** `oauth2PermissionGrant` for
 > Microsoft Graph `openid profile offline_access`.
 
-## 4. Azure RBAC for the Foundry (FH) agents
+## 4. Azure RBAC for the Foundry (FH / FD) agents
 
-Entra consent alone is not enough for Foundry Hosted agents — the gateway also checks **Azure
-RBAC** on the Foundry account. Assign **Cognitive Services User**
+Entra consent alone is not enough for Foundry Hosted **and Foundry declarative (prompt)** agents —
+the gateway also checks **Azure RBAC** on the Foundry account. Assign **Cognitive Services User**
 (`a97b65f3-24c7-4388-baec-2e87135dc908`) on each Foundry account to an access **group** and add
-your users (see [setup-MAF-FH-OBO.md](setup-MAF-FH-OBO.md) §8). No RBAC is needed for the ACA
-agents.
+your users (see [setup-MAF-FH-OBO.md](setup-MAF-FH-OBO.md) §8). Multiple users/groups are fine — a
+**group** is recommended (grant once, manage membership). **No RBAC is needed for the ACA agents.**
 
 ## 5. Configure `config.js`
 
@@ -197,7 +197,10 @@ npx -y @azure/static-web-apps-cli deploy "." --deployment-token $tok --env produ
 After the first deploy, add the SWA host (`https://<swa-host>`) as a **SPA redirect URI** on
 the app registration (step 2) if you didn't already.
 
-> **Editing local files does **not** update the live site — you must **redeploy** each time.**
+> **Editing local files does **not** update the live site — you must **redeploy** each time.** The
+> redeploy is a **static file re-upload with NO build/compilation** (`--skipAppBuild true`; the SPA has
+> no build step). When you integrate a new agent, the only file that changes is `config.js`, so the
+> redeploy just re-uploads the regenerated `config.js` plus the unchanged static assets.
 
 ### 6a. Enable CORS on the ACA agents (`UI_ALLOWED_ORIGINS`) — required
 

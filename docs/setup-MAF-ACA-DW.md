@@ -128,7 +128,9 @@ the admin center when the agent user is enabled.
 >   later (after propagation) with
 >   `az rest --method POST --url "https://graph.microsoft.com/v1.0/servicePrincipals/<blueprint-sp-id>/appRoleAssignments" --body '{"principalId":"<blueprint-sp-id>","resourceId":"<observability-sp-id>","appRoleId":"<OtelWrite-role-id>"}'`.
 > - `setup all` may prompt **`… - Provision via 'az ad sp create'? [y/N]`** for a missing
->   resource service principal (e.g. `ext_UtilityInsights`). **`az ad sp create` uses the active
+>   resource service principal — this happens **only if you attached a custom `ext_` MCP server**
+>   whose backing app isn't in the tenant yet (the default teammate ships only first-party Mail).
+>   **`az ad sp create` uses the active
 >   Azure CLI context and IGNORES `--subscription`.** On a machine whose `az` context can flip to
 >   another tenant, answer **`N`** and provision it yourself with a **pinned + verified** target
 >   context: `az account set --subscription <TARGET_SUB>`, confirm
@@ -162,11 +164,6 @@ and finish. With the target context **pinned + verified** (`az account set --sub
   `{"principalId":"<blueprint-sp-id>","resourceId":"<observability-sp-id>","appRoleId":"<OtelWrite-role-id>"}`.
   On Windows, pass the JSON via `--body "@file.json"` (inline `--body '{...}'` fails with
   *"Unable to read JSON request payload"*).
-- **`ext_UtilityInsights` SP** — the summary asks to `az ad sp create --id <appId>` and grant
-  `Tools.ListInvoke.All`. In a fresh **Frontier-preview** tenant this can fail with
-  **`NoBackingApplicationObject`** (the resource app isn't published/propagated in the tenant
-  yet). It only backs tool-metadata listing, so it is **non-blocking** for a basic teammate —
-  defer it and retry once the resource is available.
 
 ## 4. Deploy to Azure Container Apps
 

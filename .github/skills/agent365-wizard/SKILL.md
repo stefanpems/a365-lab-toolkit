@@ -114,7 +114,8 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.
 - **UI** → if exposing OBO: Mail consent (`McpServers.Mail.All`); if exposing ACA-S2S: blueprint
-  scope + `UI_AUDIENCE`; if exposing FH/FD: which users/groups get Foundry access.
+  scope + `UI_AUDIENCE`; if exposing **FH/FD** (Foundry-based, **not ACA**): which user(s)/**group** get
+  **Cognitive Services User** on the Foundry account (multiple allowed; a group is recommended).
 
 Do NOT ask for: Log Analytics names, endpoints, app/blueprint IDs, fixed first-party scopes,
 localhost redirect URIs, API versions, descriptions — these are discovered, derived, or fixed.
@@ -163,8 +164,6 @@ writing. Print the next commands for the user to run; never auto-run destructive
 - **Browser sign-in + admin consent** happens for ACA `a365 setup`, `azd auth login`, SPA consent,
   and first UI-tab use. Announce it each time; the post-accept "We couldn't connect to that service"
   page is expected and safe to ignore.
-- **`ext_UtilityInsights` prompt** during ACA/DW setup → answer **N** (optional MCP absent in tenant;
-  `az ad sp create` failure is harmless).
 - **Parallelization.** Serial only: `a365 setup`, secret/y-N/endpoint prompts, browser consent. May
   overlap: `azd`/`az acr build`/RBAC waits/`pip install`. Gate by free RAM (≤ `floor((freeMB-300)/300)`
   concurrent units, keep ≥300 MB free) and ASK the user before parallelizing.

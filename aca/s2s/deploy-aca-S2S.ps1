@@ -31,7 +31,7 @@ $APP       = "agentframework-s2s-sample"
 $ENVNAME   = "agentframework-S2S-env"
 $LOC       = "polandcentral"
 $IMAGE_TAG = "v1"
-$IMAGE     = "agentframework-s2s-sample:$IMAGE_TAG"
+$IMAGE     = "${APP}:$IMAGE_TAG"
 # Dedicated Log Analytics workspace (created in $RG if absent).
 $LAW_NAME  = "agentframework-S2S-logs"
 # ==================================================================

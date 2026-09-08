@@ -29,7 +29,7 @@ $APP       = "agentframework-dw-sample"
 $ENVNAME   = "agentframework-DW-env"
 $LOC       = "polandcentral"
 $IMAGE_TAG = "v1"
-$IMAGE     = "agentframework-dw-sample:$IMAGE_TAG"
+$IMAGE     = "${APP}:$IMAGE_TAG"
 # SELF-CONTAINED Log Analytics workspace (created in this RG, no external dependency).
 $LAW_NAME  = "agentframework-DW-logs"
 # Azure OpenAI with Entra ID auth (needed if the sub disables key auth):
