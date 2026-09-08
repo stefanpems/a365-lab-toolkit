@@ -15,7 +15,17 @@ gitignored.
     "subscriptionId": "<guid>",           // discovered, confirmed
     "region": "<azure-region>",           // e.g. polandcentral
     "resourceGroupStrategy": "isolated",  // "isolated" | "shared"
-    "sharedResourceGroup": "<name>"       // only when strategy = "shared"
+    "sharedResourceGroup": "<name>",      // only when strategy = "shared"
+    "foundry": {                          // OPTIONAL — shared Foundry footprint for ALL FH + FD agents
+      "mode": "create-shared",            // "create-shared" (one account+project+model for the lab) | "reuse-existing"
+      "resourceGroup": "<prefix>-foundry-rg", // create-shared: dedicated RG for the shared account
+      "project": "<prefix>",              // create-shared: the single project name
+      "deployment": "gpt-4.1",            // the single model deployment shared by all FH/FD agents
+      "modelVersion": "2025-04-14",       // optional (defaults to 2025-04-14)
+      "endpoint": "https://<account>.services.ai.azure.com/api/projects/<project>", // reuse-existing
+      "account": "<name>",                // reuse-existing: account name (model check + cleanup scope)
+      "existingResourceGroup": "<name>"   // reuse-existing: RG of the existing account
+    }
   },
   "agents": [
     {
@@ -87,6 +97,17 @@ gitignored.
   optional, or add more servers. **FD agents keep it `[]`** (prompt agents wire tools in
   `agent_config.py`, not via the manifest). Reusing a non-Mail Work IQ tool follows the same auth/token
   lessons — see [workiq-mcp-integration.md](./workiq-mcp-integration.md).
+- `solution.foundry` (optional) makes **all FH + FD agents share ONE Foundry account + project + model
+  deployment** instead of one account per agent. `create-shared` = the wizard provisions the single
+  account + project (`<prefix>`) + model (`gpt-4.1`) in `<prefix>-foundry-rg` (the first FH-OBO/FH-S2S
+  agent runs `azd provision`; the rest and all FD agents `azd deploy` into it — the shared account name is
+  azd-generated, so the scaffolder emits placeholder tokens the agent substitutes with the captured
+  endpoint/project-id). `reuse-existing` = every FH/FD agent deploys into an existing account+project you
+  supply (`endpoint`/`account`/`existingResourceGroup`), with **no** `azd provision` — the resilient path
+  when new-account hosted-agent provisioning is degraded service-side. **FH-DW always keeps its own
+  account** (it bundles a Bot Service + managed-agent-identity blueprint bicep). When the block is
+  **absent**, the legacy per-agent behaviour is unchanged. FD-only labs must use `reuse-existing` (a prompt
+  agent has no azd project to provision a shared account from).
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics

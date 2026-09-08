@@ -45,14 +45,38 @@ per-variant guides — do not duplicate or renumber them:**
   the truth.** A version that provisioned OK is `active` on the ITEM endpoint; a failed one is `failed` with
   an `error`, and invoking the agent returns **HTTP 409 `agent_version_failed` "Agent version provisioning
   failed"**. Interpret the error: SPECIFIC codes are fixable config/RBAC (`image_pull_failed`,
-  `AcrImageNotFound`, `InvalidAcrPullCredentials`, `DeploymentNotFound`, `SubscriptionIsNotRegistered`); a
-  **generic `ProvisioningError` ("Please retry")** that persists across several `azd deploy` retries is a
-  **server-side Foundry failure** (5xx → the docs say contact support), NOT a plan/scaffolder bug. Verified on
-  a09081 (2026-09-08): FH-OBO/FH-S2S all versions stayed `ProvisioningError` and invoking returned 409, while
-  the **identical** h2256 FH-OBO deployed the day before shows the version item `active` and works — the only
-  difference was that the a09081 Foundry accounts were minutes old. Response: **retry later** (a freshly
-  created Foundry account may need time to become hosted-agent-capable) or try another region; do not
-  "fix" the identical-to-working code/plan. The `/agents` (assistants) LIST is empty for hosted agents.
+  `AcrImageNotFound`, `InvalidAcrPullCredentials`, `DeploymentNotFound`, `SubscriptionIsNotRegistered`); the
+  `/agents` (assistants) LIST is empty for hosted agents.
+- **⛔ Persistent generic `ProvisioningError` ("Please retry") on a NEWLY-CREATED Foundry account = a
+  service-side hosted-agent build failure, NOT a plan/scaffolder/tooling bug — deploy into an EXISTING
+  working project instead of provisioning a new account.** Conclusive evidence (a09081, 2026-09-08, every
+  variable isolated): the **identical** agent code (same `content_hash`) deploys `active` in ~90 s in a
+  Foundry project created earlier (h2256, 2026-09-06), but every version `failed` with `ProvisioningError`
+  in accounts created that day — including one **freshly provisioned with the current azd 1.33 + agents
+  beta.13** (so it is NOT the old tooling), with the model deployment bound and RBAC granted. Account/
+  project ARM config (kind/sku/identity/`allowProjectManagement`/capabilityHosts/connections), account-scope
+  RBAC and project managed-identity roles were **byte-identical** between the working and failing projects;
+  the only difference was the account **creation date**. Do **not** "fix" identical-to-working code, re-grant
+  RBAC, change region, or wait for it to "activate later" (it never does — all a09081 versions stayed
+  `failed`). **Response:** deploy the FH agents into an existing hosted-agent-capable project via
+  `foundry.mode: reuse-existing` (see the Foundry-resource strategy below); that is both the rationalized
+  default and the resilient path when new-account provisioning is degraded.
+
+## Foundry-resource strategy (`solution.foundry`)
+All FH **and** FD agents share ONE Foundry footprint defined by the optional `solution.foundry` block —
+so a lab creates a single account + project + model deployment instead of one account per agent (the
+scaffolder resolves each agent's target from it; when the block is absent the legacy per-agent behaviour
+is unchanged). Two modes:
+- **`create-shared`** (default): the wizard provisions ONE Foundry account + ONE project (`<prefix>`) +
+  ONE model deployment (`gpt-4.1`) in `<prefix>-foundry-rg`; the FIRST FH agent runs `azd provision`
+  (creating the shared account/project) + creates the model + grants RBAC, and every other FH agent runs
+  `azd deploy` into that same project. FD agents deploy into it too. The Lab Cleaner removes the whole
+  `<prefix>-foundry-rg`.
+- **`reuse-existing`**: every FH/FD agent deploys into an existing account+project you supply
+  (`foundry.endpoint` / `foundry.account` / `foundry.existingResourceGroup`); the scaffolder writes that
+  endpoint into each agent and emits **deploy-only** commands (no `azd provision`). This is the resilient
+  workaround when new-account hosted-agent provisioning is failing service-side, and the Lab Cleaner deletes
+  only the lab's agent objects from that project — never the user-owned account/project.
 
 ## Tools
 FH samples currently wire **only Mail** in code. Attaching a non-Mail Work IQ MCP also needs the code

@@ -6,19 +6,28 @@ function Invoke-ScaffoldFdAgent {
     param($a, $m, $dst)
 
     $envPath = Join-Path $dst '.env'
-    $fp = $a.foundryProject
-    if ($fp -and $fp -notmatch '/api/projects/') {
-        # Prompt-agent SDK needs the PROJECT endpoint (…/api/projects/<project>), not the account endpoint. Derive it (read-only az).
-        $acctName = ([uri]$fp).Host.Split('.')[0]
-        $proj = az rest --method get --url "https://management.azure.com/subscriptions/$($plan.solution.subscriptionId)/resourceGroups/$($a.resourceGroup)/providers/Microsoft.CognitiveServices/accounts/$acctName/projects?api-version=2025-04-01-preview" --query "value[0].name" -o tsv 2>$null
-        if ($proj) { if ($proj -like '*/*') { $proj = $proj.Split('/')[-1] }; $fp = "https://$acctName.services.ai.azure.com/api/projects/$proj"; Write-Host "    FD project endpoint derived: $fp" -ForegroundColor DarkGray }
-        else { Write-Host "    WARN $($a.name): set FOUNDRY_PROJECT_ENDPOINT manually to https://<acct>.services.ai.azure.com/api/projects/<project>" -ForegroundColor Yellow }
+    $ft = Resolve-FoundryTarget $plan $a
+    if ($ft.mode -eq 'per-agent') {
+        # Legacy: derive the PROJECT endpoint from the agent's own foundryProject (account or project URL).
+        $fp = $a.foundryProject
+        if ($fp -and $fp -notmatch '/api/projects/') {
+            # Prompt-agent SDK needs the PROJECT endpoint (…/api/projects/<project>), not the account endpoint. Derive it (read-only az).
+            $acctName = ([uri]$fp).Host.Split('.')[0]
+            $proj = az rest --method get --url "https://management.azure.com/subscriptions/$($plan.solution.subscriptionId)/resourceGroups/$($a.resourceGroup)/providers/Microsoft.CognitiveServices/accounts/$acctName/projects?api-version=2025-04-01-preview" --query "value[0].name" -o tsv 2>$null
+            if ($proj) { if ($proj -like '*/*') { $proj = $proj.Split('/')[-1] }; $fp = "https://$acctName.services.ai.azure.com/api/projects/$proj"; Write-Host "    FD project endpoint derived: $fp" -ForegroundColor DarkGray }
+            else { Write-Host "    WARN $($a.name): set FOUNDRY_PROJECT_ENDPOINT manually to https://<acct>.services.ai.azure.com/api/projects/<project>" -ForegroundColor Yellow }
+        }
+    }
+    else {
+        # Shared Foundry (solution.foundry): reuse-existing = the known project endpoint; create-shared =
+        # a token the agent substitutes with the shared project the first FH agent provisioned.
+        $fp = $ft.endpoint
     }
     # The prompt-agent SDK requires the AI-services host, NOT the account's cognitiveservices.azure.com host
     # (the latter returns 404 at deploy). Normalize even when the plan already supplied /api/projects/.
     if ($fp -match 'cognitiveservices\.azure\.com') { $fp = $fp -replace '\.cognitiveservices\.azure\.com', '.services.ai.azure.com' }
     if ($fp) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $fp }
-    Set-EnvValue -Path $envPath -Key 'FOUNDRY_MODEL_NAME' -Value $a.ai.deployment
+    Set-EnvValue -Path $envPath -Key 'FOUNDRY_MODEL_NAME' -Value $ft.deployment
     Set-EnvValue -Path $envPath -Key 'AGENT_NAME' -Value $a.name
     if ($a.type -eq 'FD-OBO') {
         Set-EnvValue -Path $envPath -Key 'AZURE_TENANT_ID' -Value $plan.solution.tenantId
@@ -37,9 +46,17 @@ function Invoke-ScaffoldFdAgent {
             if ($parts.Count -gt 0) { Set-EnvValue -Path $envPath -Key 'CUSTOM_MCP_SERVERS_JSON' -Value ('[' + ($parts -join ',') + ']') }
         }
     }
-    # FD deploy authors an agent version -> needs Cognitive Services User on the reused Foundry account.
-    $fdGrant = "az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope (az cognitiveservices account show -n $($a.ai.account) -g $($a.resourceGroup) --query id -o tsv)"
-    $nextCommands.Add("cd `"$dst`"; $fdGrant; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py   # RBAC propagates ~2-5min")
+    # FD deploy authors an agent version -> needs Cognitive Services User on the Foundry account.
+    if ($ft.mode -eq 'create-shared') {
+        # The shared account name is only known after the first FH agent provisions it, and that step
+        # already granted the signed-in user Cognitive Services User on it, so no separate grant here.
+        # The agent substitutes the shared project endpoint (captured from the provisioning step) into .env.
+        $nextCommands.Add("cd `"$dst`"; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py   # create-shared: set FOUNDRY_PROJECT_ENDPOINT in .env to the captured shared project first (RBAC already granted by the shared-Foundry provisioner)")
+    }
+    else {
+        $fdGrant = "az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope (az cognitiveservices account show -n $($ft.account) -g $($ft.resourceGroup) --query id -o tsv)"
+        $nextCommands.Add("cd `"$dst`"; $fdGrant; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py   # RBAC propagates ~2-5min")
+    }
     if ($a.type -eq 'FD-OBO' -and $plan.customMcp -and $plan.customMcp.enabled -and (@($plan.customMcp.attachTo) -contains 'FD-OBO')) {
         $nextCommands.Add("#   ^ FD-OBO custom MCP: the ext_ servers must be REGISTERED + admin-approved first (custom-mcp/), then 'python deploy_agent.py' bakes them into the agent version from CUSTOM_MCP_SERVERS_JSON. FD has NO server-side code, so BYO tools surface only when the one-time Power Platform connection already exists (OBO reuses the ACA/FH connection); the prompt asks the model to run 'initialize_server' first if a server still needs it. Re-run the UI scaffolder + redeploy the SPA so config.js obo-fd gets customInputs.")
     }

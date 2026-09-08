@@ -94,6 +94,25 @@ if ($plan.solution.resourceGroupStrategy -eq 'shared') {
     }
 }
 
+# Shared Foundry strategy (optional solution.foundry). When present, all FH/FD agents share ONE account +
+# project + model instead of one account per agent. Absent = legacy per-agent (each FH provisions its own).
+if ($plan.solution.foundry) {
+    $f = $plan.solution.foundry
+    if ($f.mode -notin @('create-shared', 'reuse-existing')) {
+        $errors.Add("solution.foundry.mode '$($f.mode)' is invalid (use 'create-shared' = the wizard provisions one shared account+project+model for the lab, or 'reuse-existing' = deploy all FH/FD agents into an account+project you already have).")
+    }
+    if ($f.mode -eq 'reuse-existing' -and -not $f.endpoint) {
+        $errors.Add("solution.foundry.mode 'reuse-existing' requires 'endpoint' (the project endpoint https://<account>.services.ai.azure.com/api/projects/<project> the FH/FD agents deploy into). Add 'account' + 'existingResourceGroup' too so the model can be verified and the deploy identity granted Cognitive Services User.")
+    }
+    if ($f.mode -eq 'create-shared') {
+        $sharedProv = ($plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S') } | Select-Object -First 1)
+        $needsShared = $plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S', 'FD-OBO', 'FD-S2S') }
+        if ($needsShared -and -not $sharedProv) {
+            $errors.Add("solution.foundry.mode 'create-shared' needs at least one FH-OBO/FH-S2S agent to provision the shared account (azd provision runs from an FH folder); FD-only labs must use 'reuse-existing' (a prompt agent has no azd project to provision from). FH-DW always keeps its own account (Bot Service + blueprint bicep).")
+        }
+    }
+}
+
 # Custom MCP validation (optional). The custom MCP name is NOT asked — it IS the solution prefix (the
 # prefix rule above already guarantees a valid ext_<prefix>Anon/Auth: <= 12 lowercase alphanumeric,
 # letter-first, so ext_ stays <= 20).

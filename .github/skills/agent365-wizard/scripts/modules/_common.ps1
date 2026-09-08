@@ -65,6 +65,64 @@ function Get-WorkIQScope {
     ($WORKIQ_MCP_CATALOG | Where-Object { $_.uniqueName -eq $UniqueName } | Select-Object -First 1).scope
 }
 
+# ---------------------------------------------------------------- Foundry-resource strategy
+# All FH + FD agents share ONE Foundry footprint (account + project + model deployment) when the
+# optional solution.foundry block is present, instead of one Foundry account per agent. Two modes:
+#   create-shared  = the wizard provisions ONE account + project (<prefix>) + model (gpt-4.1) in
+#                    <prefix>-foundry-rg; the FIRST FH agent runs azd provision, the rest azd deploy
+#                    into it; FD deploys into it too. (The azd account name is generated, so the
+#                    shared endpoint/project-id are captured post-provision and reused — placeholder
+#                    tokens below are substituted by the agent from the provisioning step's output.)
+#   reuse-existing = every FH/FD agent deploys into an existing account+project the user supplies
+#                    (foundry.endpoint/account/existingResourceGroup); no azd provision. This is also
+#                    the resilient path when new-account hosted-agent provisioning is failing service-side.
+# When the block is ABSENT the legacy per-agent behaviour is unchanged (each FH agent provisions its
+# own account in its own RG; FD reuses the agent's own foundryProject).
+$SHARED_FOUNDRY_ENDPOINT_TOKEN = '<SHARED_FOUNDRY_PROJECT_ENDPOINT>'  # create-shared: agent fills from the provisioning step
+$SHARED_FOUNDRY_PROJECTID_TOKEN = '<SHARED_FOUNDRY_PROJECT_ID>'
+
+# Resolve the effective Foundry target for one FH/FD agent from solution.foundry (fallback = agent fields).
+function Resolve-FoundryTarget {
+    param($plan, $a)
+    $t = [ordered]@{
+        mode          = 'per-agent'          # 'per-agent' (legacy) | 'create-shared' | 'reuse-existing'
+        resourceGroup = $a.resourceGroup
+        account       = $a.ai.account
+        endpoint      = $a.foundryProject
+        deployment    = $a.ai.deployment
+        project       = $null
+    }
+    $f = $plan.solution.foundry
+    if ($f -and $f.mode) {
+        $t.mode = $f.mode
+        if ($f.deployment) { $t.deployment = $f.deployment }
+        if ($f.mode -eq 'reuse-existing') {
+            if ($f.endpoint) { $t.endpoint = $f.endpoint }
+            if ($f.account) { $t.account = $f.account }
+            if ($f.existingResourceGroup) { $t.resourceGroup = $f.existingResourceGroup }
+            # Parse the project name from the endpoint (…/api/projects/<project>) so the caller can build
+            # AZURE_AI_PROJECT_ID for azd deploy.
+            if ($t.endpoint -and $t.endpoint -match '/api/projects/([^/?]+)') { $t.project = $matches[1] }
+        }
+        elseif ($f.mode -eq 'create-shared') {
+            if ($f.resourceGroup) { $t.resourceGroup = $f.resourceGroup }
+            if ($f.project) { $t.project = $f.project }
+            $t.endpoint = $SHARED_FOUNDRY_ENDPOINT_TOKEN   # discovered post-provision, agent substitutes
+        }
+    }
+    return $t
+}
+
+# Name of the FH agent that provisions the shared account (create-shared only): the first FH-OBO/FH-S2S
+# in plan order. The rest (and FD) deploy into it. FH-DW is EXCLUDED — it bundles a Bot Service +
+# managed-agent-identity blueprint (bicep) that are DW-specific, so DW keeps its own account. Returns
+# $null when no shared-capable FH agent / not create-shared.
+function Get-SharedFoundryProvisioner {
+    param($plan)
+    if (-not ($plan.solution.foundry -and $plan.solution.foundry.mode -eq 'create-shared')) { return $null }
+    ($plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S') } | Select-Object -First 1).name
+}
+
 # ---------------------------------------------------------------- ToolingManifest reconciler
 # Make a scaffolded ToolingManifest.json AUTHORITATIVE: keep exactly the servers whose uniqueName is
 # in $Tools, drop the rest. The samples ship `mcp_MailTools`, so this KEEPS Mail when selected and

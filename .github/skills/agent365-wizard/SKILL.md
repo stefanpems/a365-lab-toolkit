@@ -110,10 +110,15 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 Driven by [references/variant-matrix.md](./references/variant-matrix.md):
 - Any **ACA** → Azure OpenAI account + model deployment; auth = **Managed Identity (default)** or
   API key (fallback, entered in the terminal, never chat).
-- Any **FH** → Foundry project new/existing + chat model deployment.
-- Any **FD** → Foundry project: **the wizard can CREATE one** (AIServices account + project + model)
-  if none is selected; reuse the FH project if an FH variant is also chosen; or reuse an existing one
-  if the user prefers. FD does not strictly require a pre-existing project.
+- Any **FH or FD** → **Foundry-resource strategy** (`solution.foundry`), asked ONCE for the whole lab
+  since all FH + FD agents share it: **(A) create one shared account + project + model** (`create-shared`,
+  the clean default — account/project `<prefix>` + `gpt-4.1` in `<prefix>-foundry-rg`, all FH/FD agents
+  deploy into it) **or (B) reuse an existing account + project** (`reuse-existing` — the user gives the
+  project endpoint; no provision). Prefer **reuse-existing** when new-account hosted-agent provisioning is
+  failing service-side (a freshly created Foundry account can be temporarily unable to provision hosted
+  agents — deploying into an existing working project is the resilient path). **FH-DW keeps its own
+  account** (Bot Service + blueprint bicep). FD-only labs must use reuse-existing. Legacy per-agent
+  accounts still work if `solution.foundry` is omitted.
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.
 - **UI** → if exposing OBO: Mail consent (`McpServers.Mail.All`); if exposing ACA-S2S: blueprint

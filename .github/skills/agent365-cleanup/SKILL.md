@@ -50,9 +50,12 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
 - **License release is the priority.** A soft-delete does **not** free M365 licenses — only the purge
   does. The removal script removes each license explicitly, soft-deletes the agent user, purges it from
   the recycle bin, and verifies release. Do not skip the purge.
-- **Shared resources.** Never delete a shared Foundry RG (e.g. `rg-a365-foundry-agent`, used by FD) or a
-  shared agent RG unless every agent in it is in scope. The review screen shows RG contents so the user
-  can judge. FD agents leave almost no Azure footprint — their cleanup is the blueprint app + instances.
+- **Shared resources.** Never delete a **user-owned** shared Foundry account/RG (e.g. `rg-a365-foundry-agent`
+  used by FD, or a `solution.foundry` **`reuse-existing`** account) or a shared agent RG unless every agent
+  in it is in scope. The review screen shows RG contents so the user can judge. FD agents (and FH agents in
+  `reuse-existing` mode) leave almost no Azure footprint — their cleanup is the blueprint app + instances
+  (+ the data-plane Foundry agent object). A `solution.foundry` **`create-shared`** account lives in the
+  lab-owned `<prefix>-foundry-rg`, which IS discovered by the prefix filter and deleted like an agent RG.
 
 ## Flow (in order)
 0. **Confirm the Copilot runtime model** — first action. Show the active chat model and, when VS Code

@@ -287,7 +287,10 @@ function Find-CustomMcp {
 function Find-Agents {
     Write-Host "Scanning agent resources..." -ForegroundColor Cyan
     # Azure resource groups dedicated to an agent (isolated strategy). Exclude UI and MCP RGs; a
-    # shared RG (e.g. rg-a365-foundry-agent used by FD) will simply not match a prefix filter.
+    # pre-existing shared RG (e.g. rg-a365-foundry-agent used by FD, or a solution.foundry
+    # 'reuse-existing' account) is not prefix-named so it will not match. The 'create-shared' Foundry
+    # RG <prefix>-foundry-rg IS prefix-named and lab-owned, so it matches here and is deleted like an
+    # agent RG (correct — the wizard created it for the lab).
     $rgs = Invoke-AzJson @('group', 'list', '--subscription', $sub, '-o', 'json')
     foreach ($rg in @($rgs)) {
         $n = $rg.name

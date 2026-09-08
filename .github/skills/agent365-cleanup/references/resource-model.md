@@ -44,6 +44,7 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 | Azure | **Dedicated** resource group (isolated strategy) | `<agent-name>-rg` | `delete-rg` (async) |
 | Azure | ACA container app / env / ACR / Log Analytics | inside the agent RG | covered by the RG delete |
 | Azure | FH Foundry account / project / ACR / model / Bot Service (DW) / UAMI | inside the agent RG | covered by the RG delete |
+| Azure | **Shared** Foundry account + project + model (`solution.foundry` `create-shared`) | `<prefix>-foundry-rg` | `delete-rg` — matches the prefix filter, so it is discovered and removed like an agent RG (it is lab-owned) |
 | Entra | Blueprint app (+ its SP) | `<agent-name> Blueprint` | `delete-app` + purge |
 | Entra | Agent identity app / SP | `<agent-name> Identity` | `delete-app` + purge |
 | Entra | **Agent instances** (agent users) | custom names given at hire (may NOT contain the prefix) | `remove-licenses-and-delete-user` |
@@ -51,6 +52,12 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 | Entra recycle bin | Any app / SP / user left soft-deleted from a prior attempt | matches the filter | `purge-deleted-item` |
 
 ### Shared resources that must NOT be deleted wholesale
+- **`solution.foundry` `reuse-existing`** points the FH/FD agents at a **pre-existing, user-owned** Foundry
+  account + project (supplied via `foundry.endpoint`/`account`/`existingResourceGroup`). Its RG is not
+  prefix-named, so the prefix filter will not match it — and it must **not** be deleted. Cleanup is limited
+  to the lab's blueprint/identity apps + instances (+ the Foundry **agent object**, a data-plane object;
+  delete it in the portal/admin center or via the Foundry API if required). This is the same treatment as FD
+  below. (`create-shared` is the opposite: its `<prefix>-foundry-rg` **is** lab-owned and IS deleted.)
 - **FD (prompt) agents** reuse a **shared** Foundry account/project (e.g. `rg-a365-foundry-agent` /
   `a365f-…`). It is pre-existing and shared — a prefix filter will not match it, and it must not be
   deleted. FD cleanup is limited to the blueprint app + instances (+ the Foundry agent object, which

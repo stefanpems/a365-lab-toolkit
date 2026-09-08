@@ -196,8 +196,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    and that lowercase-alphanumeric-starting-with-a-letter also satisfies Azure Container Apps, resource
    groups, managed identities, the Entra apps and the Static Web App. Examples: `contoso`, `sales01`.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
-   Azure OpenAI account+model for ACA; Foundry project (new/reuse) + model for FH; Foundry project
-   for FD (the wizard can CREATE one — see point below); Frontier/licensing for DW; UI permissions.
+   Azure OpenAI account+model for ACA; for any **FH or FD** ask the **Foundry-resource strategy** ONCE
+   (`solution.foundry`, shared by all FH+FD): **create one shared account+project+model** (`create-shared`,
+   default) or **reuse an existing account+project** (`reuse-existing`); Frontier/licensing for DW; UI
+   permissions.
 5. **Discovery + review** — run the read-only discovery script; show ONE editable review screen with
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
 6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
@@ -382,14 +384,27 @@ permissions — tell the user they must configure the agent's permissions manual
 any. **Reuse — never re-derive — the token lessons** in that reference, also referenced by each family
 sub-skill.
 
-## Creating a Foundry project for FD (FD should not require a pre-existing project)
-FD prompt agents need a Foundry project, but the wizard can create one instead of requiring it:
-- If any FH variant is also selected, **reuse** the project that `azd provision` creates.
-- Otherwise, offer to CREATE one: an `AIServices` account + a project + a chat-model deployment, e.g.
-  `az cognitiveservices account create -n <acct> -g <rg> -l <region> --kind AIServices --sku S0`,
-  create the project, then `az cognitiveservices account deployment create` for the model. Record the
-  resulting `…/api/projects/<project>` endpoint in the plan. Only fall back to "reuse existing" if the
-  user prefers it.
+## Foundry-resource strategy (`solution.foundry`) — all FH + FD agents share ONE footprint
+Ask this ONCE for the whole lab (not per agent): all FH and FD agents share one Foundry account +
+project + model deployment. Two modes:
+- **`create-shared`** (clean default): the wizard provisions ONE account + project `<prefix>` + model
+  `gpt-4.1` in `<prefix>-foundry-rg`. The first FH-OBO/FH-S2S agent runs `azd provision` (creating the
+  shared account/project); it also creates the model + grants Cognitive Services User. Every other FH
+  agent and every FD agent then **deploys** into that project. Because the azd account name is generated,
+  after the provision step **capture** `FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_PROJECT_ID`
+  (`azd env get-values`) and substitute them into the `<SHARED_FOUNDRY_*>` tokens the scaffolder emitted
+  for the other agents. The Lab Cleaner removes the whole `<prefix>-foundry-rg`.
+- **`reuse-existing`**: every FH/FD agent deploys into an existing account+project the user supplies
+  (`foundry.endpoint`/`account`/`existingResourceGroup`); **no** `azd provision`. ⛔ **Prefer this when
+  new-account hosted-agent provisioning is failing** — a freshly created Foundry account can be
+  temporarily unable to provision hosted agents (a persistent generic `ProvisioningError "Please retry"`
+  that never activates, while the identical code deploys `active` in an older project — a service-side
+  build issue, NOT a plan/tooling bug). Deploying into an existing working project (created earlier) is
+  the resilient path. The Lab Cleaner does **not** delete the user-owned account, only the lab's agent
+  objects.
+- **FH-DW always keeps its own account** (Bot Service + managed-agent-identity blueprint bicep). FD-only
+  labs must use `reuse-existing` (a prompt agent has no azd project to provision a shared account from).
+  Omit `solution.foundry` entirely to keep the legacy per-agent-account behaviour.
 
 ## Output
 End every turn with a short status: what was decided, what is still open, the exact next action, and
