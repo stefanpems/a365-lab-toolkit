@@ -75,19 +75,25 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 3. If a UI is chosen — multi-select of the **OBO/S2S** agents to expose (exclude DW: they route via
    Teams/Outlook/Office, not the SPA — see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).
 4. **Custom MCP** (single-select): *None* / *Anonymous only* / *Authenticated only* / *Both* — the
-   sample [custom-mcp/](../../../custom-mcp/README.md). If not None, also ask for `<Name>` (**max 12
-   chars**, `^[A-Za-z][A-Za-z0-9]*$` → registered as `ext_<Name>Anon` / `ext_<Name>Auth`, ≤ 20), a
-   publisher name, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
-   blocked: they can't own the per-user Power Platform connection a BYO server needs; see
-   custom-mcp/README.md), and whether to enable
-   `propagate_to_graph` (advanced On-Behalf-Of Graph test). Writes `customMcp` in the plan. `<Name>` is
-   the **unique per-copy key** (Azure resources `<name>-mcp-*`, folder `generated/<prefix>-mcp/`,
-   registrations all derive from it) — to create N coexisting copies each run needs a different `<Name>`;
-   check the tenant (`a365 develop list-available`) and ask again if it collides.5. **Registered MCP tools** (per ACA-*/FH-* agent) — multi-select of servers from
-   `a365 develop list-available` (Work IQ `mcp_*` + custom `ext_*` + third-party), with `mcp_MailTools`
-   **pre-selected** (deselect to make Mail optional), plus free-text for other registered `uniqueName`s.
-   Writes `agents[].tools`. FD agents keep `tools: []`. Reuse the token lessons in
-   [references/workiq-mcp-integration.md](./references/workiq-mcp-integration.md) for any Work IQ MCP.
+   sample [custom-mcp/](../../../custom-mcp/README.md). If not None, **do NOT ask a name** (it derives
+   from the solution prefix → `ext_<prefix>Anon` / `ext_<prefix>Auth`; the prefix must be ≤ 12
+   alphanumerics), ask a publisher name, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO`
+   only — S2S/DW are blocked: they can't own the per-user Power Platform connection a BYO server needs;
+   see custom-mcp/README.md), an **integration mode** (*approve-first* = approve the servers before the
+   agents, integrate each OBO immediately; *attach-when-approved* (default) = agents first, integrate
+   when approved else manually later), and whether to enable `propagate_to_graph` (advanced
+   On-Behalf-Of Graph test). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
+   (Azure resources `<prefix>-mcp-*`, folder `generated/<prefix>/<prefix>-mcp/`, registrations all
+   derive from it) — for N coexisting copies use a different prefix each run; check the tenant
+   (`a365 develop list-available`) and ask again if `ext_<prefix>*` collides.
+5. **Registered MCP tools** (per ACA-*/FH-* agent) — multi-select from `a365 develop list-available`
+   (Work IQ `mcp_*` + custom `ext_*` + third-party). **Show ALL Work IQ servers but make only
+   `mcp_MailTools` selectable today** (the rest visible-but-disabled, noting only tested tools are
+   enabled for now); **pre-select Mail for OBO/DW only** (not S2S). Free-text allows other registered
+   `uniqueName`s. Writes `agents[].tools` (FD stays `[]`); the scaffolder makes each manifest
+   authoritative = these tools before `a365 setup all`, so permissions match the selection. Reuse the
+   token lessons + the per-server permission map in
+   [references/workiq-mcp-integration.md](./references/workiq-mcp-integration.md).
 ### 3. Solution basics (one screen)
 - **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as
   `<prefix>-<hosting>-<identity>` where hosting ∈ {ACA, FH, FD}, identity ∈ {OBO, S2S, DW}.
@@ -130,16 +136,19 @@ Then ask: **Save plan** / **Generate scaffolding** / **Cancel**.
 ### 7. Scaffold (only on confirmation)
 Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) — a thin **router** that
 dot-sources the per-family/component modules under [scripts/modules/](./scripts/modules). It validates
-the plan (DW ≤30-char, lowercase container names, shared-RG/ACA safety, `customMcp.name` ≤12-char), copies each
-variant sample into `generated/<agent-name>/`, fills the tenant-specific config, **rewrites the ACA
-deploy-script constants** (RG / region / app / env are hardcoded, not parameters), generates
-`generated/<prefix>-ui/config.js` when a UI is requested, scaffolds `generated/<prefix>-mcp/` with filled
-`register-anon.json` / `register-auth.json` when `customMcp.enabled`, and prints the exact next
-commands (deploy MCP → register servers → `a365 develop add-mcp-servers` + `a365 setup permissions mcp`
-per attached agent, including each agent's selected `agents[].tools` and dropping `mcp_MailTools` when
-Mail is deselected). It performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to
-check a plan without writing. Print the next commands for the user to run; never auto-run destructive
-deploys.
+the plan (DW ≤30-char, lowercase container names, shared-RG/ACA safety, custom-MCP prefix ≤12-char +
+`integrationMode`), and writes everything under one **per-run root `generated/<prefix>/`**: copies each
+variant sample into `generated/<prefix>/<agent-name>/`, fills the tenant-specific config, **rewrites the
+ACA deploy-script constants** (RG / region / app / env are hardcoded, not parameters), makes each
+agent's `ToolingManifest.json` **authoritative = its `agents[].tools`** (so `a365 setup all` grants only
+the selected servers' permissions — no Mail on an agent that didn't select it), generates
+`generated/<prefix>/<prefix>-ui/config.js` when a UI is requested, and scaffolds
+`generated/<prefix>/<prefix>-mcp/` with filled `register-anon.json` / `register-auth.json` (names derived
+from the prefix) when `customMcp.enabled`. It prints the next commands in **execution order**: web UI →
+custom MCP (deploy → register → approval-mode note) → agents, each with its custom-MCP attach
+(`a365 develop add-mcp-servers` + `a365 setup permissions mcp`) folded in right after its deploy. It
+performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to check a plan without
+writing. Print the next commands for the user to run; never auto-run destructive deploys.
 
 ## 8. Deployment execution (only after scaffolding is confirmed)
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +

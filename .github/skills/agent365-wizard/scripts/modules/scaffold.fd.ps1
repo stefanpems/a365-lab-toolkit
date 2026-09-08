@@ -24,7 +24,7 @@ function Invoke-ScaffoldFdAgent {
         # builds one MCPTool + StructuredInputDefinition per server (Authorization header = {{<input>}}).
         # The SPA sends the matching tokens as structured_inputs (config.js obo-fd customInputs).
         if ($plan.customMcp -and $plan.customMcp.enabled -and (@($plan.customMcp.attachTo) -contains 'FD-OBO')) {
-            $mcpName = $plan.customMcp.name
+            $mcpName = $McpBaseName  # derived from the solution prefix (not asked)
             $srvs = @($plan.customMcp.servers); if (-not $srvs) { $srvs = @('anon', 'auth') }
             $parts = @()
             foreach ($srv in $srvs) {

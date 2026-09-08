@@ -128,12 +128,15 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 2. **Select variants** (multi-select checkbox: the 8 variants). Then **UI mode** (single-select:
    No UI / Create new / Attach to existing). If a UI is chosen, multi-select the **OBO/S2S** agents
    to expose (DW is excluded — it routes via Teams/Outlook, not the SPA). Then **Custom MCP**
-   (single-select: None / Anonymous only / Authenticated only / Both); if not None, ask `<Name>`
-   (**max 12 chars**), a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only —
-   S2S/DW are blocked: they can't own the per-user Power Platform connection a BYO server needs), and
-   whether to enable `propagate_to_graph`. See "Custom MCP integration" below. Finally, per **ACA-*/FH-***
-   agent, ask which **registered MCP tools** to attach (multi-select from `a365 develop list-available`,
-   `mcp_MailTools` pre-selected; free-text for other `uniqueName`s). See "Registered MCP tools" below.
+   (single-select: None / Anonymous only / Authenticated only / Both); if not None, **do NOT ask a name**
+   (it derives from the solution prefix → `ext_<prefix>Anon/Auth`; the prefix must be ≤ 12 alphanumerics),
+   ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
+   blocked: they can't own the per-user Power Platform connection a BYO server needs), an **integration
+   mode** (approve-first / attach-when-approved — see "Custom MCP integration" below), and whether to
+   enable `propagate_to_graph`. Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
+   attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
+   selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
+   Mail for **OBO/DW only** (not S2S). See "Registered MCP tools" below.
 3. **Solution basics** — solution prefix (must start with a lowercase letter), region, RG strategy
    (isolated `<agent>-rg` default, or shared `<prefix>-rg`).
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
@@ -146,13 +149,28 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
   it writes `generated/<agent>/` + `generated/<prefix>-ui/config.js` and prints the exact next commands.
 8. **Deploy (only on confirmation)** — follow the ordering and parallelization policy below.
 
-## Deploy ordering — UI first, then integrate incrementally
+## Deploy ordering — UI first, then custom MCP, then agents (integrate incrementally)
 1. If a UI is requested, **stand up the SPA shell first** (SWA + SPA app registration + deploy the UI
-   with a placeholder `config.js`). Then, as each **OBO/S2S** agent goes live, **add its tab** to
-   `config.js`, redeploy the UI, wire `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the
-   user "you can now test `<agent>` in the UI at `https://<swa-host>`." This gives the user a working
-   surface early and a testable increment per agent.
-2. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
+   with a placeholder `config.js`).
+2. **Then, if a custom MCP is requested, deploy + register it BEFORE the agents** (its containers, the
+   auth resource app and the `ext_<prefix>Anon/Auth` registrations depend on nothing but the
+   subscription). A BYO server must be **admin-approved** in the M365 admin center before it can attach,
+   so — right after registering — **ASK the user** how to proceed (`customMcp.integrationMode`):
+   - **approve-first**: pause and have the tenant admin **approve the `ext_*` servers now**; then, as each
+     **OBO** agent is created, **integrate the custom MCP immediately** (`a365 develop add-mcp-servers` +
+     `a365 setup permissions mcp`, with the browser admin-consent) so it is wired with permissions from
+     the start.
+   - **attach-when-approved** (default): **start creating the agents right away** and approve the `ext_*`
+     servers in parallel; each OBO agent integrates automatically **only if the servers are already
+     approved** when it deploys, otherwise run the per-agent attach block later (the scaffolder emits it
+     as a clearly-marked manual step). **S2S/DW never attach the custom MCP.**
+3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js`, redeploy the UI, wire
+   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in
+   the UI at `https://<swa-host>`." A working surface early and a testable increment per agent.
+4. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
+
+The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
+agent's custom attach folded in right after its deploy), so follow them top-to-bottom.
 
 ## Parallelization policy (validated)
 Feasibility conclusion (do not re-derive — act on it):
@@ -188,24 +206,36 @@ Feasibility conclusion (do not re-derive — act on it):
 
 ## Custom MCP integration (optional sample `custom-mcp/`)
 Load **[agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md)** when the custom MCP is in scope.
-Essentials: two servers split by auth type (`/anon` → `ext_<Name>Anon` `NoAuth`; `/auth` →
-`ext_<Name>Auth` `EntraOAuth`); `<Name>` ≤ 12 chars and is the **unique per-copy key** (check the
-tenant for a collision before writing the plan); register → **tenant admin approves** in the M365 admin
-center → attach to **OBO agents only** (ACA-OBO/FH-OBO via `a365 develop add-mcp-servers` + `a365 setup
-permissions mcp`; FD-OBO via `CUSTOM_MCP_SERVERS_JSON` in its `.env`). **S2S and DW are blocked** — a
-non-user (own app / `agentUser`) identity can't own the per-user Power Platform connection a BYO server
-needs (`ConnectionSharingNotAllowed`; S2S also can't mint the token from the SPA).
+Essentials: two servers split by auth type (`/anon` → `ext_<prefix>Anon` `NoAuth`; `/auth` →
+`ext_<prefix>Auth` `EntraOAuth`). **The name is NOT asked** — it derives from the solution prefix (the
+same unique key as the web UI; prefix ≤ 12 alphanumerics; check the tenant for an `ext_<prefix>*`
+collision before writing the plan). Order: **deploy + register the custom MCP BEFORE the agents** →
+**tenant admin approves** each server in the M365 admin center → attach to **OBO agents only** (ACA-OBO/
+FH-OBO via `a365 develop add-mcp-servers` + `a365 setup permissions mcp`; FD-OBO via
+`CUSTOM_MCP_SERVERS_JSON` in its `.env`), folded per agent so it integrates immediately with permissions.
+**Ask the user for the integration mode** (`customMcp.integrationMode`): *approve-first* (approve before
+the agents → each OBO integrates immediately) or *attach-when-approved* (agents first → integrate when
+approved, else manually later). **S2S and DW are blocked** — a non-user (own app / `agentUser`) identity
+can't own the per-user Power Platform connection a BYO server needs (`ConnectionSharingNotAllowed`; S2S
+also can't mint the token from the SPA).
 Full mechanics and the `propagate_to_graph` advanced setup: that skill + [custom-mcp/README.md](../../custom-mcp/README.md).
 
 ## Registered MCP tools (Work IQ / catalog / third-party)
-Offer a multi-select from `a365 develop list-available` (Work IQ `mcp_*`, custom `ext_*`, third-party)
-with **`mcp_MailTools` pre-selected**, plus free-text for other `uniqueName`s; writes `agents[].tools`
-(FD stays `[]`). Attach via `a365 develop add-mcp-servers <uniqueName…>` + `a365 setup permissions mcp`
-(the scaffolder emits these, plus `remove-mcp-servers mcp_MailTools` when Mail is deselected). ACA-OBO/DW
-are manifest-driven (any Work IQ MCP works); ACA-S2S is LLM-only for delegated tools; FH/FD wire only
-Mail in code. **Reuse — never re-derive — the token lessons** in
-[references/workiq-mcp-integration.md](../skills/agent365-wizard/references/workiq-mcp-integration.md),
-also referenced by each family sub-skill.
+Offer a multi-select from `a365 develop list-available` (Work IQ `mcp_*`, custom `ext_*`, third-party).
+**Show ALL Work IQ servers but make only `mcp_MailTools` selectable today** — keep the rest visible but
+**disabled**, with the note *"the solution is wired to add more Work IQ MCPs; for now only the tested
+ones (Mail) are enabled."* **Pre-select Mail for OBO/DW only** (not S2S: pure app-only can't call
+delegated Work IQ, `AADSTS82001`). Writes `agents[].tools` (FD stays `[]`).
+The scaffolder makes each agent's `ToolingManifest.json` **authoritative = exactly `agents[].tools`
+before `a365 setup all`**, so permissions follow the selection exactly (no Mail selected → **no** Mail
+permission — the fix for the earlier S2S over-grant). The per-server permission for every Work IQ tool is
+already mapped in [references/workiq-mcp-integration.md](../skills/agent365-wizard/references/workiq-mcp-integration.md)
+and `_common.ps1` (`$WORKIQ_MCP_CATALOG`), so enabling another Work IQ tool later is a small step.
+ACA-OBO/DW are manifest-driven (any Work IQ MCP works); ACA-S2S is LLM-only for delegated tools; FH/FD
+wire only Mail in code. For a **third-party** MCP (free-text), the wizard does **not** map its
+permissions — tell the user they must configure the agent's permissions manually if that server needs
+any. **Reuse — never re-derive — the token lessons** in that reference, also referenced by each family
+sub-skill.
 
 ## Creating a Foundry project for FD (FD should not require a pre-existing project)
 FD prompt agents need a Foundry project, but the wizard can create one instead of requiring it:

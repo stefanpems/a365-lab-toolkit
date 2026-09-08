@@ -52,6 +52,59 @@ are filled automatically by `a365 develop add-mcp-servers` into `ToolingManifest
 agent variant handles Mail correctly, adding another Work IQ MCP is a **catalog + manifest** change —
 provided the agent attaches tools **manifest-driven** (see the support matrix below).
 
+## Per-server permission catalog (what to grant for each Work IQ MCP)
+Every Work IQ MCP uses the **legacy shared model** (Agent 365 CLI `setup permissions mcp`): one shared
+resource app **`ea9ffc3e-8a23-4a7d-836d-234d7c7565c1`** ("Agent 365 Tools"), a **per-server delegated
+scope** `McpServers.<Workload>.All`, plus a shared **`McpServersMetadata.Read.All`** granted alongside
+any server. So an agent's MCP permissions = one scope per attached server **+** the shared metadata
+scope, and **nothing** when it attaches no server — which is exactly why an agent that did not select
+Mail must not receive `McpServers.Mail.All`. `a365 develop add-mcp-servers` fills the precise
+`scope`/`audience` into `ToolingManifest.json` from the live catalog; the scaffolder mirrors this mapping
+in [scripts/modules/_common.ps1](../scripts/modules/_common.ps1) (`$WORKIQ_MCP_CATALOG`) so it knows the
+right permission per tool without hardcoding a grant.
+
+**Delegated-only** — usable by OBO and Agentic-User/DW, never pure S2S.
+
+**Today only `mcp_MailTools` is wizard-selectable and validated end-to-end.** The rest are listed so
+enabling one later is a small, pre-scoped step; **confirm each server's `uniqueName` live with
+`a365 develop list-available`** (a display name does not always map 1:1 to the `uniqueName`). The scopes
+below are verified against the A365 blueprint OAuth2 grant reference
+([foundry-hosted/dw/scripts/create-blueprintsp-oauth2-grants.ps1](../../../../foundry-hosted/dw/scripts/create-blueprintsp-oauth2-grants.ps1)).
+
+| Work IQ server (workload) | `uniqueName` | Delegated scope | Wizard-selectable |
+|---------------------------|--------------|-----------------|-------------------|
+| Mail | `mcp_MailTools` | `McpServers.Mail.All` | ✅ today |
+| Calendar | confirm via list-available | `McpServers.Calendar.All` | mapped |
+| Teams | confirm via list-available | `McpServers.Teams.All` | mapped |
+| Copilot | confirm via list-available | `McpServers.CopilotMCP.All` | mapped |
+| OneDrive / SharePoint | confirm via list-available | `McpServers.OneDriveSharepoint.All` | mapped |
+| SharePoint Lists | confirm via list-available | `McpServers.SharepointLists.All` | mapped |
+| User | confirm via list-available | `McpServers.Me.All` | mapped |
+| Word | confirm via list-available | `McpServers.Word.All` | mapped |
+| Excel | confirm via list-available | `McpServers.Excel.All` | mapped |
+| PowerPoint | confirm via list-available | `McpServers.PowerPoint.All` | mapped |
+| Files | confirm via list-available | `McpServers.Files.All` | mapped |
+| Knowledge | confirm via list-available | `McpServers.Knowledge.All` | mapped |
+| Dataverse | confirm via list-available | `McpServers.Dataverse.All` | mapped |
+| Dataverse (custom) | confirm via list-available | `McpServers.DataverseCustom.All` | mapped |
+| D365 Sales | confirm via list-available | `McpServers.D365Sales.All` | mapped |
+| D365 Service | confirm via list-available | `McpServers.D365Service.All` | mapped |
+| ERP Analytics | confirm via list-available | `McpServers.ERPAnalytics.All` | mapped |
+| MCP Management | confirm via list-available | `McpServers.Management.All` | mapped |
+| Developer | confirm via list-available | `McpServers.Developer.All` | mapped |
+| M365 Admin | confirm via list-available | `McpServers.M365Admin.All` | mapped |
+| Admin 365 Graph | confirm via list-available | `McpServers.Admin365Graph.All` | mapped |
+| Discovery/Answers search | confirm via list-available | `McpServers.DASearch.All` | mapped |
+| Web Search | confirm via list-available | `McpServers.WebSearch.All` | mapped |
+| *(any server, shared)* | — | `McpServersMetadata.Read.All` | always |
+
+The scaffolder does **not** hand-write these scopes into the manifest for non-Mail servers (to stay
+correct on any tenant / permission model): `Set-ToolingManifest` keeps or removes the **shipped** Mail
+entry, and for a future non-Mail Work IQ server it emits `a365 develop add-mcp-servers <uniqueName>` so
+the CLI writes the catalog-authoritative `scope`/`audience`, then `a365 setup all`/`setup permissions mcp`
+grants exactly those. **Custom BYO `ext_*` servers** instead use the **per-server model**
+(`Tools.ListInvoke.All` on each server's own resource app) + the same shared `McpServersMetadata.Read.All`.
+
 ## Per-variant difficulty → fix (all reusable for any Work IQ MCP)
 
 | Variant | Token acquisition | Difficulty hit | Fix (generic to any Work IQ MCP) | Doc |

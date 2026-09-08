@@ -12,6 +12,12 @@ function Invoke-ScaffoldFhAgent {
         $txt = [regex]::Replace($txt, 'agentframeworkFH-(OBO|S2S|DW)\d*-agent', $a.name)
         Set-Content -LiteralPath $ay -Value $txt
     }
+    # Make ToolingManifest.json AUTHORITATIVE = exactly the plan's Work IQ (mcp_*) tools. The FH sample
+    # runtime is manifest-driven (wires every server in the manifest), so an agent with tools:[] (e.g.
+    # FH-S2S) ships an empty manifest and gets no Mail wiring/permission. FH-DW keeps its manifest under
+    # src/. Custom ext_ are appended later by `a365 develop add-mcp-servers` (see scaffold.tools.ps1).
+    $fhManifest = if ($a.type -eq 'FH-DW') { Join-Path $dst 'src\hello_world_a365_agent\ToolingManifest.json' } else { Join-Path $dst 'ToolingManifest.json' }
+    Set-ToolingManifest -Path $fhManifest -Tools @($a.tools)
     if ($a.type -ne 'FH-DW') {
         $envPath = Join-Path $dst '.env'
         if ($a.foundryProject) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $a.foundryProject }

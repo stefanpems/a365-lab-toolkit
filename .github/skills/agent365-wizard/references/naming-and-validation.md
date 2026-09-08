@@ -23,6 +23,11 @@ Examples for prefix `contoso-sales`: `contoso-sales-ACA-OBO`, `contoso-sales-FH-
 | SPA app registration | `<prefix>-ui-spa` | `contoso-sales-ui-spa` |
 | Static Web App | `<prefix>-ui` | `contoso-sales-ui` |
 
+> **Scaffold output lives under one per-run root: `generated/<prefix>/`.** Every folder for a run — each
+> `<agent-name>`, the `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP — is created under it (e.g.
+> `generated/contoso-sales/contoso-sales-ACA-OBO/`). The wizard's own `generated/wizard-progress.log`
+> and `generated/cleanup/` stay at the `generated/` root.
+
 ### Registry display name — the `" Agent"` suffix (cosmetic, not controllable)
 The a365 CLI lists ACA agents in the Registry with a trailing `" Agent"` (e.g. `a1730-ACA-OBO` is
 shown as **`a1730-ACA-OBO Agent`**). This is added by the CLI at registration time, not by our
@@ -52,18 +57,22 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
 2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
 3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
    account + model (FH), and Free-tier Static Web Apps (UI) before committing.
-4. **Custom MCP name (`customMcp.name`) ≤ 12 characters**, starts with a letter, alphanumeric only.
-   Agent 365 registered server names must start with `ext_` and be **≤ 20 chars**; the sample derives
-   `ext_<Name>Anon` and `ext_<Name>Auth`, so `4 (ext_) + <Name> + 4 (Anon/Auth) ≤ 20` → `<Name> ≤ 12`.
-   The wizard MUST ask for `<Name>` telling the user the max length is 12. `customMcp.attachTo` may
-   contain **only OBO agent types** (`ACA-OBO` / `FH-OBO` / `FD-OBO`); S2S and DW are blocked because a
-   BYO server needs a Power Platform connection owned by the invoking identity and only an OBO agent
-   invokes as the connection-owning user (known preview limitation — see the schema Rules).
-   `<Name>` is the **unique per-copy key**: all Azure resources (`<name>-mcp-rg` / `-ca` / `-cae`,
-   lowercased) and the registrations derive from it; the scaffold folder is `generated/<prefix>-mcp/`
-   (from `solution.prefix`). For N coexisting copies each run needs a **different, unique `<Name>`** — the wizard checks the
-   tenant (`a365 develop list-available`, or the M365 admin center Agents → Tools) and asks for another
-   name if `ext_<Name>Anon`/`ext_<Name>Auth` already exists.
+4. **Custom MCP name derives from the solution prefix — it is NOT asked.** Agent 365 registered server
+   names must start with `ext_` and be **≤ 20 chars**; the sample derives `ext_<prefix>Anon` and
+   `ext_<prefix>Auth` (prefix lowercased, non-alphanumerics stripped), so the prefix must be **≤ 12
+   alphanumerics** whenever the custom MCP is enabled (`4 (ext_) + prefix + 4 (Anon/Auth) ≤ 20`). The
+   scaffolder validates this and errors if the prefix is too long. `customMcp.attachTo` may contain
+   **only OBO agent types** (`ACA-OBO` / `FH-OBO` / `FD-OBO`); S2S and DW are blocked because a BYO
+   server needs a Power Platform connection owned by the invoking identity and only an OBO agent invokes
+   as the connection-owning user (known preview limitation — see the schema Rules). The **prefix is the
+   unique per-copy key**: all Azure resources (`<prefix>-mcp-rg` / `-ca` / `-cae`, lowercased) and the
+   registrations derive from it. For N coexisting copies each run needs a **different, unique prefix** —
+   the wizard checks the tenant (`a365 develop list-available`, or the M365 admin center Agents → Tools)
+   and asks for another prefix if `ext_<prefix>Anon`/`ext_<prefix>Auth` already exists.
+5. **Custom MCP integration mode.** `customMcp.integrationMode` ∈ { `approve-first`, `attach-when-approved` }
+   (default `attach-when-approved`) — a BYO server must be admin-approved before it can attach, so this
+   controls whether the wizard approves the `ext_*` servers before creating the agents (integrate each
+   OBO agent immediately) or starts the agents first (integrate only if approved by deploy time).
 
 ## ACA deploy-script facts (critical for scaffolding)
 Verified in the sample scripts — the wizard must account for these:

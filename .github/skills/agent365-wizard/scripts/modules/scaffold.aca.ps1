@@ -31,6 +31,11 @@ function Invoke-ScaffoldAcaAgent {
         $txt = [regex]::Replace($txt, '(\$LOC\s*=\s*)"[^"]*"',     "`$1`"$($plan.solution.region)`"")
         Set-Content -LiteralPath $deployPath -Value $txt
     }
+    # Make ToolingManifest.json AUTHORITATIVE = exactly the plan's Work IQ (mcp_*) tools, BEFORE any
+    # `a365 setup all` (which grants MCP permissions from this manifest). The sample ships mcp_MailTools;
+    # this keeps it only when selected, so an agent with tools:[] (e.g. S2S) gets NO Mail permission.
+    # Custom ext_ servers are appended later by `a365 develop add-mcp-servers` (see scaffold.tools.ps1).
+    Set-ToolingManifest -Path (Join-Path $dst 'ToolingManifest.json') -Tools @($a.tools)
     $reuse = if ($plan.solution.resourceGroupStrategy -eq 'shared') { ' -ReuseEnv' } else { '' }
     # DW agents prompt for the optional 'ext_UtilityInsights' custom MCP (may be absent in the tenant) and defer the messaging endpoint until the container is deployed.
     $dwNote = if ($a.type -eq 'ACA-DW') { "   # DW: answer N at the 'ext_UtilityInsights' prompt (optional custom MCP — add only when wiring it); after the container deploys, register the endpoint: a365 setup blueprint --endpoint-only --messaging-endpoint https://<fqdn>/api/messages" } else { '' }

@@ -33,12 +33,12 @@
   },
   "customMcp": {
     "enabled": false,
-    "name": "<MCP_NAME>",
     "publisher": "<PUBLISHER>",
     "servers": ["anon", "auth"],
-    "resourceGroup": "<MCP_NAME>-mcp-rg",
+    "resourceGroup": "<SOLUTION_PREFIX>-mcp-rg",
     "region": "<AZURE_REGION>",
     "attachTo": [],
+    "integrationMode": "attach-when-approved",
     "propagateToGraph": false
   }
 }

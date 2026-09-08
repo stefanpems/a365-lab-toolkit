@@ -53,11 +53,12 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 
 ### Custom MCP (optional — sample `custom-mcp/`)
 Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If anything but None:
-- **`<Name>`** for the servers, **max 12 characters** (registered as `ext_<Name>Anon` /
-  `ext_<Name>Auth`; `ext_` + name + `Anon`/`Auth` must stay ≤ 20). Validate length + `^[A-Za-z][A-Za-z0-9]*$`.
-  `<Name>` is the **unique per-copy key** — Azure resources (`<name>-mcp-*`), the scaffold folder
-  (`generated/<prefix>-mcp/`, from `solution.prefix`) and the registrations all derive from it. For N coexisting copies use
-  a different `<Name>` each run and check the tenant (`a365 develop list-available`) for collisions.
+- **No name is asked.** The servers derive from the **solution prefix** (the same unique key as the web
+  UI): registered as `ext_<prefix>Anon` / `ext_<prefix>Auth`, Azure resources `<prefix>-mcp-*`, scaffold
+  folder `generated/<prefix>/<prefix>-mcp/`. The prefix must be ≤ 12 alphanumerics when the custom MCP is
+  enabled (so `ext_<prefix>Anon/Auth` stays ≤ 20; validated by the scaffolder). For N coexisting copies use
+  a different prefix each run and check the tenant (`a365 develop list-available`) for an existing
+  `ext_<prefix>*` collision.
 - **Publisher** name (registration metadata, e.g. `Contoso`).
 - **Attach to**: multi-select of the deployed **OBO** agents only (`ACA-OBO` / `FH-OBO` / `FD-OBO`).
   S2S and DW are **not offered**: a BYO server needs a Power Platform connection owned by the invoking
@@ -65,6 +66,12 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
   DW (projected `agentUser` identity) can neither own it nor be granted it (preview:
   `ConnectionSharingNotAllowed`), and S2S also can't mint the custom-audience token from the SPA
   (`AADSTS82001`/`82002`). Known preview limitation.
+- **Integration mode** (single-select, asked right after the servers are registered — a BYO server must be
+  **admin-approved** in the M365 admin center before it can be attached): *approve-first* = approve the
+  `ext_*` servers BEFORE creating the agents, so each OBO agent integrates them (with permissions)
+  immediately as it is provisioned; *attach-when-approved* (default) = start the agents now and integrate
+  each OBO agent only if the servers are approved by the time it deploys, otherwise attach them manually
+  later. Writes `customMcp.integrationMode`.
 - **`propagate_to_graph`** (auth server only): enable the advanced On-Behalf-Of Graph test? If yes,
   surface the Entra prerequisites (confidential client + Graph `User.Read` + admin consent) as a checkpoint.
 - One ACA container hosts both servers on two paths; registration is per-server (auth type is
@@ -76,12 +83,20 @@ For each **ACA-*/FH-*** agent, which registered MCP servers should it use? (This
 multi-select is ACA/FH only — FD prompt agents wire tools in `agent_config.py`; for a custom BYO server,
 FD-OBO uses `CUSTOM_MCP_SERVERS_JSON`, see **Custom MCP** above.)
 - Source the choices **live** from `a365 develop list-available` (shows Work IQ `mcp_*`, approved custom
-  `ext_*`, and third-party). Present a multi-select with **`mcp_MailTools` pre-selected** (preserves the
-  samples' current behavior); deselect it to make Mail optional.
+  `ext_*`, and third-party). **Show ALL Work IQ servers, but only `mcp_MailTools` is SELECTABLE today** —
+  keep the rest **visible but disabled**, with the note: *"the solution is wired to add more Work IQ MCPs;
+  for now only the tested ones (Mail) are enabled."* The delegated permission each Work IQ server needs is
+  already mapped in [workiq-mcp-integration.md](./workiq-mcp-integration.md) and `scripts/modules/_common.ps1`
+  (`$WORKIQ_MCP_CATALOG`), so enabling one later is a small, pre-scoped step.
+- **Pre-select `mcp_MailTools` for OBO and DW agents only** (they can use delegated Work IQ); leave **S2S
+  empty** — pure S2S (app-only) cannot call delegated Work IQ tools (`AADSTS82001`), so Mail on an S2S
+  agent is useless. Deselect Mail on an OBO/DW agent to make it Mail-free.
 - Allow a **free-text** entry for any additional registered `uniqueName` (must start with `mcp_` or
   `ext_`); warn if it is not in `list-available` (not registered/approved yet).
-- Writes `agents[].tools`. The scaffolder emits `a365 develop add-mcp-servers <uniqueName…>` +
-  `a365 setup permissions mcp` per agent (and `remove-mcp-servers mcp_MailTools` if Mail is deselected).
+- Writes `agents[].tools`. The scaffolder makes each agent's `ToolingManifest.json` **authoritative =
+  exactly these tools BEFORE `a365 setup all`**, so the granted MCP permissions follow the selection
+  exactly (an agent without Mail gets **no** Mail permission). Custom `ext_*` servers are attached per
+  agent immediately after it deploys, honoring `customMcp.integrationMode`.
 - **Reuse the Work IQ token lessons** for any non-Mail Work IQ tool — see
   [workiq-mcp-integration.md](./workiq-mcp-integration.md). ACA-OBO/DW are manifest-driven (generic, it
   just works); ACA-S2S can't use delegated Work IQ tools (LLM-only); FH/FD samples wire only Mail in

@@ -92,12 +92,17 @@ if ($plan.solution.resourceGroupStrategy -eq 'shared') {
     }
 }
 
-# Custom MCP validation (optional).
+# Custom MCP validation (optional). The custom MCP name is NOT asked — it derives from the solution
+# prefix (the same unique key as the web UI): $mcpBase = the prefix lowercased with non-alphanumerics
+# stripped. It must still yield a valid ext_<Name>Anon/Auth (<= 20 chars).
 if ($plan.customMcp -and $plan.customMcp.enabled) {
-    $mcpName = $plan.customMcp.name
-    if (-not $mcpName) { $errors.Add('customMcp.enabled is true but customMcp.name is missing.') }
-    elseif ($mcpName -notmatch '^[A-Za-z][A-Za-z0-9]*$') { $errors.Add("customMcp.name '$mcpName' must start with a letter and contain only letters/digits.") }
-    elseif ($mcpName.Length -gt 12) { $errors.Add("customMcp.name '$mcpName' is $($mcpName.Length) chars (max 12; ext_<Name>Anon/Auth must stay <= 20).") }
+    $mcpBase = if ($prefix) { ($prefix -replace '[^A-Za-z0-9]', '').ToLower() } else { '' }
+    if (-not $mcpBase) { $errors.Add("customMcp.enabled is true but the solution prefix '$prefix' has no letters/digits to derive the custom MCP name from.") }
+    elseif ($mcpBase -notmatch '^[a-z][a-z0-9]*$') { $errors.Add("the custom MCP name derived from the prefix ('$mcpBase') must start with a letter and contain only letters/digits.") }
+    elseif ($mcpBase.Length -gt 12) { $errors.Add("the solution prefix '$prefix' yields custom MCP name '$mcpBase' ($($mcpBase.Length) chars); it must be <= 12 so ext_<Name>Anon/Auth stays <= 20. Use a shorter prefix (<= 12 alphanumerics) or disable the custom MCP.") }
+    if ($plan.customMcp.integrationMode -and ($plan.customMcp.integrationMode -notin @('approve-first', 'attach-when-approved'))) {
+        $errors.Add("customMcp.integrationMode '$($plan.customMcp.integrationMode)' is invalid (use 'approve-first' or 'attach-when-approved').")
+    }
     foreach ($t in @($plan.customMcp.attachTo)) {
         if ($t -notlike '*-OBO') { $errors.Add("customMcp.attachTo '$t': custom (BYO) MCP works only on OBO agents (ACA-OBO / FH-OBO / FD-OBO). A BYO server reached through the Agent 365 gateway needs a one-time Power Platform connection OWNED BY THE INVOKING IDENTITY; only an OBO agent invokes as the signed-in user who owns that connection. An S2S (own app identity) or DW (projected agentUser identity) agent invokes as a NON-USER identity that can neither own that connection nor be granted it (sharing is refused in preview with ConnectionSharingNotAllowed 403); S2S also can't mint a custom-audience token from the SPA path (AADSTS82001 app-only / AADSTS82002 OBO). This is a known preview platform limitation, not an unfinished feature.") }
         elseif (-not ($plan.agents | Where-Object { $_.type -eq $t })) { $errors.Add("customMcp.attachTo '$t' is not among the planned agents.") }
@@ -124,16 +129,33 @@ Write-Host "Plan validation OK ($($plan.agents.Count) agent(s), UI mode: $($plan
 if ($ValidateOnly) { exit 0 }
 
 # ---------------------------------------------------------------- scaffolding
-New-Item -ItemType Directory -Force -Path $OutRoot | Out-Null
-$nextCommands = New-Object System.Collections.Generic.List[string]
-# agent-name -> set of MCP server unique names to attach (Work IQ / catalog / custom). Emitted once at the end.
+# All generated folders for THIS run live under one per-run root: generated/<prefix>/.
+$RunRoot     = Join-Path $OutRoot $prefix
+$McpBaseName = if ($prefix) { ($prefix -replace '[^A-Za-z0-9]', '').ToLower() } else { '' }
+New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
+
+# Emit next-commands in EXECUTION order: the web UI and the custom MCP FIRST (so the MCP is deployed +
+# registered before the agents and can be attached immediately as each agent is created), then the
+# agents — each integrated with its tools/custom MCP right after it is created. Two ordered lists keep
+# that order regardless of when each folder is scaffolded; $nextCommands is repointed per phase and the
+# dot-sourced modules append to whichever list it currently references.
+$preCommands   = New-Object System.Collections.Generic.List[string]  # web UI + custom MCP
+$agentCommands = New-Object System.Collections.Generic.List[string]  # per-agent setup/deploy + integration
+# agent-name -> custom ext_ servers to attach (OBO only), populated by the custom-MCP module.
 $attachByAgent = @{}
 
+# Phase 1 — web UI, then custom MCP (deploy + register + approval-mode note).
+$nextCommands = $preCommands
+if ($plan.ui.mode -in @('create', 'attach')) { Invoke-ScaffoldUi }
+if ($plan.customMcp -and $plan.customMcp.enabled) { Invoke-ScaffoldCustomMcp }
+
+# Phase 2 — agents, each integrated immediately after its own setup/deploy.
+$nextCommands = $agentCommands
 foreach ($a in $plan.agents) {
     $m = $MAP[$a.type]
     $srcPath = Join-Path $repoRoot $m.src
     if (-not (Test-Path -LiteralPath $srcPath)) { Write-Host "  SKIP $($a.type): sample '$($m.src)' not found." -ForegroundColor Yellow; continue }
-    $dst = Join-Path $OutRoot $a.name
+    $dst = Join-Path $RunRoot $a.name
     if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $dst | Out-Null
     # Copy the sample, EXCLUDING heavy/local state up-front (venv, caches, azd env, build output).
@@ -148,23 +170,19 @@ foreach ($a in $plan.agents) {
         'fh'  { Invoke-ScaffoldFhAgent  $a $m $dst }
         'fd'  { Invoke-ScaffoldFdAgent  $a $m $dst }
     }
-    Write-Host "  scaffolded $($a.type) -> generated\$($a.name)" -ForegroundColor Cyan
+    # Integrate this agent immediately: attach its custom BYO MCP (OBO) + any non-Mail Work IQ tool,
+    # with permissions, right after its setup/deploy command (Work IQ Mail is already authoritative in
+    # ToolingManifest.json via Set-ToolingManifest). Grouped with the agent that needs it.
+    Add-AgentCustomAttach $a $dst
+    Write-Host "  scaffolded $($a.type) -> generated\$prefix\$($a.name)" -ForegroundColor Cyan
 }
 
-# ---------------------------------------------------------------- web UI
-if ($plan.ui.mode -in @('create', 'attach')) { Invoke-ScaffoldUi }
-
-# ---------------------------------------------------------------- custom MCP
-if ($plan.customMcp -and $plan.customMcp.enabled) { Invoke-ScaffoldCustomMcp }
-
-# ---------------------------------------------------------------- MCP tool attachment (Work IQ / catalog / custom)
-Invoke-ScaffoldToolAttachment
-
 # ---------------------------------------------------------------- summary
+$allCommands = @($preCommands) + @($agentCommands)
 Write-Host ""
-Write-Host "Scaffolding complete under: $OutRoot" -ForegroundColor Green
+Write-Host "Scaffolding complete under: $RunRoot" -ForegroundColor Green
 Write-Host "NEXT COMMANDS (review before running — none were executed):" -ForegroundColor Yellow
 $i = 1
-foreach ($c in $nextCommands) { Write-Host ("  {0}. {1}" -f $i, $c); $i++ }
+foreach ($c in $allCommands) { Write-Host ("  {0}. {1}" -f $i, $c); $i++ }
 Write-Host ""
 Write-Host "Reminder: secrets (blueprint client secret, Azure OpenAI key) are entered in the terminal at deploy time, never here." -ForegroundColor DarkGray

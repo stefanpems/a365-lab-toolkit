@@ -1,10 +1,10 @@
 # Web SPA UI: copy ui/, drop the tenant-specific config.js, and regenerate it from the plan's
 # exposed OBO/S2S agents (DW is never exposed). Emits the SWA create/deploy next-command.
-# Reads $plan / $repoRoot / $OutRoot / $nextCommands from the router scope.
+# Reads $plan / $repoRoot / $RunRoot / $McpBaseName / $nextCommands from the router scope.
 
 function Invoke-ScaffoldUi {
     $uiFolderName = "$($plan.solution.prefix)-ui"
-    $uiDst = Join-Path $OutRoot $uiFolderName
+    $uiDst = Join-Path $RunRoot $uiFolderName
     if (Test-Path -LiteralPath $uiDst) { Remove-Item -LiteralPath $uiDst -Recurse -Force }
     Copy-Item -LiteralPath (Join-Path $repoRoot 'ui') -Destination $uiDst -Recurse -Force
     Remove-Item -LiteralPath (Join-Path $uiDst 'config.js') -Force -ErrorAction SilentlyContinue
@@ -19,14 +19,14 @@ function Invoke-ScaffoldUi {
     # 'a365 develop add-mcp-servers'). Empty until the servers are attached — RE-RUN this scaffolder
     # after attaching so config.js gains customScopes (ACA/FH-OBO) / customInputs (FD-OBO).
     $mcpEnabled = [bool]($plan.customMcp -and $plan.customMcp.enabled)
-    $mcpName    = if ($mcpEnabled) { $plan.customMcp.name } else { '' }
+    $mcpName    = if ($mcpEnabled) { $McpBaseName } else { '' }  # derived from the solution prefix (not asked)
     $mcpAttach  = if ($mcpEnabled) { @($plan.customMcp.attachTo) } else { @() }
     $audMap = @{}
     if ($mcpEnabled) {
         foreach ($att in $mcpAttach) {
             $aag = $plan.agents | Where-Object { $_.type -eq $att } | Select-Object -First 1
             if (-not $aag) { continue }
-            $mani = Join-Path $OutRoot (Join-Path $aag.name 'ToolingManifest.json')
+            $mani = Join-Path $RunRoot (Join-Path $aag.name 'ToolingManifest.json')
             if (-not (Test-Path -LiteralPath $mani)) { continue }
             try {
                 foreach ($s in (Get-Content -LiteralPath $mani -Raw | ConvertFrom-Json).mcpServers) {

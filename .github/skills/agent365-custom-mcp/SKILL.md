@@ -18,18 +18,25 @@ not duplicate or renumber it here.**
   (`AADSTS82001`/`82002`).
 
 ## What it owns
-- The `customMcp.*` block of the plan and the scaffolded `generated/<prefix>-mcp/` copy
+- The `customMcp.*` block of the plan and the scaffolded `generated/<prefix>/<prefix>-mcp/` copy
   (module [scaffold.mcp.ps1](../agent365-wizard/scripts/modules/scaffold.mcp.ps1)).
 
 ## Mechanics (grounded in MS Learn)
 - **Two servers, split by auth type** (auth type is per *registration*, not per tool): `/anon/mcp`
-  → `ext_<Name>Anon` (`NoAuth`); `/auth/mcp` → `ext_<Name>Auth` (`EntraOAuth`).
-- **Naming**: registered names start with `ext_` and are **≤ 20 chars** → ask `<Name>` **≤ 12 chars**
-  (`^[A-Za-z][A-Za-z0-9]*$`); validate the length when asking.
-- **`<Name>` is the unique per-copy key**: all Azure resources (`<name>-mcp-rg`/`-ca`/`-cae`,
-  lowercased), the scaffold folder and both registrations derive from it. To create N coexisting
-  copies, each run needs a **different** `<Name>`; check the tenant (`a365 develop list-available` /
-  admin center) and ask again if `ext_<Name>*` already exists — never overwrite silently.
+  → `ext_<prefix>Anon` (`NoAuth`); `/auth/mcp` → `ext_<prefix>Auth` (`EntraOAuth`).
+- **Naming**: registered names start with `ext_` and are **≤ 20 chars**. **The name is NOT asked** — it
+  derives from the **solution prefix** (lowercased, non-alphanumerics stripped), so the prefix must be
+  **≤ 12 alphanumerics** when the custom MCP is enabled (the scaffolder validates this).
+- **The prefix is the unique per-copy key**: all Azure resources (`<prefix>-mcp-rg`/`-ca`/`-cae`,
+  lowercased), the scaffold folder `generated/<prefix>/<prefix>-mcp/` and both registrations derive from
+  it. To create N coexisting copies, each run needs a **different prefix**; check the tenant
+  (`a365 develop list-available` / admin center) and ask again if `ext_<prefix>*` already exists — never
+  overwrite silently.
+- **Integration mode** (`customMcp.integrationMode`, asked right after registration): *approve-first*
+  approves the servers before the agents (each OBO integrates immediately with permissions);
+  *attach-when-approved* (default) starts the agents first and integrates each OBO only if approved by
+  the time it deploys, else attach later. The scaffolder folds the per-OBO attach right after each
+  agent's deploy accordingly.
 - **Order**: deploy the MCP container(s) → replace the per-server FQDN in the register JSON
   (`serverUrl` must be a single-segment root `https://<fqdn>/mcp`) → `a365 develop-mcp
   register-external-mcp-server` → a **tenant admin approves** each server in the M365 admin center

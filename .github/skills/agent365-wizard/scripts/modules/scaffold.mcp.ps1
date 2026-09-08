@@ -1,15 +1,18 @@
 # Optional sample custom MCP (custom-mcp/): copy the sample to the per-run folder <prefix>-mcp,
 # rewrite the deploy-mcp.ps1 constants, fill the register-*.json from the templates,
 # and emit deploy/register next-commands. Accumulates ext_ servers into $attachByAgent for the
-# unified tool-attachment pass. Reads $plan / $repoRoot / $OutRoot / $nextCommands / $attachByAgent.
+# per-agent attach (Add-AgentCustomAttach). Reads $plan / $repoRoot / $RunRoot / $McpBaseName /
+# $nextCommands / $attachByAgent from the router scope.
 
 function Invoke-ScaffoldCustomMcp {
-    $name      = $plan.customMcp.name
-    # Azure resources and ext_ registrations derive from the (unique) <Name>, so N copies never collide.
-    $mcpSlug   = ($name -replace '[^A-Za-z0-9]', '').ToLower()
+    # The custom MCP name is NOT asked: it derives from the solution prefix (the same unique key as the
+    # web UI), so ext_<Name>Anon/Auth and the <name>-mcp-* Azure resources are unique per run without a
+    # separate question. $McpBaseName = slugified prefix (set by the router).
+    $name      = $McpBaseName
+    $mcpSlug   = $McpBaseName
     $mcpFolderName = "$($plan.solution.prefix)-mcp"
     $mcpSrc = Join-Path $repoRoot 'custom-mcp'
-    $mcpDst = Join-Path $OutRoot $mcpFolderName
+    $mcpDst = Join-Path $RunRoot $mcpFolderName
     if (Test-Path -LiteralPath $mcpDst) { Remove-Item -LiteralPath $mcpDst -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $mcpDst | Out-Null
     $null = robocopy $mcpSrc $mcpDst /E /XD '.venv' '__pycache__' /XF '*.pyc' '.env' /NFL /NDL /NJH /NJS /NP /NC /NS
@@ -56,6 +59,16 @@ function Invoke-ScaffoldCustomMcp {
         } else {
             $nextCommands.Add("cd `"$mcpDst`"; # AUTH: (1) create the resource app exposing api://<appId>/access_as_agent (see custom-mcp/README.md), put it in register-auth.json remoteScopes, replace <MCP_AUTH_FQDN> with the deployed auth FQDN. (2) BEFORE registering, verify the auth server already serves the OAuth PRM (Invoke-RestMethod https://<MCP_AUTH_FQDN>/.well-known/oauth-protected-resource must return 200) - deploy-mcp.ps1 enables MCP_OAUTH_CHALLENGE by default so the connector is created EntraOAuth (a NoAuth connector never forwards a bearer token and can't be fixed without re-registering). Then: a365 develop-mcp register-external-mcp-server -f .\register-auth.json --dry-run; a365 develop-mcp register-external-mcp-server -f .\register-auth.json   # tenant admin approves 'ext_${name}Auth'")
         }
+    }
+    # Integration mode (asked by the wizard right after the MCP is registered): approve-first (approve
+    # the ext_ servers NOW, before the agents, so each OBO agent integrates them immediately as it is
+    # created) or attach-when-approved (start the agents now; each OBO agent integrates the custom MCP
+    # only if it is already approved by the time it deploys, else attach it manually later).
+    $mode = if ($plan.customMcp.integrationMode) { $plan.customMcp.integrationMode } else { 'attach-when-approved' }
+    if ($mode -eq 'approve-first') {
+        $nextCommands.Add("# INTEGRATION MODE = approve-first: have the tenant admin APPROVE ext_${name}Anon/Auth NOW (M365 admin center > Agents > Tools > Requests), BEFORE creating the agents, so each OBO agent's provisioning below integrates the custom MCP immediately (add-mcp-servers + setup permissions mcp are emitted inline per OBO agent). Watch for a BLOCKED POPUP at Approve.")
+    } else {
+        $nextCommands.Add("# INTEGRATION MODE = attach-when-approved: you may start creating the agents now and approve ext_${name}Anon/Auth in parallel (M365 admin center > Agents > Tools > Requests). Each OBO agent integrates the custom MCP only if the servers are already approved when it deploys; otherwise run the per-agent add-mcp-servers + setup permissions mcp block (emitted below) manually once approval completes. Watch for a BLOCKED POPUP at Approve.")
     }
     $extList = (@($servers | ForEach-Object { if ($_ -eq 'anon') { "ext_${name}Anon" } else { "ext_${name}Auth" } }))
     foreach ($t in @($plan.customMcp.attachTo)) {
