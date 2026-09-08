@@ -294,7 +294,7 @@ gateway), so it isolates the tool implementation from the gateway/connection pat
 server is healthy independently of Agent 365.
 
 ```powershell
-$py = "C:\ghcp_nosync\a365sdk\agent365-agentframework-python\.venv\Scripts\python.exe"
+$py = ".\.venv\Scripts\python.exe"
 
 # Anonymous (NoAuth) server — works immediately, no token:
 & $py smoke-test.py --url https://<anon-fqdn>/mcp

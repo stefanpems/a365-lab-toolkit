@@ -8,7 +8,7 @@ validates the tool implementations and the server's own auth, independent of any
 Use it to confirm the custom tools work and to compare against what an agent returns.
 
 Examples (PowerShell):
-    $py = "C:\\ghcp_nosync\\a365sdk\\agent365-agentframework-python\\.venv\\Scripts\\python.exe"
+    $py = ".\\.venv\\Scripts\\python.exe"
 
     # Anonymous (NoAuth) server — no token needed:
     & $py smoke-test.py --url https://<anon-fqdn>/mcp
