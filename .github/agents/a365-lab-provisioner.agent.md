@@ -228,6 +228,17 @@ Feasibility conclusion (do not re-derive — act on it):
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does NOT create the model deployment or
   grant data-plane RBAC. The generated next-command creates the model and grants **Cognitive Services
   User** before `azd deploy`. Do not skip it.
+- **⛔ ACA `a365 setup all` + `deploy-aca*.ps1` are WORKING-DIRECTORY-SENSITIVE — run them FROM the
+  agent folder.** `a365 setup all` writes `a365.generated.config.json` (blueprint ids + DPAPI secret)
+  and stamps `.env` **only** via its "project settings" step, which runs **only when the CLI detects
+  the project in the current directory**. Run it from anywhere else and it prints *"No … project
+  detected in <cwd>; skipping project settings"* — the file is never written, so the deploy can't find
+  the blueprint id and `a365 setup blueprint --show-secret` fails. **When YOU (the agent) run these,
+  the leading `cd` in an ASYNC terminal is silently dropped** (it executes from the repo root). Always
+  establish the working directory FIRST with a separate `Set-Location "<agent-folder>"` command, then
+  run `a365 setup all` and the deploy in that shell (sync), and verify `$PWD` is the agent folder. The
+  deploy scripts now self-heal (resolve the blueprint by display name and rewrite a minimal config) as
+  a backstop, but the correct cwd is still required for `.env`/secret persistence.
 
 ## Custom MCP integration (optional sample `custom-mcp/`)
 Load **[agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md)** when the custom MCP is in scope.

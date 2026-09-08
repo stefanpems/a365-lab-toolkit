@@ -98,8 +98,19 @@ if (-not $LOC) {
 }
 
 # --- 4. Read blueprint credentials + LLM config (kept in the terminal, not printed) ---
-$cfg          = Get-Content a365.generated.config.json | ConvertFrom-Json
-$clientId     = $cfg.agentBlueprintId
+# 'a365 setup all' writes a365.generated.config.json ONLY when it is run FROM this agent folder
+# (it detects the project here). If setup ran elsewhere (e.g. an async shell dropped the leading
+# 'cd'), the file is absent - resolve the blueprint application by its display name so the deploy
+# still works, then persist a minimal config so re-runs and tooling find the id.
+$clientId = if (Test-Path a365.generated.config.json) { (Get-Content a365.generated.config.json | ConvertFrom-Json).agentBlueprintId } else { $null }
+if (-not $clientId) {
+    $bpName = (Get-Content a365.config.json | ConvertFrom-Json).agentBlueprintDisplayName
+    Write-Host "a365.generated.config.json missing agentBlueprintId; resolving blueprint '$bpName' by display name..." -ForegroundColor Yellow
+    $clientId = az ad app list --display-name $bpName --query "[0].appId" -o tsv
+    if (-not $clientId) { Write-Error "Could not resolve blueprint '$bpName'. Run 'a365 setup all' FROM this agent folder, then retry."; exit 1 }
+    @{ agentBlueprintId = $clientId } | ConvertTo-Json | Set-Content a365.generated.config.json -Encoding utf8
+    Write-Host "Resolved blueprint id $clientId; wrote minimal a365.generated.config.json." -ForegroundColor Green
+}
 $tenantId     = az account show --subscription $SUB --query tenantId -o tsv
 # NB: a365.generated.config.json holds the DPAPI-encrypted secret (Windows only).
 # The CLEARTEXT secret from 'a365 setup blueprint --show-secret' is required.

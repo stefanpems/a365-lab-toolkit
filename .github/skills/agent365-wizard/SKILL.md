@@ -155,6 +155,14 @@ performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to chec
 writing. Print the next commands for the user to run; never auto-run destructive deploys.
 
 ## 8. Deployment execution (only after scaffolding is confirmed)
+- **⛔ ACA `a365 setup all` + `deploy-aca*.ps1` must run FROM the agent folder.** `a365 setup all`
+  writes `a365.generated.config.json` (blueprint ids + secret) and stamps `.env` only via its "project
+  settings" step, which runs **only when the CLI detects the project in the current directory** — run
+  it from elsewhere and it prints *"No … project detected … skipping project settings"*, so the deploy
+  can't find the blueprint id and `--show-secret` fails. A leading `cd` in an **async** terminal is
+  silently dropped (runs from the repo root): set the cwd first (`Set-Location <agent-folder>`), run
+  these sync, and verify `$PWD`. (The deploy scripts self-heal the blueprint id by display-name lookup
+  as a backstop, but the correct cwd is still needed for `.env`/secret persistence.)
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +
   placeholder `config.js`); then, as each OBO/S2S agent goes live, add its tab, redeploy the UI, wire
   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user they can test it now.

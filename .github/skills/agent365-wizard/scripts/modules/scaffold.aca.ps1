@@ -39,6 +39,12 @@ function Invoke-ScaffoldAcaAgent {
     $reuse = if ($plan.solution.resourceGroupStrategy -eq 'shared') { ' -ReuseEnv' } else { '' }
     # DW defers the messaging endpoint until the container is deployed (the FQDN is a post-deploy artifact).
     $dwNote = if ($a.type -eq 'ACA-DW') { "   # DW: after the container deploys, register the endpoint: a365 setup blueprint --endpoint-only --messaging-endpoint https://<fqdn>/api/messages" } else { '' }
+    # IMPORTANT: 'a365 setup all' and the deploy script are WORKING-DIRECTORY-SENSITIVE and must run
+    # FROM this agent folder. 'a365 setup all' writes a365.generated.config.json + stamps .env only
+    # when it detects the project here; run from elsewhere it prints "No project detected ... skipping
+    # project settings" and the deploy loses the blueprint id. The 'cd' prefix below guarantees this
+    # for a human; an automation runner MUST set the cwd first (a leading 'cd' in an async shell can be
+    # dropped). The deploy scripts also self-heal (resolve the blueprint by display name) as a backstop.
     $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg <AOAI_RG> -AoaiAcc $($a.ai.account)$reuse$dwNote")
     if ($a.type -eq 'ACA-DW') {
         # DW publish: register the real endpoint, regenerate the package for THIS blueprint, then upload it in the admin center.

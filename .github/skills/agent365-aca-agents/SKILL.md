@@ -23,6 +23,15 @@ the per-variant guides — do not duplicate or renumber them:**
 3. Register the messaging endpoint after the container is up; verify `/api/health`.
 
 ## Known corrections (apply these)
+- **⛔ `a365 setup all` + `deploy-aca*.ps1` must run FROM the agent folder.** `a365 setup all` writes
+  `a365.generated.config.json` (blueprint ids + DPAPI secret) and stamps `.env` only via its "project
+  settings" step, which runs **only when it detects the project in the current directory**; run it
+  elsewhere and it prints *"No … project detected … skipping project settings"* — then the deploy
+  can't find the blueprint id and `--show-secret` fails. An automation runner's leading `cd` in an
+  **async** shell can be dropped (runs from the repo root): set the cwd first (`Set-Location
+  <agent-folder>`), run sync, verify `$PWD`. The deploy scripts self-heal (resolve the blueprint by
+  display name, write a minimal config) as a backstop, but the correct cwd is still needed for
+  `.env`/secret persistence.
 - **`" Agent"` suffix** in the Registry (e.g. `<name> Agent`) is cosmetic CLI behavior — do not "fix" it.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload
