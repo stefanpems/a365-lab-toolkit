@@ -35,19 +35,24 @@ per-variant guides — do not duplicate or renumber them:**
   [setup-MAF-FH-DW.md](../../../docs/setup-MAF-FH-DW.md) §3 Path B.
 - **FH-DW per-instance identity**: route inference via the **project endpoint** (implicit access) so
   each hired instance can call the model without a per-instance role — see §6.2 of that guide.
-- **`azd deploy` times out on "Polling agent status … (creating)" — the agent usually ACTIVATES LATER;
-  DIAGNOSE from the version, NOT from azd, and WAIT before concluding failure.**
-  azd polls only ~30×/6 min then reports "agent deployment timed out (last status: creating)", but Foundry
-  hosted-agent provisioning is often **slower than that window** — the version flips to `active` **after**
-  azd gives up. ⛔ **Do NOT change region or "fix" the plan on the azd timeout alone.** Query the version
-  (token for `https://ai.azure.com`): `GET {project-endpoint}/agents/<name>/versions?api-version=2025-05-15-preview`
-  → each `data[].status` + `.error.code`. **Re-check a few minutes after the timeout**: on a09081, FH-OBO
-  (v1/v2/v3) and FH-S2S showed `status: failed / ProvisioningError ("Please retry")` right after the
-  timeout but ALL became `status: active` a few minutes later with the SAME config that had worked the day
-  before — the "failure" was just slow provisioning. Only treat it as a real failure if the version stays
-  `failed` with a SPECIFIC config code (`image_pull_failed`, `AcrImageNotFound`, `InvalidAcrPullCredentials`,
-  `DeploymentNotFound`, `SubscriptionIsNotRegistered` — those are fixable RBAC/config issues). The `/agents`
-  (assistants) LIST is empty for hosted agents; use `GET /agents/<name>` (singular) or `/agents/<name>/versions`.
+- **`azd deploy` times out on "Polling agent status … (creating)" — read the SINGLE-VERSION item, not
+  the versions LIST, and confirm with an actual invoke.**
+  azd polls ~30×/6 min then reports "agent deployment timed out (last status: creating)". Check the real
+  outcome on the **version item** (token for `https://ai.azure.com`):
+  `GET {project-endpoint}/agents/<name>/versions/<N>?api-version=2025-05-15-preview` → `status` +
+  `error.code`/`error.message`. ⛔ **The `/versions` LIST reports a misleading `status: active` (that is the
+  traffic-selector state, NOT provisioning health); only the single-version item and an actual invoke tell
+  the truth.** A version that provisioned OK is `active` on the ITEM endpoint; a failed one is `failed` with
+  an `error`, and invoking the agent returns **HTTP 409 `agent_version_failed` "Agent version provisioning
+  failed"**. Interpret the error: SPECIFIC codes are fixable config/RBAC (`image_pull_failed`,
+  `AcrImageNotFound`, `InvalidAcrPullCredentials`, `DeploymentNotFound`, `SubscriptionIsNotRegistered`); a
+  **generic `ProvisioningError` ("Please retry")** that persists across several `azd deploy` retries is a
+  **server-side Foundry failure** (5xx → the docs say contact support), NOT a plan/scaffolder bug. Verified on
+  a09081 (2026-09-08): FH-OBO/FH-S2S all versions stayed `ProvisioningError` and invoking returned 409, while
+  the **identical** h2256 FH-OBO deployed the day before shows the version item `active` and works — the only
+  difference was that the a09081 Foundry accounts were minutes old. Response: **retry later** (a freshly
+  created Foundry account may need time to become hosted-agent-capable) or try another region; do not
+  "fix" the identical-to-working code/plan. The `/agents` (assistants) LIST is empty for hosted agents.
 
 ## Tools
 FH samples currently wire **only Mail** in code. Attaching a non-Mail Work IQ MCP also needs the code
