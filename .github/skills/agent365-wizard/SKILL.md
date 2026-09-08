@@ -95,8 +95,11 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    token lessons + the per-server permission map in
    [references/workiq-mcp-integration.md](./references/workiq-mcp-integration.md).
 ### 3. Solution basics (one screen)
-- **Solution prefix** (e.g. `contoso-sales`) — single value; all agent names derive from it as
+- **Solution prefix** (e.g. `contoso`) — single value; all agent names derive from it as
   `<prefix>-<hosting>-<identity>` where hosting ∈ {ACA, FH, FD}, identity ∈ {OBO, S2S, DW}.
+  **Before asking, STATE the rules to the user**: start with a lowercase letter; lowercase letters and
+  digits only (no hyphens/underscores/uppercase/symbols); **3–12 characters** (the 12 cap is set by the
+  custom MCP `ext_<prefix>Anon/Auth ≤ 20`; it also satisfies ACA, RG, managed identity, Entra and SWA).
 - **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.

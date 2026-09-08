@@ -54,15 +54,38 @@ Chat monitoring of background terminals is unreliable, so DO NOT rely on it as t
 Blocking prompts are the #1 failure point. When one occurs:
 1. Emit an audible alert: run `[console]::beep(880,400)` in the terminal (and repeat once).
 2. In chat, use a bold **⛔ ACTION REQUIRED** banner naming EXACTLY:
-   - **Which terminal**: the named terminal (e.g. the one titled `a365` or the one running
-     `deploy-aca.ps1`). Tell the user how to reach it: **Terminal panel → the tab/dropdown at the
-     top-right → select `<name>`**, or **View → Terminal**, then the `N Hidden Terminals` control at
-     the bottom lists chat terminals by their last command.
-   - **What to do**: e.g. "paste the blueprint client secret and press Enter", or "type `N` + Enter",
-     or "leave blank + Enter".
-   - **Where to get the value** if applicable (exact command + folder), e.g.
-     `a365 setup blueprint --show-secret` from the agent's `generated/<name>` folder.
-3. Prefer prompts the USER can answer directly in the terminal. Do not try to relay a secret yourself.
+   - **Which terminal**: the named terminal (e.g. the one running `deploy-aca.ps1`). Tell the user how
+     to reach it in VS Code: **View → Terminal**, then the **`N Hidden Terminals`** control at the
+     bottom lists the chat terminals by their last command — **click the one waiting for input**. The
+     terminal echoed in chat CANNOT be typed into (there you can only *copy*) — the user must select the
+     real terminal from that panel to paste/type.
+   - **What to do** and **where to get the value** — see the two callouts below.
+3. **You answer safe, non-secret prompts yourself** — do NOT sit idle "monitoring". For a y/N or
+   endpoint prompt, send the answer through the terminal-input tool immediately and actively poll the
+   output; never end a turn saying only "I'll wait". **Never type or relay a secret.**
+
+> ⛔ **`Assign this application permission now? [y/N]` (the Observability app-role, during `a365 setup`
+> on ACA-OBO/ACA-S2S and others) — the answer is `y`.** It grants a required blueprint permission (the
+> intended setup action). **Send `y` yourself**, and tell the user UP FRONT: *"a prompt `Assign this
+> application permission now? [y/N]` will appear — the answer is `y`; I'll send it, but you can type `y`
+> + Enter yourself if I haven't."* Do not leave it hanging — the user hit a multi-minute stall here
+> because nobody answered it.
+
+> ⛔ **SECRET prompt (blueprint client secret) — you CANNOT read or type it; walk the user through it,
+> VERY clearly, BEFORE it appears.** The ACA deploy script (`deploy-aca.ps1` / `deploy-aca-S2S.ps1`)
+> asks *"Paste the CLEARTEXT blueprint client secret"*. Tell the user to:
+> 1. **Open a SECOND terminal / PowerShell window** (NOT the one that is waiting) and run these two
+>    commands — give the **REAL absolute path** to the agent's generated folder so they are copy-paste
+>    ready:
+>    ```powershell
+>    cd "<REPO-ABSOLUTE-PATH>\generated\<prefix>\<agent-name>"
+>    a365 setup blueprint --show-secret
+>    ```
+>    then **copy** the printed secret.
+> 2. **Return to the WAITING terminal in VS Code** — **View → Terminal → the `N Hidden Terminals`
+>    control at the bottom → select the one running the deploy script** — **paste** the secret and press
+>    **Enter**. (The terminal shown in chat is copy-only; you must select the real one in that panel to
+>    paste.)
 
 ## Browser sign-in & admin consent — announce it for EVERY agent that needs it
 Several steps open a browser tab for **sign-in + admin consent**. Before each one, tell the user:
@@ -137,8 +160,13 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
    Mail for **OBO/DW only** (not S2S). See "Registered MCP tools" below.
-3. **Solution basics** — solution prefix (must start with a lowercase letter), region, RG strategy
-   (isolated `<agent>-rg` default, or shared `<prefix>-rg`).
+3. **Solution basics** — region, RG strategy (isolated `<agent>-rg` default, or shared `<prefix>-rg`),
+   and the **solution prefix**. ⛔ **Before asking for the prefix, STATE ALL its rules to the user**
+   (they apply to every derived resource name): **starts with a lowercase letter; only lowercase
+   letters and digits — no hyphens, underscores, uppercase or symbols; 3–12 characters.** Explain the
+   **12-char cap comes from the custom MCP** (`ext_<prefix>Anon` / `ext_<prefix>Auth` must stay ≤ 20),
+   and that lowercase-alphanumeric-starting-with-a-letter also satisfies Azure Container Apps, resource
+   groups, managed identities, the Entra apps and the Static Web App. Examples: `contoso`, `sales01`.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
    Azure OpenAI account+model for ACA; Foundry project (new/reuse) + model for FH; Foundry project
    for FD (the wizard can CREATE one — see point below); Frontier/licensing for DW; UI permissions.

@@ -60,7 +60,9 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 $errors = New-Object System.Collections.Generic.List[string]
 $prefix = $plan.solution.prefix
 if (-not $prefix) { $errors.Add('solution.prefix is required.') }
-elseif ($prefix -notmatch '^[a-z]') { $errors.Add("solution.prefix '$prefix' must start with a lowercase letter (Azure Container Apps / managed identities reject names starting with a digit or symbol).") }
+elseif ($prefix -cnotmatch '^[a-z][a-z0-9]{2,11}$') {
+    $errors.Add("solution.prefix '$prefix' is invalid. It must start with a lowercase letter, contain ONLY lowercase letters and digits (no hyphens, underscores, uppercase or symbols), and be 3-12 characters. The 12-char cap comes from the custom MCP: Agent 365 registers its servers as ext_<prefix>Anon / ext_<prefix>Auth, which must stay <= 20 chars (4 + prefix + 4). Lowercase-alphanumeric starting with a letter also satisfies Azure Container Apps (2-32), managed identities, resource groups, the Entra app registrations and the Static Web App, so one prefix works for every resource.")
+}
 if (-not $plan.solution.region) { $errors.Add('solution.region is required.') }
 if (-not $plan.agents -or $plan.agents.Count -eq 0) { $errors.Add('at least one agent is required.') }
 
@@ -92,14 +94,10 @@ if ($plan.solution.resourceGroupStrategy -eq 'shared') {
     }
 }
 
-# Custom MCP validation (optional). The custom MCP name is NOT asked — it derives from the solution
-# prefix (the same unique key as the web UI): $mcpBase = the prefix lowercased with non-alphanumerics
-# stripped. It must still yield a valid ext_<Name>Anon/Auth (<= 20 chars).
+# Custom MCP validation (optional). The custom MCP name is NOT asked — it IS the solution prefix (the
+# prefix rule above already guarantees a valid ext_<prefix>Anon/Auth: <= 12 lowercase alphanumeric,
+# letter-first, so ext_ stays <= 20).
 if ($plan.customMcp -and $plan.customMcp.enabled) {
-    $mcpBase = if ($prefix) { ($prefix -replace '[^A-Za-z0-9]', '').ToLower() } else { '' }
-    if (-not $mcpBase) { $errors.Add("customMcp.enabled is true but the solution prefix '$prefix' has no letters/digits to derive the custom MCP name from.") }
-    elseif ($mcpBase -notmatch '^[a-z][a-z0-9]*$') { $errors.Add("the custom MCP name derived from the prefix ('$mcpBase') must start with a letter and contain only letters/digits.") }
-    elseif ($mcpBase.Length -gt 12) { $errors.Add("the solution prefix '$prefix' yields custom MCP name '$mcpBase' ($($mcpBase.Length) chars); it must be <= 12 so ext_<Name>Anon/Auth stays <= 20. Use a shorter prefix (<= 12 alphanumerics) or disable the custom MCP.") }
     if ($plan.customMcp.integrationMode -and ($plan.customMcp.integrationMode -notin @('approve-first', 'attach-when-approved'))) {
         $errors.Add("customMcp.integrationMode '$($plan.customMcp.integrationMode)' is invalid (use 'approve-first' or 'attach-when-approved').")
     }

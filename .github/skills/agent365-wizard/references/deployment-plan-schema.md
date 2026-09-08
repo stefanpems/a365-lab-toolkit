@@ -10,7 +10,7 @@ gitignored.
 {
   "version": 1,
   "solution": {
-    "prefix": "<string>",                 // e.g. contoso-sales
+    "prefix": "<string>",                 // e.g. contoso — lowercase letter first, lowercase alphanumeric only, 3-12 chars (custom MCP ext_ cap)
     "tenantId": "<guid>",                 // discovered, confirmed
     "subscriptionId": "<guid>",           // discovered, confirmed
     "region": "<azure-region>",           // e.g. polandcentral

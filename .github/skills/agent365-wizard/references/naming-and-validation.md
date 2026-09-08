@@ -9,23 +9,22 @@ Derive every agent name from a single **solution prefix**:
    identity ∈ { OBO, S2S, DW }
 ```
 
-Examples for prefix `contoso-sales`: `contoso-sales-ACA-OBO`, `contoso-sales-FH-S2S`,
-`contoso-sales-FD-OBO`.
+Examples for prefix `contoso`: `contoso-ACA-OBO`, `contoso-FH-S2S`, `contoso-FD-OBO`.
 
 ### Derived names (never ask — show on the review screen, editable)
 | Derived | Rule | Example |
 |---------|------|---------|
-| Blueprint display name | `<agent-name> Blueprint` | `contoso-sales-ACA-OBO Blueprint` |
-| Identity display name  | `<agent-name> Identity`  | `contoso-sales-ACA-OBO Identity` |
-| Container app name (ACA) | lowercase, hyphens | `contoso-sales-aca-obo` |
-| Resource group (isolated) | `<agent-name>-rg` | `contoso-sales-ACA-OBO-rg` |
-| Resource group (shared)   | `<prefix>-rg` | `contoso-sales-rg` |
-| SPA app registration | `<prefix>-ui-spa` | `contoso-sales-ui-spa` |
-| Static Web App | `<prefix>-ui` | `contoso-sales-ui` |
+| Blueprint display name | `<agent-name> Blueprint` | `contoso-ACA-OBO Blueprint` |
+| Identity display name  | `<agent-name> Identity`  | `contoso-ACA-OBO Identity` |
+| Container app name (ACA) | lowercase, hyphens | `contoso-aca-obo` |
+| Resource group (isolated) | `<agent-name>-rg` | `contoso-ACA-OBO-rg` |
+| Resource group (shared)   | `<prefix>-rg` | `contoso-rg` |
+| SPA app registration | `<prefix>-ui-spa` | `contoso-ui-spa` |
+| Static Web App | `<prefix>-ui` | `contoso-ui` |
 
 > **Scaffold output lives under one per-run root: `generated/<prefix>/`.** Every folder for a run — each
 > `<agent-name>`, the `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP — is created under it (e.g.
-> `generated/contoso-sales/contoso-sales-ACA-OBO/`). The wizard's own `generated/wizard-progress.log`
+> `generated/contoso/contoso-ACA-OBO/`). The wizard's own `generated/wizard-progress.log`
 > and `generated/cleanup/` stay at the `generated/` root.
 
 ### Registry display name — the `" Agent"` suffix (cosmetic, not controllable)
@@ -51,17 +50,21 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
    above 30 chars**. Verified in [docs/setup-MAF-ACA-DW.md](../../../../docs/setup-MAF-ACA-DW.md).
    For any DW variant, validate the display name length and offer a short form (drop " Blueprint",
    shorten the prefix) before proceeding.
-1a. **Prefix must start with a lowercase letter** (`^[a-z]`). Azure Container Apps and managed
-   identities **reject** names starting with a digit or symbol, so a prefix like `1730` produces the
-   invalid container app `1730-aca-obo`. Enforced in `scaffold-from-plan.ps1`.
+1a. **Prefix: lowercase letter first, lowercase alphanumeric only, 3–12 chars** (`^[a-z][a-z0-9]{2,11}$`,
+   enforced in `scaffold-from-plan.ps1`). It is reused for every resource, so it must satisfy the
+   strictest consumer — the **custom MCP**: Agent 365 registers `ext_<prefix>Anon` / `ext_<prefix>Auth`,
+   which must stay **≤ 20 chars** (`4 + prefix + 4`) and are **alphanumeric** (no hyphens/underscores).
+   That also covers Azure Container Apps (2–32, lowercase, start-with-a-letter — a prefix like `1730`
+   would make the invalid container `1730-aca-obo`), managed identities, resource groups, the Entra apps
+   and the Static Web App. **State these rules to the user before asking for the prefix.** MS Learn:
+   [Azure resource naming rules](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-name-rules#microsoftapp).
 2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
 3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
    account + model (FH), and Free-tier Static Web Apps (UI) before committing.
-4. **Custom MCP name derives from the solution prefix — it is NOT asked.** Agent 365 registered server
-   names must start with `ext_` and be **≤ 20 chars**; the sample derives `ext_<prefix>Anon` and
-   `ext_<prefix>Auth` (prefix lowercased, non-alphanumerics stripped), so the prefix must be **≤ 12
-   alphanumerics** whenever the custom MCP is enabled (`4 (ext_) + prefix + 4 (Anon/Auth) ≤ 20`). The
-   scaffolder validates this and errors if the prefix is too long. `customMcp.attachTo` may contain
+4. **Custom MCP name IS the solution prefix — it is NOT asked.** Agent 365 registered server names must
+   start with `ext_` and be **≤ 20 chars**; the servers are `ext_<prefix>Anon` / `ext_<prefix>Auth`
+   (the prefix is already lowercase alphanumeric ≤ 12 per rule 1a, used verbatim — `4 + prefix + 4 ≤ 20`).
+   `customMcp.attachTo` may contain
    **only OBO agent types** (`ACA-OBO` / `FH-OBO` / `FD-OBO`); S2S and DW are blocked because a BYO
    server needs a Power Platform connection owned by the invoking identity and only an OBO agent invokes
    as the connection-owning user (known preview limitation — see the schema Rules). The **prefix is the
