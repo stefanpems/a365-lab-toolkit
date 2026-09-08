@@ -8,19 +8,20 @@
   this removes the matching local scaffolding folders under the generated root, with all their content.
 
   Matching is by the presence of an identifier string in the folder NAME (case-insensitive substring) —
-  the identifying strings of the agents and custom-MCP servers (in future also the web-UI folder). The
-  scan is RECURSIVE: today these folders sit directly under generated/, but the recursion also finds
-  them inside future grouping subfolders. Only the OUTERMOST match on each branch is returned/deleted
-  (the whole parent folder goes, so nested matches are never listed or removed separately). The cleanup
-  audit folder (generated/cleanup/**) is always excluded, and nothing outside the generated root is ever
-  touched.
+  normally just the solution PREFIX, which every per-run folder name begins with. The scan is RECURSIVE
+  and returns only the OUTERMOST match on each branch: the scaffolder groups a whole run under a single
+  per-run root `generated/<prefix>/` (the agents, `<prefix>-ui` and `<prefix>-mcp` live inside it), so
+  that root is the one and only match for the prefix and a single confirmation removes the WHOLE branch
+  (every sub-folder cascades with it). The cleanup audit folder (generated/cleanup/**) is always
+  excluded, and nothing outside the generated root is ever touched.
 
   Read-only with -List (emit candidate folders as JSON for the wizard's checkbox review); otherwise it
   deletes the confirmed selection. Every action is appended to the persistent deletion log.
 
 .PARAMETER Identifiers
-  One or more substrings identifying the resources (e.g. the solution prefix `a1730`, a custom-MCP
-  `<Name>`). Required for -List and for identifier-based deletion.
+  One or more substrings identifying the run — normally just the solution PREFIX (e.g. `a1730`). Every
+  per-run folder name begins with it, so the prefix alone selects the whole `generated/<prefix>/` root
+  (agents + web UI + custom MCP) as a single candidate. Required for -List and for identifier-based deletion.
 
 .PARAMETER GeneratedRoot
   The generated/ root to scan. Defaults to `generated` under the current location.

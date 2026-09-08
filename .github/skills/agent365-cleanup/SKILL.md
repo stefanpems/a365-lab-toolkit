@@ -32,8 +32,9 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
 - [scripts/Remove-CleanupResources.ps1](./scripts/Remove-CleanupResources.ps1) — **destructive**.
   Consumes the confirmed selection, deletes in dependency order, and writes a **persistent log**.
 - [scripts/Remove-GeneratedFolders.ps1](./scripts/Remove-GeneratedFolders.ps1) — **destructive, local FS**.
-  Recursively finds the outermost `generated/` folders whose name contains an agent / custom-MCP
-  identifier and (after the same checkbox review) deletes them with all content. `-List` is read-only.
+  A run is scaffolded under a single per-run root `generated/<prefix>/`, so passing the **prefix** returns
+  that **one root folder** (outermost match) and deleting it cascades to every sub-folder (agents,
+  `<prefix>-ui`, `<prefix>-mcp`). Runs after the same checkbox review; `-List` is read-only.
 
 ## Mandatory rules
 - **Never delete without the checkbox review.** After discovery you ALWAYS present the identified
@@ -83,14 +84,15 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    (`--no-wait`) by default; mention that RG deletion completes in the background (ACA environments can
    take 20-40 min) — pass `-WaitForRg` only if the user wants to block.
 8. **Remove local `generated/` folders (optional)** — after the cloud deletion, ask (single-select
-   Yes/No) whether to also delete the local scaffolding folders for the cleaned resources. If yes, run
-   `Remove-GeneratedFolders.ps1 -List -Identifiers <NameFilter>[,<McpNameFilter>]` to discover the
-   outermost `generated/` folders whose name contains those identifier strings (recursive — today
-   directly under `generated/`, tomorrow inside grouping subfolders; the audit folder is excluded; the
-   web-UI folder is a future identifier). Present the candidates in a **checkbox review**, write the
-   confirmed subset to `folders.selection.json`, then run `Remove-GeneratedFolders.ps1 -SelectionPath …
-   -Force` (logged to the same `deletion.log`). This is a hard, non-recoverable delete (`generated/` is
-   gitignored). Offer `-WhatIf` if the user is unsure.
+   Yes/No) whether to also delete the local scaffolding folder for the cleaned run. If yes, run
+   `Remove-GeneratedFolders.ps1 -List -Identifiers <prefix>` — because the whole run lives under one
+   per-run root `generated/<prefix>/` (agents, `<prefix>-ui`, `<prefix>-mcp`), the outermost-match logic
+   returns that **single root folder** and the prefix alone is enough (the audit folder
+   `generated/cleanup/` is always excluded). Present the candidate(s) in a **checkbox review** —
+   confirming the root deletes every sub-folder in one go — write the confirmed subset to
+   `folders.selection.json`, then run `Remove-GeneratedFolders.ps1 -SelectionPath … -Force` (logged to
+   the same `deletion.log`). This is a hard, non-recoverable delete (`generated/` is gitignored). Offer
+   `-WhatIf` if the user is unsure.
 9. **Report** — summarize successes/errors, released licenses, and point to the persistent log and
    `result.json`. For async RG deletions, give the verification command (`az group exists -n <rg>`).
 
