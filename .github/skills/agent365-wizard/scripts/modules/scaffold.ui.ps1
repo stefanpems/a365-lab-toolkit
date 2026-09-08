@@ -57,6 +57,14 @@ function Invoke-ScaffoldUi {
             default   { $null }
         }
         if ($entry) {
+            # FD reuses a KNOWN Foundry project, so resolve its Responses endpoint at scaffold time
+            # (normalize the account host to services.ai.azure.com — the prompt-agent path 404s on the
+            # cognitiveservices.azure.com host). FH accounts are created at provision, so they stay
+            # <ACCOUNT>/<PROJECT> placeholders filled during the incremental post-deploy wiring.
+            if (($t -eq 'FD-OBO' -or $t -eq 'FD-S2S') -and $ag.foundryProject) {
+                $fpUi = $ag.foundryProject -replace '\.cognitiveservices\.azure\.com', '.services.ai.azure.com'
+                if ($fpUi -match '/api/projects/') { $entry['endpoint'] = ($fpUi.TrimEnd('/')) + '/openai/v1/responses' }
+            }
             # Attach the custom-MCP token wiring when this OBO agent is a custom-MCP target and its
             # ext_ server audiences are known (from the manifest scan above).
             if ($mcpEnabled -and ($mcpAttach -contains $t)) {

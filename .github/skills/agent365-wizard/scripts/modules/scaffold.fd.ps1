@@ -14,6 +14,9 @@ function Invoke-ScaffoldFdAgent {
         if ($proj) { if ($proj -like '*/*') { $proj = $proj.Split('/')[-1] }; $fp = "https://$acctName.services.ai.azure.com/api/projects/$proj"; Write-Host "    FD project endpoint derived: $fp" -ForegroundColor DarkGray }
         else { Write-Host "    WARN $($a.name): set FOUNDRY_PROJECT_ENDPOINT manually to https://<acct>.services.ai.azure.com/api/projects/<project>" -ForegroundColor Yellow }
     }
+    # The prompt-agent SDK requires the AI-services host, NOT the account's cognitiveservices.azure.com host
+    # (the latter returns 404 at deploy). Normalize even when the plan already supplied /api/projects/.
+    if ($fp -match 'cognitiveservices\.azure\.com') { $fp = $fp -replace '\.cognitiveservices\.azure\.com', '.services.ai.azure.com' }
     if ($fp) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $fp }
     Set-EnvValue -Path $envPath -Key 'FOUNDRY_MODEL_NAME' -Value $a.ai.deployment
     Set-EnvValue -Path $envPath -Key 'AGENT_NAME' -Value $a.name
