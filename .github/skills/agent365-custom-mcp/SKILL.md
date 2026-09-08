@@ -39,8 +39,27 @@ not duplicate or renumber it here.**
   agent's deploy accordingly.
 - **Order**: deploy the MCP container(s) → replace the per-server FQDN in the register JSON
   (`serverUrl` must be a single-segment root `https://<fqdn>/mcp`) → `a365 develop-mcp
-  register-external-mcp-server` → a **tenant admin approves** each server in the M365 admin center
-  (Agents → Tools → Requests; CLI approval was removed) → attach per agent.
+  register-external-mcp-server` → **pre-empt the proxy consents** (`preempt-proxy-consents.ps1`) → a
+  **tenant admin approves** each server in the M365 admin center (Agents → Tools → Requests; CLI
+  approval was removed) → attach per agent.
+- ⛔ **`register-external-mcp-server` PROMPTS `Proceed with registration? (y/N)` and WAITS — answer
+  `y`, and NEVER pipe it through `| Out-String`.** `Out-String` (and `Tee-Object | Out-String`) buffers
+  all output until the process exits, so the prompt is invisible and the command looks **hung for
+  minutes** (this wasted a lot of time — an empty Enter defaults to **N** = "Registration cancelled",
+  creating nothing). Run it streamed (no `Out-String`; `Tee-Object -FilePath <log>` alone is fine) and
+  send `y`. There is no `--yes`/`--force` flag. The same applies to `a365 setup all`
+  (`Assign this application permission now? [y/N]` → `y`) and any interactive `a365` command.
+- ⛔ **Pre-empt the Approve consent with `preempt-proxy-consents.ps1` (emitted into `<prefix>-mcp/`).**
+  Registration creates the backing proxy apps (A365Proxy / RemoteProxy / PublicClients / BYO) but NOT
+  their service principals or the delegated grants, so the admin **Approve** fails with *"Couldn't
+  complete consent for one or more apps backing this MCP server"*. Run
+  `.\preempt-proxy-consents.ps1 -Name <prefix> -Subscription <sub>` AFTER both registrations and BEFORE
+  Approve: it creates the missing proxy SPs + the AllPrincipals grants (anon/auth Proxy+PublicClients→BYO
+  `Tools.ListInvoke.All`; BYO→Agent 365 Tools `PlatformRuntime.Internal.All`; auth RemoteProxy→Resource
+  `access_as_agent`) idempotently. It uses a Graph token + `Invoke-RestMethod` — do **not** hand-roll
+  this with `az rest --body @file` (mangles the JSON on Windows: `resourceId` seen as one character) or
+  a `$filter clientId+resourceId` (Graph rejects it), and beware PowerShell array-of-arrays flattening
+  (`@( @() @() )` without commas yields single-character elements).
 - ⛔ **For the AUTH (EntraOAuth) server, the deploy → register order is load-bearing.** Agent 365
   captures the auth type into the Power Platform **connector at registration time** by probing the
   server. The auth server MUST already be serving its OAuth Protected Resource Metadata + `401`
@@ -66,7 +85,13 @@ not duplicate or renumber it here.**
   See [custom-mcp/README.md](../../../custom-mcp/README.md) "Troubleshooting".
 - **Attach** (three steps — never hand-edit `ToolingManifest.json`), run in the agent folder:
   1. `a365 develop add-mcp-servers ext_<Name>Anon ext_<Name>Auth` — **local, safe** (updates
-     `ToolingManifest.json` only, uses the cached token, no cloud mutation, no prompt).
+     `ToolingManifest.json` only, uses the cached token, no cloud mutation, no prompt). ⛔ **Run
+     `a365 develop list-available` FIRST** (right before `add-mcp-servers`): the CLI reads a **cached**
+     catalog, and if the last `list-available` ran BEFORE the servers were registered, `add-mcp-servers`
+     logs *"Server 'ext_…' not found in catalog, adding with minimal configuration"* and writes an entry
+     with **no `url`/`scope`/`audience`** — then permissions/token wiring are wrong. If you see minimal
+     entries, `a365 develop remove-mcp-servers …` then `list-available` then `add-mcp-servers …` again
+     so each entry gets its full `url` + `scope` (`Tools.ListInvoke.All`) + `audience` (the BYO app id).
   2. `a365 setup permissions mcp --agent-name <agent-name>` (Global Admin) — configures the
      blueprint's consent for the new servers' BYO resource apps (`Tools.ListInvoke.All`) and
      **opens a browser for admin consent**. ⛔ Tell the user explicitly: a **blocked popup** stalls

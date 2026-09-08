@@ -171,7 +171,11 @@ writing. Print the next commands for the user to run; never auto-run destructive
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),
   show a bold ⛔ ACTION REQUIRED banner naming which terminal (and how to focus it via the Terminal
   panel dropdown / `N Hidden Terminals`), what to type, and where to get the value
-  (`a365 setup blueprint --show-secret`). Secrets are typed by the user, never relayed.
+  (`a365 setup blueprint --show-secret`). Secrets are typed by the user, never relayed. ⛔ **Never pipe
+  an interactive `a365` command through `| Out-String`** — it buffers all output and hides the `y/N`
+  prompt, so the command looks hung for minutes (the top time-waster). Stream it (no pipe, or
+  `Tee-Object -FilePath` alone) and answer: `register-external-mcp-server` → `Proceed? (y/N)` = `y`
+  (empty Enter = **N** = cancelled); `setup all` → `Assign … [y/N]` = `y`. No `--yes` flag exists.
 - **Browser sign-in + admin consent** happens for ACA `a365 setup`, `azd auth login`, SPA consent,
   and first UI-tab use. Announce it each time; the post-accept "We couldn't connect to that service"
   page is expected and safe to ignore.

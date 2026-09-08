@@ -114,6 +114,20 @@ a365 develop-mcp register-external-mcp-server -f .\register-auth.json
 After each registration, a **tenant administrator approves** the server in the Microsoft 365 admin
 center (Agents → Requested). CLI-based approval was removed; approval is admin-center only.
 
+> ⛔ **`register-external-mcp-server` prompts `Proceed with registration? (y/N)` and waits — answer
+> `y`.** Do **not** run it piped through `| Out-String` (it buffers output and hides the prompt, so the
+> command looks hung); an empty Enter defaults to **N** ("Registration cancelled"). There is no
+> `--yes` flag.
+
+> **Before the admin clicks Approve, pre-empt the consent.** Registration creates the backing proxy
+> apps but not their service principals or delegated grants, so Approve otherwise fails with *"Couldn't
+> complete consent for one or more apps backing this MCP server"*. Run once, after both registrations:
+> ```powershell
+> .\preempt-proxy-consents.ps1 -Name <prefix> -Subscription <SUBSCRIPTION_ID>
+> ```
+> It creates the missing proxy SPs and the AllPrincipals grants (idempotent) via a Graph token +
+> `Invoke-RestMethod`. Then the admin Approve succeeds on the first try (watch for a blocked popup).
+
 > BYO MCP servers are in **preview**; republishing a new version of a registered server isn't
 > currently supported. If you change the tool surface, register under a new `ext_` name.
 

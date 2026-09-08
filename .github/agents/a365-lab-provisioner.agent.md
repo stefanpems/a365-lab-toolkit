@@ -64,6 +64,16 @@ Blocking prompts are the #1 failure point. When one occurs:
    endpoint prompt, send the answer through the terminal-input tool immediately and actively poll the
    output; never end a turn saying only "I'll wait". **Never type or relay a secret.**
 
+> ⛔ **NEVER pipe an interactive `a365` command through `| Out-String` (or `| Tee-Object | Out-String`).**
+> `Out-String` buffers ALL output until the process exits, so a mid-run `y/N` prompt is **invisible** and
+> the command looks **hung for minutes** — the single biggest time-waster in the first runs. Stream it
+> instead (no pipe, or `Tee-Object -FilePath <log>` alone), watch for the prompt, and send the answer.
+> Commands that prompt: `a365 develop-mcp register-external-mcp-server` (`Proceed with registration?
+> (y/N)` → **`y`**; an empty Enter defaults to **N** = "Registration cancelled", creating nothing),
+> `a365 setup all` (`Assign this application permission now? [y/N]` → **`y`**), `a365 setup permissions
+> mcp`. None have a `--yes`/`--force` flag. When YOU run these, prefer `mode=async`, poll, and
+> `send_to_terminal` the answer.
+
 > ⛔ **`Assign this application permission now? [y/N]` (the Observability app-role, during `a365 setup`
 > on ACA-OBO/ACA-S2S and others) — the answer is `y`.** It grants a required blueprint permission (the
 > intended setup action). **Send `y` yourself**, and tell the user UP FRONT: *"a prompt `Assign this
