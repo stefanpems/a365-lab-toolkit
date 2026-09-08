@@ -68,6 +68,17 @@ not duplicate or renumber it here.**
   `deploy-mcp.ps1` enables this by default (`MCP_OAUTH_CHALLENGE` on + `MCP_AUTH_TENANT_ID` set on the
   auth container). Before running `register-external-mcp-server -f register-auth.json`, verify
   `Invoke-RestMethod https://<auth-fqdn>/.well-known/oauth-protected-resource` → `200`.
+- ⛔ **`whoami` on an OBO agent MUST return `authorization_token_forwarded: true` — if it says `false`,
+  it is a BUG, not a preview limitation.** The gateway DOES forward a delegated bearer token
+  (`aud=api://<auth-app-id>`, `scp=access_as_agent`, the user's `upn`). Two conditions must both hold:
+  (1) the connector is EntraOAuth (deploy → register order above); (2) the server reads headers with
+  **`get_http_headers(include_all=True)`** — FastMCP strips `Authorization` by default, which hid the
+  token and cost hours of debugging. `custom-mcp/server.py` (the template the scaffolder copies) already
+  uses `include_all=True` in `_bearer_token`/`whoami`/`token_claims`/`whoami_anon` and logs each request's
+  forwarded-token state as `[auth-diag]`. **Never remove `include_all=True`.** If a run still shows
+  `false`, read the auth container log: `[auth-diag] … bearer forwarded aud=… scp=… upn=…` proves the
+  token arrives (so the bug is header-reading), while `NO bearer token forwarded` means the connector is
+  NoAuth (re-register).
 - ⛔ **At Approve, warn the user LOUDLY about a blocked browser pop-up.** Admin consent opens
   popup(s); if the browser **blocks** them (a "pop-up blocked" icon in the address bar) the approval
   **silently hangs/fails and is easy to miss**. Tell the user in bold to allow pop-ups and retry.

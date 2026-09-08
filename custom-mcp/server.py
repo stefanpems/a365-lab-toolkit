@@ -55,7 +55,9 @@ GRAPH_DEFAULT_SCOPE = "https://graph.microsoft.com/.default"
 
 def _bearer_token() -> str | None:
     """Return the raw bearer token from the incoming Authorization header, if any."""
-    headers = get_http_headers()
+    # include_all=True is REQUIRED: FastMCP's get_http_headers() strips 'authorization' by default,
+    # which hides the bearer token the Agent 365 gateway forwards (whoami would wrongly report false).
+    headers = get_http_headers(include_all=True)
     auth = headers.get("authorization") or headers.get("Authorization")
     if not auth:
         return None
@@ -210,7 +212,7 @@ def whoami_anon() -> dict[str, Any]:
     Authorization header. This tool confirms that and lists the headers that did
     arrive, as a contrast to the '/auth' server's 'whoami' tool.
     """
-    headers = get_http_headers()
+    headers = get_http_headers(include_all=True)
     has_auth = bool(headers.get("authorization") or headers.get("Authorization"))
     return {
         "authorization_header_present": has_auth,
@@ -253,7 +255,7 @@ def whoami() -> dict[str, Any]:
       - S2S agent      -> the agent application
       - Digital Worker -> the agent's own (agent) user identity
     """
-    headers = get_http_headers()
+    headers = get_http_headers(include_all=True)
     gateway_caller = {
         "principal_id": headers.get("x-ms-client-principal-id"),
         "app_id": headers.get("x-ms-client-app-id"),
@@ -285,7 +287,7 @@ def token_claims() -> dict[str, Any]:
     Companion to 'whoami' for deeper inspection. The signature is NOT verified
     (lab sample); a production server must validate it.
     """
-    headers = get_http_headers()
+    headers = get_http_headers(include_all=True)
     token = _bearer_token()
     if not token:
         return {
@@ -458,6 +460,31 @@ def build_single(server, label):
     return app
 
 
+def _log_incoming_auth(method: str, headers: dict) -> None:
+    """Log, for one '/mcp' request, whether the Agent 365 gateway forwarded a bearer token and, if
+    so, that token's audience / app / identity-type claims. This is the primary diagnostic for the
+    EntraOAuth token-forwarding path: a request with no Authorization header means the gateway could
+    not obtain an OBO token for the server's resource (the tool then falls back to the
+    x-ms-client-* identity headers, so `whoami` reports authorization_token_forwarded=false). The
+    token audience must match the server's registered resource ('api://<AUTH_APP_ID>') for the
+    forwarded token to be usable. Set MCP_AUTH_DIAG=false to silence this logging."""
+    if os.environ.get("MCP_AUTH_DIAG", "true").strip().lower() == "false":
+        return
+    auth = headers.get(b"authorization")
+    client_hdrs = {k.decode(): v.decode() for k, v in headers.items() if k.startswith(b"x-ms-client-")}
+    if not auth:
+        print(f"[auth-diag] {method} /mcp: NO bearer token forwarded; x-ms-client-*={client_hdrs}", flush=True)
+        return
+    claims = _decode_jwt_claims(auth.decode().split(" ", 1)[-1].strip())
+    print(
+        f"[auth-diag] {method} /mcp: bearer forwarded aud={claims.get('aud')} "
+        f"appid={claims.get('appid') or claims.get('azp')} idtyp={claims.get('idtyp')} "
+        f"scp={claims.get('scp')} roles={claims.get('roles')} "
+        f"upn={claims.get('upn') or claims.get('preferred_username')}; x-ms-client-*={client_hdrs}",
+        flush=True,
+    )
+
+
 def _wrap_oauth_challenge(app):
     """ASGI wrapper that makes an MCP server look like an OAuth 2.0 protected resource.
 
@@ -502,6 +529,9 @@ def _wrap_oauth_challenge(app):
                         "headers": [(b"content-type", b"application/json")]})
             await send({"type": "http.response.body", "body": body})
             return
+
+        if path.startswith("/mcp"):
+            _log_incoming_auth(scope_dict.get("method", ""), headers)
 
         if path.startswith("/mcp") and b"authorization" not in headers:
             www = (

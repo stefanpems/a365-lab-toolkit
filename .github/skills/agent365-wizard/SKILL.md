@@ -166,6 +166,12 @@ writing. Print the next commands for the user to run; never auto-run destructive
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +
   placeholder `config.js`); then, as each OBO/S2S agent goes live, add its tab, redeploy the UI, wire
   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user they can test it now.
+- **After each agent, OFFER to test it in its UI (interactive question, not plain text).** When an
+  agent is live (and, for OBO/S2S, its tab is wired), ask `[ Test now | Continue ]`. Ask **only if a
+  test surface exists**: OBO/S2S only if a UI is present for that agent (UI mode `create`/`attach`);
+  DW always (Teams). On **Test now**, print the exact per-MCP test prompts for THIS agent (from its
+  `tools` + `customMcp.attachTo`) and where to run them — see the agent's "After each agent goes live"
+  section (OBO custom-auth `whoami` must return `authorization_token_forwarded: true`).
 - **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
   at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),

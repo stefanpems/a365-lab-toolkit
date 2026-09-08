@@ -241,6 +241,50 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
 agent's custom attach folded in right after its deploy), so follow them top-to-bottom.
 
+## After each agent goes live — OFFER to test it in its UI (ASK, don't assume)
+As soon as an agent is deployed and (for OBO/S2S) its UI tab is wired, use the **interactive questions
+tool** (single-select control — NEVER plain text) to ask:
+> "Test **`<agent>`** now in its UI, or continue to the next agent?" → `[ Test now | Continue ]`
+
+**Ask ONLY if a test surface exists for that agent:**
+- **OBO / S2S**: ask **only if a UI is present for this agent** — i.e. UI mode was `create` OR `attach`
+  AND the agent is exposed as a tab. If UI mode is `none`, **skip the question** (no surface to test in).
+- **DW**: **always ask** — the Teams surface always exists after the admin-center publish + hire.
+
+If the user picks **Test now**, print the exact **test prompts to paste**, selecting only the rows that
+apply to THIS agent (by agent type + the MCPs actually attached to it, from `agents[].tools` +
+`customMcp.attachTo`). Tell them **where** to run them: the web UI tab **`<agent>`** at
+`https://<swa-host>` for OBO/S2S, or **Teams** (the hired instance) for DW. When they're done, continue
+to the next agent (or re-offer). If **Continue**, move on immediately.
+
+### Test-prompt catalog (emit only the rows that apply)
+Substitute `<name>` = the custom-MCP name/prefix, `<auth-app-id>` = the auth resource app id, `<me>` =
+the signed-in user's address.
+
+| Attached to the agent | Prompt to paste | What proves it worked |
+| --- | --- | --- |
+| `mcp_MailTools` | `Summarize my 3 most recent inbox emails (sender + subject).` | Real subjects/senders (not invented) |
+| `mcp_MailTools` (send) | `Send an email to <me> with subject "A365 lab test" and body "hello from <agent>", then confirm.` | The email arrives |
+| Work IQ (e.g. `mcp_CalendarTools`, `mcp_TeamsTools`) | `Using <that tool>, list my next 3 calendar events / recent Teams messages.` | Real data returned (delegated; **OBO/DW only**, S2S is app-only) |
+| `ext_<name>Anon` (custom, NoAuth) | `Call the ext_<name>Anon server's server_time tool and show the exact UTC time it returns.` | A real current time (past/invented time = tool NOT called) |
+| `ext_<name>Anon` | `Call the ext_<name>Anon server's hash_text tool on the text "agent365" with algo sha256 and show the digest.` | Digest matches the true sha256 |
+| `ext_<name>Anon` | `Call the ext_<name>Anon server's outbound_connectivity_check tool and show the HTTP status and latency.` | `reachable: true`, an HTTP status |
+| `ext_<name>Anon` | `Call the ext_<name>Anon server's whoami_anon tool and show the JSON.` | `authorization_header_present: false` (NoAuth) |
+| `ext_<name>Auth` (custom, EntraOAuth) — **OBO** | `Call the ext_<name>Auth server's whoami tool (the authenticated EntraOAuth one) and show the exact JSON it returns.` | **`authorization_token_forwarded: true`**, `token_type: delegated`, your `user_principal_name`, `audience: api://<auth-app-id>`, `scopes: access_as_agent` |
+| `ext_<name>Auth` — **OBO** | `Call the ext_<name>Auth server's token_claims tool and show the decoded claims.` | Decoded delegated claims of the signed-in user |
+| `ext_<name>Auth` — **OBO**, if `propagateToGraph` configured | `Call the ext_<name>Auth server's propagate_to_graph tool and show the resolved_identity from Microsoft Graph /me.` | `flow: on-behalf-of`, `success: true`, `resolved_identity` = you |
+
+**Agent-type nuances to state when offering the test:**
+- **OBO** — the custom **auth `whoami` MUST return `authorization_token_forwarded: true`** (delegated, YOUR
+  `upn`). If it says `false`, that is a **bug** (see the custom-MCP skill: connector must be EntraOAuth AND
+  the server must read headers with `get_http_headers(include_all=True)`), not a preview limitation.
+- **S2S** — app-only identity; the custom MCP and delegated Work IQ tools are **not attached** (by design).
+  Test = a general chat prompt to confirm the S2S agent responds (e.g. `Give me a one-sentence status.`).
+- **DW** — test in **Teams** on the hired instance; the custom MCP is **not** available to DW (connection
+  ownership limitation). Test Mail/Work IQ delegated as the agent's own user (e.g. `Send me a test email.`).
+
+
+
 ## Parallelization policy (validated)
 Feasibility conclusion (do not re-derive — act on it):
 - **Serial only** (never overlap): any `a365 setup` (each opens its own WAM window — parallel windows
