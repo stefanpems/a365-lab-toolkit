@@ -128,6 +128,15 @@ center (Agents → Requested). CLI-based approval was removed; approval is admin
 > It creates the missing proxy SPs and the AllPrincipals grants (idempotent) via a Graph token +
 > `Invoke-RestMethod`. Then the admin Approve succeeds on the first try (watch for a blocked popup).
 
+> **Give the user the exact Power Platform connection URLs.** Each `ext_` server needs its own one-time
+> connection; `print-connection-urls.ps1 -Name <prefix>` prints the precise
+> `https://make.powerapps.com/connectionsMcp?connectorIds=…&environmentName=…` deep-link for **both**
+> `...AnonP` (NoAuth) and `...AuthP` (EntraOAuth — prompts an OAuth sign-in). The connectors live in a
+> hidden **Compliant Container** environment that the environment APIs don't list, so if auto-discovery
+> fails, pass `-EnvironmentId <environmentName>` (copy it from the `environmentName=` of any `ext_`
+> `initialize_server` URL). Anon tools working does NOT mean auth tools work — the auth connection is
+> separate.
+
 > BYO MCP servers are in **preview**; republishing a new version of a registered server isn't
 > currently supported. If you change the tool surface, register under a new `ext_` name.
 

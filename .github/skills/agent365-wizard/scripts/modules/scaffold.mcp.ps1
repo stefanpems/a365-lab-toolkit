@@ -67,6 +67,12 @@ function Invoke-ScaffoldCustomMcp {
     # Approve. It uses a Graph token + Invoke-RestMethod (az rest --body @file mangles the JSON on
     # Windows) and skips existing grants.
     $nextCommands.Add("cd `"$mcpDst`"; .\preempt-proxy-consents.ps1 -Name $name -Subscription $($plan.solution.subscriptionId)   # create the missing proxy SPs + AllPrincipals grants BEFORE the admin Approve (prevents 'Couldn't complete consent')")
+    # After approval + attach, EACH USER must create a one-time Power Platform connection per ext_ server.
+    # This helper prints the exact make.powerapps.com/connectionsMcp URLs (anon AND auth) so the agent can
+    # hand them to the user instead of a vague instruction. The connectors live in a hidden 'Compliant
+    # Container' environment that the environment APIs don't list, so pass -EnvironmentId (the
+    # environmentName from any ext_ initialize_server URL) if auto-discovery can't find it.
+    $nextCommands.Add("cd `"$mcpDst`"; .\print-connection-urls.ps1 -Name $name   # prints the exact make.powerapps.com/connectionsMcp URLs for BOTH ext_${name}Anon and ext_${name}Auth - GIVE BOTH to the user (auth = OAuth sign-in). If the Compliant Container env isn't auto-found, add -EnvironmentId <environmentName from an ext_ initialize_server URL>.")
     # Integration mode (asked by the wizard right after the MCP is registered): approve-first (approve
     # the ext_ servers NOW, before the agents, so each OBO agent integrates them immediately as it is
     # created) or attach-when-approved (start the agents now; each OBO agent integrates the custom MCP

@@ -230,6 +230,12 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      the user up front: *"open `https://make.powerapps.com/connectionsMcp` and create/authorize a
      connection for **BOTH** `ext_<name>Anon` (NoAuth) and `ext_<name>Auth` (OAuth sign-in) as yourself,
      then retry."* OBO reuses the same connections across ACA/FH/FD (same user), so each is created once.
+     - **Hand the user the EXACT URLs — run the emitted helper** `custom-mcp/print-connection-urls.ps1
+       -Name <prefix>` (copied into `generated/<prefix>/<prefix>-mcp/`). It derives the precise
+       `connectionsMcp` deep-link for **both** `...AnonP` and `...AuthP` from the Power Platform
+       connectors. The connectors live in a hidden **Compliant Container** environment that the
+       environment APIs don't list, so if auto-discovery fails, pass `-EnvironmentId <environmentName>`
+       (take it from the `environmentName=` of any `ext_` `initialize_server` URL the agent surfaced).
 4. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
 
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
