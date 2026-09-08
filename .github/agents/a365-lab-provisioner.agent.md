@@ -71,8 +71,12 @@ Blocking prompts are the #1 failure point. When one occurs:
 > Commands that prompt: `a365 develop-mcp register-external-mcp-server` (`Proceed with registration?
 > (y/N)` → **`y`**; an empty Enter defaults to **N** = "Registration cancelled", creating nothing),
 > `a365 setup all` (`Assign this application permission now? [y/N]` → **`y`**), `a365 setup permissions
-> mcp`. None have a `--yes`/`--force` flag. When YOU run these, prefer `mode=async`, poll, and
-> `send_to_terminal` the answer.
+> mcp`, and **`a365 publish --aiteammate`** (DW manifest packaging — TWO prompts: `Open manifest in your
+> default editor now? (Y/n)` → **`n`** to keep the lab defaults; then `Press Enter when you have finished
+> editing the manifest to continue:` → **Enter**; it then prints `Package created: …manifest.zip`). None
+> have a `--yes`/`--force` flag. When YOU run these, run them in **`mode=async` with NO pipe** (a
+> `Tee-Object | Select-String` pipe HIDES the prompt AND blocks stdin — verified: it hung `a365 publish`),
+> then `get_terminal_output` to read the prompt and `send_to_terminal` the answer.
 
 > ⛔ **Judge `a365 setup` completion from the ARTIFACT, NOT the terminal buffer (verified time-waster).**
 > After the browser admin-consent completes, `a365 setup all` often **lingers without flushing or exiting**

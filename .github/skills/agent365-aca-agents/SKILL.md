@@ -42,7 +42,10 @@ the per-variant guides — do not duplicate or renumber them:**
 - **`" Agent"` suffix** in the Registry (e.g. `<name> Agent`) is cosmetic CLI behavior — do not "fix" it.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload
-  custom agent), then a user hires it in Teams.
+  custom agent), then a user hires it in Teams. ⛔ **`a365 publish --aiteammate` is INTERACTIVE — never
+  pipe it** (a `Tee-Object | Select-String` pipe hides the prompts and blocks stdin, hanging it). Run it
+  with no pipe and answer: `Open manifest in your default editor now? (Y/n)` → **`n`** (keep lab
+  defaults); `Press Enter … to continue:` → **Enter**; success = `Package created: …manifest.zip`.
 - **Shared-RG is unsafe for ACA-OBO**: the generic `deploy-aca.ps1` deletes its RG. Use isolated RGs,
   or `-ReuseEnv`. (The scaffolder blocks shared-RG + ACA-OBO.)
 
