@@ -1,6 +1,6 @@
 ---
 name: "Agent 365 — Foundry prompt agents"
-description: "Provision, scaffold, deploy and verify the Foundry Declarative (prompt) sample agents: FD-OBO (on-behalf-of, Mail MCP via per-request token) and FD-S2S (own identity, conversational). USE WHEN the user wants to create/deploy a Foundry declarative/prompt agent, wire its project endpoint, or expose it in the SPA. Trigger phrases: 'Foundry declarative', 'prompt agent', 'FD agent', 'FD-OBO/S2S', 'declarative agent', 'Responses API agent'. Sub-skill of the A365 Lab Provisioner."
+description: "Provision, scaffold, deploy and verify the Foundry Declarative (prompt) sample agents: FD-OBO (on-behalf-of, Mail MCP via per-request token) and FD-S2S (own identity, conversational). USE WHEN the user wants to create/deploy a Foundry declarative/prompt agent, wire its project endpoint, or expose it in the SPA. Trigger phrases: 'Foundry declarative', 'prompt agent', 'FD agent', 'FD-OBO/S2S', 'declarative agent', 'Responses API agent'. Sub-skill of the Lab Builder."
 ---
 
 # Agent 365 — Foundry prompt agents (FD-OBO / FD-S2S)

@@ -1,6 +1,6 @@
 ---
 name: "Agent 365 — Custom MCP"
-description: "Deploy, register and attach the optional sample custom (bring-your-own) MCP server — one ACA container hosting an anonymous (/anon) and an authenticated (/auth) MCP server — to the ACA and FH sample agents, to test Agent 365 tool behavior. USE WHEN the user wants to add the sample MCP, register an ext_ server, attach a custom tool to an agent, or test caller identity / On-Behalf-Of Graph propagation. Trigger phrases: 'custom MCP', 'sample MCP', 'ext_ server', 'register MCP', 'attach a tool', 'propagate_to_graph', 'BYO MCP'. Sub-skill of the A365 Lab Provisioner."
+description: "Deploy, register and attach the optional sample custom (bring-your-own) MCP server — one ACA container hosting an anonymous (/anon) and an authenticated (/auth) MCP server — to the ACA and FH sample agents, to test Agent 365 tool behavior. USE WHEN the user wants to add the sample MCP, register an ext_ server, attach a custom tool to an agent, or test caller identity / On-Behalf-Of Graph propagation. Trigger phrases: 'custom MCP', 'sample MCP', 'ext_ server', 'register MCP', 'attach a tool', 'propagate_to_graph', 'BYO MCP'. Sub-skill of the Lab Builder."
 ---
 
 # Agent 365 — Custom MCP

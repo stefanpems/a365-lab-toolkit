@@ -1,12 +1,12 @@
 ---
 name: agent365-cleanup
-description: 'Delete resources created by the A365 Lab Provisioner for a given run, in any state. Use when the user wants to clean up / tear down / remove a lab run: Web UI (Azure), Custom MCP servers (Azure + Entra registration), or Agents (Azure RG + Entra identity incl. recycle bin + M365 license assignments). Always discovers, shows a checkbox review, then deletes with a persistent log. Trigger phrases: clean up the lab, delete the run, tear down agents, remove the web UI, remove the custom MCP, release agent licenses.'
+description: 'Delete resources created by the Lab Builder for a given run, in any state. Use when the user wants to clean up / tear down / remove a lab run: Web UI (Azure), Custom MCP servers (Azure + Entra registration), or Agents (Azure RG + Entra identity incl. recycle bin + M365 license assignments). Always discovers, shows a checkbox review, then deletes with a persistent log. Trigger phrases: clean up the lab, delete the run, tear down agents, remove the web UI, remove the custom MCP, release agent licenses.'
 argument-hint: 'Describe what to clean up, or just say start'
 ---
 
 # Agent 365 lab cleanup
 
-Delete every resource the [A365 Lab Provisioner](../../agents/a365-lab-provisioner.agent.md) created
+Delete every resource the [Lab Builder](../../agents/a365-lab-provisioner.agent.md) created
 for a run — **regardless of the state they are in** (fully deployed, half-deployed, or already
 soft-deleted and waiting in the Entra recycle bin). Do **not** modify the provisioning tool; only read
 it for the naming rules.

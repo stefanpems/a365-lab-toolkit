@@ -1,6 +1,6 @@
 ---
 name: "Agent 365 — ACA agents"
-description: "Provision, scaffold, deploy and verify the Azure Container Apps (A365-SDK-hosted) sample agents: ACA-OBO (on-behalf-of the user), ACA-S2S (own app identity), ACA-DW (AI-teammate Digital Worker). USE WHEN the user wants to create/deploy an ACA agent, configure the a365 blueprint for a container agent, publish an ACA Digital Worker, or troubleshoot the ACA turn/tool path. Trigger phrases: 'ACA agent', 'Container Apps agent', 'deploy ACA', 'ACA-OBO/S2S/DW', 'AI teammate on ACA'. Sub-skill of the A365 Lab Provisioner."
+description: "Provision, scaffold, deploy and verify the Azure Container Apps (A365-SDK-hosted) sample agents: ACA-OBO (on-behalf-of the user), ACA-S2S (own app identity), ACA-DW (AI-teammate Digital Worker). USE WHEN the user wants to create/deploy an ACA agent, configure the a365 blueprint for a container agent, publish an ACA Digital Worker, or troubleshoot the ACA turn/tool path. Trigger phrases: 'ACA agent', 'Container Apps agent', 'deploy ACA', 'ACA-OBO/S2S/DW', 'AI teammate on ACA'. Sub-skill of the Lab Builder."
 ---
 
 # Agent 365 — ACA agents (ACA-OBO / ACA-S2S / ACA-DW)

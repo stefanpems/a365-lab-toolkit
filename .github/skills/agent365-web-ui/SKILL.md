@@ -1,6 +1,6 @@
 ---
 name: "Agent 365 — Web UI"
-description: "Create, attach, configure and deploy the shared MSAL web SPA (Azure Static Web Apps) that exercises the OBO and S2S agents (ACA + Foundry). USE WHEN the user wants to add or wire the web UI, expose an agent as a tab, generate or fix ui/config.js, set UI_ALLOWED_ORIGINS / UI_AUDIENCE, or deploy the SPA. Trigger phrases: 'add the web UI', 'web SPA', 'config.js', 'expose agent in the UI', 'Static Web App', 'CORS for the agent'. Sub-skill of the A365 Lab Provisioner."
+description: "Create, attach, configure and deploy the shared MSAL web SPA (Azure Static Web Apps) that exercises the OBO and S2S agents (ACA + Foundry). USE WHEN the user wants to add or wire the web UI, expose an agent as a tab, generate or fix ui/config.js, set UI_ALLOWED_ORIGINS / UI_AUDIENCE, or deploy the SPA. Trigger phrases: 'add the web UI', 'web SPA', 'config.js', 'expose agent in the UI', 'Static Web App', 'CORS for the agent'. Sub-skill of the Lab Builder."
 ---
 
 # Agent 365 — Web UI

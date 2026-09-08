@@ -12,7 +12,7 @@ starting point, **not** the objective. The lab is **framework-agnostic by design
 
 This is a hands-on **lab** that provisions a set of **custom agents**, a shared web UI, and optional
 **test MCP servers**, all integrated into **Microsoft Agent 365**. A provisioning wizard agent (the
-**A365 Lab Provisioner**, see [.github/agents/](.github/agents)) scaffolds and deploys the whole thing.
+**Lab Builder**, see [.github/agents/](.github/agents)) scaffolds and deploys the whole thing.
 It has two goals:
 
 - **For IT admins** — exercise Agent 365 end to end with agents across different **hosting models**
@@ -81,7 +81,7 @@ propagation to Microsoft Graph. The provisioning wizard can deploy, register and
 > For a Teams Digital Worker use **[MAF-FH-DW](docs/setup-MAF-FH-DW.md)**; a declarative agent remains
 > fully usable through the Responses API (**MAF-FD-OBO**, **MAF-FD-S2S**).
 
-### Provisioning tooling (the A365 Lab Provisioner)
+### Provisioning tooling (the Lab Builder)
 You don't need this to run a pre-built agent, but the wizard that scaffolds and deploys the lab lives
 under `.github/`. The agent [.github/agents/a365-lab-provisioner.agent.md](.github/agents/a365-lab-provisioner.agent.md)
 orchestrates focused **skills**; the scaffolder is a thin router that dot-sources per-family/component

@@ -1,6 +1,6 @@
 # Cleanup resource model
 
-What the A365 Lab Provisioner creates per category, and how the cleanup agent finds and deletes it.
+What the Lab Builder creates per category, and how the cleanup agent finds and deletes it.
 This mirrors the provisioning wizard's naming rules
 ([agent365-wizard/references/naming-and-validation.md](../../agent365-wizard/references/naming-and-validation.md))
 — it is read-only reference for cleanup and must stay in sync if the wizard's naming changes.

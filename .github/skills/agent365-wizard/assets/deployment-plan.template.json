@@ -1,5 +1,5 @@
 {
-  "$comment": "Agent 365 deployment plan — SECRET-FREE. Generated/edited by the A365 Lab Provisioner wizard. Schema: .github/skills/agent365-wizard/references/deployment-plan-schema.md",
+  "$comment": "Agent 365 deployment plan — SECRET-FREE. Generated/edited by the Lab Builder wizard. Schema: .github/skills/agent365-wizard/references/deployment-plan-schema.md",
   "version": 1,
   "solution": {
     "prefix": "<SOLUTION_PREFIX>",
