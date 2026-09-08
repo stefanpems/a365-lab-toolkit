@@ -163,6 +163,13 @@ writing. Print the next commands for the user to run; never auto-run destructive
   silently dropped (runs from the repo root): set the cwd first (`Set-Location <agent-folder>`), run
   these sync, and verify `$PWD`. (The deploy scripts self-heal the blueprint id by display-name lookup
   as a backstop, but the correct cwd is still needed for `.env`/secret persistence.)
+- **⛔ Detect `a365 setup` completion from the ARTIFACT, not the terminal.** After the browser admin
+  consent, `a365 setup all` can **linger without flushing/exiting** — the terminal shows the same last
+  line for minutes though it already succeeded. Do **not** keep re-reading the terminal buffer (it makes
+  you look stuck). The authoritative signal is `a365.generated.config.json` in the agent folder: done
+  when it exists with every `resourceConsents[].consentGranted == true`. Run `a365 setup all` async with
+  `Tee-Object -FilePath <log>`, announce the browser gate once, then poll the **file** (not the buffer).
+  A missing `.env`/`completed:false` does **not** block the deploy.
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +
   placeholder `config.js`); then, as each OBO/S2S agent goes live, add its tab, redeploy the UI, wire
   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user they can test it now.

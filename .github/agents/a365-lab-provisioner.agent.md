@@ -74,6 +74,20 @@ Blocking prompts are the #1 failure point. When one occurs:
 > mcp`. None have a `--yes`/`--force` flag. When YOU run these, prefer `mode=async`, poll, and
 > `send_to_terminal` the answer.
 
+> ⛔ **Judge `a365 setup` completion from the ARTIFACT, NOT the terminal buffer (verified time-waster).**
+> After the browser admin-consent completes, `a365 setup all` often **lingers without flushing or exiting**
+> — the terminal shows the SAME last line (e.g. "Configuring application permissions … Observability API")
+> for minutes even though the setup already **succeeded**. Re-reading `get_terminal_output` on that
+> unchanged buffer makes YOU look stuck for minutes (observed). The deterministic completion signal is the
+> file **`a365.generated.config.json`** written into the agent folder: setup is done when it exists and
+> every `resourceConsents[].consentGranted == true` (the Tee log also ends with "Configuration synced to
+> project settings successfully"). Procedure: run `a365 setup all` in **`mode=async`** with `Tee-Object
+> -FilePath <log>`, announce the browser gate ONCE, then **poll the artifact** (`Test-Path
+> a365.generated.config.json` + parse `resourceConsents`) and the **log file** — **never re-read the same
+> terminal buffer**, and never end a turn implying you are "still watching" an idle terminal. If the
+> artifact shows all consents granted, proceed (a missing `.env`/`completed:false` does NOT block the
+> deploy — `deploy-aca-*.ps1` reads `agentBlueprintId` from the config and self-heals).
+
 > ⛔ **`Assign this application permission now? [y/N]` (the Observability app-role, during `a365 setup`
 > on ACA-OBO/ACA-S2S and others) — the answer is `y`.** It grants a required blueprint permission (the
 > intended setup action). **Send `y` yourself**, and tell the user UP FRONT: *"a prompt `Assign this

@@ -32,6 +32,13 @@ the per-variant guides — do not duplicate or renumber them:**
   <agent-folder>`), run sync, verify `$PWD`. The deploy scripts self-heal (resolve the blueprint by
   display name, write a minimal config) as a backstop, but the correct cwd is still needed for
   `.env`/secret persistence.
+- **⛔ `a365 setup all` completion = the ARTIFACT, not the terminal.** After the browser admin consent,
+  the command can **linger without flushing/exiting** — the terminal keeps showing the same last line
+  (e.g. "Configuring application permissions … Observability API") for minutes though it already
+  succeeded. Do NOT keep re-reading the terminal buffer. Done = `a365.generated.config.json` exists with
+  every `resourceConsents[].consentGranted == true`. Run it async with `Tee-Object -FilePath <log>`,
+  announce the browser gate once, then poll the **file**. A missing `.env`/`completed:false` does not
+  block `deploy-aca-*.ps1`.
 - **`" Agent"` suffix** in the Registry (e.g. `<name> Agent`) is cosmetic CLI behavior — do not "fix" it.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload
