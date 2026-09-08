@@ -1,4 +1,4 @@
-name: agent365-dw-autopilot-agentframeworkfh
+name: agent365-fh-dw-autopilot
 
 hooks:
   postprovision:
@@ -16,10 +16,10 @@ hooks:
 # Re-enable it (and ensure Docker is running) only if you want to use `azd ai agent` monitor commands.
 # NOTE: name MUST match the deployed AGENT_NAME in the azd env (.azure/<env>/.env).
 # services:
-#   agentframeworkFH-DW2-agent:
+#   sample-fh-dw-agent:
 #     host: azure.ai.agent
 #     kind: hosted
-#     name: agentframeworkFH-DW2-agent
+#     name: sample-fh-dw-agent
 #     project: ./src/hello_world_a365_agent
 #     language: docker
 #     startupCommand: python main.py

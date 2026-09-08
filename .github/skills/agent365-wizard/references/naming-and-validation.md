@@ -42,7 +42,7 @@ hires it in Teams. FH-DW appears after the admin-center approval of its azd-publ
 ### FH-DW naming (different from the others)
 The FH-DW sample hardcodes the agent name in **Bicep and scripts** (not `azure.yaml`). The scaffolder
 rewrites every occurrence to `<prefix>-FH-DW`. If a pre-existing lab agent (e.g.
-`agentframeworkFH-DW2-agent`) is reused instead of a clean provision, the Registry will show the old
+`sample-fh-dw-agent`) is reused instead of a clean provision, the Registry will show the old
 name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
 
 ## HARD validation rules (block, don't warn)

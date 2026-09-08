@@ -3,14 +3,14 @@
 $ErrorActionPreference = 'Stop'
 
 $ep    = "https://dwfhhxvtywwocznayacct.services.ai.azure.com/api/projects/dwfhhxvtywwocznayproj"
-$agent = "agentframeworkFH-DW2-agent"
+$agent = "sample-fh-dw-agent"
 $acr   = "dwfhhxvtywwocznayacr.azurecr.io"
-$maib  = "agentframeworkFH-DW2-agent-maib"
+$maib  = "sample-fh-dw-agent-maib"
 
 # App Insights connection string (dwfh2-appinsights)
 $conn = $env:APPLICATIONINSIGHTS_CONNECTION_STRING
 if (-not $conn) {
-    $conn = az monitor app-insights component show --app dwfh2-appinsights -g agentframeworkFH-DW2-rg --query connectionString -o tsv
+    $conn = az monitor app-insights component show --app dwfh2-appinsights -g sample-fh-dw-rg --query connectionString -o tsv
 }
 
 $tok = az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv

@@ -51,11 +51,11 @@ $ErrorActionPreference = 'Stop'
 
 # --- Fixed environment values for the dwfh2 deployment ------------------------
 $SubscriptionId = 'd6116047-3fe1-46f0-aa50-14dd661af84e'
-$ResourceGroup  = 'agentframeworkFH-DW2-rg'
+$ResourceGroup  = 'sample-fh-dw-rg'
 $WorkspaceName  = 'dwfh2-logs'
 $AccountName    = 'dwfhhxvtywwocznayacct'
 $ProjectName    = 'dwfhhxvtywwocznayproj'
-$AgentName      = 'agentframeworkFH-DW2-agent'
+$AgentName      = 'sample-fh-dw-agent'
 $AzdEnv         = 'dwfh2'
 $ProjectEndpoint = "https://$AccountName.services.ai.azure.com/api/projects/$ProjectName"
 # azd needs to resolve the project config (azure.yaml), which lives in the repo root.

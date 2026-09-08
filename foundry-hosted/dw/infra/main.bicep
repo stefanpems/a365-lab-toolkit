@@ -36,7 +36,7 @@ param containerRegistrySku string = 'Basic'
 @description('Agent name. Overridable via the AGENT_NAME azd var; falls back to the sample default when empty (e.g. on a fresh clone).')
 param agentName string = ''
 
-var effectiveAgentName = empty(agentName) ? 'agentframeworkFH-DW2-agent' : agentName
+var effectiveAgentName = empty(agentName) ? 'sample-fh-dw-agent' : agentName
 
 var maibName = '${effectiveAgentName}-maib'
 

@@ -9,7 +9,7 @@ function Invoke-ScaffoldFhAgent {
     $ay = Join-Path $dst 'azure.yaml'
     if (Test-Path -LiteralPath $ay) {
         $txt = Get-Content -LiteralPath $ay -Raw
-        $txt = [regex]::Replace($txt, 'agentframeworkFH-(OBO|S2S|DW)\d*-agent', $a.name)
+        $txt = [regex]::Replace($txt, 'sample-fh-(obo|s2s|dw)-agent', $a.name)
         Set-Content -LiteralPath $ay -Value $txt
     }
     # Make ToolingManifest.json AUTHORITATIVE = exactly the plan's Work IQ (mcp_*) tools. The FH sample
@@ -75,7 +75,7 @@ function Invoke-ScaffoldFhAgent {
         foreach ($rel in $dwFiles) {
             $fp = Join-Path $dst $rel
             if (Test-Path -LiteralPath $fp) {
-                (Get-Content -LiteralPath $fp -Raw).Replace('agentframeworkFH-DW2-agent', $a.name) | Set-Content -LiteralPath $fp
+                (Get-Content -LiteralPath $fp -Raw).Replace('sample-fh-dw-agent', $a.name) | Set-Content -LiteralPath $fp
             }
         }
         # Solution A (governed subscription): the ARM deploymentScript that creates the managed

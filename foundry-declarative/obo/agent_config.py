@@ -23,7 +23,7 @@ load_dotenv()
 # a lab-specific default would silently target the wrong tenant/project.
 PROJECT_ENDPOINT: str = os.environ.get("FOUNDRY_PROJECT_ENDPOINT", "")
 MODEL: str = os.environ.get("FOUNDRY_MODEL_NAME", "gpt-4.1")
-AGENT_NAME: str = os.environ.get("AGENT_NAME", "agentframeworkFD-OBO-agent")
+AGENT_NAME: str = os.environ.get("AGENT_NAME", "sample-fd-obo-agent")
 
 if not PROJECT_ENDPOINT:
     raise ValueError(

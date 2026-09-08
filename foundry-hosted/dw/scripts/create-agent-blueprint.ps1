@@ -33,12 +33,12 @@
     Agent name (the MAIB is '<AgentName>-maib'). Defaults to the bicep default.
 
 .EXAMPLE
-    ./scripts/create-agent-blueprint.ps1 -ResourceGroup agentframeworkFH-DW-rg
+    ./scripts/create-agent-blueprint.ps1 -ResourceGroup sample-fh-dw-rg
 #>
 param(
     [string]$Subscription = $env:AZURE_SUBSCRIPTION_ID,
     [string]$ResourceGroup = $env:AZURE_RESOURCE_GROUP,
-    [string]$AgentName = 'agentframeworkFH-DW2-agent',
+    [string]$AgentName = 'sample-fh-dw-agent',
     [string]$MaibName
 )
 

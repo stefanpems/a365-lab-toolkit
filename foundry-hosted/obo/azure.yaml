@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 
-name: agent365-obo-agentframeworkfh-python
+name: agent365-fh-obo
 services:
-    agentframeworkFH-OBO-agent:
+    sample-fh-obo-agent:
         project: .
         host: azure.ai.agent
         language: python
@@ -19,7 +19,7 @@ services:
                 cpu: "0.5"
                 memory: 1Gi
         kind: hosted
-        name: agentframeworkFH-OBO-agent
+        name: sample-fh-obo-agent
         protocols:
             - protocol: invocations
               version: 2.0.0
