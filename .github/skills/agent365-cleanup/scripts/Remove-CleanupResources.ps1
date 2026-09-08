@@ -18,6 +18,8 @@
     24  purge-deleted-item               Permanently remove an object already sitting in the recycle bin.
     30  delete-connector                 Delete a Power Platform custom connector.
     38  delete-swa                       Delete a Static Web App resource.
+    39  purge-cognitiveservices          Delete (if live) + PURGE a Cognitive Services account, freeing its
+                                         name + regional quota and removing its child project ("workspace").
     40  delete-rg                        Delete an Azure resource group (async by default; see -WaitForRg).
 
   License release is the priority: a soft-delete alone does NOT free M365 licenses — only the purge
@@ -276,6 +278,20 @@ function Remove-ResourceGroup {
     }
 }
 
+function Remove-CognitiveServicesAccount {
+    param($Item)
+    $name = $Item.id; $rg = $Item.resourceGroup; $loc = $Item.location
+    if ($WhatIf) { Write-Log 'WHATIF' "would delete+purge Cognitive Services account '$name' (RG $rg, $loc)"; Add-Result $Item 'WHATIF' ''; return }
+    # Soft-delete if it is still live (harmless if it is already gone or already soft-deleted).
+    az cognitiveservices account delete -n $name -g $rg --subscription $sub 2>$null
+    # Purge from the soft-deleted state: frees the name + regional quota and removes the child project
+    # ("workspace"), which is what blocks a same-name re-provision. No separate AML-workspace purge needed.
+    $out = az cognitiveservices account purge --location $loc --resource-group $rg --name $name --subscription $sub 2>&1
+    if ($LASTEXITCODE -eq 0) { Write-Log 'OK' "purged Cognitive Services account '$name' (RG $rg, $loc)"; Add-Result $Item 'OK' 'purged' }
+    elseif (($out | Out-String) -match '(?i)(not\s*found|does not exist|ResourceNotFound|no\s+deleted)') { Write-Log 'SKIP' "Cognitive Services account '$name' already purged/absent"; Add-Result $Item 'SKIP' 'absent' }
+    else { Write-Log 'ERROR' "purge failed '$name' (RG $rg, $loc): $(( $out | Out-String).Trim())"; Add-Result $Item 'ERROR' 'purge failed' }
+}
+
 function Remove-ServicePrincipal {
     param($Item)
     $spObj = $Item.objectId; if (-not $spObj) { $spObj = $Item.id }
@@ -304,6 +320,7 @@ foreach ($item in $ordered) {
             'purge-deleted-item' { Remove-DeletedItem $item }
             'delete-connector' { Remove-Connector $item }
             'delete-swa' { Remove-Swa $item }
+            'purge-cognitiveservices' { Remove-CognitiveServicesAccount $item }
             'delete-rg' { Remove-ResourceGroup $item }
             default { Write-Log 'SKIP' "unknown action '$($item.action)' for '$($item.displayName)'"; Add-Result $item 'SKIP' 'unknown action' }
         }

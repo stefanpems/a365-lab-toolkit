@@ -56,6 +56,12 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
   `reuse-existing` mode) leave almost no Azure footprint — their cleanup is the blueprint app + instances
   (+ the data-plane Foundry agent object). A `solution.foundry` **`create-shared`** account lives in the
   lab-owned `<prefix>-foundry-rg`, which IS discovered by the prefix filter and deleted like an agent RG.
+- **Purge soft-deleted Cognitive Services accounts.** Deleting a lab RG only *soft-deletes* the Foundry /
+  Azure OpenAI accounts in it; each keeps blocking its name and counting against the regional quota until
+  **purged** (a same-name re-provision otherwise fails with *"account already exists"* / *"Soft-deleted
+  workspace exists"*). The cleaner adds a `purge-cognitiveservices` step (order 39, before the RG delete)
+  that delete+purges each lab-owned account and also sweeps prior-run soft-deleted leftovers. Purging the
+  account removes its child project/"workspace" too — there is no separate AML-workspace resource to purge.
 
 ## Flow (in order)
 0. **Confirm the Copilot runtime model** — first action. Show the active chat model and, when VS Code

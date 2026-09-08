@@ -298,6 +298,29 @@ function Find-Agents {
         if ($n -match '(?i)(ui-rg|mcp)') { continue }
         Add-Item -Category 'Agents' -Kind 'azure-rg' -Id $n -ObjectId $null -DisplayName $n `
             -Detail (Get-RgDetail $n) -Action 'delete-rg' -DeleteOrder 40 -Extra @{ location = $rg.location }
+        # Cognitive Services (Foundry AIServices / Azure OpenAI) accounts in the RG SOFT-DELETE on RG
+        # delete and keep blocking their name + counting against the regional quota until PURGED. Add an
+        # explicit delete+purge just BEFORE the RG delete (order 39). Purging the account also removes its
+        # child project — the "workspace" the Foundry azd provider complains about on re-provision — so no
+        # separate AML-workspace purge is needed.
+        $cogs = Invoke-AzJson @('cognitiveservices', 'account', 'list', '-g', $n, '--subscription', $sub, '-o', 'json')
+        foreach ($c in @($cogs)) {
+            Add-Item -Category 'Agents' -Kind 'cognitiveservices-account' -Id $c.name -ObjectId $null -DisplayName $c.name `
+                -Detail "Cognitive Services account (kind $($c.kind)) in RG $n — soft-deletes on RG delete; delete+purge frees its name + quota (and its project/workspace)" `
+                -Action 'purge-cognitiveservices' -DeleteOrder 39 -Extra @{ resourceGroup = $n; location = $c.location }
+        }
+    }
+    # Prior-run leftovers: accounts already sitting SOFT-DELETED whose ORIGINAL RG matches the prefix (a
+    # previous cleanup deleted the RG but never purged the account — they pile up against the quota). Sweep
+    # the sub's deleted-accounts list and add a purge item for each match.
+    $deletedCogs = Invoke-AzJson @('cognitiveservices', 'account', 'list-deleted', '--subscription', $sub, '-o', 'json')
+    foreach ($d in @($deletedCogs)) {
+        $origRg = if ($d.id -match '/resourceGroups/([^/]+)/') { $matches[1] } else { '' }
+        if ($origRg -notmatch [regex]::Escape($NameFilter)) { continue }
+        if ($origRg -match '(?i)(ui-rg|mcp)') { continue }
+        Add-Item -Category 'Agents' -Kind 'cognitiveservices-deleted' -Id $d.name -ObjectId $null -DisplayName $d.name `
+            -Detail "SOFT-DELETED Cognitive Services account (original RG $origRg, $($d.location)) — pending purge; frees its name + quota" `
+            -Action 'purge-cognitiveservices' -DeleteOrder 39 -Extra @{ resourceGroup = $origRg; location = $d.location }
     }
     # Entra apps: blueprint + identity apps derive from the agent name. Exclude UI/MCP apps.
     $apps = Get-GraphFiltered 'applications' "startswith(displayName,'$NameFilter')"

@@ -43,8 +43,8 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 |-------|----------|--------|----------------|
 | Azure | **Dedicated** resource group (isolated strategy) | `<agent-name>-rg` | `delete-rg` (async) |
 | Azure | ACA container app / env / ACR / Log Analytics | inside the agent RG | covered by the RG delete |
-| Azure | FH Foundry account / project / ACR / model / Bot Service (DW) / UAMI | inside the agent RG | covered by the RG delete |
-| Azure | **Shared** Foundry account + project + model (`solution.foundry` `create-shared`) | `<prefix>-foundry-rg` | `delete-rg` — matches the prefix filter, so it is discovered and removed like an agent RG (it is lab-owned) |
+| Azure | FH Foundry account / project / ACR / model / Bot Service (DW) / UAMI | inside the agent RG | ACR/model/Bot/UAMI covered by the RG delete; the **Cognitive Services account** (+ its project) is **delete+purged first** (order 39) so it does not linger soft-deleted |
+| Azure | **Shared** Foundry account + project + model (`solution.foundry` `create-shared`) | `<prefix>-foundry-rg` | account **delete+purged** (order 39), then `delete-rg` removes the RG — both matched by the prefix filter (lab-owned) |
 | Entra | Blueprint app (+ its SP) | `<agent-name> Blueprint` | `delete-app` + purge |
 | Entra | Agent identity app / SP | `<agent-name> Identity` | `delete-app` + purge |
 | Entra | **Agent instances** (agent users) | custom names given at hire (may NOT contain the prefix) | `remove-licenses-and-delete-user` |
@@ -65,6 +65,19 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 - A **shared** agent resource group (`<prefix>-rg`, shared strategy) holds several agents at once. If
   it appears in discovery, the review screen shows its full contents — keep it unless every agent in
   it is being removed.
+
+### Cognitive Services accounts soft-delete — purge them (frees name + quota)
+Deleting a resource group only **soft-deletes** the Cognitive Services accounts inside it (Foundry
+`AIServices` accounts, Azure OpenAI accounts). A soft-deleted account keeps **blocking its name** and
+**counts against the regional Cognitive Services quota** until it is **purged** — and a same-name
+re-provision fails with *"account already exists"* / *"Soft-deleted workspace exists"*. Discovery therefore
+adds a `purge-cognitiveservices` item (order **39**, just before `delete-rg`) that **deletes the live
+account then purges it**, and also **sweeps `az cognitiveservices account list-deleted`** for accounts whose
+original RG matches the prefix (leftovers a prior cleanup deleted the RG for but never purged). Purging the
+account also removes its child **project** — the *"workspace"* the Foundry azd provider projects via the
+`Microsoft.MachineLearningServices` compat API — so there is **no separate AML-workspace resource to purge**.
+Only prefix-named (lab-owned) accounts are purged; a shared/user-owned account (`reuse-existing`, the FD
+project, the ACA-shared Azure OpenAI account) is never prefix-matched and is left intact.
 
 ### Why instances need special handling (the license guarantee)
 An autopilot is **one blueprint → many instances**, and **each hired instance gets its own agent
