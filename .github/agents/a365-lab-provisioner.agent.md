@@ -217,13 +217,19 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      the Mail scope when a custom MCP is attached.
    - ⛔ **Power Platform connection — a MANDATORY one-time USER action; announce it PROACTIVELY, do not
      wait for the agent to surface it.** A BYO tool only returns data once the invoking user has created
-     the connector connection. On the first custom-tool call the agent MAY reply *"This server is not
-     yet set up. Visit `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext-<...>&environmentName=<env>`"* —
+     the connector connection. **EACH `ext_` server has its OWN connector, so the user must create a
+     SEPARATE connection for the anon AND the auth server** — creating the anon one is NOT enough. The
+     **auth (`ext_<name>Auth`, EntraOAuth) connection requires an OAuth sign-in**, unlike the anon
+     (NoAuth) one. ⚠️ **Anon tools working does NOT mean auth tools work**: if `server_time`/`whoami_anon`
+     succeed but a request for the authenticated `whoami`/`token_claims` comes back from the *anon*
+     server, the **auth connection is missing** (the auth server exposes only `initialize_server` until
+     the connection exists, so the model can't call auth `whoami`). Fix: create the auth connection.
+     On the first custom-tool call the agent MAY reply *"This server is not yet set up. Visit
+     `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext-<...>&environmentName=<env>`"* —
      but it does **not always** surface it. So, as soon as an OBO agent's custom tools are wired, TELL
-     the user up front: *"the first time you invoke a custom tool you must open
-     `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext_<name>…&environmentName=<env>`
-     (the exact ids are per-run) and create/update the connection as yourself, then retry the prompt."*
-     OBO reuses the same connection across ACA/FH/FD (same user), so it is created once per `ext_` server.
+     the user up front: *"open `https://make.powerapps.com/connectionsMcp` and create/authorize a
+     connection for **BOTH** `ext_<name>Anon` (NoAuth) and `ext_<name>Auth` (OAuth sign-in) as yourself,
+     then retry."* OBO reuses the same connections across ACA/FH/FD (same user), so each is created once.
 4. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
 
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO

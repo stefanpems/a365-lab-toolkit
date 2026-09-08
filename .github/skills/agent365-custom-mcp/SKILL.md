@@ -124,8 +124,13 @@ not duplicate or renumber it here.**
   all — test those via the agentic / Bot Framework path (Teams / `/api/messages`) if ever needed.
   Tell-tale of a NON-call: `server_time` returns a **past** date or a wrong hash (the model
   hallucinated because the tool wasn't actually invoked — check `customScopes` + the Power Platform
-  connection). Note the model may call the **anon** `whoami_anon` when asked generically for "whoami";
-  to see the authenticated caller identity, prompt it to call the **`ext_<name>Auth`** server's
+  connection). ⛔ **Each `ext_` server needs its OWN Power Platform connection (anon AND auth
+  separately); the auth one is EntraOAuth (OAuth sign-in).** If `whoami_anon` works but a request for
+  the authenticated `whoami` returns the *anon* server's response, the **auth connection is missing**:
+  the auth server exposes only `<server>_initialize_server` until the connection exists, so the auth
+  `whoami` isn't in the tool set and the model substitutes the anon one. The OBO agent prompt now
+  forbids that substitution and surfaces the auth setup URL instead. Note the model may still call the
+  anon `whoami_anon` when asked **generically** for "whoami"; ask for the **`ext_<name>Auth`** server's
   `whoami` explicitly.
 - **`Duplicate tool name 'initialize_server'` after attaching 2+ custom servers (agentic/Teams path).**
   The gateway exposes an `initialize_server` handshake tool for **every** `ext_*` server, so 2+ of them

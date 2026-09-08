@@ -39,8 +39,10 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
   and the OBO host wires every manifest server, so the custom tools work from the first test. Fill the
   audiences from `plan.customMcp.audiences` (set right after registration) or the agent's
   `ToolingManifest.json`; wire them in the same `config.js` edit as the endpoint, then redeploy.
-- ⛔ **Tell the user, up front, to create the one-time Power Platform connection.** The first custom-tool
-  call may require the user to open
-  `https://make.powerapps.com/connectionsMcp?connectorIds=shared_tc-ext_<name>…&environmentName=<env>`
-  and create/update the connection as themselves (the agent does not always surface this URL). OBO
-  reuses the connection across ACA/FH/FD.
+- ⛔ **Tell the user, up front, to create a SEPARATE one-time Power Platform connection for EACH ext_
+  server (anon AND auth).** Each `ext_` server has its own connector; creating the anon connection is
+  NOT enough. The **auth (`ext_<name>Auth`, EntraOAuth) connection needs an OAuth sign-in**. Open
+  `https://make.powerapps.com/connectionsMcp` and create/authorize **both** as yourself. ⚠️ If
+  `server_time`/`whoami_anon` work but an authenticated `whoami` request comes back from the *anon*
+  server, the **auth connection is missing** (the auth server exposes only `initialize_server` until
+  then). OBO reuses the connections across ACA/FH/FD.
