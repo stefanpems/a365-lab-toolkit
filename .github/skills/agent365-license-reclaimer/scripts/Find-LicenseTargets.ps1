@@ -213,6 +213,9 @@ if ($Action -eq 'ListSkus') {
 # ---------------------------------------------------------------------------
 # FindUsers
 # ---------------------------------------------------------------------------
+# `pwsh -File` passes comma-joined values as one literal string; split them back into a real array.
+if ($SkuIds) { $SkuIds = @($SkuIds | ForEach-Object { $_ -split '[,\s]+' } | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+if ($Selector -eq 'ObjectId' -and $SelectorValues) { $SelectorValues = @($SelectorValues | ForEach-Object { $_ -split '[,\s]+' } | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
 if (-not $SkuIds -or $SkuIds.Count -eq 0) { throw "FindUsers requires -SkuIds (the target SKU ids)." }
 if (-not $Selector) { throw "FindUsers requires -Selector (ObjectId | Prefix | All)." }
 if ($Selector -in @('ObjectId', 'Prefix') -and (-not $SelectorValues -or $SelectorValues.Count -eq 0)) {
@@ -282,7 +285,7 @@ $result = [pscustomobject]@{
     selector          = $Selector
     includeDependents = [bool]$IncludeDependents
     targetSkuIds      = @($SkuIds)
-    users             = @($matchedUsers)
+    users             = @($matchedUsers.ToArray())
 }
 $json = $result | ConvertTo-Json -Depth 8
 if ($OutFile) {

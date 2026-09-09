@@ -26,10 +26,12 @@ language.
   question at a time. IDs and prefixes are collected through the questions tool (an input control), never
   as free chat prose. If (and only if) that tool is genuinely unavailable, say so once and fall back to
   numbered text.
-- **Never remove a license without the checkbox review — no exceptions.** Even if the user says "remove
-  from everyone", you still present the matched users and the exact SKUs to be removed, obtain a per-item
-  selection, and get a final confirmation. Removing a license can disable a real user's mailbox, Teams, or
-  app access — treat every run as high-impact and irreversible in effect.
+- **The actual removal never starts without an explicit final approval.** After the checkbox review you
+  ALWAYS build the plan with `Resolve-RemovalPlan.ps1` and present a final confirmation that lists all —
+  and only — what will change (each selected user + the exact target licenses). The removal runs only
+  after the user explicitly approves it. The single documented exception is dependent add-ons discovered
+  at runtime, and only if the user approved dependents. Removing a license can disable a real user's
+  mailbox, Teams, or app access — treat every run as high-impact and irreversible in effect.
 - **The Copilot runtime-model gate is always first** (see Flow step 0), before any tool or discovery.
 - **Pin the subscription and verify the tenant** before anything. Microsoft Graph ignores
   `--subscription` and uses the active account, and a concurrent session can flip the shared az context.
@@ -52,12 +54,58 @@ language.
 
 Then discover the holders, present the **checkbox review**, confirm, and remove.
 
-## License dependencies
+## Checkbox review rules (mandatory)
+- **Always present the matched holders for per-item selection.** The discovery script already returns
+  ONLY users that hold at least one of the target SKUs, so the list is inherently limited to users who
+  actually have a license to remove — never a raw directory dump.
+- **Every name is DESELECTED by default.** Never pre-check a user, never mark one "recommended", never
+  apply "self-protection" pre-selection. The operator must consciously check each user; nothing is
+  removed unless explicitly selected.
+- **If more than 100 holders match, do NOT present the list.** Say the list is too long to review
+  safely, then re-present the "How to identify users" question (step 4/5) so the user narrows it down by
+  object ID / UPN list or by a name / surname / UPN prefix. Re-run discovery with that filter and show
+  the (still holder-only) result. Repeat until the list is ≤ 100, then present the all-deselected
+  checkbox review. You may still flag high-impact accounts (the signed-in admin, the operator, agent
+  identities) in the message text, but they stay **deselected** like everyone else.
+- After the user selects, restate the count and the tenant and get the final confirmation before removal.
+- **Map the selection back to stable object ids, not to labels.** Match each selected checkbox entry to
+  its user in `users.json` by a unique key (object id, or full UPN) — never by a name/UPN *prefix* (two
+  users can share one) — and pass those object ids to `Resolve-RemovalPlan.ps1`.
+
+## Removal gate (binding — the actual removal never starts without explicit approval)
+- After the checkbox review, ALWAYS build the plan with `Resolve-RemovalPlan.ps1` (never hand-build
+  `selection.json`). It writes `selection.json` + `plan-summary.txt` and flags **CRITICAL** accounts (the
+  signed-in operator + members of Global Administrator / Privileged Role Administrator / User
+  Administrator). Invoke it with array params as ONE comma-joined string
+  (`-SelectedObjectIds ($ids -join ',')`), never as a PowerShell array (the `-File` host mis-binds arrays).
+- Present a FINAL CONFIRMATION showing all — and only — what will change (each selected user + the exact
+  target licenses). The removal MUST NOT start until the user explicitly approves. Restate count + tenant.
+- **If the user approved removing dependents:** after building the plan, present the UPDATED per-user list
+  that also shows the candidate dependent add-ons, as a multi-select with every reviewed user checked, and
+  let the user **deselect** anyone to exclude them. Rebuild `selection.json` from the still-selected users
+  before the final Approve. Flag **CRITICAL** accounts prominently — beyond the obvious "these users are
+  impacted", call out plainly that removing licenses from the operator/admin account (the one running this
+  operation) can break the very session performing the change, so it probably should stay unchecked.
+- Offer a dry run (`-WhatIf`) whenever the user is unsure; run the real removal with `-Force` only after
+  the explicit chat approval.
+
+## After the removal — verify, then report (both mandatory)
+- **Verify it actually ran.** After launching `Remove-TenantLicenses.ps1`, read `removal.log` and
+  `result.json` BEFORE saying anything about the outcome. NEVER state that licenses were removed based
+  only on having issued the command — if the log/result is missing, the removal did not run; run it and
+  re-check. (This exact miss happened once: the command was announced but never executed.)
+- **Always end a completed `start` session with the concise report** the script writes to `report.txt`:
+  per user, which licenses were removed, plus any left-in-place (naming the blocking retained license)
+  and any errors.
 Microsoft enforces license prerequisites at the API — a base license cannot be removed while a dependent
 add-on that requires it is still assigned. The removal script tries the targets alone first; on a
 dependency error it removes the blocking add-ons **only if** the user granted permission (step 3),
 otherwise it leaves the base in place and logs which add-ons blocked it. Add-ons are never removed
-pre-emptively.
+pre-emptively. Microsoft does **not** publish a machine-readable service-plan dependency graph (the
+licensing service plan reference is a name/GUID map only), so candidate dependents are pre-computed from
+each user's own held SKUs — never parsed from error text — and a deeper `servicePlanDependencyConflict`
+(an unselected retained license needing a plan inside a base) is enforced only at runtime; the removal
+script then leaves that base fully in place with a readable `SKIP`, never a raw error blob.
 
 ## Destructive-operation safety
 - **Offer a dry run first.** When the user is unsure, run the removal with `-WhatIf` so they see exactly
@@ -68,7 +116,8 @@ pre-emptively.
 
 ## Progress visibility
 - Keep the persistent artifacts under `generated/license-reclaimer/<timestamp>/`: `skus.json`,
-  `users.json`, `selection.json`, `removal.log`, `result.json` (all gitignored, local-only).
+  `users.json`, `selection.json`, `plan-summary.txt`, `removal.log`, `result.json`, `report.txt` (all
+  gitignored, local-only).
 - At the start of removal, tell the user: "Open `generated/license-reclaimer/<timestamp>/removal.log` to
   watch removals live — the chat may not always update in real time."
 - Never end a turn with a vague "I'll resume when it finishes." State the exact file to watch and the
@@ -82,4 +131,5 @@ terminal is waiting and that they must type `RECLAIM` + Enter. Never relay it si
 
 ## Output
 End every turn with a short status: what was decided, what is still open, the exact next action, and a
-reminder to watch `generated/license-reclaimer/<timestamp>/removal.log`.
+reminder to watch `generated/license-reclaimer/<timestamp>/removal.log`. At the end of a completed
+session, always include the concise per-user removal report from `report.txt`.

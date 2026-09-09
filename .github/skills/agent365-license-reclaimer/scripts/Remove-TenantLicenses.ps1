@@ -154,14 +154,37 @@ function Test-IsAddOnPart {
     return [bool]($Part -match '(?i)(project|visio|MCOEV|PHONESYSTEM|MCOPSTN|MCOMEETADV|MCOCAP|AUDIO[_ ]?CONFERENC|POWER[_ ]?BI|FLOW_|POWERAUTOMATE|POWER[_ ]?AUTOMATE|POWERAPPS|POWER[_ ]?APPS|TEAMS[_ ]?PHONE|CALLING)')
 }
 
-# Build a skuId -> partNumber map so add-on SKUs held live can be named/resolved for the fallback.
-$skuMap = @{}
+# Build a skuId -> partNumber map so add-on SKUs held live can be named/resolved for the fallback,
+# plus service-plan maps so a hard dependency conflict can be explained instead of dumped as raw JSON.
+$skuMap = @{}      # skuId  -> skuPartNumber
+$skuPlans = @{}    # skuId  -> @(servicePlanId, ...)
+$planName = @{}    # planId -> servicePlanName
 try {
     foreach ($s in (Invoke-RestMethod -Method GET -Uri 'https://graph.microsoft.com/v1.0/subscribedSkus' -Headers @{ Authorization = "Bearer $graphToken" }).value) {
         $skuMap[$s.skuId] = $s.skuPartNumber
+        $skuPlans[$s.skuId] = @($s.servicePlans | ForEach-Object { $_.servicePlanId })
+        foreach ($p in $s.servicePlans) { $planName[$p.servicePlanId] = $p.servicePlanName }
     }
 }
 catch { }
+
+# A `servicePlanDependencyConflict` means an UNSELECTED, retained license still needs a service plan the
+# removal would strip (e.g. a Dynamics/Power Platform bundle needing Calling/Power BI plans). Removing
+# add-ons cannot fix it — the base is left in place. Parse the error so the log names the culprit.
+function Get-ServicePlanConflict {
+    param([string]$Message, [string[]]$LiveSkuIds, [string[]]$RemoveSkuIds)
+    $out = [pscustomobject]@{ isConflict = $false; planNames = @(); blockingSkus = @() }
+    if ($Message -notmatch '(?i)servicePlanDependencyConflict') { return $out }
+    $ids = @()
+    try { $ids = @(($Message | ConvertFrom-Json).error.innerError.properties.dependsOnServicePlanIds) } catch { }
+    if (-not $ids -or $ids.Count -eq 0) { $ids = @([regex]::Matches($Message, '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}') | ForEach-Object { $_.Value }) }
+    $ids = @($ids | Where-Object { $_ } | Select-Object -Unique)
+    $retained = @($LiveSkuIds | Where-Object { $RemoveSkuIds -notcontains $_ })
+    $out.isConflict = $true
+    $out.planNames = @($ids | ForEach-Object { if ($planName[$_]) { $planName[$_] } else { $_ } } | Select-Object -Unique)
+    $out.blockingSkus = @($retained | Where-Object { $skuPlans[$_] -and (@($skuPlans[$_] | Where-Object { $ids -contains $_ }).Count -gt 0) } | ForEach-Object { if ($skuMap[$_]) { $skuMap[$_] } else { $_ } } | Select-Object -Unique)
+    return $out
+}
 
 # ---------------------------------------------------------------------------
 # Remove per user.
@@ -194,6 +217,16 @@ foreach ($u in $users) {
         continue
     }
 
+    # A hard service-plan dependency from an UNSELECTED retained license cannot be fixed by removing
+    # add-ons — leave the base in place with a readable reason (never a raw error blob).
+    $conf = Get-ServicePlanConflict -Message $r.message -LiveSkuIds $live -RemoveSkuIds $toRemove
+    if ($conf.isConflict) {
+        $reason = "blocked by retained license(s) [$($conf.blockingSkus -join ', ')] that still require service plan(s) [$($conf.planNames -join ', ')] — outside the reclaim scope"
+        Write-Log 'SKIP' "left [$(( & $namesOf $toRemove) -join ', ')] in place for $upn ($uid): $reason"
+        $results.Add([pscustomobject]@{ id = $uid; upn = $upn; status = 'SKIP'; removed = @(); message = $reason })
+        continue
+    }
+
     if (Test-DependencyError $r.message) {
         # Dependent add-ons block the base removal.
         $liveAddOns = @($live | Where-Object { ($toRemove -notcontains $_) -and $skuMap[$_] -and (Test-IsAddOnPart $skuMap[$_]) })
@@ -207,11 +240,17 @@ foreach ($u in $users) {
         if ($r2.ok) {
             Write-Log 'OK' "removed targets + dependents [$(( & $namesOf $set2) -join ', ')] from $upn ($uid)"
             $results.Add([pscustomobject]@{ id = $uid; upn = $upn; status = 'OK'; removed = @($set2); message = 'targets + dependents removed' })
+            continue
         }
-        else {
-            Write-Log 'ERROR' "removal still failed for $upn ($uid) after including dependents: $($r2.message)"
-            $results.Add([pscustomobject]@{ id = $uid; upn = $upn; status = 'ERROR'; removed = @(); message = $r2.message })
+        $conf2 = Get-ServicePlanConflict -Message $r2.message -LiveSkuIds $live -RemoveSkuIds $set2
+        if ($conf2.isConflict) {
+            $reason2 = "blocked by retained license(s) [$($conf2.blockingSkus -join ', ')] that still require service plan(s) [$($conf2.planNames -join ', ')] — outside the reclaim scope"
+            Write-Log 'SKIP' "left [$(( & $namesOf $set2) -join ', ')] in place for $upn ($uid): $reason2"
+            $results.Add([pscustomobject]@{ id = $uid; upn = $upn; status = 'SKIP'; removed = @(); message = $reason2 })
+            continue
         }
+        Write-Log 'ERROR' "removal still failed for $upn ($uid) after including dependents: $($r2.message)"
+        $results.Add([pscustomobject]@{ id = $uid; upn = $upn; status = 'ERROR'; removed = @(); message = $r2.message })
         continue
     }
 
@@ -233,4 +272,36 @@ $ok = @($results | Where-Object { $_.status -eq 'OK' }).Count
 $skip = @($results | Where-Object { $_.status -eq 'SKIP' }).Count
 $err = @($results | Where-Object { $_.status -eq 'ERROR' }).Count
 Write-Log 'INFO' "=== Done. removed=$ok skipped=$skip errors=$err — result: $resultPath ==="
+
+# ---------------------------------------------------------------------------
+# Concise, human-readable final report (always produced): which licenses were removed from which users.
+# ---------------------------------------------------------------------------
+$nameList = { param($ids) (@($ids | ForEach-Object { if ($skuMap[$_]) { $skuMap[$_] } else { $_ } }) -join ', ') }
+$reportPath = Join-Path $logDir 'report.txt'
+$rep = New-Object System.Collections.Generic.List[string]
+$verb = if ($WhatIf) { 'WOULD REMOVE (dry run)' } else { 'REMOVED' }
+$rep.Add("License reclaim report — tenant $($ctx.tenantId) — operator $signedIn — $((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))")
+$rep.Add("Summary: removed=$ok  skipped/left-in-place=$skip  errors=$err  (users in plan: $($results.Count))")
+$rep.Add('')
+$rep.Add("== $verb ==")
+$done = @($results | Where-Object { $_.status -in @('OK', 'WHATIF') })
+if ($done.Count) { foreach ($x in $done) { $rep.Add("  {0,-45} {1}" -f $x.upn, (& $nameList $x.removed)) } } else { $rep.Add('  (none)') }
+$left = @($results | Where-Object { $_.status -eq 'SKIP' })
+if ($left.Count) {
+    $rep.Add('')
+    $rep.Add('== LEFT IN PLACE (not removed) ==')
+    foreach ($x in $left) { $rep.Add("  {0,-45} {1}" -f $x.upn, $x.message) }
+}
+$bad = @($results | Where-Object { $_.status -eq 'ERROR' })
+if ($bad.Count) {
+    $rep.Add('')
+    $rep.Add('== ERRORS ==')
+    foreach ($x in $bad) { $firstLine = ($x.message -split "`n")[0]; $rep.Add("  {0,-45} {1}" -f $x.upn, $firstLine) }
+}
+$reportText = $rep -join [Environment]::NewLine
+Set-Content -LiteralPath $reportPath -Value $reportText -Encoding utf8
+Write-Host ''
+Write-Host $reportText -ForegroundColor Cyan
+Write-Host ''
+Write-Host "Report: $reportPath" -ForegroundColor Cyan
 Write-Output (Get-Content -LiteralPath $resultPath -Raw)
