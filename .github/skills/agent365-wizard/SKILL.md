@@ -68,6 +68,16 @@ abort on mismatch. These values are written ONLY to the gitignored `a365-deploym
 guards the shared, concurrently-flipping `az`/Graph context (see the parallel-session note in
 [references/naming-and-validation.md](./references/naming-and-validation.md)).
 
+### 1a. Choose the lab name (the solution prefix) — ask this EARLY
+Ask the **lab name** up front (right after tenant/subscription, before selecting what to create). The lab
+name IS the `solution.prefix`: it derives every agent name, every resource name, the custom-MCP
+registrations and the per-run scaffold root `generated/<prefix>/`. State the rules BEFORE asking:
+**lowercase letter first, lowercase alphanumeric only, 3–12 chars** (`^[a-z][a-z0-9]{2,11}$`), and it must
+be **UNIQUE** — not a name a previous lab already used. Check for collisions before accepting it: an
+existing `generated/<prefix>/` folder (a prior run on this machine), and — when the custom MCP is in
+scope — an existing `ext_<prefix>*` in the tenant (`a365 develop list-available` / admin center). If taken,
+ask for a different lab name. See [references/naming-and-validation.md](./references/naming-and-validation.md).
+
 ### 2. Select what to create
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 8 variants (mark DW/FH as "requires Frontier/Foundry").
@@ -140,7 +150,9 @@ blueprint/`name.short` **≤ 30 characters** hard rule.
 Emit `a365-deployment-plan.json` at the repo root from
 [assets/deployment-plan.template.json](./assets/deployment-plan.template.json). It is **secret-free**
 (resource references only) and gitignored. Schema:
-[references/deployment-plan-schema.md](./references/deployment-plan-schema.md).
+[references/deployment-plan-schema.md](./references/deployment-plan-schema.md). The scaffolder also
+**archives the plan per-run** to `generated/<prefix>/a365-deployment-plan.json`, so overwriting the root
+plan on the next run never loses earlier plans (each unique lab name keeps its own copy).
 Then ask: **Save plan** / **Generate scaffolding** / **Cancel**.
 
 ### 7. Scaffold (only on confirmation)

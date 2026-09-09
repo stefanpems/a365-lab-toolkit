@@ -10,7 +10,7 @@ gitignored.
 {
   "version": 1,
   "solution": {
-    "prefix": "<string>",                 // e.g. contoso — lowercase letter first, lowercase alphanumeric only, 3-12 chars (custom MCP ext_ cap)
+    "prefix": "<string>",                 // the LAB NAME (asked early) — e.g. contoso — lowercase letter first, lowercase alphanumeric only, 3-12 chars (custom MCP ext_ cap); must be UNIQUE per run (no existing generated/<prefix>/ or ext_<prefix>*)
     "tenantId": "<guid>",                 // discovered, confirmed
     "subscriptionId": "<guid>",           // discovered, confirmed
     "region": "<azure-region>",           // e.g. polandcentral

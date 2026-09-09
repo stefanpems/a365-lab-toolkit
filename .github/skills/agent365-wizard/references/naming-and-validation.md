@@ -50,13 +50,19 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
    above 30 chars**. Verified in [docs/setup-MAF-ACA-DW.md](../../../../docs/setup-MAF-ACA-DW.md).
    For any DW variant, validate the display name length and offer a short form (drop " Blueprint",
    shorten the prefix) before proceeding.
-1a. **Prefix: lowercase letter first, lowercase alphanumeric only, 3–12 chars** (`^[a-z][a-z0-9]{2,11}$`,
-   enforced in `scaffold-from-plan.ps1`). It is reused for every resource, so it must satisfy the
-   strictest consumer — the **custom MCP**: Agent 365 registers `ext_<prefix>Anon` / `ext_<prefix>Auth`,
-   which must stay **≤ 20 chars** (`4 + prefix + 4`) and are **alphanumeric** (no hyphens/underscores).
-   That also covers Azure Container Apps (2–32, lowercase, start-with-a-letter — a prefix like `1730`
-   would make the invalid container `1730-aca-obo`), managed identities, resource groups, the Entra apps
-   and the Static Web App. **State these rules to the user before asking for the prefix.** MS Learn:
+1a. **Lab name (the solution prefix): lowercase letter first, lowercase alphanumeric only, 3–12 chars**
+   (`^[a-z][a-z0-9]{2,11}$`, enforced in `scaffold-from-plan.ps1`). Presented to the user as the **lab
+   name** and asked **early** (right after tenant/subscription), because it derives every agent name,
+   every resource name, the custom-MCP registrations and the per-run root `generated/<prefix>/`. It is
+   reused for every resource, so it must satisfy the strictest consumer — the **custom MCP**: Agent 365
+   registers `ext_<prefix>Anon` / `ext_<prefix>Auth`, which must stay **≤ 20 chars** (`4 + prefix + 4`)
+   and are **alphanumeric** (no hyphens/underscores). That also covers Azure Container Apps (2–32,
+   lowercase, start-with-a-letter — a prefix like `1730` would make the invalid container `1730-aca-obo`),
+   managed identities, resource groups, the Entra apps and the Static Web App. It must also be **UNIQUE**
+   — not a name a previous lab used: check for an existing `generated/<prefix>/` folder (a prior run on
+   this machine) and, when the custom MCP is in scope, an existing `ext_<prefix>*` in the tenant
+   (`a365 develop list-available` / admin center); ask for a different lab name if taken. **State these
+   rules to the user before asking for the lab name.** MS Learn:
    [Azure resource naming rules](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-name-rules#microsoftapp).
 2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
 3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry

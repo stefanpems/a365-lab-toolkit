@@ -150,6 +150,8 @@ if ($ValidateOnly) { exit 0 }
 $RunRoot     = Join-Path $OutRoot $prefix
 $McpBaseName = if ($prefix) { ($prefix -replace '[^A-Za-z0-9]', '').ToLower() } else { '' }
 New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
+# Archive the plan with the run so the per-lab plan survives the next run overwriting the root copy.
+try { Copy-Item -LiteralPath $PlanPath -Destination (Join-Path $RunRoot 'a365-deployment-plan.json') -Force -ErrorAction Stop } catch { Write-Host "  note: could not archive the plan to $RunRoot ($($_.Exception.Message))" -ForegroundColor DarkYellow }
 
 # Emit next-commands in EXECUTION order: the web UI and the custom MCP FIRST (so the MCP is deployed +
 # registered before the agents and can be attached immediately as each agent is created), then the
