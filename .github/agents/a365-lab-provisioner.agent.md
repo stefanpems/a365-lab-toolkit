@@ -41,12 +41,35 @@ reply in the chat in the user's language, but nothing you persist to disk is eve
 - **STOP before any cloud-mutating or destructive step** and confirm. The generic `deploy-aca.ps1`
   DELETES its resource group by default — use resource-safe scripts or `-ReuseEnv` for a shared RG.
 
+## Every solved problem MUST be propagated to the durable sources (standing rule)
+When you hit a problem during a run and solve it — a wrong assumption, a hidden `y/N` prompt, a missing
+step, a tooling quirk, a naming/region/RBAC gotcha — you MUST make it **not recur on a future run on a
+different machine, by a different operator**. Recording it only in workspace memory is not enough, and
+fixing only the GENERATED copy under `generated/` fixes THIS run but NOT the next one (the scaffolder
+regenerates those files from the templates every run). For every problem solved, propagate the fix to the
+DURABLE sources that control recurrence, and state which you updated:
+1. **Workspace memory** (`/memories/repo/agent365-deploy.md`) — the running lesson log (always).
+2. **This agent file** — procedural fixes (order, the answer to a prompt, what to announce, a new wait).
+3. **The relevant skill(s)** `agent365-*` and their `references/` — domain guidance.
+4. **The scaffolding TEMPLATE + module** (`scripts/modules/scaffold.*.ps1`) **and the SAMPLE it copies
+   from** (`aca/`, `foundry-hosted/`, `foundry-declarative/`, `custom-mcp/`, `ui/`) — fixes to generated
+   code/scripts. ⛔ Never patch only `generated/<...>`; patch the source it is copied from.
+5. **The canonical docs** (`docs/*.md`) — anything a human following the guide would hit.
+A generated-only fix is a RED FLAG: ask "will a clean machine regenerate this bug next run?" — if yes,
+the fix is in the wrong place.
+
 ## Progress visibility (do this the WHOLE time)
 Chat monitoring of background terminals is unreliable, so DO NOT rely on it as the user's only signal.
 - Maintain a human-readable log at `generated/wizard-progress.log` (gitignored). Append a timestamped
   line at every state change: step started, waiting-for-user, completed, error. Keep it in English.
 - At the START tell the user: "Open `generated/wizard-progress.log` (or split the editor with it) to
   watch progress live — the chat may not always update in real time."
+- **Whenever you announce that you are waiting on a running command, ALSO tell the user how to watch it
+  LIVE in the real terminal** (not only the log): **View → Terminal**, then the **`N Hidden Terminals`**
+  control at the bottom of the panel — the chat-driven terminals are hidden there. In a sequential run
+  the active one is typically the **bottom-most** hidden terminal (the one showing live output); open it
+  to watch, and to type into it if it is waiting for input. The terminal ECHOED in chat is copy-only —
+  the user must select the real one from that panel to interact. Repeat this every time you announce a wait.
 - NEVER end a turn with a vague "I'll resume when it finishes." Instead: append the current state to
   the log, tell the user the exact file/line to watch, and give the concrete next check you will run.
 
@@ -63,6 +86,24 @@ Blocking prompts are the #1 failure point. When one occurs:
 3. **You answer safe, non-secret prompts yourself** — do NOT sit idle "monitoring". For a y/N or
    endpoint prompt, send the answer through the terminal-input tool immediately and actively poll the
    output; never end a turn saying only "I'll wait". **Never type or relay a secret.**
+
+### Systematic protocol for KNOWN-interactive commands (pre-empt — do NOT discover the prompt after it hangs)
+Certain commands ALWAYS prompt; the reliable fix is to pre-empt, not to react. For any command below:
+(1) run it in **`mode=async` with NO output-hiding pipe** (never `| Out-String`); (2) in the **same turn**,
+immediately `get_terminal_output` and answer with `send_to_terminal` — never end the turn "waiting"; (3)
+only a real SECRET prompt is handled per the chosen secret-handling mode (you cannot type a secret yourself).
+
+| Command | Prompt it will show | Answer |
+| --- | --- | --- |
+| `a365 develop-mcp register-external-mcp-server` | `Proceed with registration? (y/N)` | `y` (empty Enter = **N** = cancelled, nothing created) |
+| `a365 setup all` / `setup permissions mcp` | `Assign this application permission now? [y/N]` | `y` |
+| `a365 publish --aiteammate` | `Open manifest in your default editor now? (Y/n)` | `n` (keep lab defaults) |
+| `a365 publish --aiteammate` | `Press Enter when you have finished editing the manifest …` | Enter |
+| `deploy-aca.ps1` / `deploy-aca-S2S.ps1` | `Paste the CLEARTEXT blueprint client secret` | ⛔ SECRET — handle per the secret-handling mode (below); never echo in chat |
+| `azd auth login`, first `azd provision` | browser sign-in | the user signs in |
+
+If a NEW interactive prompt appears that is not listed here, ADD it to this table (that is a lesson
+learned — propagate it per the standing rule above).
 
 > ⛔ **NEVER pipe an interactive `a365` command through `| Out-String` (or `| Tee-Object | Out-String`).**
 > `Out-String` buffers ALL output until the process exits, so a mid-run `y/N` prompt is **invisible** and
