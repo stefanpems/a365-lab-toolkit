@@ -139,8 +139,10 @@ required service plan(s) — it never partially removes and never dumps a raw er
      (`servicePlanDependencyConflict` / prerequisite) — and only because the operator approved dependents.
 8. **Remove** — run `Remove-TenantLicenses.ps1 -SelectionPath selection.json -Subscription … -TenantId …`
    (`-Force` because the user already approved in step 7, or `-WhatIf` for the dry run). **After it
-   returns you MUST verify it actually ran** by reading `removal.log` / `result.json` before reporting
-   anything — never claim a removal happened based only on launching the command.
+   returns you MUST verify it finished cleanly**: the exit code is 0 AND `removal.log`, `result.json` and
+   `report.txt` all exist. A non-zero exit or a missing `report.txt` means the run hit an error even if
+   some rows changed — investigate before reporting. Never claim a removal happened based only on
+   launching the command, and don't hide its output behind `| Out-Null`.
 9. **Final report (mandatory — always at the end of a `start` session)** — present the concise report the
    script writes to `report.txt`: per user, which licenses were removed; plus any **left in place** (with
    the blocking retained license named) and any errors. Point to `removal.log` / `result.json` /

@@ -90,10 +90,14 @@ Then discover the holders, present the **checkbox review**, confirm, and remove.
   the explicit chat approval.
 
 ## After the removal — verify, then report (both mandatory)
-- **Verify it actually ran.** After launching `Remove-TenantLicenses.ps1`, read `removal.log` and
-  `result.json` BEFORE saying anything about the outcome. NEVER state that licenses were removed based
-  only on having issued the command — if the log/result is missing, the removal did not run; run it and
-  re-check. (This exact miss happened once: the command was announced but never executed.)
+- **Verify it actually ran and finished cleanly.** After launching `Remove-TenantLicenses.ps1`, check the
+  script's **exit code is 0** AND that `removal.log`, `result.json` and `report.txt` all exist, BEFORE
+  saying anything about the outcome. A non-zero exit (or a missing `report.txt`) means the run hit an
+  error even if some rows changed — investigate before declaring success. Do not hide the script's output
+  behind `| Out-Null`; read the artifacts. NEVER state that licenses were removed based only on having
+  issued the command — if the log/result is missing, the removal did not run; run it and re-check. (Both
+  have happened: once the command was announced but never executed; once a formatting bug suppressed only
+  `report.txt` while the log looked fine.)
 - **Always end a completed `start` session with the concise report** the script writes to `report.txt`:
   per user, which licenses were removed, plus any left-in-place (naming the blocking retained license)
   and any errors.
