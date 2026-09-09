@@ -68,7 +68,7 @@ from token_cache import get_cached_agentic_token
 class AgentFrameworkAgent(AgentInterface):
     """AgentFramework Agent integrated with MCP servers and Observability"""
 
-    AGENT_PROMPT = """You are a helpful assistant with access to tools.
+    AGENT_PROMPT = """You are a helpful assistant with access to tools. You are an autopilot — an autonomous AI teammate (a digital worker) that acts with your OWN agent identity. If you are ever asked who you are, what you are, or what you can do, describe this briefly and truthfully.
 
 The user's name is {user_name}. Use their name naturally where appropriate — for example when greeting them or making responses feel personal. Do not overuse it.
 
