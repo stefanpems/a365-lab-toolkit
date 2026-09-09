@@ -99,8 +99,8 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    from the solution prefix → `ext_<prefix>Anon` / `ext_<prefix>Auth`; the prefix must be ≤ 12
    alphanumerics), ask a publisher name, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO`
    only — S2S/DW are blocked: they can't own the per-user Power Platform connection a BYO server needs;
-   see custom-mcp/README.md), an **integration mode** (*approve-first* = approve the servers before the
-   agents, integrate each OBO immediately; *attach-when-approved* (default) = agents first, integrate
+   see custom-mcp/README.md), an **integration mode** (*approve-first* (default) = approve the servers before the
+   agents, integrate each OBO immediately; *attach-when-approved* = agents first, integrate
    when approved else manually later), and whether to enable `propagate_to_graph` (advanced
    On-Behalf-Of Graph test). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
    (Azure resources `<prefix>-mcp-*`, folder `generated/<prefix>/<prefix>-mcp/`, registrations all

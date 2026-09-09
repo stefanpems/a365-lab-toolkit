@@ -34,7 +34,7 @@ function Add-AgentCustomAttach {
     }
 
     if ($customExtras.Count -gt 0) {
-        $mode = if ($plan.customMcp.integrationMode) { $plan.customMcp.integrationMode } else { 'attach-when-approved' }
+        $mode = if ($plan.customMcp.integrationMode) { $plan.customMcp.integrationMode } else { 'approve-first' }
         $extJoin = ($customExtras -join ' ')
         if ($mode -eq 'approve-first') {
             # Custom MCP approved BEFORE the agents (see the MCP section) -> integrate this agent now.

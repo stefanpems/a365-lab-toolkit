@@ -50,7 +50,7 @@
     "resourceGroup": "<SOLUTION_PREFIX>-mcp-rg",
     "region": "<AZURE_REGION>",
     "attachTo": [],
-    "integrationMode": "attach-when-approved",
+    "integrationMode": "approve-first",
     "propagateToGraph": false
   }
 }

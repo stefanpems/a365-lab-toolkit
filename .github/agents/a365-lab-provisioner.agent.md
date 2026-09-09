@@ -246,7 +246,7 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    (it derives from the solution prefix → `ext_<prefix>Anon/Auth`; the prefix must be ≤ 12 alphanumerics),
    ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
    blocked: they can't own the per-user Power Platform connection a BYO server needs), an **integration
-   mode** (approve-first / attach-when-approved — see "Custom MCP integration" below), and whether to
+   mode** (approve-first (default) / attach-when-approved — see "Custom MCP integration" below), and whether to
    enable `propagate_to_graph`. Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
@@ -277,11 +277,11 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    auth resource app and the `ext_<prefix>Anon/Auth` registrations depend on nothing but the
    subscription). A BYO server must be **admin-approved** in the M365 admin center before it can attach,
    so — right after registering — **ASK the user** how to proceed (`customMcp.integrationMode`):
-   - **approve-first**: pause and have the tenant admin **approve the `ext_*` servers now**; then, as each
+   - **approve-first** (default): pause and have the tenant admin **approve the `ext_*` servers now**; then, as each
      **OBO** agent is created, **integrate the custom MCP immediately** (`a365 develop add-mcp-servers` +
      `a365 setup permissions mcp`, with the browser admin-consent) so it is wired with permissions from
      the start.
-   - **attach-when-approved** (default): **start creating the agents right away** and approve the `ext_*`
+   - **attach-when-approved**: **start creating the agents right away** and approve the `ext_*`
      servers in parallel; each OBO agent integrates automatically **only if the servers are already
      approved** when it deploys, otherwise run the per-agent attach block later (the scaffolder emits it
      as a clearly-marked manual step). **S2S/DW never attach the custom MCP.**
@@ -456,7 +456,7 @@ collision before writing the plan). Order: **deploy + register the custom MCP BE
 **tenant admin approves** each server in the M365 admin center → attach to **OBO agents only** (ACA-OBO/
 FH-OBO via `a365 develop add-mcp-servers` + `a365 setup permissions mcp`; FD-OBO via
 `CUSTOM_MCP_SERVERS_JSON` in its `.env`), folded per agent so it integrates immediately with permissions.
-**Ask the user for the integration mode** (`customMcp.integrationMode`): *approve-first* (approve before
+**Ask the user for the integration mode** (`customMcp.integrationMode`): *approve-first* (default — approve before
 the agents → each OBO integrates immediately) or *attach-when-approved* (agents first → integrate when
 approved, else manually later). **S2S and DW are blocked** — a non-user (own app / `agentUser`) identity
 can't own the per-user Power Platform connection a BYO server needs (`ConnectionSharingNotAllowed`; S2S

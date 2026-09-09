@@ -74,9 +74,9 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
   `ConnectionSharingNotAllowed`), and S2S also can't mint the custom-audience token from the SPA
   (`AADSTS82001`/`82002`). Known preview limitation.
 - **Integration mode** (single-select, asked right after the servers are registered — a BYO server must be
-  **admin-approved** in the M365 admin center before it can be attached): *approve-first* = approve the
+  **admin-approved** in the M365 admin center before it can be attached): *approve-first* (default) = approve the
   `ext_*` servers BEFORE creating the agents, so each OBO agent integrates them (with permissions)
-  immediately as it is provisioned; *attach-when-approved* (default) = start the agents now and integrate
+  immediately as it is provisioned; *attach-when-approved* = start the agents now and integrate
   each OBO agent only if the servers are approved by the time it deploys, otherwise attach them manually
   later. Writes `customMcp.integrationMode`.
 - **`propagate_to_graph`** (auth server only): enable the advanced On-Behalf-Of Graph test? If yes,

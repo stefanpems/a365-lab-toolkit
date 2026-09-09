@@ -77,7 +77,7 @@ function Invoke-ScaffoldCustomMcp {
     # the ext_ servers NOW, before the agents, so each OBO agent integrates them immediately as it is
     # created) or attach-when-approved (start the agents now; each OBO agent integrates the custom MCP
     # only if it is already approved by the time it deploys, else attach it manually later).
-    $mode = if ($plan.customMcp.integrationMode) { $plan.customMcp.integrationMode } else { 'attach-when-approved' }
+    $mode = if ($plan.customMcp.integrationMode) { $plan.customMcp.integrationMode } else { 'approve-first' }
     if ($mode -eq 'approve-first') {
         $nextCommands.Add("# INTEGRATION MODE = approve-first: have the tenant admin APPROVE ext_${name}Anon/Auth NOW (M365 admin center > Agents > Tools > Requests), BEFORE creating the agents, so each OBO agent's provisioning below integrates the custom MCP immediately (add-mcp-servers + setup permissions mcp are emitted inline per OBO agent). Watch for a BLOCKED POPUP at Approve.")
     } else {

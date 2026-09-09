@@ -79,7 +79,7 @@ name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
    the wizard checks the tenant (`a365 develop list-available`, or the M365 admin center Agents → Tools)
    and asks for another prefix if `ext_<prefix>Anon`/`ext_<prefix>Auth` already exists.
 5. **Custom MCP integration mode.** `customMcp.integrationMode` ∈ { `approve-first`, `attach-when-approved` }
-   (default `attach-when-approved`) — a BYO server must be admin-approved before it can attach, so this
+   (default `approve-first`) — a BYO server must be admin-approved before it can attach, so this
    controls whether the wizard approves the `ext_*` servers before creating the agents (integrate each
    OBO agent immediately) or starts the agents first (integrate only if approved by deploy time).
 

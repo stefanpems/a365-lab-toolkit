@@ -33,8 +33,8 @@ not duplicate or renumber it here.**
   (`a365 develop list-available` / admin center) and ask again if `ext_<prefix>*` already exists — never
   overwrite silently.
 - **Integration mode** (`customMcp.integrationMode`, asked right after registration): *approve-first*
-  approves the servers before the agents (each OBO integrates immediately with permissions);
-  *attach-when-approved* (default) starts the agents first and integrates each OBO only if approved by
+  (default) approves the servers before the agents (each OBO integrates immediately with permissions);
+  *attach-when-approved* starts the agents first and integrates each OBO only if approved by
   the time it deploys, else attach later. The scaffolder folds the per-OBO attach right after each
   agent's deploy accordingly.
 - **Order**: deploy the MCP container(s) → replace the per-server FQDN in the register JSON

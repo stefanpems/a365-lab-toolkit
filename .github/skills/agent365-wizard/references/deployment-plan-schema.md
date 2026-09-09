@@ -80,7 +80,7 @@ gitignored.
     "resourceGroup": "<prefix>-mcp-rg",     // defaults to <prefix>-mcp-rg
     "region": "<azure-region>",
     "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO); S2S/DW blocked (see Rules)
-    "integrationMode": "attach-when-approved", // "approve-first" | "attach-when-approved" (see Rules)
+    "integrationMode": "approve-first",     // "approve-first" (default) | "attach-when-approved" (see Rules)
     "propagateToGraph": false               // enable the advanced On-Behalf-Of Graph test
   }
 }
@@ -118,7 +118,7 @@ gitignored.
   identity) and **DW** (projected `agentUser` identity) invoke as a non-user identity that can't own — nor
   be granted (preview: `ConnectionSharingNotAllowed`) — that connection (S2S also can't mint the custom
   audience token from the SPA: `AADSTS82001`/`82002`). Known preview limitation, not an unfinished feature.
-- `customMcp.integrationMode` (optional, default `attach-when-approved`) sets HOW the OBO agents pick up
+- `customMcp.integrationMode` (optional, default `approve-first`) sets HOW the OBO agents pick up
   the custom MCP, since a BYO server must be **admin-approved** (M365 admin center) before it can be
   attached: `approve-first` = approve the `ext_*` servers BEFORE creating the agents, so each OBO agent
   integrates them immediately as it is provisioned (with permissions); `attach-when-approved` = start the
