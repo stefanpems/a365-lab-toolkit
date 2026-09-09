@@ -324,15 +324,28 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
 agent's custom attach folded in right after its deploy), so follow them top-to-bottom.
 
-## After each agent goes live — OFFER to test it in its UI (ASK, don't assume)
-As soon as an agent is deployed and (for OBO/S2S) its UI tab is wired, use the **interactive questions
-tool** (single-select control — NEVER plain text) to ask:
+## ⛔ MANDATORY BLOCKING GATE after each agent goes live — you MUST offer to test it
+This is a **HARD STOP, not optional**. The moment an agent is deployed and (for OBO/S2S) its UI tab is
+wired, and **BEFORE you touch the next agent in any way** (no `azd env/provision/deploy`, no
+`a365 setup`, no env setup, no `Set-Location` into the next agent's folder, no "next I'll deploy X"
+message), you **MUST** present the interactive test gate with the **interactive questions tool**
+(single-select control — NEVER plain text):
 > "Test **`<agent>`** now in its UI, or continue to the next agent?" → `[ Test now | Continue ]`
 
-**Ask ONLY if a test surface exists for that agent:**
-- **OBO / S2S**: ask **only if a UI is present for this agent** — i.e. UI mode was `create` OR `attach`
-  AND the agent is exposed as a tab. If UI mode is `none`, **skip the question** (no surface to test in).
-- **DW**: **always ask** — the Teams surface always exists after the admin-center publish + hire.
+Rules that make this non-skippable:
+- **One gate per agent, every agent** — OBO, S2S, DW alike. Deploying N agents ⇒ exactly N gates (minus
+  only the agents with no test surface, below). If you deployed an agent and did NOT show its gate, you
+  made a process error — go back and show it before continuing.
+- **Do not batch or skip.** Never finish one agent and immediately begin the next; the gate sits between
+  them. Before running the FIRST command of the next agent, verify you have already shown and received an
+  answer for the current agent's gate. If not, STOP and show it now. (This was violated once with
+  FH-S2S — do not repeat it.)
+- **Wait for the answer.** The gate blocks progression; do not assume "Continue" and move on.
+
+**Skip the gate ONLY when NO test surface exists for that agent:**
+- **OBO / S2S**: show the gate **only if a UI is present for this agent** — i.e. UI mode was `create` OR
+  `attach` AND the agent is exposed as a tab. If UI mode is `none`, skip (no surface to test in).
+- **DW**: **always** show the gate — the Teams surface always exists after the admin-center publish + hire.
 
 If the user picks **Test now**, print the exact **test prompts to paste**, selecting only the rows that
 apply to THIS agent (by agent type + the MCPs actually attached to it, from `agents[].tools` +

@@ -201,15 +201,19 @@ writing. Print the next commands for the user to run; never auto-run destructive
 - **UI first, then integrate incrementally.** Stand up the SPA shell first (SWA + SPA app reg +
   placeholder `config.js`); then, as each OBO/S2S agent goes live, add its tab, redeploy the UI, wire
   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user they can test it now.
-- **After each agent, OFFER to test it in its UI (interactive question, not plain text).** When an
-  agent is live (and, for OBO/S2S, its tab is wired), ask `[ Test now | Continue ]`. Ask **only if a
-  test surface exists**: OBO/S2S only if a UI is present for that agent (UI mode `create`/`attach`);
-  DW always (Teams). On **Test now**, print the exact per-MCP test prompts for THIS agent (from its
-  `tools` + `customMcp.attachTo`, using the library
-  [references/test-prompts.md](./references/test-prompts.md)) and where to run them — see the agent's
-  "After each agent goes live" section (OBO custom-auth `whoami` must return
-  `authorization_token_forwarded: true`; **S2S: never ask
-  the LLM to describe its own identity — it hallucinates — use an identity-agnostic prompt**).
+- **⛔ MANDATORY BLOCKING test gate after each agent (HARD STOP, not optional).** The moment an agent
+  is live (and, for OBO/S2S, its tab is wired), and **before touching the next agent in any way**
+  (env setup, `azd`, `a365 setup`, `Set-Location`, or even a "next I'll deploy X" message), present the
+  **interactive** single-select gate `[ Test now | Continue ]` and WAIT for the answer. **One gate per
+  agent, every agent** (OBO/S2S/DW) — N agents ⇒ N gates. Never batch or skip: before the FIRST command
+  of the next agent, confirm the current agent's gate was shown and answered; if not, STOP and show it.
+  (Violated once with FH-S2S — must not recur.) Skip ONLY when no test surface exists: OBO/S2S only if a
+  UI is present for that agent (UI mode `create`/`attach` + exposed as a tab); DW always (Teams). On
+  **Test now**, print the exact per-MCP test prompts for THIS agent (from its `tools` +
+  `customMcp.attachTo`, using the library [references/test-prompts.md](./references/test-prompts.md)) and
+  where to run them — see the agent's "After each agent goes live" section (OBO custom-auth `whoami` must
+  return `authorization_token_forwarded: true`; **S2S: never ask the LLM to describe its own identity —
+  it hallucinates — use an identity-agnostic prompt**).
 - **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
   at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),
