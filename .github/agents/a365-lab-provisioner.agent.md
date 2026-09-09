@@ -273,6 +273,17 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 ## Deploy ordering — UI first, then custom MCP, then agents (integrate incrementally)
 1. If a UI is requested, **stand up the SPA shell first** (SWA + SPA app registration + deploy the UI
    with a placeholder `config.js`).
+   - ⛔ **As soon as the SWA is created, hand the user its URL in a copy-friendly way and set
+     expectations — do this BEFORE moving on to the custom MCP or the agents.** Print the full host on
+     its OWN line inside a fenced code block (so it is one-click copyable) AND as a clickable link, e.g.:
+     ```
+     https://<swa-host>
+     ```
+     `https://<swa-host>` . Then tell the user, clearly: *"The web UI is already live and you can open it
+     now. The agent tabs you selected are already listed in it, but they will NOT respond yet — the agents
+     still have to be created and deployed. Each tab starts working the moment its agent goes live (I'll
+     tell you as we get there)."* This prevents the user thinking the UI is broken when the not-yet-created
+     agents don't answer.
 2. **Then, if a custom MCP is requested, deploy + register it BEFORE the agents** (its containers, the
    auth resource app and the `ext_<prefix>Anon/Auth` registrations depend on nothing but the
    subscription). A BYO server must be **admin-approved** in the M365 admin center before it can attach,

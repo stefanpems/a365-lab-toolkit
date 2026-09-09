@@ -24,6 +24,11 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
    `generated/<prefix>-ui/config.js`, where `<prefix>` is `solution.prefix` from the deployment plan.
 2. **Deploy UI first, integrate incrementally.** Stand up the SWA shell with a placeholder `config.js`;
    then, as each OBO/S2S agent goes live, add its tab, redeploy, and wire origins.
+   - ⛔ **The moment the SWA exists, give the user its URL copy-friendly (a fenced code block with the
+     bare `https://<swa-host>` on its own line, plus a clickable link) and set expectations**: the web UI
+     is already live and openable, the selected agent tabs are already listed, but they will NOT respond
+     until each agent is created and deployed — every tab starts working as its agent goes live. Say this
+     BEFORE moving on, so the empty/not-yet-created tabs aren't mistaken for a broken UI.
 3. **Follow the canonical steps** for the SPA app registration, Entra consent (AllPrincipals), Azure
    RBAC for Foundry agents, and the SWA deploy: [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)
    §2–§6. Per-host permission specifics (Mail consent for OBO, `UI_AUDIENCE` for ACA-S2S, Foundry
