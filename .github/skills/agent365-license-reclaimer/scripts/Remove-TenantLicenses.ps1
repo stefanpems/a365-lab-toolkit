@@ -285,18 +285,18 @@ $rep.Add("Summary: removed=$ok  skipped/left-in-place=$skip  errors=$err  (users
 $rep.Add('')
 $rep.Add("== $verb ==")
 $done = @($results | Where-Object { $_.status -in @('OK', 'WHATIF') })
-if ($done.Count) { foreach ($x in $done) { $rep.Add("  {0,-45} {1}" -f $x.upn, (& $nameList $x.removed)) } } else { $rep.Add('  (none)') }
+if ($done.Count) { foreach ($x in $done) { $rep.Add(("  {0,-45} {1}" -f $x.upn, (& $nameList $x.removed))) } } else { $rep.Add('  (none)') }
 $left = @($results | Where-Object { $_.status -eq 'SKIP' })
 if ($left.Count) {
     $rep.Add('')
     $rep.Add('== LEFT IN PLACE (not removed) ==')
-    foreach ($x in $left) { $rep.Add("  {0,-45} {1}" -f $x.upn, $x.message) }
+    foreach ($x in $left) { $rep.Add(("  {0,-45} {1}" -f $x.upn, $x.message)) }
 }
 $bad = @($results | Where-Object { $_.status -eq 'ERROR' })
 if ($bad.Count) {
     $rep.Add('')
     $rep.Add('== ERRORS ==')
-    foreach ($x in $bad) { $firstLine = ($x.message -split "`n")[0]; $rep.Add("  {0,-45} {1}" -f $x.upn, $firstLine) }
+    foreach ($x in $bad) { $firstLine = ($x.message -split "`n")[0]; $rep.Add(("  {0,-45} {1}" -f $x.upn, $firstLine)) }
 }
 $reportText = $rep -join [Environment]::NewLine
 Set-Content -LiteralPath $reportPath -Value $reportText -Encoding utf8

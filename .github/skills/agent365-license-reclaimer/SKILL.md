@@ -41,6 +41,9 @@ ids). Three invocation pitfalls are already handled inside the scripts, keep the
 - On PowerShell 7.6.x, `@($list)` where `$list` is a `System.Collections.Generic.List[object]` throws
   `Argument types do not match`; use `$list.ToArray()` before `@(…)` (piping a list through
   `Where-Object`/`ForEach-Object` is unaffected).
+- Inside a method call, `$list.Add("{0} {1}" -f $a, $b)` parses the comma as a **method-argument**
+  separator, so `-f` gets only `$a` and fails with "index … less than the size of the argument list".
+  Wrap the format expression in parentheses: `$list.Add(("{0} {1}" -f $a, $b))`.
 
 Microsoft does **not** publish a machine-readable service-plan *dependency* graph (the
 [licensing service plan reference](https://learn.microsoft.com/entra/identity/users/licensing-service-plan-reference)
