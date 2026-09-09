@@ -33,8 +33,8 @@ tenant `863ee9e2-…`, subscription `d6116047-…`, region `eastus2`, model `gpt
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/a365-agent-lab.git
-cd a365-agent-lab/foundry-hosted/obo
+git clone https://github.com/<your-org>/a365-lab-toolkit.git
+cd a365-lab-toolkit/foundry-hosted/obo
 ```
 
 Layout: `main.py` (host entry), `foundry_agent.py` (agent + Mail MCP tool),

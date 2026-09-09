@@ -32,8 +32,8 @@ Per-agent call paths in `app.js`:
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/a365-agent-lab.git
-cd a365-agent-lab/ui
+git clone https://github.com/<your-org>/a365-lab-toolkit.git
+cd a365-lab-toolkit/ui
 ```
 
 ## 2. Create the SPA app registration

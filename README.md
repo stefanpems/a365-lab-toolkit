@@ -1,4 +1,4 @@
-# Agent 365 agent lab (`a365-agent-lab`) — custom agents integrated with Microsoft Agent 365
+# Agent 365 agent lab (`a365-lab-toolkit`) — custom agents integrated with Microsoft Agent 365
 
 A lab of custom agents integrated with **Microsoft Agent 365**, spanning three authentication models
 (OBO, S2S, Digital Worker) across three hosting/dev models — **Azure Container Apps (ACA)**,
@@ -34,7 +34,7 @@ It has two goals:
 ## Repository layout
 
 ```
-a365-agent-lab/
+a365-lab-toolkit/
 ├─ docs/                     # Documentation: intro + one setup guide per agent type + web UI
 ├─ ui/                       # MSAL web SPA (Azure Static Web Apps) for the OBO/S2S agents
 ├─ custom-mcp/               # Optional sample custom MCP server (anonymous + authenticated) for tool tests
@@ -88,7 +88,7 @@ orchestrates focused **skills**; the scaffolder is a thin router that dot-source
 modules and writes everything under the gitignored `generated/`.
 
 ```
-a365-agent-lab/
+a365-lab-toolkit/
 ├─ .github/
 │  ├─ agents/
 │  │  └─ a365-lab-provisioner.agent.md    # the wizard agent (entry point)

@@ -418,10 +418,10 @@ blueprint**, it inherits the Agent 365 enterprise controls
 ## 9. Source layout & how to reproduce
 
 The sources live in a public GitHub repository (suggested name
-**`a365-agent-lab`**) with one folder per hosting model and a shared UI:
+**`a365-lab-toolkit`**) with one folder per hosting model and a shared UI:
 
 ```
-a365-agent-lab/
+a365-lab-toolkit/
 ├─ README.md
 ├─ docs/                     ← this documentation set
 ├─ ui/                       ← the MSAL web SPA (agent365-UI)

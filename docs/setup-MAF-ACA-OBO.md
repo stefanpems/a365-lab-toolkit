@@ -172,8 +172,8 @@ command — in any terminal, for any ACA variant — reuses it silently**. Re-ru
 ## 1. Get the sources
 
 ```powershell
-git clone https://github.com/<your-org>/a365-agent-lab.git
-cd a365-agent-lab/aca/obo
+git clone https://github.com/<your-org>/a365-lab-toolkit.git
+cd a365-lab-toolkit/aca/obo
 uv venv ; .\.venv\Scripts\Activate.ps1 ; uv pip install -e .
 ```
 
