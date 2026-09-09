@@ -78,6 +78,16 @@ existing `generated/<prefix>/` folder (a prior run on this machine), and — whe
 scope — an existing `ext_<prefix>*` in the tenant (`a365 develop list-available` / admin center). If taken,
 ask for a different lab name. See [references/naming-and-validation.md](./references/naming-and-validation.md).
 
+### 1b. Choose the secret-handling mode
+Ask once, single-select, how the run should handle secrets (blueprint client secret, Azure OpenAI key):
+- **Manual (default)** — you (the agent) never read, request, or echo any secret; you walk the user through
+  fetching it (`a365 setup blueprint --show-secret`) and pasting it into the waiting terminal.
+- **Assisted** (opt-in, for THROWAWAY test labs in test tenants) — the user authorizes you to obtain the
+  blueprint secret non-interactively (from the `a365 setup all` log or `a365 setup blueprint --show-secret`)
+  and supply it to the deploy without the manual paste. Even then you **never print a secret value in
+  chat**, and you hand the user the rotation steps afterward.
+Write `solution.secretHandling` (`manual` | `assisted`) and follow it exactly for the whole run.
+
 ### 2. Select what to create
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 8 variants (mark DW/FH as "requires Frontier/Foundry").

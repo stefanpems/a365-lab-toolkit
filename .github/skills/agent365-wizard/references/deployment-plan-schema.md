@@ -14,6 +14,7 @@ gitignored.
     "tenantId": "<guid>",                 // discovered, confirmed
     "subscriptionId": "<guid>",           // discovered, confirmed
     "region": "<azure-region>",           // e.g. polandcentral
+    "secretHandling": "manual",           // "manual" (default; the user handles secrets, the agent never reads/echoes them) | "assisted" (opt-in, THROWAWAY test labs only; the agent may read the blueprint secret from the setup log / 'a365 setup blueprint --show-secret' and supply it to the deploy; never echoed in chat; rotate after)
     "resourceGroupStrategy": "isolated",  // "isolated" | "shared"
     "sharedResourceGroup": "<name>",      // only when strategy = "shared"
     "foundry": {                          // OPTIONAL — shared Foundry footprint for ALL FH + FD agents

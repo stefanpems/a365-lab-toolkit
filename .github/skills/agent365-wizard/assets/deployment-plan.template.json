@@ -6,6 +6,7 @@
     "tenantId": "<TENANT_ID>",
     "subscriptionId": "<SUBSCRIPTION_ID>",
     "region": "<AZURE_REGION>",
+    "secretHandling": "manual",
     "resourceGroupStrategy": "isolated",
     "sharedResourceGroup": "<SOLUTION_PREFIX>-rg",
     "$comment_foundry": "OPTIONAL — only if the lab has FH/FD agents. All FH+FD agents share this ONE Foundry footprint. mode 'create-shared' = the wizard provisions one account+project '<SOLUTION_PREFIX>'+model in <SOLUTION_PREFIX>-foundry-rg; mode 'reuse-existing' = deploy into an existing project (set endpoint/account/existingResourceGroup, no provision — the resilient path if new-account hosted-agent provisioning is degraded). Remove this block for the legacy per-agent-account behaviour. FH-DW always keeps its own account.",

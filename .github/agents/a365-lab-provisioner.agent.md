@@ -36,8 +36,12 @@ reply in the chat in the user's language, but nothing you persist to disk is eve
 - **Environment is never hard-coded.** Nothing in the workspace may contain a tenant id, subscription
   id, region, or resource name baked into tracked files. The ONLY place these live is the gitignored
   `a365-deployment-plan.json` (and `generated/`), written after the interview.
-- **Secrets never pass through chat** (blueprint client secret, Azure OpenAI key, delegated tokens).
-  They are typed by the user directly into the terminal. You never ask for or echo them.
+- **Secrets are NEVER echoed in chat** (blueprint client secret, Azure OpenAI key, delegated tokens) — in
+  either handling mode. The user picks the mode via `solution.secretHandling` (asked in the interview):
+  **`manual`** (default) — the user types every secret directly into the terminal; you never read,
+  request, or echo them. **`assisted`** (opt-in, THROWAWAY test labs only) — you MAY read the blueprint
+  secret from the setup log or `a365 setup blueprint --show-secret` and supply it to the deploy, but you
+  STILL never print a secret value in a chat message, and you give the user the rotation steps afterward.
 - **STOP before any cloud-mutating or destructive step** and confirm. The generic `deploy-aca.ps1`
   DELETES its resource group by default — use resource-safe scripts or `-ReuseEnv` for a shared RG.
 
@@ -140,9 +144,9 @@ learned — propagate it per the standing rule above).
 > + Enter yourself if I haven't."* Do not leave it hanging — the user hit a multi-minute stall here
 > because nobody answered it.
 
-> ⛔ **SECRET prompt (blueprint client secret) — you CANNOT read or type it; walk the user through it,
-> VERY clearly, BEFORE it appears.** The ACA deploy script (`deploy-aca.ps1` / `deploy-aca-S2S.ps1`)
-> asks *"Paste the CLEARTEXT blueprint client secret"*. Tell the user to:
+> ⛔ **SECRET prompt (blueprint client secret) — `manual` mode (default): you CANNOT read or type it; walk
+> the user through it, VERY clearly, BEFORE it appears.** The ACA deploy script (`deploy-aca.ps1` /
+> `deploy-aca-S2S.ps1`) asks *"Paste the CLEARTEXT blueprint client secret"*. Tell the user to:
 > 1. **Open a SECOND terminal / PowerShell window** (NOT the one that is waiting) and run these two
 >    commands — give the **REAL absolute path** to the agent's generated folder so they are copy-paste
 >    ready:
@@ -155,6 +159,24 @@ learned — propagate it per the standing rule above).
 >    control at the bottom → select the one running the deploy script** — **paste** the secret and press
 >    **Enter**. (The terminal shown in chat is copy-only; you must select the real one in that panel to
 >    paste.)
+
+> 🔓 **`assisted` mode (opt-in, throwaway test labs only) — obtain the secret non-interactively instead of
+> the paste dance.** With `solution.secretHandling: assisted` the user has authorized you to fetch the
+> blueprint client secret yourself — from the `a365 setup all` Tee log
+> (`Select-String 'Blueprint client secret:' <log>`) or by running `a365 setup blueprint --show-secret`
+> from the agent folder — and supply it to the deploy: pass `-ClientSecret <value>` to `deploy-aca.ps1` /
+> `deploy-aca-S2S.ps1`, or send it to the waiting `Read-Host` via the terminal-input tool. ⛔ Still **never
+> print the secret value in a chat message.** This is for test tenants whose labs are torn down quickly;
+> hand the user the rotation steps below once the lab is up.
+
+> **Rotating secrets (give this to the user in assisted mode).** The blueprint client secret is a client
+> credential on the agent blueprint's Entra app (client id in `a365.generated.config.json`, or
+> `az ad app list --display-name "<blueprint display name>"`). Rotate: `az ad app credential reset --id
+> <blueprintClientId>` (note the new value), redeploy the ACA agent with it (`-ClientSecret` in assisted /
+> paste in manual), then delete old credentials with `az ad app credential delete --id <blueprintClientId>
+> --key-id <old>`. Azure OpenAI key (only if key-auth): `az cognitiveservices account keys regenerate
+> --name <acct> -g <rg> --key-name key1`. The custom-MCP auth client secret rotates the same way (Entra app
+> credential on the auth resource app), then update the container secret per custom-mcp/README.md.
 
 ## Browser sign-in & admin consent — announce it for EVERY agent that needs it
 Several steps open a browser tab for **sign-in + admin consent**. Before each one, tell the user:
