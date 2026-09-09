@@ -48,6 +48,22 @@ the per-variant guides — do not duplicate or renumber them:**
   defaults); `Press Enter … to continue:` → **Enter**; success = `Package created: …manifest.zip`.
 - **Shared-RG is unsafe for ACA-OBO**: the generic `deploy-aca.ps1` deletes its RG. Use isolated RGs,
   or `-ReuseEnv`. (The scaffolder blocks shared-RG + ACA-OBO.)
+- **⛔ AOAI endpoint comes from `env/.env.playground.user`, which the scaffolder copies from the
+  sample = a PRIOR lab's account.** The deploy stamps the container `AZURE_OPENAI_ENDPOINT` /
+  `AZURE_OPENAI_DEPLOYMENT` from that file, so a stale value points the container at the wrong Azure
+  OpenAI account — where its managed identity has no role → **`401 PermissionDenied … chat/completions`
+  even though the role is correctly assigned on the plan's account** (the misleading part). Fixed in the
+  scaffolder (it now overwrites `env/.env.playground.user` `AZURE_OPENAI_ENDPOINT` +
+  `AZURE_OPENAI_DEPLOYMENT_NAME` from `plan.agents[].ai.account/deployment`) and the deploy scripts (they
+  force `AZURE_OPENAI_ENDPOINT` from `-AoaiAcc`). If you still see this 401, verify
+  `az containerapp show … --query "properties.template.containers[0].env"` points at the plan's account,
+  not a prior one; `az containerapp update --set-env-vars AZURE_OPENAI_ENDPOINT=https://<acct>.openai.azure.com/
+  AZURE_OPENAI_DEPLOYMENT=<deployment>` fixes a live container.
+- **AcrPull race on ACA-OBO's first deploy.** `deploy-aca.ps1` uses `az containerapp up`, which can
+  create the app before the system MI has AcrPull on the auto-created ACR → the first revision falls
+  back to `mcr.microsoft.com/k8se/quickstart` (health may 200 but it's the placeholder, not your agent).
+  The script now detects this and remediates (grant AcrPull + set the real image). S2S/DW use admin
+  registry creds and are unaffected.
 
 ## Tools
 The ACA turn path is **manifest-driven**, so attaching any Work IQ MCP works generically. Token/refresh

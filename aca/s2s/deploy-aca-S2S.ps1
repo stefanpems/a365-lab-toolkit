@@ -124,6 +124,11 @@ Get-Content $llmEnv |
     Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } |
     ForEach-Object { $k, $v = $_ -split '=', 2; $m[$k.Trim()] = $v.Trim() }
 
+# Force the AOAI endpoint to the -AoaiAcc account so a stale env/.env.playground.user (copied from the
+# sample = a prior lab's account) can't point the container at the wrong Azure OpenAI account, where
+# the managed identity has no role -> a 401 on the model call.
+if ($AoaiAcc) { $m['AZURE_OPENAI_ENDPOINT'] = "https://$AoaiAcc.openai.azure.com/" }
+
 # --- 7. Env vars (do NOT set AZURE_OPENAI_API_KEY if empty: with Entra ID an empty string
 #         is interpreted by the openai client as an invalid key -> "Missing credentials"). ---
 $envVars = @(

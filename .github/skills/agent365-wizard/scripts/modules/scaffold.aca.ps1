@@ -31,6 +31,28 @@ function Invoke-ScaffoldAcaAgent {
         $txt = [regex]::Replace($txt, '(\$LOC\s*=\s*)"[^"]*"',     "`$1`"$($plan.solution.region)`"")
         Set-Content -LiteralPath $deployPath -Value $txt
     }
+    # env/.env.playground.user is copied from the sample and ships a PRIOR lab's Azure OpenAI values
+    # (tenant-specific, gitignored). deploy-aca*.ps1 reads AZURE_OPENAI_ENDPOINT/DEPLOYMENT from it, so a
+    # stale endpoint sends the container to the wrong account where its managed identity has no role ->
+    # a 401 on the model call. Overwrite it from the plan so the deploy targets the right account+model.
+    if ($a.ai.account) {
+        $pgPath = Join-Path $dst 'env/.env.playground.user'
+        $apiVer = '2024-12-01-preview'
+        if (Test-Path -LiteralPath $pgPath) {
+            $cur = @{}
+            Get-Content -LiteralPath $pgPath | Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } | ForEach-Object { $kk, $vv = $_ -split '=', 2; $cur[$kk.Trim()] = $vv.Trim() }
+            if ($cur['AZURE_OPENAI_API_VERSION']) { $apiVer = $cur['AZURE_OPENAI_API_VERSION'] }
+        }
+        else {
+            New-Item -ItemType Directory -Force -Path (Split-Path $pgPath) | Out-Null
+        }
+        @(
+            "AZURE_OPENAI_ENDPOINT=https://$($a.ai.account).openai.azure.com/"
+            "AZURE_OPENAI_DEPLOYMENT_NAME=$($a.ai.deployment)"
+            "AZURE_OPENAI_API_VERSION=$apiVer"
+            "SECRET_AZURE_OPENAI_API_KEY="
+        ) | Set-Content -LiteralPath $pgPath -Encoding utf8
+    }
     # Make ToolingManifest.json AUTHORITATIVE = exactly the plan's Work IQ (mcp_*) tools, BEFORE any
     # `a365 setup all` (which grants MCP permissions from this manifest). The sample ships mcp_MailTools;
     # this keeps it only when selected, so an agent with tools:[] (e.g. S2S) gets NO Mail permission.

@@ -121,6 +121,11 @@ Get-Content env/.env.playground.user |
     Where-Object { $_ -match '=' -and $_ -notmatch '^\s*#' } |
     ForEach-Object { $k,$v = $_ -split '=',2; $m[$k.Trim()] = $v.Trim() }
 
+# Force the AOAI endpoint to the -AoaiAcc account so a stale env/.env.playground.user (copied from the
+# sample = a prior lab's account) can't point the container at the wrong Azure OpenAI account, where
+# the managed identity has no role -> a 401 on the model call.
+if ($AOAI_ACC) { $m['AZURE_OPENAI_ENDPOINT'] = "https://$AOAI_ACC.openai.azure.com/" }
+
 # --- 5. Deploy to Azure Container Apps (build from the Dockerfile via ACR) ---
 Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
 
@@ -154,6 +159,26 @@ az containerapp up `
   --subscription $SUB `
   --source . --target-port 3978 --ingress external `
   --env-vars @envVars
+
+# 'az containerapp up' can create the app before the system-assigned identity has AcrPull on the
+# auto-created ACR, leaving the first revision on the mcr.microsoft.com/k8se/quickstart placeholder.
+# Detect and remediate: grant AcrPull to the app identity and (re)set the real built image.
+$curImg = az containerapp show -n $APP -g $RG --query "properties.template.containers[0].image" -o tsv @SubArg 2>$null
+if ($curImg -like '*k8se/quickstart*') {
+    Write-Host "First revision fell back to the quickstart image; granting AcrPull and setting the built image..." -ForegroundColor Yellow
+    $acrName = az acr list -g $RG --query "[0].name" -o tsv @SubArg
+    if ($acrName) {
+        $miPrincipal = az containerapp identity assign -n $APP -g $RG --system-assigned --query principalId -o tsv @SubArg
+        $acrId = az acr show -n $acrName --query id -o tsv @SubArg
+        az role assignment create --assignee-object-id $miPrincipal --assignee-principal-type ServicePrincipal --role AcrPull --scope $acrId @SubArg 2>$null | Out-Null
+        $realTag = az acr repository show-tags -n $acrName --repository $APP --orderby time_desc --top 1 -o tsv @SubArg 2>$null
+        if ($realTag) {
+            az containerapp registry set -n $APP -g $RG --server "$acrName.azurecr.io" --identity system @SubArg 2>$null | Out-Null
+            az containerapp update -n $APP -g $RG --image "$acrName.azurecr.io/$APP`:$realTag" @SubArg | Out-Null
+            Write-Host "Set image $acrName.azurecr.io/$APP`:$realTag with AcrPull on the managed identity." -ForegroundColor Green
+        }
+    }
+}
 
 # --- 5b. (Entra ID auth for Azure OpenAI) Managed identity + role ---
 # Needed when the subscription disables key auth (Azure Policy disableLocalAuth=true):

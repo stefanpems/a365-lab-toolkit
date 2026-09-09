@@ -410,6 +410,29 @@ Feasibility conclusion (do not re-derive — act on it):
   run `a365 setup all` and the deploy in that shell (sync), and verify `$PWD` is the agent folder. The
   deploy scripts now self-heal (resolve the blueprint by display name and rewrite a minimal config) as
   a backstop, but the correct cwd is still required for `.env`/secret persistence.
+- **⛔ ACA model `401 PermissionDenied … chat/completions` is (usually) the WRONG Azure OpenAI account,
+  not RBAC propagation.** The deploy stamps the container `AZURE_OPENAI_ENDPOINT` from
+  `env/.env.playground.user`, which the scaffolder copies from the sample = a PRIOR lab's account. A
+  stale endpoint points the container at an account where its managed identity has no role → 401, even
+  though the role IS correctly assigned on the plan's account (the misleading part — do NOT chase
+  "propagation"). The scaffolder now overwrites that file (endpoint + deployment from the plan) and the
+  deploy scripts force the endpoint from `-AoaiAcc`, so new runs are correct. To diagnose a live 401:
+  `az containerapp show … --query "properties.template.containers[0].env"` — if `AZURE_OPENAI_ENDPOINT`
+  is a different account than the plan's, fix it with `az containerapp update --set-env-vars
+  AZURE_OPENAI_ENDPOINT=https://<plan-acct>.openai.azure.com/ AZURE_OPENAI_DEPLOYMENT=<plan-deployment>`.
+  (A brand-new AOAI account's data-plane RBAC can also lag 5–15 min, but the endpoint is the usual cause.)
+- **ACA-OBO first deploy can land on the `k8se/quickstart` placeholder** (`az containerapp up` created
+  the app before the system MI had AcrPull on the auto-created ACR). Health may return 200 but it's the
+  placeholder, not the agent. `deploy-aca.ps1` now detects and remediates (AcrPull grant + real image);
+  if you hit it on an old copy, grant AcrPull to the app MI on the RG's ACR, `az containerapp registry
+  set --identity system`, then `az containerapp update --image <acr>/<app>:<realtag>`.
+- **⛔ Custom-MCP connections: give the user the EXACT per-server URL from
+  `print-connection-urls.ps1`, NOT the model's echoed URL.** Each `ext_` server has its OWN Power
+  Platform connector (`…anonp…` vs `…authp…`); the agent LLM, when a tool isn't set up, may **reuse a
+  setup URL shown earlier in the conversation for a different server** (e.g. it hands the auth URL when
+  asked for the anon `server_time`). That's a model quirk, not an infra bug — all connectors exist and
+  map correctly. The OBO agent prompt is hardened to fetch each server's URL fresh, but always confirm
+  the user opened the connector whose id matches the server they're testing (anon → `…anonp…`).
 
 ## Custom MCP integration (optional sample `custom-mcp/`)
 Load **[agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md)** when the custom MCP is in scope.
