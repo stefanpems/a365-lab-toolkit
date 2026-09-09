@@ -358,7 +358,15 @@ Rules that make this non-skippable:
   `attach` AND the agent is exposed as a tab. If UI mode is `none`, skip (no surface to test in).
 - **DW**: **always** show the gate — the Teams surface always exists after the admin-center publish + hire.
 
-If the user picks **Test now**, print the exact **test prompts to paste**, selecting only the rows that
+If the user picks **Test now**:
+- ⛔ **FIRST, for a web-UI test (OBO/S2S), tell the user IN BOLD to HARD-RELOAD the SWA before testing —
+  make this impossible to miss, and say it BEFORE the prompts.** The tab was just (re)deployed into
+  `config.js`, so any browser tab that was already open is running the STALE config and the new/updated
+  agent tab will be missing or won't respond. Say, above everything else: *"⚠️ Reload the web UI FIRST —
+  do a HARD refresh of `https://<swa-host>` (Ctrl+F5 / Ctrl+Shift+R); if the tab still misbehaves, close
+  it and reopen the URL. The page MUST reload to pick up the freshly deployed config, otherwise
+  `<agent>` won't appear or won't answer."* (Teams/DW needs no reload — skip this for DW.)
+- Then print the exact **test prompts to paste**, selecting only the rows that
 apply to THIS agent (by agent type + the MCPs actually attached to it, from `agents[].tools` +
 `customMcp.attachTo`). Tell them **where** to run them: the web UI tab **`<agent>`** at
 `https://<swa-host>` for OBO/S2S, or **Teams** (the hired instance) for DW. When they're done, continue

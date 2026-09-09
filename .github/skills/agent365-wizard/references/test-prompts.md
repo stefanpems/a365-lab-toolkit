@@ -9,6 +9,12 @@ an agent without that server, or a custom-tool prompt to an agent the custom MCP
 Substitutions: `<agent>` = the agent name; `<name>` = the custom-MCP name/prefix; `<auth-app-id>` = the
 auth resource app id; `<me>` = the signed-in user's email address.
 
+> ⛔ **Before a web-UI test (OBO / S2S): tell the user IN BOLD to HARD-RELOAD the SWA first.** The agent's
+> tab was just (re)deployed into `config.js`; a browser tab left open from before is running the STALE
+> config, so the new/updated tab will be missing or won't answer. Instruct a hard refresh of
+> `https://<swa-host>` (Ctrl+F5 / Ctrl+Shift+R), or close and reopen the URL. Say this ABOVE the prompts,
+> every time. (Teams/DW needs no reload.)
+
 ## 1. Baseline — every agent
 | Prompt | What proves it worked | Applies to |
 | --- | --- | --- |
