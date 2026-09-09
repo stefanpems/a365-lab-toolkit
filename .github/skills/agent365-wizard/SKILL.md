@@ -114,9 +114,10 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
   since all FH + FD agents share it: **(A) create one shared account + project + model** (`create-shared`,
   the clean default — account/project `<prefix>` + `gpt-4.1` in `<prefix>-foundry-rg`, all FH/FD agents
   deploy into it) **or (B) reuse an existing account + project** (`reuse-existing` — the user gives the
-  project endpoint; no provision). Prefer **reuse-existing** when new-account hosted-agent provisioning is
-  failing service-side (a freshly created Foundry account can be temporarily unable to provision hosted
-  agents — deploying into an existing working project is the resilient path). **FH-DW keeps its own
+  project endpoint; no provision). Prefer **reuse-existing** as a resilient fallback if a new-account
+  hosted-agent deploy fails provisioning (`ProvisioningError`) — deploying into a known-good project
+  sidesteps both a bad package build and a transient account state; see the FH skill's ProvisioningError
+  note for the full root-cause analysis and the external reproduction playbook. **FH-DW keeps its own
   account** (Bot Service + blueprint bicep). FD-only labs must use reuse-existing. Legacy per-agent
   accounts still work if `solution.foundry` is omitted.
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
