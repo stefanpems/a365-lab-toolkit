@@ -32,6 +32,14 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
 ## Guardrails
 - `config.js` is gitignored (tenant-specific) — create it from `config.js.example`; never commit it.
 - Always `node --check app.js ; node --check config.js` before deploying — one JS error breaks login.
+- ⛔ **SWA region need not match the lab region.** SWA Free is only offered in `eastus2`/`centralus`/
+  `eastasia`/`westeurope`/`westus2` and the SPA is served from a global CDN. If the lab region isn't one of
+  these (e.g. `swedencentral`), ASK the user which allowed region to use for the Free SWA (nearest —
+  `westeurope` in Europe, else the validated `eastus2`); the choice goes to `ui.swaRegion`.
+- ⛔ **Deploy with `StaticSitesClient.exe` directly, from the repo root, with an absolute `--app` path** —
+  the `npx @azure/static-web-apps-cli deploy` wrapper reliably exits 1 on Windows. Never pass `--app "."`
+  from inside the UI folder (the uploader rejects an artifact folder equal to the cwd). See
+  [docs/setup-web-ui.md](../../../docs/setup-web-ui.md).
 - After deploy, set `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE=<s2s-app-id>` for ACA-S2S) on the ACA
   containers so the browser origin is allowed (see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).
 - ⛔ **An OBO tab with a custom MCP attached MUST ship with `customScopes` (ACA/FH-OBO) or `customInputs`

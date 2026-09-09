@@ -170,29 +170,28 @@ login):
 node --check app.js ; node --check config.js
 ```
 
-Create the Static Web App (once) and deploy with the SWA CLI:
+Create the Static Web App (once), then deploy the content. **Deploy with the `StaticSitesClient.exe`
+uploader directly** — on Windows the `npx @azure/static-web-apps-cli deploy` wrapper reliably exits 1
+(it spawns this same uploader but fails to propagate the result), so use the uploader as the primary path:
 
 ```powershell
 az staticwebapp create -n agentframework-ui -g agentframework-ui -l <region> --sku Free
-$tok = az staticwebapp secrets list --name agentframework-ui -g agentframework-ui `
-  --query "properties.apiKey" -o tsv
-npx -y @azure/static-web-apps-cli deploy "." --deployment-token $tok --env production
+$tok = az staticwebapp secrets list -n agentframework-ui -g agentframework-ui --query properties.apiKey -o tsv
+# The uploader is downloaded under %USERPROFILE%\.swa\deploy\<hash>\ (the path is printed on first use).
+$c = "$env:USERPROFILE\.swa\deploy\<hash>\StaticSitesClient.exe"
+& $c upload --app "<repo-root>\generated\<prefix>\<prefix>-ui" --apiToken $tok --skipAppBuild true
 ```
 
-> **Region:** SWA **Free** is only offered in a few regions and some reject new customers
-> (`westeurope` returned *"region is currently not accepting new customers"* in the lab). Use
-> **`eastus2`** (validated) or another allowed region — it is independent of where the ACA
-> agents run.
+Run it **from the repo root** and pass an **absolute `--app` path** to the UI folder. ⛔ Do **not** run it
+from inside the UI folder with `--app "."` — the uploader rejects an artifact folder equal to the current
+directory (*"current directory cannot be identical to the artifact folder"*). It prints
+`Deployment Complete :)` and the site URL.
 
-> **If `npx @azure/static-web-apps-cli deploy` fails** with *"Deployment failed with exit
-> code 1 / The deployment binary exited with code 1"* and no further detail, invoke the
-> downloaded uploader **directly** (this succeeds where the wrapper silently fails):
-> ```powershell
-> $c = "$env:USERPROFILE\.swa\deploy\<hash>\StaticSitesClient.exe"   # path printed by the CLI
-> $tok = az staticwebapp secrets list -n agentframework-ui -g agentframework-ui --query properties.apiKey -o tsv
-> & $c upload --app "." --apiToken $tok --skipAppBuild true
-> ```
-> It prints `Deployment Complete :)` and the site URL.
+> **Region:** SWA **Free** is only offered in a few regions (`eastus2`, `centralus`, `eastasia`,
+> `westeurope`, `westus2`) — not every Azure region (e.g. `swedencentral` is unavailable) — and the SPA is
+> served from a **global CDN**, so the SWA region need not match the lab region. `westeurope` has returned
+> *"region is currently not accepting new customers"* in the lab; **`eastus2`** is validated. If the lab
+> region is not an SWA region, the wizard **asks** which allowed region to use for the Free SWA.
 
 After the first deploy, add the SWA host (`https://<swa-host>`) as a **SPA redirect URI** on
 the app registration (step 2) if you didn't already.

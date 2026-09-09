@@ -42,7 +42,12 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 - Policy-template choice (portal step — surface as a checkpoint).
 
 ### UI (if selected)
-- New UI: name (default `<prefix>-ui`), local-only or Azure Static Web App (+ SWA region).
+- New UI: name (default `<prefix>-ui`), local-only or Azure Static Web App. **SWA region:** SWA Free is
+  only offered in a few regions (`eastus2`/`centralus`/`eastasia`/`westeurope`/`westus2`) and the SPA is
+  served from a global CDN, so it need not match the lab region. If the lab region is **not** one of them
+  (e.g. `swedencentral`), **ask the user** whether it is OK to use a different region for the Free SWA
+  (recommend the nearest allowed — `westeurope` in Europe, else the validated `eastus2`) or to pick
+  another allowed region; write the choice to `ui.swaRegion`.
 - Existing UI: SPA app registration + origin + existing SWA.
 - Agents to expose: multi-select of the OBO/S2S agents.
 - If exposing OBO → Mail consent `McpServers.Mail.All`.
