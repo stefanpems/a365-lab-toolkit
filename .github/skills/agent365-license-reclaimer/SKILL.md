@@ -147,6 +147,12 @@ required service plan(s) — it never partially removes and never dumps a raw er
    script writes to `report.txt`: per user, which licenses were removed; plus any **left in place** (with
    the blocking retained license named) and any errors. Point to `removal.log` / `result.json` /
    `report.txt`.
+10. **Left-in-place needs a decision — never accept it silently.** For every user whose base was left in
+    place by a runtime `servicePlanDependencyConflict` (an unselected retained license depends on it),
+    the operator's original intent was not met. Ask (input control) how to proceed: leave as-is / expand
+    scope to also remove the blocking retained license(s) / (advanced) disable only the conflicting
+    service plans on the retained license via `disabledPlans` / cancel. Only leave it in place on an
+    explicit choice.
 
 ## Progress visibility
 - Keep the persistent artifacts under `generated/license-reclaimer/<timestamp>/`: `skus.json`,

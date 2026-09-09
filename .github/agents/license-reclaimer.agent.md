@@ -101,6 +101,14 @@ Then discover the holders, present the **checkbox review**, confirm, and remove.
 - **Always end a completed `start` session with the concise report** the script writes to `report.txt`:
   per user, which licenses were removed, plus any left-in-place (naming the blocking retained license)
   and any errors.
+- **A runtime dependency SKIP is NOT a decision you make alone — never call it "correct/final".** When a
+  base the operator asked to remove is left in place because an *unselected* license the user keeps
+  depends on it (`servicePlanDependencyConflict`), the operator's intent was NOT fulfilled. Surface every
+  such user and ask, via an input control, how to proceed: **leave as-is** / **expand scope: also remove
+  the blocking retained license(s)** / **(advanced) disable only the conflicting service plans on the
+  retained license via `disabledPlans`** / **cancel**. Only leave it in place if the operator explicitly
+  chooses to. The safe default (no partial change) is correct behaviour for the script, but the outcome
+  still requires the operator's decision.
 Microsoft enforces license prerequisites at the API — a base license cannot be removed while a dependent
 add-on that requires it is still assigned. The removal script tries the targets alone first; on a
 dependency error it removes the blocking add-ons **only if** the user granted permission (step 3),
