@@ -133,8 +133,13 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 
 ### 4. Conditional questions (ask only what the selection requires)
 Driven by [references/variant-matrix.md](./references/variant-matrix.md):
-- Any **ACA** → Azure OpenAI account + model deployment; auth = **Managed Identity (default)** or
-  API key (fallback, entered in the terminal, never chat).
+- Any **ACA** → **Azure OpenAI strategy** (`solution.azureOpenAI`), asked ONCE for the whole lab since
+  all ACA agents share it: **(A) create one shared account + deployment** (`create-shared`, **the
+  DEFAULT** — a lab-owned account `<prefix>aoai` + model in `<prefix>-aoai-rg`, deleted by the Lab
+  Cleaner via the prefix like `<prefix>-foundry-rg`) **or (B) reuse an existing account + deployment**
+  (`reuse-existing` — and ONLY then ask which existing account/deployment from discovery). Auth =
+  **Managed Identity (default)** or API key (fallback, entered in the terminal, never chat). Omit
+  `solution.azureOpenAI` to keep the legacy per-agent `ai` fields.
 - Any **FH or FD** → **Foundry-resource strategy** (`solution.foundry`), asked ONCE for the whole lab
   since all FH + FD agents share it: **(A) create one shared account + project + model** (`create-shared`,
   the clean default — account/project `<prefix>` + `gpt-4.1` in `<prefix>-foundry-rg`, all FH/FD agents

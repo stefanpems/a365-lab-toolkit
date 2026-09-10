@@ -56,6 +56,9 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
   `reuse-existing` mode) leave almost no Azure footprint — their cleanup is the blueprint app + instances
   (+ the data-plane Foundry agent object). A `solution.foundry` **`create-shared`** account lives in the
   lab-owned `<prefix>-foundry-rg`, which IS discovered by the prefix filter and deleted like an agent RG.
+  Likewise a `solution.azureOpenAI` **`create-shared`** Azure OpenAI account lives in the lab-owned
+  `<prefix>-aoai-rg` (discovered by the prefix filter and deleted + purged like the shared Foundry account);
+  a `solution.azureOpenAI` **`reuse-existing`** account is user-owned — never delete it.
 - **Purge soft-deleted Cognitive Services accounts.** Deleting a lab RG only *soft-deletes* the Foundry /
   Azure OpenAI accounts in it; each keeps blocking its name and counting against the regional quota until
   **purged** (a same-name re-provision otherwise fails with *"account already exists"* / *"Soft-deleted

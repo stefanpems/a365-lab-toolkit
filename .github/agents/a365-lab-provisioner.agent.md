@@ -265,10 +265,12 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30 with the framework segment.
    Examples: `contoso`, `sales01`.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
-   Azure OpenAI account+model for ACA; for any **FH or FD** ask the **Foundry-resource strategy** ONCE
-   (`solution.foundry`, shared by all FH+FD): **create one shared account+project+model** (`create-shared`,
-   default) or **reuse an existing account+project** (`reuse-existing`); Frontier/licensing for DW; UI
-   permissions.
+   for any **ACA** ask the **Azure OpenAI strategy** ONCE (`solution.azureOpenAI`, shared by all ACA):
+   **create a new shared account+deployment** (`create-shared`, **default** — lab-owned, deleted by the
+   Lab Cleaner) or **reuse an existing account+deployment** (`reuse-existing` — only then ask which one);
+   for any **FH or FD** ask the **Foundry-resource strategy** ONCE (`solution.foundry`, shared by all
+   FH+FD): **create one shared account+project+model** (`create-shared`, **default**) or **reuse an
+   existing account+project** (`reuse-existing`); Frontier/licensing for DW; UI permissions.
 5. **Discovery + review** — run the read-only discovery script; show ONE editable review screen with
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
 6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
@@ -340,6 +342,15 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
 
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO
 agent's custom attach folded in right after its deploy), so follow them top-to-bottom.
+
+> ⛔ **`solution.azureOpenAI` `create-shared` (the ACA default): create the shared Azure OpenAI account
+> BEFORE the ACA deploys.** The scaffolder emits the `az group create` + `az cognitiveservices account
+> create` + `deployment create` one-liner as the FIRST ACA command (once, ahead of the first ACA agent's
+> `a365 setup all`/deploy) — run it first; every ACA deploy then grants the app's managed identity
+> **Cognitive Services OpenAI User** on `<prefix>aoai` in `<prefix>-aoai-rg`. With `reuse-existing` no
+> account is created — the deploys target the account the user picked. The `az cognitiveservices account
+> deployment create` for a brand-new account may need a minute before the model is queryable; the deploy
+> tolerates the short data-plane RBAC lag (~2-5 min).
 
 ## ⛔ MANDATORY BLOCKING GATE after each agent goes live — you MUST offer to test it
 This is a **HARD STOP, not optional**. The moment an agent is deployed and (for OBO/S2S) its UI tab is
@@ -504,6 +515,25 @@ wire only Mail in code. For a **third-party** MCP (free-text), the wizard does *
 permissions — tell the user they must configure the agent's permissions manually if that server needs
 any. **Reuse — never re-derive — the token lessons** in that reference, also referenced by each family
 sub-skill.
+
+## Azure OpenAI strategy (`solution.azureOpenAI`) — all ACA agents share ONE footprint
+Ask this ONCE for the whole lab (not per agent): all ACA agents share one Azure OpenAI account + model
+deployment. This is the ACA mirror of the Foundry strategy below. Two modes:
+- **`create-shared`** (**the DEFAULT** — same default as Foundry): the wizard creates a **lab-owned**
+  Azure OpenAI account `<prefix>aoai` + deployment (e.g. `gpt-4.1-mini`) in `<prefix>-aoai-rg`. The
+  scaffolder emits a single `az cognitiveservices account create` + `deployment create` one-liner ahead
+  of the ACA deploys (the first ACA agent runs it, the rest reuse the account). Each ACA deploy grants
+  the app's managed identity **Cognitive Services OpenAI User** on it. The Lab Cleaner deletes
+  `<prefix>-aoai-rg` and purges the soft-deleted account via the prefix filter (exactly like
+  `<prefix>-foundry-rg`).
+- **`reuse-existing`**: every ACA agent deploys against an existing account the user supplies
+  (`azureOpenAI.account` + `existingResourceGroup`); **nothing is created** and the Lab Cleaner never
+  touches it. ⛔ **Only in this mode do you list the discovered accounts and ask which to use** — in
+  `create-shared` you do NOT ask (the name derives from the prefix). Discovery
+  ([discover-environment.ps1](../skills/agent365-wizard/scripts/discover-environment.ps1)) already
+  enumerates the tenant's Azure OpenAI accounts for this pick.
+- Auth = **Managed Identity (default)** or API key (entered in the terminal, never chat). Omit
+  `solution.azureOpenAI` entirely to keep the legacy per-agent `ai.account`/`ai.deployment` behaviour.
 
 ## Foundry-resource strategy (`solution.foundry`) — all FH + FD agents share ONE footprint
 Ask this ONCE for the whole lab (not per agent): all FH and FD agents share one Foundry account +

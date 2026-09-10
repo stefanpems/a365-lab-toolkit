@@ -145,6 +145,20 @@ if ($plan.solution.foundry) {
     }
 }
 
+# Shared Azure OpenAI strategy (optional solution.azureOpenAI). When present, all ACA agents share ONE
+# account + deployment instead of per-agent a.ai fields. create-shared = the wizard creates a lab-owned
+# account in <prefix>-aoai-rg (deleted by the Lab Cleaner); reuse-existing = deploy against an account the
+# user already has. Absent = legacy per-agent a.ai (unchanged).
+if ($plan.solution.azureOpenAI) {
+    $o = $plan.solution.azureOpenAI
+    if ($o.mode -notin @('create-shared', 'reuse-existing')) {
+        $errors.Add("solution.azureOpenAI.mode '$($o.mode)' is invalid (use 'create-shared' = the wizard creates one lab-owned Azure OpenAI account+deployment for all ACA agents, or 'reuse-existing' = deploy all ACA agents against an account you already have).")
+    }
+    if ($o.mode -eq 'reuse-existing' -and (-not $o.account)) {
+        $errors.Add("solution.azureOpenAI.mode 'reuse-existing' requires 'account' (the existing Azure OpenAI account name). Add 'existingResourceGroup' too so the deploy can grant the app's managed identity Cognitive Services OpenAI User on it.")
+    }
+}
+
 # Custom MCP validation (optional). The custom MCP name is NOT asked — it IS the solution prefix (the
 # prefix rule above already guarantees a valid ext_<prefix>Anon/Auth: <= 12 lowercase alphanumeric,
 # letter-first, so ext_ stays <= 20).

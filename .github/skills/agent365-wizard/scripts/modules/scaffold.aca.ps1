@@ -31,11 +31,16 @@ function Invoke-ScaffoldAcaAgent {
         $txt = [regex]::Replace($txt, '(\$LOC\s*=\s*)"[^"]*"',     "`$1`"$($plan.solution.region)`"")
         Set-Content -LiteralPath $deployPath -Value $txt
     }
+    # Resolve the effective Azure OpenAI target from solution.azureOpenAI (shared by all ACA agents):
+    # create-shared = a lab-owned account <prefix>aoai in <prefix>-aoai-rg (created before the deploys,
+    # deleted by the Lab Cleaner via the prefix); reuse-existing = the account the user picked; absent =
+    # legacy per-agent a.ai. Used for both env/.env.playground.user and the deploy -AoaiRg/-AoaiAcc.
+    $aoai = Resolve-AoaiTarget $plan $a
     # env/.env.playground.user is copied from the sample and ships a PRIOR lab's Azure OpenAI values
     # (tenant-specific, gitignored). deploy-aca*.ps1 reads AZURE_OPENAI_ENDPOINT/DEPLOYMENT from it, so a
     # stale endpoint sends the container to the wrong account where its managed identity has no role ->
     # a 401 on the model call. Overwrite it from the plan so the deploy targets the right account+model.
-    if ($a.ai.account) {
+    if ($aoai.account) {
         $pgPath = Join-Path $dst 'env/.env.playground.user'
         $apiVer = '2024-12-01-preview'
         if (Test-Path -LiteralPath $pgPath) {
@@ -47,8 +52,8 @@ function Invoke-ScaffoldAcaAgent {
             New-Item -ItemType Directory -Force -Path (Split-Path $pgPath) | Out-Null
         }
         @(
-            "AZURE_OPENAI_ENDPOINT=https://$($a.ai.account).openai.azure.com/"
-            "AZURE_OPENAI_DEPLOYMENT_NAME=$($a.ai.deployment)"
+            "AZURE_OPENAI_ENDPOINT=https://$($aoai.account).openai.azure.com/"
+            "AZURE_OPENAI_DEPLOYMENT_NAME=$($aoai.deployment)"
             "AZURE_OPENAI_API_VERSION=$apiVer"
             "SECRET_AZURE_OPENAI_API_KEY="
         ) | Set-Content -LiteralPath $pgPath -Encoding utf8
@@ -67,7 +72,17 @@ function Invoke-ScaffoldAcaAgent {
     # project settings" and the deploy loses the blueprint id. The 'cd' prefix below guarantees this
     # for a human; an automation runner MUST set the cwd first (a leading 'cd' in an async shell can be
     # dropped). The deploy scripts also self-heal (resolve the blueprint by display name) as a backstop.
-    $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg <AOAI_RG> -AoaiAcc $($a.ai.account)$reuse$dwNote")
+    # create-shared: the FIRST ACA agent creates the lab's ONE shared Azure OpenAI account + deployment
+    # before any deploy (emitted once, ahead of this agent's setup/deploy line). The rest reuse it.
+    if ($aoai.mode -eq 'create-shared' -and $a.name -eq (Get-SharedAoaiProvisioner $plan)) {
+        $modelVer = if ($plan.solution.azureOpenAI.modelVersion) { $plan.solution.azureOpenAI.modelVersion } else { '2025-04-14' }
+        $mkAoai = "az group create -n $($aoai.resourceGroup) -l $($plan.solution.region) -o none; az cognitiveservices account create -n $($aoai.account) -g $($aoai.resourceGroup) -l $($plan.solution.region) --kind OpenAI --sku S0 --custom-domain $($aoai.account) --yes -o none; az cognitiveservices account deployment create -n $($aoai.account) -g $($aoai.resourceGroup) --deployment-name $($aoai.deployment) --model-name $($aoai.deployment) --model-version $modelVer --model-format OpenAI --sku-name GlobalStandard --sku-capacity 20 -o none"
+        $nextCommands.Add("$mkAoai   # SHARED Azure OpenAI (create-shared): create the lab's ONE account '$($aoai.account)' + deployment '$($aoai.deployment)' in '$($aoai.resourceGroup)' (lab-owned; deleted by the Lab Cleaner via the '$($plan.solution.prefix)' prefix). Run ONCE before the ACA deploys; each deploy grants the app's managed identity Cognitive Services OpenAI User on it.")
+    }
+    # -AoaiRg is the resolved account RG (create-shared: <prefix>-aoai-rg; reuse-existing: existingResourceGroup);
+    # falls back to the <AOAI_RG> placeholder only in legacy per-agent mode where no shared RG is known.
+    $aoaiRgArg = if ($aoai.resourceGroup) { $aoai.resourceGroup } else { '<AOAI_RG>' }
+    $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg $aoaiRgArg -AoaiAcc $($aoai.account)$reuse$dwNote")
     if ($a.type -eq 'ACA-DW') {
         # DW publish: register the real endpoint, regenerate the package for THIS blueprint, then upload it in the admin center.
         $nextCommands.Add("cd `"$dst`"; a365 setup blueprint --endpoint-only --messaging-endpoint https://<ACA_DW_FQDN>/api/messages; a365 publish --aiteammate --agent-name `"$($a.name)`"   # answer n + Enter at the manifest prompts; then upload manifest\manifest.zip at admin.microsoft.com > Agents > All agents > Upload custom agent (Publish/Activate), then users hire in Teams")

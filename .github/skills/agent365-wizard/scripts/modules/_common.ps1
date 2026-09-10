@@ -123,6 +123,51 @@ function Get-SharedFoundryProvisioner {
     ($plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S') } | Select-Object -First 1).name
 }
 
+# ---------------------------------------------------------------- Azure OpenAI strategy (ACA)
+# All ACA agents share ONE Azure OpenAI footprint (account + model deployment) when the optional
+# solution.azureOpenAI block is present, mirroring solution.foundry for FH/FD. Two modes:
+#   create-shared  = the wizard creates a LAB-OWNED account (<prefix>aoai) + deployment in
+#                    <prefix>-aoai-rg before the ACA deploys; the FIRST ACA agent emits the create
+#                    command, the rest reuse it. The Lab Cleaner deletes+purges it via the prefix.
+#   reuse-existing = every ACA agent deploys against an existing account the user supplies
+#                    (account/existingResourceGroup); nothing is created and cleanup never touches it.
+# When the block is ABSENT the legacy per-agent behaviour is unchanged (each agent uses its own a.ai).
+
+# Resolve the effective Azure OpenAI target for one ACA agent from solution.azureOpenAI (fallback = a.ai).
+function Resolve-AoaiTarget {
+    param($plan, $a)
+    $t = [ordered]@{
+        mode          = 'per-agent'        # 'per-agent' (legacy) | 'create-shared' | 'reuse-existing'
+        resourceGroup = $null              # AOAI account RG (deploy -AoaiRg / MI role scope); $null = unknown
+        account       = $a.ai.account
+        deployment    = $a.ai.deployment
+        auth          = if ($a.ai.auth) { $a.ai.auth } else { 'managed-identity' }
+    }
+    $o = $plan.solution.azureOpenAI
+    if ($o -and $o.mode) {
+        $t.mode = $o.mode
+        if ($o.deployment) { $t.deployment = $o.deployment }
+        if ($o.auth) { $t.auth = $o.auth }
+        if ($o.mode -eq 'create-shared') {
+            $t.account = if ($o.account) { $o.account } else { "$(($plan.solution.prefix -replace '[^a-z0-9]', '').ToLower())aoai" }
+            $t.resourceGroup = if ($o.resourceGroup) { $o.resourceGroup } else { "$($plan.solution.prefix)-aoai-rg" }
+        }
+        elseif ($o.mode -eq 'reuse-existing') {
+            if ($o.account) { $t.account = $o.account }
+            if ($o.existingResourceGroup) { $t.resourceGroup = $o.existingResourceGroup }
+        }
+    }
+    return $t
+}
+
+# Name of the ACA agent that creates the shared account (create-shared only): the first ACA-* in plan
+# order. The rest reuse it. Returns $null when not create-shared / no ACA agent.
+function Get-SharedAoaiProvisioner {
+    param($plan)
+    if (-not ($plan.solution.azureOpenAI -and $plan.solution.azureOpenAI.mode -eq 'create-shared')) { return $null }
+    ($plan.agents | Where-Object { $_.type -like 'ACA-*' } | Select-Object -First 1).name
+}
+
 # ---------------------------------------------------------------- ToolingManifest reconciler
 # Make a scaffolded ToolingManifest.json AUTHORITATIVE: keep exactly the servers whose uniqueName is
 # in $Tools, drop the rest. The samples ship `mcp_MailTools`, so this KEEPS Mail when selected and

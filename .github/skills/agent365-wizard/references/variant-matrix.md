@@ -25,7 +25,10 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 - **Resource-group strategy** → per-agent (`<agent>-rg`, default) or shared (`<prefix>-rg`).
 
 ### Any ACA
-- Azure OpenAI account + model deployment (list, or create new).
+- **Azure OpenAI strategy** (`solution.azureOpenAI`), asked ONCE (all ACA agents share it): **create a
+  new lab-owned account + deployment** (`create-shared`, **DEFAULT** — `<prefix>aoai` in
+  `<prefix>-aoai-rg`, deleted by the Lab Cleaner) or **reuse an existing account + deployment**
+  (`reuse-existing` — only then list which one).
 - Auth: **Managed Identity (default)** or API key (fallback; entered in terminal, never chat).
 
 ### Any FH

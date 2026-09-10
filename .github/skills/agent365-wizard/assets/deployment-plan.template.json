@@ -19,6 +19,16 @@
       "endpoint": "",
       "account": "",
       "existingResourceGroup": ""
+    },
+    "$comment_azureOpenAI": "OPTIONAL — only if the lab has ACA agents. All ACA agents share this ONE Azure OpenAI footprint. mode 'create-shared' (DEFAULT) = the wizard creates a lab-owned account '<SOLUTION_PREFIX>aoai' + deployment in <SOLUTION_PREFIX>-aoai-rg (deleted by the Lab Cleaner via the prefix); mode 'reuse-existing' = deploy against an existing account (set account/existingResourceGroup, no creation). Remove this block for the legacy per-agent 'ai' behaviour.",
+    "azureOpenAI": {
+      "mode": "create-shared",
+      "resourceGroup": "<SOLUTION_PREFIX>-aoai-rg",
+      "account": "<SOLUTION_PREFIX>aoai",
+      "deployment": "gpt-4.1-mini",
+      "modelVersion": "2025-04-14",
+      "auth": "managed-identity",
+      "existingResourceGroup": ""
     }
   },
   "agents": [

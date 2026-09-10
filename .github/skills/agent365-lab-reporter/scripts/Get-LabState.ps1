@@ -235,7 +235,7 @@ function Find-ExtApp { param([string]$Pattern) return @($allExtApps | Where-Obje
 function Find-AgentEntra { param([string]$AgentName) return @(@($allPrefixApps + $allPrefixSps) | Where-Object { $_.displayName -like "$AgentName Blueprint*" -or $_.displayName -like "$AgentName Identity*" }) }
 
 # Rows accumulator for the resource-style sections (uniform schema).
-$sections = [ordered]@{ webui = @(); mcp = @(); foundry = @() }
+$sections = [ordered]@{ webui = @(); mcp = @(); foundry = @(); aoai = @() }
 function Add-ResRow {
     param([string]$Section, [string]$Object, [string]$Layer, [string]$Name, [bool]$Exists, [string]$State, [string]$Details)
     $script:sections[$Section] += [pscustomobject]@{
@@ -250,6 +250,15 @@ $sharedFoundryRg = $null
 if ($plan -and $plan.solution.foundry -and $plan.solution.foundry.mode -eq 'create-shared') {
     $sharedFoundry = $true
     $sharedFoundryRg = if ($plan.solution.foundry.resourceGroup) { $plan.solution.foundry.resourceGroup } else { "$prefix-foundry-rg" }
+}
+
+# Shared Azure OpenAI (solution.azureOpenAI create-shared) resource group, if any — lab-owned, so it is
+# discovered/reported like the shared Foundry RG above.
+$sharedAoai = $false
+$sharedAoaiRg = $null
+if ($plan -and $plan.solution.azureOpenAI -and $plan.solution.azureOpenAI.mode -eq 'create-shared') {
+    $sharedAoai = $true
+    $sharedAoaiRg = if ($plan.solution.azureOpenAI.resourceGroup) { $plan.solution.azureOpenAI.resourceGroup } else { "$prefix-aoai-rg" }
 }
 
 # ---------------------------------------------------------------------------
@@ -371,6 +380,29 @@ if ($sharedFoundry) {
         }
         else {
             Add-ResRow 'foundry' 'Foundry account' 'Azure' '(none)' $false 'fail' 'no Cognitive Services account in the RG'
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# 4b. Shared Azure OpenAI (solution.azureOpenAI create-shared).
+# ---------------------------------------------------------------------------
+if ($sharedAoai) {
+    $oRg = $sharedAoaiRg
+    $oRgExists = Test-RgExists $oRg
+    Add-ResRow 'aoai' 'Resource group' 'Azure' $oRg $oRgExists ($(if ($oRgExists) { 'ok' } else { 'fail' })) `
+        ($(if ($oRgExists) { (Get-RgTypes $oRg) -join ', ' } else { 'not found' }))
+    if ($oRgExists) {
+        $oAccs = @(Invoke-AzJson @('cognitiveservices', 'account', 'list', '-g', $oRg, '--subscription', $sub, '-o', 'json'))
+        if ($oAccs.Count -gt 0) {
+            foreach ($ac in $oAccs) {
+                $ps = $ac.properties.provisioningState
+                $st = if ($ps -match '(?i)succeeded') { 'ok' } elseif ($ps) { 'warn' } else { 'warn' }
+                Add-ResRow 'aoai' 'Azure OpenAI account' 'Azure' $ac.name $true $st "provisioningState=$ps; kind=$($ac.kind)"
+            }
+        }
+        else {
+            Add-ResRow 'aoai' 'Azure OpenAI account' 'Azure' '(none)' $false 'fail' 'no Cognitive Services account in the RG'
         }
     }
 }
@@ -506,6 +538,7 @@ $state = [ordered]@{
     webui        = $sections.webui
     customMcp    = $sections.mcp
     sharedFoundry = $sections.foundry
+    sharedAoai   = $sections.aoai
     agents       = $agentRows
     dwInstances  = @{ lab = $dwLab; other = $dwOther }
     recycleBin   = $recycle
@@ -567,6 +600,7 @@ else {
 }
 
 if ($sharedFoundry) { Emit-ResTable '4. Shared Foundry (create-shared)' $sections.foundry 'No shared Foundry resources found.' }
+if ($sharedAoai) { Emit-ResTable '4b. Shared Azure OpenAI (create-shared)' $sections.aoai 'No shared Azure OpenAI resources found.' }
 
 # DW instances.
 if ($dwTypes.Count -gt 0) {

@@ -16,6 +16,17 @@ the per-variant guides — do not duplicate or renumber them:**
   fill `a365.config.json`, rewrite the **hardcoded** deploy-script constants (RG / app / env / region),
   and emit the `a365 setup all` + `deploy-aca*.ps1` (+ DW publish) next-commands.
 
+## Azure OpenAI strategy (`solution.azureOpenAI`)
+All ACA agents share ONE Azure OpenAI footprint, asked ONCE (the ACA mirror of `solution.foundry` for FH/FD):
+- **`create-shared`** (**DEFAULT**): the wizard creates a **lab-owned** account `<prefix>aoai` + deployment
+  in `<prefix>-aoai-rg` before the ACA deploys; the first ACA agent emits the create command, the rest
+  reuse it. The Lab Cleaner deletes `<prefix>-aoai-rg` via the prefix and purges the soft-deleted account.
+- **`reuse-existing`**: deploy all ACA agents against an account the user already has (`account` +
+  `existingResourceGroup`); nothing is created and the Lab Cleaner never touches it. Only in this mode does
+  the wizard list existing accounts to pick from.
+Each deploy grants the app's managed identity **Cognitive Services OpenAI User** on the resolved account
+(`-AoaiRg`/`-AoaiAcc`). Omit the block for the legacy per-agent `ai` behaviour.
+
 ## Flow
 1. Scaffold via the router: [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1).
 2. Run the printed next-commands: `a365 setup all --agent-name <name>` → the variant's

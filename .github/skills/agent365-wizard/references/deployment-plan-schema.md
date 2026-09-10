@@ -26,6 +26,15 @@ gitignored.
       "endpoint": "https://<account>.services.ai.azure.com/api/projects/<project>", // reuse-existing
       "account": "<name>",                // reuse-existing: account name (model check + cleanup scope)
       "existingResourceGroup": "<name>"   // reuse-existing: RG of the existing account
+    },
+    "azureOpenAI": {                      // OPTIONAL — shared Azure OpenAI footprint for ALL ACA agents (default create-shared)
+      "mode": "create-shared",            // "create-shared" (DEFAULT — lab-owned NEW account+deployment, deleted by the Lab Cleaner) | "reuse-existing"
+      "resourceGroup": "<prefix>-aoai-rg",// create-shared: dedicated lab-owned RG (the prefix filter discovers + purges it)
+      "account": "<prefix>aoai",          // account name (create-shared: derived from prefix; reuse-existing: the chosen existing account)
+      "deployment": "gpt-4.1-mini",       // model deployment shared by all ACA agents
+      "modelVersion": "2025-04-14",       // optional (defaults to 2025-04-14)
+      "auth": "managed-identity",         // "managed-identity" (default) | "api-key"
+      "existingResourceGroup": "<name>"   // reuse-existing: RG of the chosen existing account
     }
   },
   "agents": [
@@ -110,6 +119,15 @@ gitignored.
   account** (it bundles a Bot Service + managed-agent-identity blueprint bicep). When the block is
   **absent**, the legacy per-agent behaviour is unchanged. FD-only labs must use `reuse-existing` (a prompt
   agent has no azd project to provision a shared account from).
+- `solution.azureOpenAI` (optional) makes **all ACA agents share ONE Azure OpenAI account + model
+  deployment** instead of per-agent `ai` fields (the ACA mirror of `solution.foundry`). `create-shared` =
+  **the DEFAULT** — the wizard creates a **lab-owned** account (`<prefix>aoai`) + deployment in
+  `<prefix>-aoai-rg` before the ACA deploys (the first ACA-* agent emits the create command, the rest reuse
+  it); the Lab Cleaner deletes+purges it via the prefix, exactly like `<prefix>-foundry-rg`. `reuse-existing`
+  = every ACA agent deploys against an existing account the user supplies (`account` +
+  `existingResourceGroup`), with **no** creation, and cleanup never touches it. Each deploy grants the app's
+  managed identity **Cognitive Services OpenAI User** on the resolved account. When the block is **absent**,
+  the legacy per-agent `ai.account`/`ai.deployment` behaviour is unchanged.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics
