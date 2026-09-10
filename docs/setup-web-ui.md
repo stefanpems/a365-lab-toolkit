@@ -127,27 +127,29 @@ your users (see [setup-MAF-FH-OBO.md](setup-MAF-FH-OBO.md) §8). Multiple users/
 Set `msal.clientId` (from step 2) and `msal.authority`
 (`https://login.microsoftonline.com/<tenant>`), then list your agents. Example entries:
 
-Use a **consistent tab name** for every agent: `<hosting>-<authN>`, where `<hosting>` is one of
-`ACA` (Azure Container Apps), `FH` (Foundry Hosted) or `FD` (Foundry Declarative), and `<authN>`
-is one of `OBO`, `S2S` or `DW`. So the tabs read `ACA-OBO`, `ACA-S2S`, `FH-OBO`, `FH-S2S`,
-`FD-OBO`, `FD-S2S`, … — the per-agent details go in the `description` field.
+Use a **consistent tab name** for every agent: `<framework>-<hosting>-<authN>`, where `<framework>`
+is the agent framework (`MAF` today), `<hosting>` is one of `ACA` (Azure Container Apps), `FH`
+(Foundry Hosted) or `FD` (Foundry Declarative), and `<authN>` is one of `OBO`, `S2S` or `DW`. So the
+tabs read `MAF-ACA-OBO`, `MAF-ACA-S2S`, `MAF-FH-OBO`, `MAF-FH-S2S`, `MAF-FD-OBO`, `MAF-FD-S2S`, … — the
+per-agent details go in the `description` field. (The Lab Builder names its tabs
+`<prefix>-<framework>-<hosting>-<identity>`, e.g. `contoso-MAF-ACA-OBO`.)
 
 ```js
 window.APP_CONFIG = {
   msal: { clientId: "<SPA_APPID>", authority: "https://login.microsoftonline.com/<tenant>" },
   agents: [
-    { id:"s2s", kind:"aca", name:"ACA-S2S",
+    { id:"s2s", kind:"aca", name:"MAF-ACA-S2S",
       apiBase:"https://<s2s-fqdn>",
       scope:"api://<s2s-app-id>/access_agent_as_user" },
-    { id:"obo", kind:"aca", name:"ACA-OBO",
+    { id:"obo", kind:"aca", name:"MAF-ACA-OBO",
       apiBase:"https://<obo-fqdn>",
       scope:"ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All" },
-    { id:"obo-fh", kind:"foundry-invocations", name:"FH-OBO",
+    { id:"obo-fh", kind:"foundry-invocations", name:"MAF-FH-OBO",
       endpoint:"https://<account>.services.ai.azure.com/api/projects/<project>/agents/<obo-agent>/endpoint/protocols/invocations?api-version=v1",
       endpointScope:"https://ai.azure.com/.default",
       mailScope:"ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All",
       sessionPrefix:"obo" },
-    { id:"s2s-fh", kind:"foundry-responses", name:"FH-S2S",
+    { id:"s2s-fh", kind:"foundry-responses", name:"MAF-FH-S2S",
       endpoint:"https://<account>.services.ai.azure.com/api/projects/<project>/agents/<s2s-agent>/endpoint/protocols/openai/responses?api-version=v1",
       endpointScope:"https://ai.azure.com/.default" }
   ]

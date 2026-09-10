@@ -115,11 +115,16 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    token lessons + the per-server permission map in
    [references/workiq-mcp-integration.md](./references/workiq-mcp-integration.md).
 ### 3. Solution basics (one screen)
-- **Solution prefix** (e.g. `contoso`) — single value; all agent names derive from it as
-  `<prefix>-<hosting>-<identity>` where hosting ∈ {ACA, FH, FD}, identity ∈ {OBO, S2S, DW}.
-  **Before asking, STATE the rules to the user**: start with a lowercase letter; lowercase letters and
-  digits only (no hyphens/underscores/uppercase/symbols); **3–12 characters** (the 12 cap is set by the
-  custom MCP `ext_<prefix>Anon/Auth ≤ 20`; it also satisfies ACA, RG, managed identity, Entra and SWA).
+- **Solution prefix / lab name** (e.g. `contoso`) — single value; all agent names derive from it as
+  `<prefix>-<framework>-<hosting>-<identity>` where framework = `MAF` (fixed today), hosting ∈ {ACA, FH, FD},
+  identity ∈ {OBO, S2S, DW}. **Before asking, EXPLAIN how the selected agents' names are composed** —
+  show the structure and at least **two concrete examples** (e.g. `contoso-MAF-ACA-OBO`,
+  `contoso-MAF-FH-S2S`) so the user sees the fixed framework segment — **and STATE the length rules**:
+  start with a lowercase letter; lowercase letters and digits only (no hyphens/underscores/uppercase/symbols);
+  **3–12 characters**. The 12-char cap is set by the custom MCP (`ext_<prefix>Anon/Auth ≤ 20`) and is
+  **independent of the agent name** (it also satisfies ACA, RG, managed identity, Entra and SWA). **A
+  Digital Worker lab lowers the cap** (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30
+  once the framework segment is added.
 - **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.

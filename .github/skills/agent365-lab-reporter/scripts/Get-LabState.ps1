@@ -29,7 +29,7 @@
 
   Expected objects come from the run's deployment plan when available (generated/<prefix>/
   a365-deployment-plan.json, or -PlanPath, or the repo-root plan if its prefix matches); otherwise the
-  agent set is reconstructed from the cloud (blueprint apps named "<prefix>-<HOSTING>-<IDENTITY> Blueprint").
+  agent set is reconstructed from the cloud (blueprint apps named "<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>[ Blueprint]").
 
 .PARAMETER LabName
   The lab name / solution prefix (e.g. `a09091`).
@@ -195,11 +195,13 @@ if ($plan) {
 }
 else {
     # No plan: reconstruct the agent set from any available evidence (union, de-duplicated by name):
-    #   (1) Entra blueprint apps "<prefix>-<HOSTING>-<IDENTITY> Blueprint" (finds ACA — FH/FD have none);
+    #   (1) Entra blueprint apps "<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>[ Blueprint]" (finds ACA — FH/FD have none);
     #   (2) local scaffold folders generated/<prefix>-* (flat) and generated/<prefix>/<prefix>-* (nested);
-    #   (3) agent resource groups <prefix>-<HOSTING>-<IDENTITY>-rg.
+    #   (3) agent resource groups <prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>-rg.
+    # Names carry a FIXED framework segment (e.g. contoso-MAF-ACA-OBO); DW blueprint apps have NO
+    # " Blueprint" suffix, so the strip below is a no-op for them and the bare name still matches.
     $found = @{}
-    $reVariant = '(?i)^' + [regex]::Escape($prefix) + '-(ACA|FH|FD)-(OBO|S2S|DW)$'
+    $reVariant = '(?i)^' + [regex]::Escape($prefix) + '-([A-Za-z0-9]{2,})-(ACA|FH|FD)-(OBO|S2S|DW)$'
     foreach ($app in (Get-GraphFiltered 'applications' "startswith(displayName,'$prefix')")) {
         $nm = $app.displayName -replace ' Blueprint$', ''
         if ($nm -match $reVariant) { $found[$nm] = $true }
@@ -211,12 +213,14 @@ else {
         }
     }
     foreach ($rgn in @(Invoke-AzJson @('group', 'list', '--subscription', $sub, '--query', '[].name', '-o', 'json'))) {
-        if ($rgn -match ('(?i)^' + [regex]::Escape($prefix) + '-(ACA|FH|FD)-(OBO|S2S|DW)-rg$')) { $found[($rgn -replace '(?i)-rg$', '')] = $true }
+        if ($rgn -match ('(?i)^' + [regex]::Escape($prefix) + '-([A-Za-z0-9]{2,})-(ACA|FH|FD)-(OBO|S2S|DW)-rg$')) { $found[($rgn -replace '(?i)-rg$', '')] = $true }
     }
     foreach ($nm in ($found.Keys | Sort-Object)) {
-        $t = ($nm -replace "(?i)^$([regex]::Escape($prefix))-", '').ToUpper()
+        # type = hosting-identity (drop the <prefix>-<framework> lead); classify AI kind by hosting.
+        $t = if ($nm -match $reVariant) { "$($matches[2])-$($matches[3])".ToUpper() } else { ($nm -replace "(?i)^$([regex]::Escape($prefix))-", '').ToUpper() }
         $aik = switch -Regex ($t) { '^ACA' { 'azure-openai' } default { 'foundry' } }
-        $agents += [pscustomobject]@{ type = $t; name = $nm; rg = "$nm-rg"; aiKind = $aik; blueprint = "$nm Blueprint"; identity = "$nm Identity" }
+        $bp  = if ($t -like '*-DW') { $nm } else { "$nm Blueprint" }  # DW blueprint has no " Blueprint" suffix
+        $agents += [pscustomobject]@{ type = $t; name = $nm; rg = "$nm-rg"; aiKind = $aik; blueprint = $bp; identity = "$nm Identity" }
     }
 }
 

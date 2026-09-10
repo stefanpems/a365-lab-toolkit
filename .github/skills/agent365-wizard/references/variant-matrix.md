@@ -18,7 +18,8 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 ## Inputs the wizard MUST ask (grouped)
 
 ### Common (all variants)
-- **Solution prefix** → derives all agent names as `<prefix>-<hosting>-<identity>`.
+- **Solution prefix** → derives all agent names as `<prefix>-<framework>-<hosting>-<identity>` (the
+  `<framework>` segment is fixed — `MAF` today — e.g. `contoso-MAF-ACA-OBO`).
 - **Tenant / Subscription** → auto-detected; user confirms or overrides.
 - **Preferred region** → validated per service.
 - **Resource-group strategy** → per-agent (`<agent>-rg`, default) or shared (`<prefix>-rg`).
@@ -109,13 +110,19 @@ FD-OBO uses `CUSTOM_MCP_SERVERS_JSON`, see **Custom MCP** above.)
   just works); ACA-S2S can't use delegated Work IQ tools (LLM-only); FH/FD samples wire only Mail in
   code today, so a non-Mail Work IQ tool needs the code generalization noted in that reference.
 
-## Future direction — multi-framework (vision, not yet implemented)
-Today all 8 variants are **MAF** (`MAF-ACA-OBO`, …). The Agent 365 integration is framework-agnostic
-(identity, MCP gateway, messaging), so the lab is meant to grow a **framework** dimension: per-framework
-source folders (e.g. `aca-langchain/…`), a `framework` field in the plan (default `maf`), and variant IDs
-like `LC-ACA-OBO` / `SK-FH-S2S`. ACA and FH are the natural hosts for code frameworks; FD (declarative
-prompt agents) is framework-independent. The token/auth lessons in workiq-mcp-integration.md apply
-unchanged to any framework. Not yet implemented — vision only.
+## Framework segment in the name (fixed today, multi-framework later)
+Every agent name carries a fixed **`<framework>`** segment: `<prefix>-<framework>-<hosting>-<identity>`
+(e.g. `contoso-MAF-ACA-OBO`). Today the only framework is **MAF**, so the plan writes `framework: "MAF"`
+on every agent (default when omitted). The segment is mandatory so that a same-type agent built with a
+**different** framework (e.g. a LangChain `ACA-OBO` or a Copilot Studio one) stays distinguishable from
+the MAF one — both could coexist as `<prefix>-LC-ACA-OBO` and `<prefix>-MAF-ACA-OBO`.
+
+The Agent 365 integration is framework-agnostic (identity, MCP gateway, messaging), so growing the lab to
+other frameworks later means: per-framework source folders (e.g. `aca-langchain/…`), a new short framework
+code (e.g. `LC`, `SK`) written to `agents[].framework`, and the scaffolder mapping `type` → the matching
+source. ACA and FH are the natural hosts for code frameworks; FD (declarative prompt agents) is
+framework-independent (still named with a framework segment for consistency). The token/auth lessons in
+workiq-mcp-integration.md apply unchanged to any framework. Only **MAF** source folders exist today.
 
 ## Do NOT ask (discover / derive / fixed)
 - Blueprint / identity / container / bot / app-reg names → derived from the prefix.

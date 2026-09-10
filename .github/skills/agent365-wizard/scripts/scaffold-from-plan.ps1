@@ -59,9 +59,29 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 # ---------------------------------------------------------------- validation
 $errors = New-Object System.Collections.Generic.List[string]
 $prefix = $plan.solution.prefix
+
+# Every lab agent name carries a FIXED <framework> segment: <prefix>-<framework>-<hosting>-<identity>
+# (e.g. a90902-MAF-ACA-OBO). framework defaults to MAF; it keeps a same-type agent built with another
+# framework (LangChain, Semantic Kernel, ...) distinguishable. Resolve it per agent so the dynamic prefix
+# cap and the per-agent name check can use it.
+function Get-AgentFramework { param($a) if ($a.framework) { "$($a.framework)".Trim() } else { 'MAF' } }
+
+# Dynamic prefix cap. The 12-char base ceiling is driven by the CUSTOM MCP (ext_<prefix>Anon / ext_<prefix>Auth
+# must stay <= 20), NOT the agent name. A Digital Worker adds a SECOND ceiling: 'a365 setup all --agent-name
+# <name>' derives the Teams/M365 name.short as "<name> Blueprint", which is rejected above 30 chars. With the
+# fixed <framework> segment the worst case is "<prefix>-<fw>-<hosting>-DW Blueprint", so a DW lab needs a
+# shorter prefix (e.g. 9 for MAF-ACA-DW). Take the strictest applicable ceiling.
+$maxPrefix = 12
+foreach ($a in @($plan.agents | Where-Object { $_.type -like '*-DW' })) {
+    $cap = 30 - "-$(Get-AgentFramework $a)-$($a.type) Blueprint".Length
+    if ($cap -lt $maxPrefix) { $maxPrefix = $cap }
+}
+if ($maxPrefix -lt 3) { $maxPrefix = 3 }
+
 if (-not $prefix) { $errors.Add('solution.prefix is required.') }
-elseif ($prefix -cnotmatch '^[a-z][a-z0-9]{2,11}$') {
-    $errors.Add("solution.prefix '$prefix' is invalid. It must start with a lowercase letter, contain ONLY lowercase letters and digits (no hyphens, underscores, uppercase or symbols), and be 3-12 characters. The 12-char cap comes from the custom MCP: Agent 365 registers its servers as ext_<prefix>Anon / ext_<prefix>Auth, which must stay <= 20 chars (4 + prefix + 4). Lowercase-alphanumeric starting with a letter also satisfies Azure Container Apps (2-32), managed identities, resource groups, the Entra app registrations and the Static Web App, so one prefix works for every resource.")
+elseif ($prefix -cnotmatch "^[a-z][a-z0-9]{2,$($maxPrefix - 1)}$") {
+    $dwNote = if ($maxPrefix -lt 12) { " For THIS lab the cap is $maxPrefix (not 12) because it includes a Digital Worker: 'a365 setup all' derives the Teams name.short as '<name> Blueprint', which must stay <= 30 chars once the fixed <framework> segment is added." } else { '' }
+    $errors.Add("solution.prefix '$prefix' is invalid. It must start with a lowercase letter, contain ONLY lowercase letters and digits (no hyphens, underscores, uppercase or symbols), and be 3-$maxPrefix characters. The 12-char base cap comes from the custom MCP (Agent 365 registers ext_<prefix>Anon / ext_<prefix>Auth, which must stay <= 20 = 4 + prefix + 4) and is INDEPENDENT of the agent name.$dwNote Lowercase-alphanumeric starting with a letter also satisfies Azure Container Apps (2-32), managed identities, resource groups, the Entra app registrations and the Static Web App, so one prefix works for every resource.")
 }
 if (-not $plan.solution.region) { $errors.Add('solution.region is required.') }
 if (-not $plan.agents -or $plan.agents.Count -eq 0) { $errors.Add('at least one agent is required.') }
@@ -73,6 +93,18 @@ foreach ($a in $plan.agents) {
         continue
     }
     if (-not $a.name) { $errors.Add("agent of type $($a.type) is missing 'name'.") }
+    # FIXED naming convention: <prefix>-<framework>-<hosting>-<identity> (framework default MAF).
+    elseif ($prefix) {
+        $fw = Get-AgentFramework $a
+        $expected = "$prefix-$fw-$($a.type)"
+        if ($a.name -ne $expected) {
+            $errors.Add("$($a.name): agent name must follow the fixed convention <prefix>-<framework>-<hosting>-<identity> = '$expected' (framework '$fw', type '$($a.type)'). The <framework> segment is mandatory so a same-type agent built with a different framework stays distinguishable.")
+        }
+        # Only MAF has sample source folders today; block silently scaffolding MAF code under another name.
+        if ($fw -ne 'MAF') {
+            $errors.Add("$($a.name): framework '$fw' has no sample source yet — only 'MAF' is implemented. The <framework> naming segment is reserved for future frameworks (LangChain/Semantic Kernel/...); set framework to 'MAF', or add the per-framework source folders + variant-map entry before using another code.")
+        }
+    }
     # ACA container app name must be lowercase.
     if ($a.type -like 'ACA-*') {
         $app = ($a.name -replace '[^A-Za-z0-9-]', '-').ToLower()

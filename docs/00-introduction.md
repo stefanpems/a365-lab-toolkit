@@ -21,7 +21,11 @@
 
 ## 1. Naming convention
 
-Agents are named `<framework>-<env>-<auth>`:
+Each agent **type** is identified as `<framework>-<env>-<auth>` (e.g. `MAF-ACA-OBO`). A **deployed
+agent instance** additionally carries the **lab prefix** (the solution / lab name), so its full name is
+`<lab-prefix>-<framework>-<env>-<auth>`, e.g. `a90902-MAF-ACA-OBO`. The `<framework>` segment is a
+**fixed, mandatory** part of the name (only `MAF` today) so that a same-type agent built with a
+different framework stays distinguishable. The three type segments are:
 
 | Segment | Values | Meaning |
 | --- | --- | --- |

@@ -8,9 +8,10 @@ user with the **minimum** questions, produce a **secret-free deployment plan**, 
 explicit confirmation — generate and drive the per-variant deployment.
 
 The lab is **framework-agnostic by design**: today all variants are **MAF** (a pragmatic starting
-point, not the objective), and the agent-type naming carries a `<framework>` segment so other
-frameworks (e.g. LangChain, Semantic Kernel) can be added later under the same hosting/identity
-structure. This is a vision, not yet implemented — see "Future direction" in
+point, not the objective). Every agent name carries a **fixed `<framework>` segment** —
+`<prefix>-<framework>-<hosting>-<identity>`, e.g. `contoso-MAF-ACA-OBO` — so a same-type agent built
+with another framework (LangChain, Semantic Kernel, Copilot Studio, …) stays distinguishable from the
+MAF one. Only MAF source folders exist today; see "Framework segment in the name" in
 [references/variant-matrix.md](../skills/agent365-wizard/references/variant-matrix.md).
 
 Always write **in English** in every file, log, config, comment, and command you produce. You may
@@ -252,12 +253,17 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
    Mail for **OBO/DW only** (not S2S). See "Registered MCP tools" below.
 3. **Solution basics** — region, RG strategy (isolated `<agent>-rg` default, or shared `<prefix>-rg`),
-   and the **solution prefix**. ⛔ **Before asking for the prefix, STATE ALL its rules to the user**
-   (they apply to every derived resource name): **starts with a lowercase letter; only lowercase
-   letters and digits — no hyphens, underscores, uppercase or symbols; 3–12 characters.** Explain the
-   **12-char cap comes from the custom MCP** (`ext_<prefix>Anon` / `ext_<prefix>Auth` must stay ≤ 20),
-   and that lowercase-alphanumeric-starting-with-a-letter also satisfies Azure Container Apps, resource
-   groups, managed identities, the Entra apps and the Static Web App. Examples: `contoso`, `sales01`.
+   and the **solution prefix / lab name**. ⛔ **Before asking for the prefix, EXPLAIN how the selected
+   agents' names are composed** — the structure `<prefix>-<framework>-<hosting>-<identity>` (framework
+   `MAF` fixed today) with at least **two concrete examples** (e.g. `contoso-MAF-ACA-OBO`,
+   `contoso-MAF-FH-S2S`) — **and STATE ALL the prefix rules** (they apply to every derived resource
+   name): **starts with a lowercase letter; only lowercase letters and digits — no hyphens, underscores,
+   uppercase or symbols; 3–12 characters.** The **12-char cap comes from the custom MCP**
+   (`ext_<prefix>Anon` / `ext_<prefix>Auth` must stay ≤ 20) and is **independent of the agent name**;
+   lowercase-alphanumeric-starting-with-a-letter also satisfies Azure Container Apps, resource groups,
+   managed identities, the Entra apps and the Static Web App. **A Digital Worker lab lowers the cap**
+   (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30 with the framework segment.
+   Examples: `contoso`, `sales01`.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
    Azure OpenAI account+model for ACA; for any **FH or FD** ask the **Foundry-resource strategy** ONCE
    (`solution.foundry`, shared by all FH+FD): **create one shared account+project+model** (`create-shared`,
@@ -419,14 +425,14 @@ Feasibility conclusion (do not re-derive — act on it):
 
 ## Known corrections from the first end-to-end run (apply these)
 - **ACA `" Agent"` suffix**: the a365 CLI registers the agent in the Registry with a trailing
-  `" Agent"` (e.g. `a1730-ACA-OBO Agent`). This is cosmetic CLI behavior, not from our config, and
+  `" Agent"` (e.g. `a1730-MAF-ACA-OBO Agent`). This is cosmetic CLI behavior, not from our config, and
   does not affect the blueprint/identity names. Do not try to "fix" it in the plan.
 - **ACA-DW is not auto-listed in the Registry** like OBO/S2S. It becomes visible only after
   `a365 publish --aiteammate --agent-name "<name>"` regenerates `manifest/manifest.zip` for THIS
   blueprint and the user uploads it in the M365 admin center (Agents → Upload custom agent), then a
   user hires it in Teams. Guide the user through this explicitly.
 - **FH-DW naming**: the FH-DW sample hardcodes the agent name in Bicep/scripts (not `azure.yaml`).
-  The scaffolder rewrites every occurrence to `<prefix>-FH-DW`; verify the deployed agent uses the
+  The scaffolder rewrites every occurrence to the planned `<prefix>-MAF-FH-DW`; verify the deployed agent uses the
   planned name and is not reusing a pre-existing lab agent.
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does NOT create the model deployment or
   grant data-plane RBAC. The generated next-command creates the model and grants **Cognitive Services

@@ -1,35 +1,42 @@
 # Naming & validation rules
 
 ## Agent name scheme
-Derive every agent name from a single **solution prefix**:
+Derive every agent name from a single **solution prefix** plus a **fixed `<framework>` segment**:
 
 ```
-<prefix>-<hosting>-<identity>
-   hosting  ∈ { ACA, FH, FD }
-   identity ∈ { OBO, S2S, DW }
+<prefix>-<framework>-<hosting>-<identity>
+   framework ∈ { MAF, … }   (fixed segment; today only MAF — LangChain/Semantic Kernel/… later)
+   hosting   ∈ { ACA, FH, FD }
+   identity  ∈ { OBO, S2S, DW }
 ```
 
-Examples for prefix `contoso`: `contoso-ACA-OBO`, `contoso-FH-S2S`, `contoso-FD-OBO`.
+The `<framework>` segment is **mandatory** and part of the name for **every** agent: it keeps a
+same-type agent built with a different framework (e.g. a LangChain `ACA-OBO`) distinguishable from the
+MAF one. In the plan it is `agents[].framework` (default `MAF`); the plan `type` stays the hosting-identity
+variant (`ACA-OBO`, …) and the name is composed as `<prefix>-<framework>-<type>`.
+
+Examples for prefix `contoso`: `contoso-MAF-ACA-OBO`, `contoso-MAF-FH-S2S`, `contoso-MAF-FD-OBO`.
 
 ### Derived names (never ask — show on the review screen, editable)
 | Derived | Rule | Example |
 |---------|------|---------|
-| Blueprint display name | `<agent-name> Blueprint` | `contoso-ACA-OBO Blueprint` |
-| Identity display name  | `<agent-name> Identity`  | `contoso-ACA-OBO Identity` |
-| Container app name (ACA) | lowercase, hyphens | `contoso-aca-obo` |
-| Resource group (isolated) | `<agent-name>-rg` | `contoso-ACA-OBO-rg` |
+| Blueprint display name (OBO/S2S) | `<agent-name> Blueprint` | `contoso-MAF-ACA-OBO Blueprint` |
+| Blueprint display name (**DW**) | `<agent-name>` (**no** `" Blueprint"` suffix; `name.short` ≤ 30) | `contoso-MAF-ACA-DW` |
+| Identity display name  | `<agent-name> Identity`  | `contoso-MAF-ACA-OBO Identity` |
+| Container app name (ACA) | lowercase, hyphens | `contoso-maf-aca-obo` |
+| Resource group (isolated) | `<agent-name>-rg` | `contoso-MAF-ACA-OBO-rg` |
 | Resource group (shared)   | `<prefix>-rg` | `contoso-rg` |
 | SPA app registration | `<prefix>-ui-spa` | `contoso-ui-spa` |
 | Static Web App | `<prefix>-ui` | `contoso-ui` |
 
 > **Scaffold output lives under one per-run root: `generated/<prefix>/`.** Every folder for a run — each
 > `<agent-name>`, the `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP — is created under it (e.g.
-> `generated/contoso/contoso-ACA-OBO/`). The wizard's own `generated/wizard-progress.log`
+> `generated/contoso/contoso-MAF-ACA-OBO/`). The wizard's own `generated/wizard-progress.log`
 > and `generated/cleanup/` stay at the `generated/` root.
 
 ### Registry display name — the `" Agent"` suffix (cosmetic, not controllable)
-The a365 CLI lists ACA agents in the Registry with a trailing `" Agent"` (e.g. `a1730-ACA-OBO` is
-shown as **`a1730-ACA-OBO Agent`**). This is added by the CLI at registration time, not by our
+The a365 CLI lists ACA agents in the Registry with a trailing `" Agent"` (e.g. `a1730-MAF-ACA-OBO` is
+shown as **`a1730-MAF-ACA-OBO Agent`**). This is added by the CLI at registration time, not by our
 `a365.config.json`, and does not affect the blueprint (`… Blueprint`) or identity (`… Identity`)
 names. Do not attempt to strip it via the plan — it cannot be set there.
 
@@ -41,24 +48,33 @@ hires it in Teams. FH-DW appears after the admin-center approval of its azd-publ
 
 ### FH-DW naming (different from the others)
 The FH-DW sample hardcodes the agent name in **Bicep and scripts** (not `azure.yaml`). The scaffolder
-rewrites every occurrence to `<prefix>-FH-DW`. If a pre-existing lab agent (e.g.
+rewrites every occurrence to the planned name `<prefix>-MAF-FH-DW`. If a pre-existing lab agent (e.g.
 `sample-fh-dw-agent`) is reused instead of a clean provision, the Registry will show the old
-name — verify the deployed agent matches the planned `<prefix>-FH-DW`.
+name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
 
 ## HARD validation rules (block, don't warn)
-1. **DW ≤ 30 characters.** The blueprint display name and Teams/M365 `name.short` are **rejected
-   above 30 chars**. Verified in [docs/setup-MAF-ACA-DW.md](../../../../docs/setup-MAF-ACA-DW.md).
-   For any DW variant, validate the display name length and offer a short form (drop " Blueprint",
-   shorten the prefix) before proceeding.
+1. **DW `name.short` ≤ 30 characters.** Teams/M365 rejects a `name.short` **above 30 chars**, and
+   `a365 publish` derives `name.short` from the blueprint display name — while `a365 setup all
+   --agent-name <name>` auto-derives that display name as **`"<name> Blueprint"`**. Verified in
+   [docs/setup-MAF-ACA-DW.md](../../../../docs/setup-MAF-ACA-DW.md). So for a DW agent: (a) set
+   `displayNames.blueprint` = the agent name **without** the `" Blueprint"` suffix (`<prefix>-<framework>-<hosting>-DW`),
+   and (b) keep the prefix short enough that even the auto-derived `"<name> Blueprint"` stays ≤ 30 —
+   this is enforced by the **dynamic prefix cap** in rule 1a. With the fixed `<framework>` segment the
+   worst case is `<prefix>-MAF-ACA-DW Blueprint`, so an ACA-DW lab caps the prefix at **9**.
 1a. **Lab name (the solution prefix): lowercase letter first, lowercase alphanumeric only, 3–12 chars**
-   (`^[a-z][a-z0-9]{2,11}$`, enforced in `scaffold-from-plan.ps1`). Presented to the user as the **lab
+   by default (`^[a-z][a-z0-9]{2,11}$`), **lowered dynamically for a DW lab** (see below), enforced in
+   `scaffold-from-plan.ps1`. Presented to the user as the **lab
    name** and asked **early** (right after tenant/subscription), because it derives every agent name,
-   every resource name, the custom-MCP registrations and the per-run root `generated/<prefix>/`. It is
-   reused for every resource, so it must satisfy the strictest consumer — the **custom MCP**: Agent 365
+   every resource name, the custom-MCP registrations and the per-run root `generated/<prefix>/`. The
+   **12-char base cap is set by the custom MCP** — it is **independent of the agent name** (adding the
+   `<framework>` segment does NOT change it): Agent 365
    registers `ext_<prefix>Anon` / `ext_<prefix>Auth`, which must stay **≤ 20 chars** (`4 + prefix + 4`)
    and are **alphanumeric** (no hyphens/underscores). That also covers Azure Container Apps (2–32,
-   lowercase, start-with-a-letter — a prefix like `1730` would make the invalid container `1730-aca-obo`),
-   managed identities, resource groups, the Entra apps and the Static Web App. It must also be **UNIQUE**
+   lowercase, start-with-a-letter — a prefix like `1730` would make the invalid container `1730-maf-aca-obo`),
+   managed identities, resource groups, the Entra apps and the Static Web App. **A DW lab lowers the cap**
+   so the DW `name.short` (rule 1) stays ≤ 30 once the `<framework>` segment is added: the scaffolder
+   computes `30 − len("-<framework>-<hosting>-DW Blueprint")` per DW agent and takes the strictest
+   (e.g. **9** for `MAF-ACA-DW`, **10** for `MAF-FH-DW`). It must also be **UNIQUE**
    — not a name a previous lab used: check for an existing `generated/<prefix>/` folder (a prior run on
    this machine) and, when the custom MCP is in scope, an existing `ext_<prefix>*` in the tenant
    (`a365 develop list-available` / admin center); ask for a different lab name if taken. **State these

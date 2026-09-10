@@ -21,7 +21,7 @@ window.APP_CONFIG = {
     {
       id: "s2s",
       kind: "aca",
-      name: "AgentFrameworkS2SSample (ACA, S2S)",
+      name: "MAF-ACA-S2S",
       description: "S2S blueprint agent. The /chat endpoint validates the user's Entra token and replies via the LLM.",
       apiBase: "https://<YOUR_ACA_S2S_FQDN>",
       scope: "api://<YOUR_ACA_S2S_APP_ID>/access_agent_as_user"
@@ -29,7 +29,7 @@ window.APP_CONFIG = {
     {
       id: "obo",
       kind: "aca",
-      name: "AgentFrameworkSample (ACA, OBO)",
+      name: "MAF-ACA-OBO",
       description: "OBO agent. /chat uses the user's delegated Mail token and sends email from their mailbox.",
       apiBase: "https://<YOUR_ACA_OBO_FQDN>",
       // First-party Agent 365 Tools Mail scope — keep as-is.
@@ -52,13 +52,13 @@ window.APP_CONFIG = {
       // body as `mail_token` so the agent sends mail from the signed-in user's mailbox.
       id: "obo-fh",
       kind: "foundry-invocations",
-      name: "OBO Foundry Hosted (invocations)",
+      name: "MAF-FH-OBO",
       description: "Foundry Hosted Agent (OBO). Gateway auth + mail_token in the body; sends email from your mailbox.",
       endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/agents/<YOUR_FH_OBO_AGENT_NAME>/endpoint/protocols/invocations?api-version=v1",
       endpointScope: "https://ai.azure.com/.default",
       mailScope: "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All",
       // OPTIONAL — custom (BYO) MCP servers attached to this Foundry Hosted OBO agent.
-      // Same shape as the ACA-OBO entry: audience -> delegated scope. app.js sends them as
+      // Same shape as the MAF-ACA-OBO entry: audience -> delegated scope. app.js sends them as
       // body.tokens; the agent wires each ToolingManifest.json server with the matching token.
       customScopes: {
         "<YOUR_ANON_BYO_APP_ID>": "<YOUR_ANON_BYO_APP_ID>/Tools.ListInvoke.All",
@@ -75,7 +75,7 @@ window.APP_CONFIG = {
       // gateway; no user/mail token. Body: { input }  ->  output[].content[].text.
       id: "s2s-fh",
       kind: "foundry-responses",
-      name: "S2S Foundry Hosted (responses)",
+      name: "MAF-FH-S2S",
       description: "Foundry Hosted Agent (S2S). Its own identity; conversational assistant.",
       endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/agents/<YOUR_FH_S2S_AGENT_NAME>/endpoint/protocols/openai/responses?api-version=v1",
       endpointScope: "https://ai.azure.com/.default"
@@ -91,7 +91,7 @@ window.APP_CONFIG = {
       //   body     = { input, agent_reference, structured_inputs: { mail_token } }
       id: "obo-fd",
       kind: "foundry-prompt",
-      name: "OBO Foundry Declarative (prompt agent)",
+      name: "MAF-FD-OBO",
       description: "Foundry prompt agent (OBO). Project Responses API + agent_reference; the Mail token is passed as a structured input and email is sent from your mailbox.",
       endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/openai/v1/responses",
       endpointScope: "https://ai.azure.com/.default",
@@ -115,7 +115,7 @@ window.APP_CONFIG = {
       // `input` so the agent can personalize replies / answer "who am I".
       id: "s2s-fd",
       kind: "foundry-prompt",
-      name: "S2S Foundry Declarative (prompt agent)",
+      name: "MAF-FD-S2S",
       description: "Foundry prompt agent (S2S). Own identity; conversational assistant, no mailbox access.",
       endpoint: "https://<YOUR_FOUNDRY_ACCOUNT>.services.ai.azure.com/api/projects/<YOUR_FOUNDRY_PROJECT>/openai/v1/responses",
       endpointScope: "https://ai.azure.com/.default",

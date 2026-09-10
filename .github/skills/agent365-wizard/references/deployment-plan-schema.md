@@ -30,10 +30,11 @@ gitignored.
   },
   "agents": [
     {
-      "type": "ACA-OBO",                  // one of the 8 supported variants
-      "name": "<prefix>-<hosting>-<identity>",
+      "type": "ACA-OBO",                  // one of the 8 supported variants (hosting-identity; the scaffolder $MAP key)
+      "framework": "MAF",                 // FIXED name segment identifying the agent framework (default "MAF"); today only MAF exists
+      "name": "<prefix>-<framework>-<hosting>-<identity>",  // e.g. contoso-MAF-ACA-OBO — the <framework> segment is mandatory
       "displayNames": {
-        "blueprint": "<name> Blueprint",  // DW: MUST be <= 30 chars
+        "blueprint": "<name> Blueprint",  // OBO/S2S: "<name> Blueprint". DW: "<name>" (NO " Blueprint" suffix — a365 publish derives name.short from it and Teams/M365 rejects name.short > 30 chars)
         "identity": "<name> Identity"
       },
       "resourceGroup": "<name>",          // <agent>-rg (isolated) or the shared RG
@@ -128,7 +129,13 @@ gitignored.
   `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP) lives under that single per-run root. To run the
   wizard N times and create N coexisting copies, give each run a **different prefix** (the wizard checks
   the tenant for an existing `ext_<prefix>*` and asks for another prefix if it collides).
-- DW entries require `displayNames.blueprint` length ≤ 30 (see naming-and-validation.md).
+- **Every agent name carries the fixed `<framework>` segment**: `name` = `<prefix>-<framework>-<hosting>-<identity>`
+  (e.g. `contoso-MAF-ACA-OBO`). `framework` defaults to `MAF` (the only framework today); the scaffolder
+  validates `name` == `<prefix>-<framework>-<type>`. The segment keeps a same-type agent built with another
+  framework distinguishable. The prefix cap stays **12** (custom-MCP driven, independent of the agent name);
+  a **DW** lab lowers it (e.g. 9 for `MAF-ACA-DW`) so `name.short` stays ≤ 30 — see naming-and-validation.md.
+- DW entries: `displayNames.blueprint` = the agent name **without** a `" Blueprint"` suffix and length ≤ 30
+  (see naming-and-validation.md); OBO/S2S keep `"<name> Blueprint"`.
 - Anything discoverable post-deploy (FQDN, blueprint/app IDs, endpoints) is **omitted** from the plan
   and resolved at scaffold/deploy time.
 - No secrets, ever. `auth: "api-key"` records only the *method*; the key is entered in the terminal.

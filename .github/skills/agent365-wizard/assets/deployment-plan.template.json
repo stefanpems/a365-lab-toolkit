@@ -24,12 +24,13 @@
   "agents": [
     {
       "type": "ACA-OBO",
-      "name": "<SOLUTION_PREFIX>-ACA-OBO",
+      "framework": "MAF",
+      "name": "<SOLUTION_PREFIX>-MAF-ACA-OBO",
       "displayNames": {
-        "blueprint": "<SOLUTION_PREFIX>-ACA-OBO Blueprint",
-        "identity": "<SOLUTION_PREFIX>-ACA-OBO Identity"
+        "blueprint": "<SOLUTION_PREFIX>-MAF-ACA-OBO Blueprint",
+        "identity": "<SOLUTION_PREFIX>-MAF-ACA-OBO Identity"
       },
-      "resourceGroup": "<SOLUTION_PREFIX>-ACA-OBO-rg",
+      "resourceGroup": "<SOLUTION_PREFIX>-MAF-ACA-OBO-rg",
       "ai": { "kind": "azure-openai", "account": "<AOAI_ACCOUNT>", "deployment": "gpt-4.1", "auth": "managed-identity" },
       "tools": ["mcp_MailTools"]
     }

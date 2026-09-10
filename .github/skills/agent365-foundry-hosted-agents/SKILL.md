@@ -27,7 +27,7 @@ per-variant guides — do not duplicate or renumber them:**
   nor grant data-plane RBAC. The generated next-command creates the model (`az cognitiveservices
   account deployment create … gpt-4.1`) and grants **Cognitive Services User** before `azd deploy`.
 - **FH-DW naming**: the sample hardcodes the agent name in Bicep/scripts (not `azure.yaml`); the
-  scaffolder rewrites every occurrence to `<prefix>-FH-DW`. Verify the deployed agent uses the planned
+  scaffolder rewrites every occurrence to `<prefix>-MAF-FH-DW`. Verify the deployed agent uses the planned
   name and is not reusing a pre-existing lab agent.
 - **FH-DW governed subscription**: the ARM deploymentScript that creates the blueprint needs shared-key
   storage (may be policy-blocked). Use **Solution A** (out-of-band blueprint via

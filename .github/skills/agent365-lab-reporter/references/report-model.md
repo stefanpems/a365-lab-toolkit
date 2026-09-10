@@ -57,7 +57,8 @@ count, not one row each).
 "Expected" objects come from the run's deployment plan when it is available
 (`generated/<prefix>/a365-deployment-plan.json`, or `-PlanPath`, or the repo-root plan if its prefix
 matches). Without a plan, the agent set is reconstructed from Entra blueprint apps
-(`<prefix>-<HOSTING>-<IDENTITY> Blueprint`). "Actual" is always live cloud state (`az … show/list/exists`
+(`<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>`, e.g. `contoso-MAF-ACA-OBO`; OBO/S2S blueprint apps carry a
+trailing `" Blueprint"`, DW apps do not). "Actual" is always live cloud state (`az … show/list/exists`
 and Microsoft Graph GET). Everything is **read-only**.
 
 ## Known limitations (state them in the report footnotes, don't hide them)

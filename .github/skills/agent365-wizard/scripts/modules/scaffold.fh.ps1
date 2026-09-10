@@ -67,7 +67,7 @@ function Invoke-ScaffoldFhAgent {
     }
     else {
         # FH-DW hardcodes the agent name in Bicep + scripts (NOT azure.yaml). Rewrite every
-        # occurrence to the planned name so DW matches the <prefix>-FH-DW scheme like the others.
+        # occurrence to the planned name so DW matches the <prefix>-MAF-FH-DW scheme like the others.
         $dwFiles = @(
             'infra\main.bicep', 'infra\main.json', 'infra\main.parameters.json',
             'scripts\create-agent-blueprint.ps1', 'scripts\read-logs.ps1', 'scripts\roll-instrumented-version.ps1'
