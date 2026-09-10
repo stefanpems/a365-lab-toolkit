@@ -251,7 +251,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    enable `propagate_to_graph` (**default: enable**). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
-   Mail for **OBO/DW only** (not S2S). See "Registered MCP tools" below.
+   Mail for **OBO/DW agents**. ⛔ **EXCLUDE every S2S agent from the Mail selection entirely** — do NOT
+   list S2S agents as options (not even unselected); tell the user Mail / delegated Work IQ integration is
+   **not available** for S2S today (app-only identity can't call delegated Work IQ — `AADSTS82001`), and
+   that whether/how it could be supported is still to be determined. See "Registered MCP tools" below.
 3. **Solution basics** — region, RG strategy (isolated `<agent>-rg` default, or shared `<prefix>-rg`),
    and the **solution prefix / lab name**. ⛔ **Before asking for the prefix, EXPLAIN how the selected
    agents' names are composed** — the structure `<prefix>-<framework>-<hosting>-<identity>` (framework
@@ -503,8 +506,11 @@ Full mechanics and the `propagate_to_graph` advanced setup: that skill + [custom
 Offer a multi-select from `a365 develop list-available` (Work IQ `mcp_*`, custom `ext_*`, third-party).
 **Show ALL Work IQ servers but make only `mcp_MailTools` selectable today** — keep the rest visible but
 **disabled**, with the note *"the solution is wired to add more Work IQ MCPs; for now only the tested
-ones (Mail) are enabled."* **Pre-select Mail for OBO/DW only** (not S2S: pure app-only can't call
-delegated Work IQ, `AADSTS82001`). Writes `agents[].tools` (FD stays `[]`).
+ones (Mail) are enabled."* **Offer the Mail selection to OBO/DW agents only and pre-select it there.**
+⛔ **EXCLUDE every S2S agent from the Mail choice entirely** — do NOT list S2S agents as options (not even
+unselected). State that Mail / delegated Work IQ integration is **not available** for S2S today (pure
+app-only can't call delegated Work IQ, `AADSTS82001`); whether/how it could be supported is still to be
+determined. Writes `agents[].tools` (S2S stays `[]`; FD stays `[]`).
 The scaffolder makes each agent's `ToolingManifest.json` **authoritative = exactly `agents[].tools`
 before `a365 setup all`**, so permissions follow the selection exactly (no Mail selected → **no** Mail
 permission — the fix for the earlier S2S over-grant). The per-server permission for every Work IQ tool is

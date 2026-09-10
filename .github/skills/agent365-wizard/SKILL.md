@@ -109,7 +109,9 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 5. **Registered MCP tools** (per ACA-*/FH-* agent) — multi-select from `a365 develop list-available`
    (Work IQ `mcp_*` + custom `ext_*` + third-party). **Show ALL Work IQ servers but make only
    `mcp_MailTools` selectable today** (the rest visible-but-disabled, noting only tested tools are
-   enabled for now); **pre-select Mail for OBO/DW only** (not S2S). Free-text allows other registered
+   enabled for now); **offer Mail to OBO/DW agents only and pre-select it there**. **EXCLUDE every S2S
+   agent from the Mail selection entirely** (do NOT list them as options) — state Mail / delegated Work IQ
+   is **not available** for S2S today (`AADSTS82001`; feasibility still to be determined). Free-text allows other registered
    `uniqueName`s. Writes `agents[].tools` (FD stays `[]`); the scaffolder makes each manifest
    authoritative = these tools before `a365 setup all`, so permissions match the selection. Reuse the
    token lessons + the per-server permission map in

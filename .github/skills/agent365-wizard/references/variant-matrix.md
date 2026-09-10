@@ -100,9 +100,11 @@ FD-OBO uses `CUSTOM_MCP_SERVERS_JSON`, see **Custom MCP** above.)
   for now only the tested ones (Mail) are enabled."* The delegated permission each Work IQ server needs is
   already mapped in [workiq-mcp-integration.md](./workiq-mcp-integration.md) and `scripts/modules/_common.ps1`
   (`$WORKIQ_MCP_CATALOG`), so enabling one later is a small, pre-scoped step.
-- **Pre-select `mcp_MailTools` for OBO and DW agents only** (they can use delegated Work IQ); leave **S2S
-  empty** — pure S2S (app-only) cannot call delegated Work IQ tools (`AADSTS82001`), so Mail on an S2S
-  agent is useless. Deselect Mail on an OBO/DW agent to make it Mail-free.
+- **Offer the Mail selection to OBO and DW agents only, and pre-select `mcp_MailTools` there** (they can
+  use delegated Work IQ). ⛔ **EXCLUDE every S2S agent from the Mail choice entirely** — do NOT list S2S
+  agents as options (not even unselected): pure S2S (app-only) cannot call delegated Work IQ tools
+  (`AADSTS82001`), so Mail integration is **not available** for S2S today, and whether/how it could be
+  supported is still to be determined. Deselect Mail on an OBO/DW agent to make it Mail-free.
 - Allow a **free-text** entry for any additional registered `uniqueName` (must start with `mcp_` or
   `ext_`); warn if it is not in `list-available` (not registered/approved yet).
 - Writes `agents[].tools`. The scaffolder makes each agent's `ToolingManifest.json` **authoritative =
