@@ -201,9 +201,19 @@ a365 setup blueprint --endpoint-only `
 For AI teammates, `a365 publish` really produces a package (the `--agent-name` flag is **required**):
 
 ```powershell
+# ALWAYS run from THIS agent's project folder — a365 publish is working-directory-sensitive.
+Set-Location "<repo>/generated/<prefix>/<agent-name>"
 a365 publish --aiteammate --agent-name "<agent-name>"
 ```
 
+- ⛔ **Run it FROM the agent's project folder.** `a365 publish` reads the **current directory's**
+  `a365.config.json` / `a365.generated.config.json` and extracts the manifest templates into a
+  `manifest/` folder in the **current directory**. Run from the wrong folder it reads a stale or
+  other-agent config (*"Generated config blueprint ID … does not match Entra-resolved ID …; Skipping
+  resource IDs from file"*) and drops a stray `manifest/` there. It still resolves the correct
+  blueprint via `--agent-name`, but the package lands in the wrong place — so `cd` into the agent
+  folder first, and if a `manifest/` ever appears elsewhere (e.g. the repo root), move its
+  `manifest.zip` into the agent folder and delete the stray `manifest/`.
 - Emits `manifest/` (`manifest.json` with an `agenticUserTemplates` block →
   `agenticUserTemplateManifest.json`, icons) and `manifest/manifest.zip`.
 - It **always** prints the manifest fields and prompts *"Open manifest in your default editor now?

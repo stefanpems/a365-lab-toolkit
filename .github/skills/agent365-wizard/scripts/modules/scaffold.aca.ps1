@@ -85,6 +85,7 @@ function Invoke-ScaffoldAcaAgent {
     $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg $aoaiRgArg -AoaiAcc $($aoai.account)$reuse$dwNote")
     if ($a.type -eq 'ACA-DW') {
         # DW publish: register the real endpoint, regenerate the package for THIS blueprint, then upload it in the admin center.
-        $nextCommands.Add("cd `"$dst`"; a365 setup blueprint --endpoint-only --messaging-endpoint https://<ACA_DW_FQDN>/api/messages; a365 publish --aiteammate --agent-name `"$($a.name)`"   # answer n + Enter at the manifest prompts; then upload manifest\manifest.zip at admin.microsoft.com > Agents > All agents > Upload custom agent (Publish/Activate), then users hire in Teams")
+        # a365 publish is CWD-SENSITIVE: it reads THIS folder's config and drops manifest/ in the CURRENT dir -> the leading cd is mandatory.
+        $nextCommands.Add("cd `"$dst`"; a365 setup blueprint --endpoint-only --messaging-endpoint https://<ACA_DW_FQDN>/api/messages; a365 publish --aiteammate --agent-name `"$($a.name)`"   # RUN FROM THIS AGENT FOLDER (a365 publish is cwd-sensitive: it reads this folder's a365.config.json and writes manifest\ here; from the wrong cwd it reads a stale config + drops a stray manifest\ at the repo root). answer n + Enter at the manifest prompts; then upload manifest\manifest.zip at admin.microsoft.com > Agents > All agents > Upload custom agent (Publish/Activate), then users hire in Teams")
     }
 }

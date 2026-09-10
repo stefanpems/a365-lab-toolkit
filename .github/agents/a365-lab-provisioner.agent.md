@@ -123,6 +123,13 @@ learned — propagate it per the standing rule above).
 > have a `--yes`/`--force` flag. When YOU run these, run them in **`mode=async` with NO pipe** (a
 > `Tee-Object | Select-String` pipe HIDES the prompt AND blocks stdin — verified: it hung `a365 publish`),
 > then `get_terminal_output` to read the prompt and `send_to_terminal` the answer.
+> ⛔ **EXCEPTION — `a365 publish --aiteammate` is BOTH interactive AND cwd-sensitive, so do NOT run it in
+> a fresh `mode=async` shell (that starts at the repo root and drops the manifest there).** Establish the
+> agent folder FIRST with a separate `Set-Location "<agent-folder>"` (sync), then run `a365 publish` in
+> that same persistent shell **sync** — the sync runner backgrounds it at the prompt so you can still
+> `send_to_terminal` **`n`** then **Enter**, while keeping the correct cwd so `manifest/manifest.zip`
+> lands in `generated/<prefix>/<agent>/manifest/`. If a stray `manifest/` ever appears at the repo root,
+> move its `manifest.zip` into the agent folder and delete the root `manifest/`.
 
 > ⛔ **Judge `a365 setup` completion from the ARTIFACT, NOT the terminal buffer (verified time-waster).**
 > After the browser admin-consent completes, `a365 setup all` often **lingers without flushing or exiting**
@@ -488,17 +495,26 @@ Feasibility conclusion (do not re-derive — act on it):
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does NOT create the model deployment or
   grant data-plane RBAC. The generated next-command creates the model and grants **Cognitive Services
   User** before `azd deploy`. Do not skip it.
-- **⛔ ACA `a365 setup all` + `deploy-aca*.ps1` are WORKING-DIRECTORY-SENSITIVE — run them FROM the
-  agent folder.** `a365 setup all` writes `a365.generated.config.json` (blueprint ids + DPAPI secret)
-  and stamps `.env` **only** via its "project settings" step, which runs **only when the CLI detects
-  the project in the current directory**. Run it from anywhere else and it prints *"No … project
-  detected in <cwd>; skipping project settings"* — the file is never written, so the deploy can't find
-  the blueprint id and `a365 setup blueprint --show-secret` fails. **When YOU (the agent) run these,
-  the leading `cd` in an ASYNC terminal is silently dropped** (it executes from the repo root). Always
-  establish the working directory FIRST with a separate `Set-Location "<agent-folder>"` command, then
-  run `a365 setup all` and the deploy in that shell (sync), and verify `$PWD` is the agent folder. The
-  deploy scripts now self-heal (resolve the blueprint by display name and rewrite a minimal config) as
-  a backstop, but the correct cwd is still required for `.env`/secret persistence.
+- **⛔ ACA `a365 setup all` + `deploy-aca*.ps1` + `a365 publish --aiteammate` are
+  WORKING-DIRECTORY-SENSITIVE — ALWAYS run them FROM the agent folder.** `a365 setup all` writes
+  `a365.generated.config.json` (blueprint ids + DPAPI secret) and stamps `.env` **only** via its
+  "project settings" step, which runs **only when the CLI detects the project in the current
+  directory**. Run it from anywhere else and it prints *"No … project detected in <cwd>; skipping
+  project settings"* — the file is never written, so the deploy can't find the blueprint id and
+  `a365 setup blueprint --show-secret` fails. **`a365 publish --aiteammate` (ACA-DW) is equally
+  cwd-sensitive**: it reads the CURRENT directory's `a365.config.json` / `a365.generated.config.json`
+  and **extracts the manifest templates into a `manifest/` folder in the CURRENT directory**. Run from
+  the repo root it (a) reads the WRONG (stale/other-agent) config — printing *"Generated config
+  blueprint ID (…) does not match Entra-resolved ID (…); Skipping resource IDs from file"* — and (b)
+  drops a stray `manifest/` at the repo root instead of `generated/<prefix>/<agent>/manifest/`. It
+  still resolves the right blueprint via `--agent-name`, but the package lands in the wrong place. **When
+  YOU (the agent) run any of these, the leading `cd` in an ASYNC terminal is silently dropped** (it
+  executes from the repo root). Always establish the working directory FIRST with a separate
+  `Set-Location "<agent-folder>"` command, then run `a365 setup all`, the deploy, and `a365 publish`
+  in that shell, and verify `$PWD` is the agent folder. If `a365 publish` ever lands a `manifest/` at
+  the repo root, move `manifest/manifest.zip` into `generated/<prefix>/<agent>/manifest/` and delete
+  the root `manifest/`. The deploy scripts self-heal the blueprint id (display-name lookup) as a
+  backstop, but the correct cwd is still required for `.env`/secret persistence and the manifest path.
 - **⛔ ACA model `401 PermissionDenied … chat/completions` is (usually) the WRONG Azure OpenAI account,
   not RBAC propagation.** The deploy stamps the container `AZURE_OPENAI_ENDPOINT` from
   `env/.env.playground.user`, which the scaffolder copies from the sample = a PRIOR lab's account. A

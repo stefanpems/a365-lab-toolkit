@@ -53,10 +53,17 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
 - **`" Agent"` suffix** in the Registry (e.g. `<name> Agent`) is cosmetic CLI behavior — do not "fix" it.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload
-  custom agent), then a user hires it in Teams. ⛔ **`a365 publish --aiteammate` is INTERACTIVE — never
-  pipe it** (a `Tee-Object | Select-String` pipe hides the prompts and blocks stdin, hanging it). Run it
-  with no pipe and answer: `Open manifest in your default editor now? (Y/n)` → **`n`** (keep lab
-  defaults); `Press Enter … to continue:` → **Enter**; success = `Package created: …manifest.zip`.
+  custom agent), then a user hires it in Teams. ⛔ **`a365 publish --aiteammate` is INTERACTIVE and
+  CWD-SENSITIVE — ALWAYS run it FROM the agent folder, and never pipe it.** It reads the current
+  directory's `a365.config.json` and extracts the manifest templates into a `manifest/` folder in the
+  CURRENT directory, so from the wrong cwd it reads a stale/other-agent config (*"Generated config
+  blueprint ID … does not match Entra-resolved ID …"*) and drops a stray `manifest/` at the repo root
+  instead of `generated/<prefix>/<agent>/manifest/`. `Set-Location "<agent-folder>"` FIRST, then run it
+  **sync** in that shell (a fresh async shell starts at the repo root; a `Tee-Object | Select-String`
+  pipe hides the prompts and blocks stdin, hanging it). Answer: `Open manifest in your default editor
+  now? (Y/n)` → **`n`** (keep lab defaults); `Press Enter … to continue:` → **Enter**; success =
+  `Package created: …manifest.zip`. If a `manifest/` ever lands at the repo root, move its
+  `manifest.zip` into the agent folder and delete the root `manifest/`.
 - **Shared-RG is unsafe for ACA-OBO**: the generic `deploy-aca.ps1` deletes its RG. Use isolated RGs,
   or `-ReuseEnv`. (The scaffolder blocks shared-RG + ACA-OBO.)
 - **⛔ AOAI endpoint comes from `env/.env.playground.user`, which the scaffolder copies from the
