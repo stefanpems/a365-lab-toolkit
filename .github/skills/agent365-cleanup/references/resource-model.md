@@ -37,10 +37,7 @@ The two discovery filters:
 
 ## 3. Agents
 
-Agent name scheme: `<prefix>-<framework>-<hosting>-<identity>` (framework `MAF` today; hosting ∈ ACA/FH/FD;
-identity ∈ OBO/S2S/DW), e.g. `contoso-MAF-ACA-OBO`. Discovery matches by the **prefix** (RG names contain it;
-Entra apps/SPs/users `startswith` it), so the framework segment does not change what is found — the prefix
-stays the leading token of every derived name.
+Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; identity ∈ OBO/S2S/DW).
 
 | Layer | Resource | Naming | Cleanup action |
 |-------|----------|--------|----------------|

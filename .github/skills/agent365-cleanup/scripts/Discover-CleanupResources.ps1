@@ -333,14 +333,13 @@ function Find-Agents {
     }
     # Entra service principals that need explicit deletion: agent-identity leftovers ('<name> Identity')
     # that have no matching app in this tenant. Skip SPs that cascade from an app we already listed, and
-    # container-app managed identities (lowercase '<prefix>-<framework>-<hosting>-<identity>') removed with their RG.
+    # container-app managed identities (lowercase '<name>-<hosting>-<identity>') removed with their RG.
     $agentAppNames = @($items | Where-Object { $_.category -eq 'Agents' -and $_.kind -eq 'entra-app' } | ForEach-Object { $_.displayName })
     foreach ($sp in (Get-GraphFiltered 'servicePrincipals' "startswith(displayName,'$NameFilter')")) {
         if (-not $sp.displayName) { continue }
         if ($agentAppNames -contains $sp.displayName) { continue }
         # Only agent-identity leftovers ('<name> Identity') need an explicit SP delete: blueprint SPs
-        # cascade from their app, the container / MCP managed identities (named after the lowercased
-        # agent name `<prefix>-<framework>-<hosting>-<identity>`) go with their resource group, and
+        # cascade from their app, container / MCP managed identities go with their resource group, and
         # agent-instance SPs are handled by the agent-instance (user) path below.
         if ($sp.displayName -notmatch '(?i) Identity$') { continue }
         Add-Item -Category 'Agents' -Kind 'entra-sp' -Id $sp.appId -ObjectId $sp.id -DisplayName $sp.displayName `
