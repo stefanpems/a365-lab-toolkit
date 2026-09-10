@@ -143,6 +143,20 @@ not duplicate or renumber it here.**
   forbids that substitution and surfaces the auth setup URL instead. Note the model may still call the
   anon `whoami_anon` when asked **generically** for "whoami"; ask for the **`ext_<name>Auth`** server's
   `whoami` explicitly.
+- ⛔ **CONNECTION GATE — build BOTH connection URLs and gate ONCE, before any custom-tool test.** The
+  connections apply to **every OBO agent (ACA-OBO / FH-OBO / FD-OBO)** with the custom MCP attached, but
+  are **per-user → created ONCE and reused** by all three (**S2S/DW never need them**). So present the
+  gate the first time a custom tool could be exercised — right after approval if the env id is cached,
+  else right after the FIRST OBO agent is deployed + UI-integrated — with `[ Done | I'll do it later ]`;
+  if deferred, re-show the URLs at the first `ext_*` test prompt (only Baseline + Mail are meaningful
+  until then). Get the URLs from `print-connection-urls.ps1 -Name <prefix>`, which resolves the hidden
+  **Compliant Container** env systematically: **`-EnvironmentId` → per-tenant cache
+  (`%LOCALAPPDATA%\a365-lab\pp-compliant-env.<tenantId>.txt`) → environment scan EXCLUDING the Default**
+  (a Default match is a false positive: `shared_` connectors are visible there but the connection must
+  live in the Compliant Container; a wrong pick also doubles the `tc-` connector id). No API lists that
+  env, but it is **stable per tenant** and cached once resolved. First time in a fresh tenant: ask an OBO
+  agent *"Give me the Power Platform setup URL for the ext_<prefix>Anon server"*, copy `environmentName=`,
+  run once with `-EnvironmentId <id>` (it caches). See [custom-mcp/README.md](../../../custom-mcp/README.md).
 - **`Duplicate tool name 'initialize_server'` after attaching 2+ custom servers (agentic/Teams path).**
   The gateway exposes an `initialize_server` handshake tool for **every** `ext_*` server, so 2+ of them
   collide and the turn fails. Fix: unique `tool_name_prefix` per server **before it connects** — the

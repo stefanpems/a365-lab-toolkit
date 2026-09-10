@@ -338,9 +338,46 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      - **Hand the user the EXACT URLs — run the emitted helper** `custom-mcp/print-connection-urls.ps1
        -Name <prefix>` (copied into `generated/<prefix>/<prefix>-mcp/`). It derives the precise
        `connectionsMcp` deep-link for **both** `...AnonP` and `...AuthP` from the Power Platform
-       connectors. The connectors live in a hidden **Compliant Container** environment that the
-       environment APIs don't list, so if auto-discovery fails, pass `-EnvironmentId <environmentName>`
-       (take it from the `environmentName=` of any `ext_` `initialize_server` URL the agent surfaced).
+       connectors. The connectors live in a hidden **Compliant Container** environment that **no
+       environment-listing API returns** (verified: default, admin BAP, `$expand` all show only the
+       tenant Default; the `shared_` connectors ARE visible in Default but that is a **false positive** —
+       the A365 MCP connection must be created in the Compliant Container, not Default). The helper is
+       systematic: it resolves the env in this order — **(1) `-EnvironmentId` if given; (2) a per-tenant
+       cache** at `%LOCALAPPDATA%\a365-lab\pp-compliant-env.<tenantId>.txt`; **(3) an environment scan
+       that EXCLUDES the Default**. The env id is **stable per tenant**, so once resolved it is cached and
+       every later run/agent in that tenant gets the URLs automatically. **First time in a fresh tenant**
+       (nothing cached, Compliant Container not listable): ask the user to send this exact prompt in an
+       OBO tab — *"Give me the Power Platform setup URL for the ext_<prefix>Anon server"* — copy the
+       `environmentName=<id>` from the URL the agent returns, run
+       `print-connection-urls.ps1 -Name <prefix> -EnvironmentId <id>` once (it caches it), and reuse from
+       then on. Do NOT trust the model's echoed connector id blindly, but the `environmentName` it returns
+       is reliable for seeding the cache. **The wizard CANNOT self-serve this env id (VERIFIED):** the
+       `az` CLI can authenticate to the OBO `/chat` as the user (Mail token accepted), but it cannot mint
+       the per-BYO-audience delegated tokens the gateway needs to trigger `initialize_server`
+       (`az account get-access-token --resource <ext_ audience>` → `AADSTS65001`, the CLI client isn't
+       consented), so the setup URL is never produced server-side — it must come from the USER's OBO tab
+       (which holds the SPA's consented tokens), matching the official MS Learn flow ("Follow the provided
+       URL to complete the one-time connection setup"). **One `environmentName` yields BOTH URLs** (anon
+       and auth connectors share the same Compliant Container), so the user sends ONE prompt, not two.
+   - ⛔ **CONNECTION GATE (do this ONCE per lab, before any custom-tool test).** The one-time Power
+     Platform connections apply to **every OBO agent with the custom MCP attached — ACA-OBO, FH-OBO AND
+     FD-OBO alike** (all invoke the BYO server as the signed-in user through the A365 gateway), but they
+     are **per-user, so they are created ONCE and reused** across all three. **S2S and DW never need them**
+     (blocked by design). Therefore, **the first time** the lab reaches a point where a custom tool could
+     be exercised — i.e. **right after the custom MCP is approved if the env id is already known/cached,
+     otherwise immediately after the FIRST OBO agent (ACA/FH/FD-OBO, whichever comes first) is deployed and
+     integrated in the UI — and BEFORE you propose any test prompts** — build BOTH connection URLs with the
+     helper and present an **explicit interactive gate**:
+     > "Create the two Power Platform connections now (BOTH `ext_<prefix>Anon` NoAuth **and**
+     > `ext_<prefix>Auth` OAuth sign-in), at the URLs above, as yourself." → **[ Done — propose test
+     > prompts | I'll do it later ]**
+     - **Done** → proceed to the test prompts.
+     - **I'll do it later** → tell the user plainly they MUST create both before any custom-tool prompt
+       will work, and that you will re-show the two URLs at the first such prompt. Then, at the first test
+       gate whose prompts touch `ext_*` tools, **re-print both URLs** and warn that the anon/auth prompts
+       are pointless until the connections exist (only the Baseline + Mail prompts are meaningful without
+       them).
+     Once created, do NOT re-ask on later OBO agents — the same connections are reused; just remind briefly.
 4. DW variants are **not** in the UI; their surface is Teams/Outlook after the admin-center publish.
 
 The scaffolder prints the next-commands in exactly this order (UI → custom MCP → agents, with each OBO

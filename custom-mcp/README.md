@@ -132,9 +132,17 @@ center (Agents → Requested). CLI-based approval was removed; approval is admin
 > connection; `print-connection-urls.ps1 -Name <prefix>` prints the precise
 > `https://make.powerapps.com/connectionsMcp?connectorIds=…&environmentName=…` deep-link for **both**
 > `...AnonP` (NoAuth) and `...AuthP` (EntraOAuth — prompts an OAuth sign-in). The connectors live in a
-> hidden **Compliant Container** environment that the environment APIs don't list, so if auto-discovery
-> fails, pass `-EnvironmentId <environmentName>` (copy it from the `environmentName=` of any `ext_`
-> `initialize_server` URL). Anon tools working does NOT mean auth tools work — the auth connection is
+> hidden **Compliant Container** environment that **no environment-listing API returns** (the `shared_`
+> connectors ARE visible in the tenant Default, but that is a **false positive** — the A365 MCP
+> connection must be created in the Compliant Container, not Default). The helper therefore resolves the
+> env in order: **(1) `-EnvironmentId`; (2) a per-tenant cache** at
+> `%LOCALAPPDATA%\a365-lab\pp-compliant-env.<tenantId>.txt`; **(3) a scan that EXCLUDES the Default**.
+> The env id is **stable per tenant**, so once resolved it is cached and reused automatically. **First
+> time in a fresh tenant** (nothing cached, Compliant Container not listable): ask an OBO agent
+> *"Give me the Power Platform setup URL for the ext_<prefix>Anon server"*, copy the `environmentName=`
+> value, run `print-connection-urls.ps1 -Name <prefix> -EnvironmentId <id>` once (it caches it). The
+> connections are **per-user → created ONCE and reused** by ACA-OBO / FH-OBO / FD-OBO alike; **S2S and DW
+> never need them** (blocked). Anon tools working does NOT mean auth tools work — the auth connection is
 > separate.
 
 > BYO MCP servers are in **preview**; republishing a new version of a registered server isn't

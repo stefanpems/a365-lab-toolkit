@@ -55,6 +55,10 @@ generated/
 **/devTools/
 **/*.log
 **/manifest/manifest.zip
+# a365 publish extracts manifest templates into a 'manifest/' folder in the CURRENT dir; when it is
+# accidentally run from the repo root (async cwd), it lands here. The real per-agent copy lives under
+# the gitignored generated/<agent>/manifest/. Never commit a root-level manifest artifact.
+/manifest/
 **/bin/
 **/obj/
 
