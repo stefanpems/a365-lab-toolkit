@@ -38,7 +38,9 @@ function Invoke-ScaffoldFhAgent {
             }
             $set = "$envBase; azd env set FOUNDRY_PROJECT_ENDPOINT $($ft.endpoint); azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME $($ft.deployment)"
             if ($projId) { $set += "; azd env set AZURE_AI_PROJECT_ID `"$projId`"" }
-            $nextCommands.Add("$set; azd deploy   # protocol: $proto  (reuse-existing: deploy into $($ft.endpoint); if it 404s on the model, ensure $($ft.deployment) exists on account $($ft.account) and you have Cognitive Services User)")
+            # Extra UI-tester grants (ui.permissions.foundryAccess: CSV of UPNs and/or a group object id).
+            $accessStr = if ($ft.account -and $ft.resourceGroup) { $g = Get-FoundryAccessGrants $plan "(az cognitiveservices account show -n $($ft.account) -g $($ft.resourceGroup) --query id -o tsv)"; if ($g) { '; ' + ($g -join '; ') } else { '' } } else { '' }
+            $nextCommands.Add("$set$accessStr; azd deploy   # protocol: $proto  (reuse-existing: deploy into $($ft.endpoint); if it 404s on the model, ensure $($ft.deployment) exists on account $($ft.account) and you have Cognitive Services User)")
         }
         elseif ($ft.mode -eq 'create-shared') {
             $provisioner = Get-SharedFoundryProvisioner $plan
@@ -47,7 +49,10 @@ function Invoke-ScaffoldFhAgent {
                 $prov = "$envBase; azd env set AZURE_RESOURCE_GROUP $($ft.resourceGroup); azd env set AZURE_AI_PROJECT_NAME $($ft.project); azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME $($ft.deployment); azd provision"
                 $model = "`$acct=(az cognitiveservices account list -g $($ft.resourceGroup) --query `"[?kind=='AIServices'].name | [0]`" -o tsv); az cognitiveservices account deployment create -n `$acct -g $($ft.resourceGroup) --deployment-name $($ft.deployment) --model-name $($ft.deployment) --model-version $modelVer --model-format OpenAI --sku-name GlobalStandard --sku-capacity 20"
                 $role = "az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope (az cognitiveservices account show -n `$acct -g $($ft.resourceGroup) --query id -o tsv)"
-                $nextCommands.Add("$prov; $model; $role; azd deploy   # SHARED Foundry: provisions the lab's ONE account + project '$($ft.project)' + model, then deploys THIS agent. Capture the shared endpoint for the other FH/FD agents: azd env get-values | Select-String 'FOUNDRY_PROJECT_ENDPOINT|AZURE_AI_PROJECT_ID'")
+                # Extra UI-tester grants (ui.permissions.foundryAccess: CSV of UPNs and/or a group object id) on the shared account ($acct).
+                $g = Get-FoundryAccessGrants $plan "(az cognitiveservices account show -n `$acct -g $($ft.resourceGroup) --query id -o tsv)"
+                $accessStr = if ($g) { '; ' + ($g -join '; ') } else { '' }
+                $nextCommands.Add("$prov; $model; $role$accessStr; azd deploy   # SHARED Foundry: provisions the lab's ONE account + project '$($ft.project)' + model, then deploys THIS agent. Capture the shared endpoint for the other FH/FD agents: azd env get-values | Select-String 'FOUNDRY_PROJECT_ENDPOINT|AZURE_AI_PROJECT_ID'")
             }
             else {
                 # Deploy into the shared project the provisioner created. The agent substitutes the two

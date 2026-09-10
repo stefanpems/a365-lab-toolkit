@@ -56,10 +56,13 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 - Agents to expose: multi-select of the OBO/S2S agents.
 - If exposing OBO → Mail consent `McpServers.Mail.All`.
 - If exposing ACA-S2S → blueprint scope `api://<s2s-app-id>/access_agent_as_user` + `UI_AUDIENCE`.
-- If exposing **FH or FD** (Foundry-based) → **who to authorize**: the user(s) and/or **group** to grant
-  **Cognitive Services User** on the Foundry account (the SPA calls the Foundry data plane, which checks
-  Azure RBAC). Accepts **multiple** entries; a **group** (name or object id) is recommended — grant the
-  role to the group once and manage membership there. **ACA agents need none** (they run on Container
+- If exposing **FH or FD** (Foundry-based) → **who to authorize**: who gets **Cognitive Services User**
+  on the shared Foundry account (the SPA calls the Foundry data plane, which checks Azure RBAC). The
+  **default is just the signed-in user** (fine for a solo lab), but the answer **also accepts a
+  comma-separated list of UPNs** (several testers) **and/or a group object id** (recommended for many
+  testers — grant the role to the group once and manage membership there). Every entry is written to
+  `ui.permissions.foundryAccess` and granted by the scaffolder (the signed-in deploy user is always
+  granted too). **ACA agents need none** (they run on Container
   Apps, no Foundry) — do not ask this for an ACA-only UI.
 
 ### Custom MCP (optional — sample `custom-mcp/`)

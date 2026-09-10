@@ -80,7 +80,7 @@ gitignored.
     "permissions": {
       "mailConsent": false,                // true if any OBO agent is exposed
       "s2sAudience": false,                // true if ACA-S2S is exposed (sets UI_AUDIENCE)
-      "foundryAccess": []                  // users/groups granted Cognitive Services User on the Foundry account; FH/FD only (not ACA); a group is recommended
+      "foundryAccess": []                  // extra UI testers granted Cognitive Services User on the shared Foundry account (BEYOND the signed-in deploy user, who is always granted); FH/FD only (not ACA). Each entry is a UPN or a GROUP object id; a comma-separated list of UPNs in one entry is also accepted. A group is recommended for many testers.
     }
   },
   "customMcp": {                            // optional sample custom MCP server (custom-mcp/)

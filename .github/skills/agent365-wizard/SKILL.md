@@ -155,8 +155,12 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.
 - **UI** → if exposing OBO: Mail consent (`McpServers.Mail.All`); if exposing ACA-S2S: blueprint
-  scope + `UI_AUDIENCE`; if exposing **FH/FD** (Foundry-based, **not ACA**): which user(s)/**group** get
-  **Cognitive Services User** on the Foundry account (multiple allowed; a group is recommended).
+  scope + `UI_AUDIENCE`; if exposing **FH/FD** (Foundry-based, **not ACA**): who gets **Cognitive
+  Services User** on the shared Foundry account. **Default: just the signed-in user** (convenient for a
+  solo lab). **Explicitly signal that the answer also accepts a comma-separated list of UPNs** (multiple
+  testers) **and/or a group object id** (recommended for many testers — grant once, manage membership in
+  the group). Writes each entry to `ui.permissions.foundryAccess`; the scaffolder grants every one (the
+  signed-in deploy user is always granted regardless).
 
 Do NOT ask for: Log Analytics names, endpoints, app/blueprint IDs, fixed first-party scopes,
 localhost redirect URIs, API versions, descriptions — these are discovered, derived, or fixed.

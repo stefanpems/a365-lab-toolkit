@@ -55,7 +55,10 @@ function Invoke-ScaffoldFdAgent {
     }
     else {
         $fdGrant = "az role assignment create --assignee-object-id (az ad signed-in-user show --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope (az cognitiveservices account show -n $($ft.account) -g $($ft.resourceGroup) --query id -o tsv)"
-        $nextCommands.Add("cd `"$dst`"; $fdGrant; python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py   # RBAC propagates ~2-5min")
+        # Extra UI-tester grants (ui.permissions.foundryAccess: CSV of UPNs and/or a group object id).
+        $g = if ($ft.account -and $ft.resourceGroup) { Get-FoundryAccessGrants $plan "(az cognitiveservices account show -n $($ft.account) -g $($ft.resourceGroup) --query id -o tsv)" } else { @() }
+        $accessStr = if ($g) { ($g -join '; ') + '; ' } else { '' }
+        $nextCommands.Add("cd `"$dst`"; $fdGrant; $accessStr" + "python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -r requirements.txt; python deploy_agent.py   # RBAC propagates ~2-5min")
     }
     if ($a.type -eq 'FD-OBO' -and $plan.customMcp -and $plan.customMcp.enabled -and (@($plan.customMcp.attachTo) -contains 'FD-OBO')) {
         $nextCommands.Add("#   ^ FD-OBO custom MCP: the ext_ servers must be REGISTERED + admin-approved first (custom-mcp/), then 'python deploy_agent.py' bakes them into the agent version from CUSTOM_MCP_SERVERS_JSON. FD has NO server-side code, so BYO tools surface only when the one-time Power Platform connection already exists (OBO reuses the ACA/FH connection); the prompt asks the model to run 'initialize_server' first if a server still needs it. Re-run the UI scaffolder + redeploy the SPA so config.js obo-fd gets customInputs.")

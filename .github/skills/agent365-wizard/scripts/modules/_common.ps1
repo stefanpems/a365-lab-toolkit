@@ -123,6 +123,36 @@ function Get-SharedFoundryProvisioner {
     ($plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S') } | Select-Object -First 1).name
 }
 
+# Extra UI-tester grants from ui.permissions.foundryAccess: the additional people (BEYOND the signed-in
+# deploy identity, which every FH/FD deploy already grants) who need Cognitive Services User on the SHARED
+# Foundry account so the FH/FD tabs work in the SPA. Each list entry is a UPN or a GROUP object id, and a
+# single entry may itself be a COMMA-SEPARATED list of UPNs. Emitted ONCE per run (there is one shared
+# account). $ScopeExpr must resolve to the account resource id in the emitted shell (it may contain a
+# literal $acct for the create-shared provisioner, where the azd-generated account name lives in $acct).
+$script:FoundryAccessEmitted = $false
+function Get-FoundryAccessGrants {
+    param($plan, [string]$ScopeExpr)
+    if ($script:FoundryAccessEmitted) { return @() }
+    $ids = @()
+    if ($plan.ui -and $plan.ui.permissions -and $plan.ui.permissions.foundryAccess) {
+        foreach ($e in @($plan.ui.permissions.foundryAccess)) { foreach ($p in ("$e" -split ',')) { $t = $p.Trim(); if ($t) { $ids += $t } } }
+    }
+    if ($ids.Count -eq 0) { return @() }
+    $cmds = @()
+    foreach ($id in $ids) {
+        if ($id -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+            # A GUID = a group object id (grant the role to the group once; manage membership there).
+            $cmds += "az role assignment create --assignee-object-id $id --assignee-principal-type Group --role `"Cognitive Services User`" --scope $ScopeExpr   # UI tester group $id"
+        }
+        else {
+            # A UPN = resolve to the user's object id at run time (avoids a name-vs-id ambiguity).
+            $cmds += "az role assignment create --assignee-object-id (az ad user show --id `"$id`" --query id -o tsv) --assignee-principal-type User --role `"Cognitive Services User`" --scope $ScopeExpr   # UI tester $id"
+        }
+    }
+    $script:FoundryAccessEmitted = $true
+    return $cmds
+}
+
 # ---------------------------------------------------------------- Azure OpenAI strategy (ACA)
 # All ACA agents share ONE Azure OpenAI footprint (account + model deployment) when the optional
 # solution.azureOpenAI block is present, mirroring solution.foundry for FH/FD. Two modes:
