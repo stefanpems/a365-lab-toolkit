@@ -64,6 +64,8 @@ docs-companion/
 # --- OS / editor noise ------------------------------------------------------
 .DS_Store
 Thumbs.db
+# Office lock/owner files (e.g. ~$Agent365-Lab-Overview.pptx created while the deck is open)
+~$*
 
 # ============================================================================
 # Keep the templates (explicitly un-ignore in case a broad rule catches them)
