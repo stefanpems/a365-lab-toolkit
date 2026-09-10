@@ -62,6 +62,6 @@
     "region": "<AZURE_REGION>",
     "attachTo": [],
     "integrationMode": "approve-first",
-    "propagateToGraph": false
+    "propagateToGraph": true
   }
 }

@@ -102,7 +102,7 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    see custom-mcp/README.md), an **integration mode** (*approve-first* (default) = approve the servers before the
    agents, integrate each OBO immediately; *attach-when-approved* = agents first, integrate
    when approved else manually later), and whether to enable `propagate_to_graph` (advanced
-   On-Behalf-Of Graph test). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
+   On-Behalf-Of Graph test; **default: enable**). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
    (Azure resources `<prefix>-mcp-*`, folder `generated/<prefix>/<prefix>-mcp/`, registrations all
    derive from it) — for N coexisting copies use a different prefix each run; check the tenant
    (`a365 develop list-available`) and ask again if `ext_<prefix>*` collides.

@@ -91,7 +91,7 @@ gitignored.
     "region": "<azure-region>",
     "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO); S2S/DW blocked (see Rules)
     "integrationMode": "approve-first",     // "approve-first" (default) | "attach-when-approved" (see Rules)
-    "propagateToGraph": false               // enable the advanced On-Behalf-Of Graph test
+    "propagateToGraph": true                // enable the advanced On-Behalf-Of Graph test (DEFAULT: true)
   }
 }
 ```

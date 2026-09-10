@@ -248,7 +248,7 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
    blocked: they can't own the per-user Power Platform connection a BYO server needs), an **integration
    mode** (approve-first (default) / attach-when-approved — see "Custom MCP integration" below), and whether to
-   enable `propagate_to_graph`. Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
+   enable `propagate_to_graph` (**default: enable**). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
    Mail for **OBO/DW only** (not S2S). See "Registered MCP tools" below.

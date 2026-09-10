@@ -83,8 +83,9 @@ Single-select: *None* / *Anonymous only* / *Authenticated only* / *Both*. If any
   immediately as it is provisioned; *attach-when-approved* = start the agents now and integrate
   each OBO agent only if the servers are approved by the time it deploys, otherwise attach them manually
   later. Writes `customMcp.integrationMode`.
-- **`propagate_to_graph`** (auth server only): enable the advanced On-Behalf-Of Graph test? If yes,
-  surface the Entra prerequisites (confidential client + Graph `User.Read` + admin consent) as a checkpoint.
+- **`propagate_to_graph`** (auth server only): enable the advanced On-Behalf-Of Graph test? **Default:
+  enable.** If enabled, surface the Entra prerequisites (confidential client + Graph `User.Read` + admin
+  consent) as a checkpoint.
 - One ACA container hosts both servers on two paths; registration is per-server (auth type is
   per-registration): NoAuth for `/anon/mcp`, EntraOAuth for `/auth/mcp`. Admin approval of each
   registered server happens in the M365 admin center (not CLI).
