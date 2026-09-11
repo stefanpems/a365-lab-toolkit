@@ -26,6 +26,8 @@ custom-mcp/register-auth.json
 # Provisioning wizard: tenant-specific plan + generated scaffolding output
 a365-deployment-plan.json
 generated/
+# Local scratch/analysis output (e.g. extracted system-instruction dumps)
+tmp/
 # Backups / historical copies of config that may hold secrets
 **/*.OLD.json
 **/*bak*.json

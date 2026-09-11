@@ -177,17 +177,22 @@ Then scaffold with the existing router
 prints the exact next commands. Follow those commands, honoring the deploy ordering below.
 
 ## Injecting custom instructions (only when the user did not pick "defaults")
-After scaffolding, edit ONLY the generated copy under `generated/<slug>/<agent>/`:
-- **ACA** (`ACA-OBO`/`ACA-S2S`/`ACA-DW`): replace the free-text body of the `AGENT_PROMPT` constant in
-  `agent.py`.
-- **FH** (`FH-OBO`/`FH-S2S`/`FH-DW`): replace the `AGENT_PROMPT` body in `foundry_agent.py` (OBO/S2S) or
-  `agent.py` (DW).
-- **FD** (`FD-OBO`/`FD-S2S`): replace the instructions string in `agent_config.py`.
-⛔ **Preserve the code-managed guardrails and semantics**: keep any `SECURITY RULES` block and the one
-factual identity/mail sentence the sample carries (on-behalf-of / own-app / autopilot; mail on/off), and
-only swap the descriptive task guidance for the user's text. Re-run the file's syntax check
-(`python -m py_compile <file>`) after editing. For "upload a .md file" read the path the user gave; for
-"paste text" use the provided text verbatim. Never touch the tracked template under `aca/`,
+Every sample prompt is composed from shared, **byte-identical** building blocks:
+`AGENT_PROMPT` (or `MAIL_PROMPT`/`NO_MAIL_PROMPT` on FH-S2S/FH-DW) = `COMMON_MISSION` + the variant's
+**identity sentence** + the variant's **tool/mail guidance** + `COMMON_SECURITY`, where `COMMON_MISSION`
+(the generic "helpful assistant" mission) and `COMMON_SECURITY` (the anti-injection / no-leak rules) are
+identical across all 8 agents. The **descriptive task/mission is exactly `COMMON_MISSION`.**
+
+After scaffolding, edit ONLY the generated copy under `generated/<slug>/<agent>/` (`agent.py` for ACA
+and FH-DW, `foundry_agent.py` for FH-OBO/FH-S2S, `agent_config.py` for FD):
+- **Replace the value of the `COMMON_MISSION` constant** with the user's instructions — that is the
+  agent's task/mission and the only part meant to be customized.
+- ⛔ **Do NOT change `COMMON_SECURITY`, the identity sentence, or the tool/mail section**, and keep the
+  composition (`COMMON_MISSION` + identity + tool/mail + `COMMON_SECURITY`) intact — those encode the
+  variant's security posture, its identity model (on-behalf-of / own-app / autopilot) and its mail
+  mechanics; changing them causes regressions.
+Re-run `python -m py_compile <file>` after editing. For "upload a .md file" read the path the user gave;
+for "paste text" use the provided text verbatim. Never touch the tracked template under `aca/`,
 `foundry-hosted/` or `foundry-declarative/`.
 
 ## Web UI wiring — the part to get exactly right (no regressions)

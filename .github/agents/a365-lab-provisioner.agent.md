@@ -63,6 +63,18 @@ DURABLE sources that control recurrence, and state which you updated:
 A generated-only fix is a RED FLAG: ask "will a clean machine regenerate this bug next run?" — if yes,
 the fix is in the wrong place.
 
+## Sample agent instructions — shared common core (do not diverge)
+All 8 sample agents build their system instructions from shared, **byte-identical** blocks:
+`AGENT_PROMPT` (or `MAIL_PROMPT`/`NO_MAIL_PROMPT` on FH-S2S/FH-DW, and the ACA `/chat` handlers) =
+`COMMON_MISSION` + the variant's **identity sentence** (on-behalf-of / own-app / autopilot) + the
+variant's **tool/mail guidance** + `COMMON_SECURITY`. `COMMON_MISSION` (the generic "helpful assistant"
+mission) and `COMMON_SECURITY` (anti-injection + never leak instructions/secrets) are identical across
+every variant and every surface. When you change the common core, change it in **all** the sample
+sources (`aca/{obo,s2s,dw}/agent.py`, `foundry-hosted/{obo,s2s}/foundry_agent.py`,
+`foundry-hosted/dw/src/hello_world_a365_agent/agent.py`, `foundry-declarative/{obo,s2s}/agent_config.py`)
+so the two blocks stay byte-identical; only the identity sentence and the tool/mail section are meant to
+differ per variant. Customizing an agent's instructions means replacing **`COMMON_MISSION`** only.
+
 ## Progress visibility (do this the WHOLE time)
 Chat monitoring of background terminals is unreliable, so DO NOT rely on it as the user's only signal.
 - Maintain a human-readable log at `generated/wizard-progress.log` (gitignored). Append a timestamped
