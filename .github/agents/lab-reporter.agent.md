@@ -40,15 +40,25 @@ user's language, but nothing you persist to disk is ever in another language.
 2. **Lab name** — ask for the solution prefix (input control). Offer the `generated/<prefix>/` folders
    present in the workspace as hints (each is a past run).
 3. **What to produce** — single-select: **Web UI URL** / **Full state dashboard** / **Both**.
+3b. **Output format gate** (only when the choice includes the full state dashboard) — single-select:
+   **In chat (Markdown)** / **HTML file** / **Both**. This chooses how the state dashboard is delivered;
+   it does not affect the Web UI URL, which is always shown inline.
 4. **Run + present**:
    - **Web UI URL** → run
      [Get-LabSwaUrl.ps1](../skills/agent365-lab-reporter/scripts/Get-LabSwaUrl.ps1) and present the
      `https://<host>` URL in a copy-friendly fenced code block AND as a clickable link.
    - **Full state** → run
-     [Get-LabState.ps1](../skills/agent365-lab-reporter/scripts/Get-LabState.ps1), then **display the
-     generated `report.md` verbatim** in chat (do not paraphrase or re-order it — its structure is the
-     consistency contract) and point the user to the `report.md` + `state.json` paths under
-     `generated/lab-reporter/<prefix>-<timestamp>/`.
+     [Get-LabState.ps1](../skills/agent365-lab-reporter/scripts/Get-LabState.ps1) (always — it produces
+     `report.md` + `state.json`). Then, per the format gate:
+     - **In chat / Both** → **display the generated `report.md` verbatim** in chat (do not paraphrase or
+       re-order it — its structure is the consistency contract).
+     - **HTML / Both** → run
+       [Get-LabStateHtml.ps1](../skills/agent365-lab-reporter/scripts/Get-LabStateHtml.ps1)
+       `-StateJsonPath <the state.json just produced>` to render `report.html` (same fixed
+       macro-structure, hosts any lab configuration) into the same `generated/lab-reporter/<prefix>-<timestamp>/`
+       folder, and point the user to it. This script is offline (it only reads `state.json`; no cloud
+       calls) — always feed it the fresh `state.json`, never regenerate cloud state for the HTML.
+     - Point the user to the `report.md`, `report.html` (when produced) and `state.json` paths.
 5. **Status** — end with a short summary (agents healthy, Web UI, Custom MCP, DW instances) and the
    artifact paths.
 
@@ -64,6 +74,11 @@ user's language, but nothing you persist to disk is ever in another language.
 - DW instances are agent users holding a Frontier / Agent 365 license; list those whose name/UPN carries
   the lab prefix with their licenses, and summarize other agent-license holders as a count (likely other
   labs — instances can be custom-named at hire time).
+- The report opens with an **Acronyms** glossary (right after the Legend) covering exactly the acronyms
+  that appear in it — the agent taxonomy `<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>`: **MAF** (framework),
+  **ACA** / **FH** / **FD** (hosting) and **OBO** / **S2S** / **DW** (identity/pattern). It is defined
+  once in `Get-LabState.ps1`, stored in `state.json` (`acronyms`), and reused verbatim by the HTML
+  renderer — do not diverge the two.
 
 ## Output
 End every turn with a short status: the lab reported on, what was produced (URL / dashboard), the exact

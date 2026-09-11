@@ -16,6 +16,24 @@ and the cleanup resource model
 | ⚪ | not part of this lab (not planned / not applicable) |
 | 🔵 | informational (present but no single health verdict, e.g. Foundry-managed identity) |
 
+## Acronyms (fixed glossary, right after the legend)
+The report opens with an **Acronyms** section covering exactly the acronyms that appear in it — the agent
+taxonomy `<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>` (e.g. `MAF-ACA-OBO`):
+
+| Acronym | Meaning |
+|:--:|---|
+| MAF | Microsoft Agent Framework (the framework the sample agents are currently built with) |
+| ACA | Azure Container Apps (agent hosting) |
+| FH | Foundry Hosted (agent hosting) |
+| FD | Foundry Declarative (prompt/declarative agent) |
+| OBO | On-Behalf-Of (agent acts with the signed-in user's delegated identity) |
+| S2S | Service-to-Service (agent acts with its own application identity) |
+| DW | Digital Worker (AI-teammate agent hired as an agent user; holds a Frontier / Agent 365 license) |
+
+`Get-LabState.ps1` owns this glossary (defined once, emitted to `report.md` and stored in `state.json` as
+`acronyms`); `Get-LabStateHtml.ps1` reuses `state.acronyms` verbatim (with a built-in fallback). Keep the
+two in sync — do not add acronyms that are not present in the report, and do not drop any that are.
+
 ## Which object types are reported (and which are NOT)
 The report lists only objects whose **existence or state is meaningful**. Supporting / detail resources
 are intentionally **excluded as rows** (they are implied by their resource group): NICs, disks, public
@@ -52,6 +70,17 @@ count, not one row each).
 6. **Entra recycle bin** — shown only if soft-deleted apps/SPs/users matching the prefix are pending
    purge (informational — a prior half-finished cleanup).
 7. **Summary** — one-line counts (agents healthy, Web UI, Custom MCP, DW instances).
+
+## HTML rendering (same macro-structure, hosts any lab configuration)
+`Get-LabStateHtml.ps1` renders a self-contained `report.html` from a `state.json` with a **fixed**
+macro-structure, in this order: **header** (lab name, tenant, subscription, generated timestamp, plan
+source) → **legend** → **acronyms** → **summary** (cards) → **Web UI** → **Custom MCP** → **Agents** →
+**shared Foundry** (only when present) → **shared Azure OpenAI** (only when present) → **Digital Worker
+instances & licenses** → **Entra recycle bin** (only when present) → **footer**. The same table columns,
+status emoji and included/excluded object types apply. Core sections (Web UI, Custom MCP, Agents, DW)
+always render — with an italic placeholder note when a lab does not include them — while the optional
+sections render only when the state has data, so a single template holds any configuration. The HTML
+makes no cloud calls; it is a pure projection of `state.json`.
 
 ## Expected vs actual
 "Expected" objects come from the run's deployment plan when it is available

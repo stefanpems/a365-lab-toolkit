@@ -12,7 +12,10 @@ Produce **read-only** information about a lab run created by the
 
 1. **Web UI URL** — resolve the Static Web App URL of a lab.
 2. **Lab state dashboard** — a consistent, colour-coded table report of every significant object the run
-   can create, its actual existence in Azure / Entra / Microsoft 365, and its status.
+   can create, its actual existence in Azure / Entra / Microsoft 365, and its status. The dashboard can
+   be delivered as **Markdown** (shown in chat), as a self-contained **HTML** file, or **both** — the
+   user chooses via the output-format gate. Both formats share the same fixed macro-structure and the
+   same underlying `state.json`.
 
 This skill **never mutates** anything — only `az … list/show/exists` and Microsoft Graph GET calls. Do
 **not** modify the Lab Builder or the deployed agents; only read them. Write **English** in every file
@@ -23,7 +26,13 @@ and command you persist; chat may be in the user's language.
   the lab's Static Web App (`<prefix>-ui`) from the live subscription.
 - [scripts/Get-LabState.ps1](./scripts/Get-LabState.ps1) — READ-ONLY. Discovers the significant objects,
   checks existence + status, and writes `state.json` + a deterministic `report.md` dashboard under
-  `generated/lab-reporter/<prefix>-<timestamp>/`.
+  `generated/lab-reporter/<prefix>-<timestamp>/`. The `report.md` opens with an **Acronyms** glossary
+  (defined once here, also stored in `state.json` as `acronyms`).
+- [scripts/Get-LabStateHtml.ps1](./scripts/Get-LabStateHtml.ps1) — READ-ONLY, **offline** (no cloud
+  calls). Renders a self-contained `report.html` (inline CSS, fixed macro-structure) from a `state.json`
+  produced by `Get-LabState.ps1`. Preferred call is `-StateJsonPath <the fresh state.json>`; it can also
+  take `-LabName/-Subscription/-TenantId` and will invoke `Get-LabState.ps1` itself to produce the state
+  first. It reuses `state.acronyms` verbatim (with a built-in fallback), so the glossary never diverges.
 
 ## What is reported (and the fixed table shape)
 The exact sections, columns, status legend and the list of **included vs excluded** object types (detail
@@ -34,6 +43,14 @@ runs — the script renders it deterministically; present it verbatim.
 
 Status legend: ✅ present & healthy · 🟡 present, provisioning/degraded · ❌ missing or failed · ⚪ not
 part of this lab · 🔵 informational.
+
+The report also opens with an **Acronyms** glossary (right after the legend) covering exactly the
+acronyms that appear in it — the agent taxonomy `<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>`: **MAF**
+(framework), **ACA** / **FH** / **FD** (hosting) and **OBO** / **S2S** / **DW** (identity/pattern). The
+HTML rendering keeps the same fixed macro-structure (header, legend, acronyms, summary, then Web UI,
+Custom MCP, Agents, optional shared Foundry / shared Azure OpenAI, Digital Worker instances, optional
+recycle bin, footer); optional sections render only when the lab has that data, so one template hosts
+any lab configuration.
 
 ## Flow (in order)
 0. **Confirm the Copilot runtime model** — first action. Show the active chat model and, when VS Code
@@ -48,11 +65,20 @@ part of this lab · 🔵 informational.
 2. **Ask the lab name** — the solution prefix (e.g. `a09091`), via the questions tool (input control).
    Offer the discovered `generated/<prefix>/` folders as a hint.
 3. **Ask what to produce** — single-select: **Web UI URL** / **Full state dashboard** / **Both**.
+3b. **Output-format gate** — only when the choice includes the full state dashboard. Single-select:
+   **In chat (Markdown)** / **HTML file** / **Both**. It governs delivery of the dashboard only; the Web
+   UI URL is always shown inline regardless.
 4. **Run the script(s)** and **show the result**:
    - Web UI URL → run `Get-LabSwaUrl.ps1`; present the `https://…` URL in a copy-friendly fenced block +
      a clickable link.
-   - Full state → run `Get-LabState.ps1`; then **display the generated `report.md` verbatim** in chat and
-     point the user to the file paths (`report.md` + `state.json`).
+   - Full state → always run `Get-LabState.ps1` first (it writes `report.md` + `state.json`). Then, per
+     the format gate:
+     - **In chat / Both** → **display the generated `report.md` verbatim** in chat.
+     - **HTML / Both** → run `Get-LabStateHtml.ps1 -StateJsonPath <the state.json just written>` to
+       produce `report.html` next to it (offline; never regenerate cloud state for the HTML). Point the
+       user to `report.html`.
+     - Always point the user to the produced file paths (`report.md`, `report.html` when made,
+       `state.json`).
 5. **Report** — summarize (agents healthy, Web UI, Custom MCP, DW instances) and point to the artifacts.
 
 ## Guardrails
@@ -66,4 +92,5 @@ part of this lab · 🔵 informational.
   the same pattern the cleanup discovery uses; keep it for any new Graph call.
 - **pwsh 7.6 `@($list)` regression** — never write `@($someGenericList)` directly; use
   `@($list.ToArray())` (see [repo memory]; it throws "Argument types do not match").
-- Artifacts land under `generated/lab-reporter/` (gitignored) — a local, uncommitted audit trail.
+- Artifacts land under `generated/lab-reporter/` (gitignored) — a local, uncommitted audit trail
+  (`state.json`, `report.md`, and `report.html` when the HTML format is requested).

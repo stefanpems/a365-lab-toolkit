@@ -529,12 +529,26 @@ if (-not $OutDir) {
 }
 if (-not (Test-Path -LiteralPath $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
 
+# Acronyms used in this report (all and only the ones that appear): the agent taxonomy is
+# <prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY> (e.g. MAF-ACA-OBO). Kept in the state model so the HTML
+# renderer reuses the exact same definitions (no drift).
+$glossary = [ordered]@{
+    MAF = 'Microsoft Agent Framework — the framework the sample agents are currently built with.'
+    ACA = 'Azure Container Apps — agent hosting on the managed container platform.'
+    FH  = 'Foundry Hosted — agent hosting managed by Azure AI Foundry.'
+    FD  = 'Foundry Declarative — a prompt (declarative) agent defined in Azure AI Foundry.'
+    OBO = 'On-Behalf-Of — the agent acts using the signed-in user''s delegated identity.'
+    S2S = 'Service-to-Service — the agent acts with its own application identity.'
+    DW  = 'Digital Worker — an AI-teammate agent hired as an agent user (holds a Frontier / Agent 365 license).'
+}
+
 $state = [ordered]@{
     labName      = $prefix
     tenantId     = $ctx.tenantId
     subscription = $sub
     generatedUtc = $nowUtc
     planSource   = $planSource
+    acronyms     = $glossary
     webui        = $sections.webui
     customMcp    = $sections.mcp
     sharedFoundry = $sections.foundry
@@ -557,6 +571,11 @@ Emit "- **Generated:** $nowUtc"
 Emit "- **Plan source:** $planSource"
 Emit ''
 Emit 'Legend: ✅ present & healthy · 🟡 present, provisioning/degraded · ❌ missing or failed · ⚪ not part of this lab · 🔵 informational'
+Emit ''
+
+Emit '## Acronyms'
+Emit ''
+foreach ($k in $glossary.Keys) { Emit ("- **$k** — " + $glossary[$k]) }
 Emit ''
 
 function Emit-ResTable {
