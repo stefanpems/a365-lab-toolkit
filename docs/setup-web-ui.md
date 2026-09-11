@@ -160,6 +160,13 @@ window.APP_CONFIG = {
 > ACA `/chat` accepted browser fetches from the SWA origin (no CORS proxy needed); if you host
 > the ACA agents behind a stricter ingress, allow the SWA origin.
 
+> **Sidebar reveal (`enabled`).** Each agent entry may carry an `enabled` flag: while `enabled: false`
+> its **left-sidebar tab is hidden**, and it appears only once you set `enabled: true`. This lets the UI
+> reveal each agent as it goes live. The Lab Builder scaffolds **every tab with `enabled: false`** and
+> flips it to `true` in the same `config.js` edit that fills the agent's FQDN/endpoint after it deploys.
+> An entry **without** the flag is treated as live (shown), so a hand-written config stays visible.
+> When no tab is enabled yet, the shell shows a short "agents appear as they are deployed" placeholder.
+
 ## 6. Validate & deploy to Azure Static Web Apps
 
 > **`config.js` is gitignored** (tenant-specific). Create it from the tracked template first:
@@ -201,7 +208,9 @@ the app registration (step 2) if you didn't already.
 > **Editing local files does **not** update the live site — you must **redeploy** each time.** The
 > redeploy is a **static file re-upload with NO build/compilation** (`--skipAppBuild true`; the SPA has
 > no build step). When you integrate a new agent, the only file that changes is `config.js`, so the
-> redeploy just re-uploads the regenerated `config.js` plus the unchanged static assets.
+> redeploy just re-uploads the regenerated `config.js` plus the unchanged static assets. Integrating a
+> live agent means, in that same `config.js` edit: fill its FQDN/endpoint **and** set its `enabled: true`
+> to unhide its left-sidebar tab, then redeploy.
 
 ### 6a. Enable CORS on the ACA agents (`UI_ALLOWED_ORIGINS`) — required
 

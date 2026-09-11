@@ -298,10 +298,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      https://<swa-host>
      ```
      `https://<swa-host>` . Then tell the user, clearly: *"The web UI is already live and you can open it
-     now. The agent tabs you selected are already listed in it, but they will NOT respond yet — the agents
-     still have to be created and deployed. Each tab starts working the moment its agent goes live (I'll
-     tell you as we get there)."* This prevents the user thinking the UI is broken when the not-yet-created
-     agents don't answer.
+     now. Its left sidebar starts EMPTY — each agent's tab is hidden until that agent is created, deployed
+     and wired, then it appears automatically. Each tab shows up and starts working the moment its agent
+     goes live (I'll tell you as we get there)."* This prevents the user thinking the UI is broken when the
+     sidebar is empty before any agent exists.
 2. **Then, if a custom MCP is requested, deploy + register it BEFORE the agents** (its containers, the
    auth resource app and the `ext_<prefix>Anon/Auth` registrations depend on nothing but the
    subscription). A BYO server must be **admin-approved** in the M365 admin center before it can attach,
@@ -314,10 +314,11 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      servers in parallel; each OBO agent integrates automatically **only if the servers are already
      approved** when it deploys, otherwise run the per-agent attach block later (the scaffolder emits it
      as a clearly-marked manual step). **S2S/DW never attach the custom MCP.**
-3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js`, redeploy the UI (a **build-free
-   static re-upload** — only `config.js` changes, no compilation), wire `UI_ALLOWED_ORIGINS` (+
-   `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in the UI at
-   `https://<swa-host>`." A working surface early and a testable increment per agent.
+3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js` and **unhide it** (set that
+   entry's `enabled: true` — tabs are scaffolded `enabled: false` and hidden until then), redeploy the UI
+   (a **build-free static re-upload** — only `config.js` changes, no compilation), wire
+   `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in
+   the UI at `https://<swa-host>`." A working surface early and a testable increment per agent.
    - ⛔ **Integrate the custom MCP into the tab IMMEDIATELY — never leave an OBO tab as "Mail only".**
      When the agent is a `customMcp.attachTo` target, the `config.js` tab MUST include the custom-token
      wiring so the custom tools work from the first test: **ACA-OBO/FH-OBO** get `customScopes`

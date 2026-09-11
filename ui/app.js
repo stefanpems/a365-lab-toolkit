@@ -137,8 +137,19 @@
   });
 
   // --- Build vertical tabs + one chat panel per agent ---
+  // A tab is rendered only when its agent is live: entries are hidden while `enabled === false`
+  // (the scaffolder ships every tab that way) and shown once the integration step flips the flag
+  // to true. Entries without the flag are treated as live (backward-compatible with older configs).
   function buildUI() {
-    agents.forEach((agent, index) => {
+    const liveAgents = agents.filter(a => a.enabled !== false);
+    if (liveAgents.length === 0) {
+      el.tabs.innerHTML = '<p class="side-empty">No agents are live yet.</p>';
+      el.panels.innerHTML =
+        '<div class="panels-empty">Agents appear in the left sidebar as they are deployed and wired. '
+        + 'Come back after the first one goes live.</div>';
+      return;
+    }
+    liveAgents.forEach((agent, index) => {
       const tab = document.createElement("button");
       tab.className = "tab" + (index === 0 ? " active" : "");
       tab.dataset.agent = agent.id;

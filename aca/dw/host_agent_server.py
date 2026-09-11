@@ -280,8 +280,20 @@ class GenericAgentHost:
                     # Each send_activity call produces a discrete Teams message.
                     # NOTE: For Teams agentic identities, streaming is buffered into a single message by the SDK;
                     #       use send_activity for any messages that must arrive immediately.
-                    await context.send_activity("Got it — working on it…")
-                    await context.send_activity(Activity(type="typing"))
+                    # Some channels (e.g. the Agent 365 email/agents channel) reject the ack and
+                    # 'typing' activity with HTTP 400; those are cosmetic, so a failure must never
+                    # abort the turn before the agent processes the message.
+                    async def _safe_send(activity):
+                        try:
+                            await context.send_activity(activity)
+                        except Exception as _e:
+                            logger.info(
+                                "Non-fatal: channel rejected activity %s (%s)",
+                                getattr(activity, "type", activity), _e,
+                            )
+
+                    await _safe_send("Got it — working on it…")
+                    await _safe_send(Activity(type="typing"))
 
                     # Typing indicator loop — refreshes the "..." animation every ~4s for long-running operations.
                     # Typing indicators time out after ~5s and must be re-sent. Only visible in 1:1 and small group chats.
@@ -289,7 +301,7 @@ class GenericAgentHost:
                         try:
                             while True:
                                 await asyncio.sleep(4)
-                                await context.send_activity(Activity(type="typing"))
+                                await _safe_send(Activity(type="typing"))
                         except asyncio.CancelledError:
                             pass  # Expected: loop is cancelled when processing completes.
 

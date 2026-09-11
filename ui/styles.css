@@ -116,6 +116,23 @@ button.link {
   font-weight: 400;
   margin-top: 3px;
 }
+.side-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  margin: 0;
+}
+.panels-empty {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
 
 /* ---------- Chat panels ---------- */
 .panels { flex: 1 1 auto; min-width: 0; display: flex; }

@@ -16,19 +16,25 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
 - The `ui.*` block of the deployment plan (mode, expose[], permissions).
 - The generated `generated/<prefix>-ui/config.js` (one tab per exposed OBO/S2S agent — **DW is never exposed**;
   it routes via Teams/Outlook).
+- **Sidebar visibility**: every scaffolded tab carries `enabled: false` so its left-sidebar link is
+  **hidden until the agent is live**. `app.js` renders a tab only when `enabled !== false`; the
+  incremental integration step flips it to `true` to unhide it (see Flow §2).
 
 ## Flow
 1. **Scaffold** the config via the wizard router (no cloud writes):
    [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1) → module
    [scaffold.ui.ps1](../agent365-wizard/scripts/modules/scaffold.ui.ps1) emits
    `generated/<prefix>-ui/config.js`, where `<prefix>` is `solution.prefix` from the deployment plan.
-2. **Deploy UI first, integrate incrementally.** Stand up the SWA shell with a placeholder `config.js`;
-   then, as each OBO/S2S agent goes live, add its tab, redeploy, and wire origins.
+2. **Deploy UI first, integrate incrementally.** Stand up the SWA shell with a placeholder `config.js`
+   (all tabs `enabled: false`, so the sidebar starts empty); then, as each OBO/S2S agent goes live, in the
+   SAME `config.js` edit fill its FQDN/endpoint **and** set its `enabled: true` to **unhide** its
+   left-sidebar link, redeploy, and wire origins.
    - ⛔ **The moment the SWA exists, give the user its URL copy-friendly (a fenced code block with the
      bare `https://<swa-host>` on its own line, plus a clickable link) and set expectations**: the web UI
-     is already live and openable, the selected agent tabs are already listed, but they will NOT respond
-     until each agent is created and deployed — every tab starts working as its agent goes live. Say this
-     BEFORE moving on, so the empty/not-yet-created tabs aren't mistaken for a broken UI.
+     is already live and openable, but the **left sidebar starts empty** — each agent's tab is **hidden
+     until that agent is created, deployed and wired** (its `enabled` flag flips to true). Every tab
+     appears and starts working as its agent goes live. Say this BEFORE moving on, so the empty sidebar
+     isn't mistaken for a broken UI.
 3. **Follow the canonical steps** for the SPA app registration, Entra consent (AllPrincipals), Azure
    RBAC for Foundry agents, and the SWA deploy: [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)
    §2–§6. Per-host permission specifics (Mail consent for OBO, `UI_AUDIENCE` for ACA-S2S, Foundry

@@ -66,6 +66,10 @@ function Invoke-ScaffoldUi {
             default   { $null }
         }
         if ($entry) {
+            # Every tab is scaffolded HIDDEN (enabled:false): the sidebar link is revealed only when
+            # the agent is live, by flipping this to true in the same config.js edit that fills the
+            # agent's FQDN/endpoint after it deploys (see the incremental integration step).
+            $entry['enabled'] = $false
             # FD reuses a KNOWN Foundry project, so resolve its Responses endpoint at scaffold time
             # (normalize the account host to services.ai.azure.com — the prompt-agent path 404s on the
             # cognitiveservices.azure.com host). FH accounts are created at provision, so they stay
@@ -101,6 +105,7 @@ function Invoke-ScaffoldUi {
         Set-Content -LiteralPath (Join-Path $uiDst 'config.js')
     Write-Host "  scaffolded UI ($($plan.ui.mode)) -> generated\$uiFolderName\config.js ($($uiAgents.Count) tab(s))" -ForegroundColor Cyan
     $nextCommands.Add("# UI: create SWA (az staticwebapp create -l $swaRegion --sku Free; SWA Free is region-limited [eastus2/centralus/eastasia/westeurope/westus2] and served from a global CDN, so it need not match the lab region - westeurope may reject new customers, eastus2 is validated), register the SPA app (redirect https://<swa-host> + http://localhost:3000), fill config.js, deploy per docs/setup-web-ui.md (use StaticSitesClient.exe directly from the REPO ROOT with an absolute --app path - the 'npx @azure/static-web-apps-cli deploy' wrapper exits 1), then set UI_ALLOWED_ORIGINS (+ UI_AUDIENCE=<s2s-app-id> for ACA-S2S) on the ACA containers.")
+    $nextCommands.Add("# UI sidebar reveal: every tab is scaffolded HIDDEN (enabled:false). As each OBO/S2S agent goes live, in the SAME config.js edit that fills its FQDN/endpoint set that entry's enabled:true to UNHIDE its left-sidebar link, then redeploy the SPA (static re-upload, no build). The shell deploys with all tabs hidden and reveals each one as its agent is wired.")
     if ($mcpEnabled -and (@($mcpAttach | Where-Object { $_ -eq 'ACA-OBO' -or $_ -eq 'FH-OBO' -or $_ -eq 'FD-OBO' }).Count -gt 0)) {
         $nextCommands.Add("# UI + custom MCP (MANDATORY, not optional - every OBO agent must integrate its MCP tools immediately): fill plan.customMcp.audiences with the ext_${mcpName}Anon/Auth BYO app ids right after registration so config.js gets customScopes (ACA/FH-OBO) / customInputs (FD-OBO) automatically; otherwise attach first (add-mcp-servers) then RE-RUN this scaffolder to read them from each agent's ToolingManifest.json. Redeploy the SPA after. then, EACH USER MUST create a SEPARATE one-time Power Platform connection for BOTH ext_${mcpName}Anon (NoAuth) AND ext_${mcpName}Auth (EntraOAuth = OAuth sign-in) at https://make.powerapps.com/connectionsMcp - creating only the anon one is NOT enough (if server_time works but the authenticated whoami comes back from the anon server, the auth connection is missing; the auth server exposes only initialize_server until then). The agent MUST proactively tell the user to create BOTH as themselves, then retry (OBO reuses both across ACA/FH/FD). deploy the SPA with StaticSitesClient.exe directly from the repo root (the 'npx @azure/static-web-apps-cli deploy' wrapper exits 1): & <hash>\StaticSitesClient.exe upload --app <ui-folder> --apiToken <tok> --skipAppBuild true (see docs/setup-web-ui.md).")
     }

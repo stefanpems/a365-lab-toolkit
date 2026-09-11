@@ -10,6 +10,12 @@
 //
 // One vertical tab is rendered per entry in "agents".
 // Include only the agents you actually deploy; delete the others.
+//
+// Sidebar visibility: a tab is HIDDEN while its entry has `enabled: false`, and shown once you
+// set `enabled: true`. This lets the sidebar reveal each agent only when it is live — the Lab
+// Builder scaffolds every tab with `enabled: false` and flips it to `true` in the same edit that
+// fills the agent's FQDN/endpoint after it deploys. An entry WITHOUT the flag is treated as live
+// (shown), so a hand-written config stays visible by default.
 // ============================================================================
 window.APP_CONFIG = {
   msal: {
