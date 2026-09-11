@@ -324,7 +324,7 @@ def run_send(args):
         "total": len(results),
         "basic_pass": sum(1 for r in results if r["basic_pass"]),
         "basic_fail": sum(1 for r in results if not r["basic_pass"]),
-        "user": args.user or (load_config(args.config) and _current_user(cfg, args.cache, args.user)),
+        "user": _current_user(cfg, args.cache, args.user),
         "results": results,
     }
     if args.out:

@@ -33,6 +33,10 @@ generated/
 # One-off id/secret dumps
 **/preauth.txt
 **/spa_appid.txt
+# MSAL token caches (contain refresh tokens) — Prompts Sender and any local harness
+**/token_cache.json
+# Local throwaway test harness (never commit; may hold tokens)
+_test/
 # Certificates / keys
 *.pem
 *.pfx
