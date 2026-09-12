@@ -52,6 +52,7 @@ param(
     [Parameter(Mandatory)][ValidateSet('ACA-OBO', 'ACA-S2S', 'FH-OBO', 'FH-S2S', 'FD-OBO', 'FD-S2S')][string]$AgentType,
     [Parameter(Mandatory)][string]$Name,
     [Parameter(Mandatory)][string]$LabPrefix,
+    [string]$InstanceSuffix,
     [string]$ApiBase,
     [string]$S2sAppId,
     [string]$Endpoint,
@@ -101,8 +102,13 @@ else {
 }
 
 # --- Build + merge the ONE tab ---
-$entry = New-TabEntry -AgentType $AgentType -Name $Name -LabPrefix $LabPrefix -ApiBase $ApiBase -S2sAppId $S2sAppId `
+# InstanceSuffix (e.g. '-2') disambiguates one of N instances of the same type in a SHARED config.js; the
+# tab id becomes '<shortId><suffix>-<labPrefix>' and still ends '-<labPrefix>' so Remove-TabsByLab finds it.
+$tabIdOverride = if ($InstanceSuffix) { "$(Get-TabShortId -AgentType $AgentType)$InstanceSuffix-$LabPrefix" } else { $null }
+$entry = New-TabEntry -AgentType $AgentType -Name $Name -LabPrefix $LabPrefix -TabId $tabIdOverride -ApiBase $ApiBase -S2sAppId $S2sAppId `
     -Endpoint $Endpoint -AgentName $AgentName -AnonAudience $AnonAudience -AuthAudience $AuthAudience
+# Multi-instance: keep the FH Invocations session prefix unique per instance too (mirrors scaffold.ui.ps1).
+if ($InstanceSuffix -and ($entry.Contains('sessionPrefix'))) { $entry['sessionPrefix'] = "$($entry['sessionPrefix'])$InstanceSuffix" }
 $tabId = $entry['id']
 $before = @($cfg.agents).Count
 $cfg = Add-OrReplaceTab -Config $cfg -Entry $entry

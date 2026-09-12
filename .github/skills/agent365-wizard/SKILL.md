@@ -93,6 +93,14 @@ Write `solution.secretHandling` (`manual` | `assisted`) and follow it exactly fo
 ### 2. Select what to create
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 10 variants (mark DW/FH as "requires Frontier/Foundry"; MCS as "Copilot Studio, needs pac + a target env — MCS-NH needs PAYG/Copilot Credits").
+1a. **Instances per variant** — for each selected variant, ask **how many instances** to create (a whole
+   number ≥ 1; default **1**). Use the word **"istanza"/"instance"** — it is the right term (it is also the
+   Digital-Worker blueprint's word for its projected agent users; here it means a whole distinct agent copy).
+   There is **no upper limit on N** — the only cost of a larger N is script run time and GHCP tokens; still
+   surface that DW instances each consume M365 licenses and that Azure/region quota can cap very large N.
+   **Naming**: a variant with a **single** instance keeps the plain name (no suffix); a variant with **>1**
+   instance suffixes **every** instance with a 1-based `-<n>` (`<prefix>-MAF-ACA-OBO-1`, `-2`, …). Emit one
+   `agents[]` entry per instance with its computed unique name (MCS included: `<prefix>-MCS-OH-1`, …).
 2. **Companion UI** — single-select: *No UI* / *Create new UI* / *Attach to existing UI*.
    For **Attach to existing UI**, discover the existing web UIs by the `a365component=web-ui` tag
    (`az staticwebapp list` → keep `tags.a365component == 'web-ui'`) and let the user PICK one (record it
@@ -101,13 +109,18 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    user to the **Web UI Creator** (or `Set-ComponentTags.ps1 -Retro`). See
    [agent365-web-ui/SKILL.md](../agent365-web-ui/SKILL.md).
 3. If a UI is chosen — multi-select of the **OBO/S2S** agents to expose (exclude DW: they route via
-   Teams/Outlook/Office, not the SPA — see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).
+   Teams/Outlook/Office, not the SPA — see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)). List each
+   **instance individually by its agent name** (not by type) so N instances of a type can be exposed as N
+   separate tabs; write each chosen one as `{ "agentName": "<name>" }` in `ui.expose` (a bare
+   `{ "agentType": "<type>" }` is still accepted and means every instance of that type).
 4. **Custom MCP** (single-select): *None* / *Anonymous only* / *Authenticated only* / *Both* — the
    sample [custom-mcp/](../../../custom-mcp/README.md). If not None, **do NOT ask a name** (it derives
    from the solution prefix → `ext_<prefix>Anon` / `ext_<prefix>Auth`; the prefix must be ≤ 12
    alphanumerics), ask a publisher name, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO`
    only — S2S/DW are blocked: they can't own the per-user Power Platform connection a BYO server needs;
-   see custom-mcp/README.md), an **integration mode** (*approve-first* (default) = approve the servers before the
+   see custom-mcp/README.md) — **list each OBO instance individually by name**; write chosen instances as
+   agent names in `customMcp.attachTo` (a bare OBO type there attaches to every instance of that type), an
+   **integration mode** (*approve-first* (default) = approve the servers before the
    agents, integrate each OBO immediately; *attach-when-approved* = agents first, integrate
    when approved else manually later), and whether to enable `propagate_to_graph` (advanced
    On-Behalf-Of Graph test; **default: enable**). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
@@ -131,14 +144,16 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
   show the structure and at least **two concrete examples** (e.g. `contoso-MAF-ACA-OBO`,
   `contoso-MAF-FH-S2S`) so the user sees the fixed framework segment — **and STATE the length rules**:
   start with a lowercase letter; lowercase letters and digits only (no hyphens/underscores/uppercase/symbols);
-  **3–12 characters**. The 12-char cap is set by the custom MCP (`ext_<prefix>Anon/Auth ≤ 20`) and is
+  **3–12 characters**. Also state the **instance suffix rule**: a variant with a single instance keeps the
+  plain name; a variant with **>1** instance suffixes every instance `-<n>` (`contoso-MAF-ACA-OBO-1`, `-2`). The 12-char cap is set by the custom MCP (`ext_<prefix>Anon/Auth ≤ 20`) and is
   **independent of the agent name** (it also satisfies ACA, RG, managed identity, Entra and SWA). **A
   Digital Worker lab lowers the cap** (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30
   once the framework segment is added.
 - **Naming mode** — single-select **Default names** / **Custom names** (`solution.namingMode`, default
   `default`). *Default* keeps the convention above. *Custom* lets you rename each **code** agent
-  (ACA/FH/FD): present ONE screen listing every selected code agent with its **default name pre-filled**
-  and an editable field to override it. ⛔ **STATE the naming rules to the user BEFORE the field** (a
+  (ACA/FH/FD): present ONE screen listing every selected code agent **instance** with its **default name
+  pre-filled** (multi-instance defaults already carry the `-<n>` suffix) and an editable field to override
+  it. ⛔ **STATE the naming rules to the user BEFORE the field** (a
   priori) — a custom agent name must:
   - **start with a letter**; contain **only letters, digits and hyphens** (no spaces/underscores/symbols);
   - have **no consecutive hyphens (`--`) and no trailing hyphen**;

@@ -11,12 +11,21 @@ function Invoke-ScaffoldUi {
         $ex = $plan.ui.existing
         $swa = if ($ex -and $ex.staticWebApp) { $ex.staticWebApp } else { '<EXISTING_SWA_NAME>' }
         $prefix = $plan.solution.prefix
-        $attachTypes = @($plan.ui.expose | ForEach-Object { $_.agentType } | Where-Object { $_ -notlike '*-DW' })
-        Write-Host "  UI (attach) -> shared SWA '$swa': will merge $($attachTypes.Count) tab(s) via Add-WebUiTab.ps1 (config.js NOT regenerated)." -ForegroundColor Cyan
-        $nextCommands.Add("# UI (ATTACH to existing SWA '$swa'): do NOT regenerate config.js. As each OBO/S2S agent below goes live, ASSOCIATE it with a SINGLE surgical merge (fetches the live config.js, adds one tab id '<type>-$prefix', redeploys, tags the SWA a365ref_$prefix, wires CORS). The shared UI's other tabs are preserved.")
-        foreach ($t in $attachTypes) {
-            $ag = $plan.agents | Where-Object { $_.type -eq $t } | Select-Object -First 1
-            if (-not $ag) { continue }
+        $suffixMap = Get-InstanceSuffixMap $plan
+        # Resolve every exposed OBO/S2S agent (by agentName, else agentType = all instances of that type); DW never exposed.
+        $attachAgents = New-Object System.Collections.Generic.List[object]
+        foreach ($ex2 in @($plan.ui.expose)) {
+            $tok = if ($ex2.agentName) { $ex2.agentName } else { $ex2.agentType }
+            foreach ($rag in (Resolve-PlanAgents $plan $tok)) {
+                if ($rag.type -like '*-DW') { continue }
+                if ($attachAgents -notcontains $rag) { $attachAgents.Add($rag) }
+            }
+        }
+        Write-Host "  UI (attach) -> shared SWA '$swa': will merge $($attachAgents.Count) tab(s) via Add-WebUiTab.ps1 (config.js NOT regenerated)." -ForegroundColor Cyan
+        $nextCommands.Add("# UI (ATTACH to existing SWA '$swa'): do NOT regenerate config.js. As each OBO/S2S agent below goes live, ASSOCIATE it with a SINGLE surgical merge (fetches the live config.js, adds one tab whose id ends '-$prefix', redeploys, tags the SWA a365ref_$prefix, wires CORS). The shared UI's other tabs are preserved.")
+        foreach ($ag in $attachAgents) {
+            $t = $ag.type
+            $sfx = [string]$suffixMap[[string]$ag.name]
             $epHint = switch ($t) {
                 'ACA-OBO' { "-ApiBase https://<FQDN>" }
                 'ACA-S2S' { "-ApiBase https://<FQDN> -S2sAppId <S2S_APP_ID>" }
@@ -27,7 +36,8 @@ function Invoke-ScaffoldUi {
                 default   { "" }
             }
             $acaHint = if ($t -like 'ACA-*') { " -AcaApp <container-app> -AcaResourceGroup <rg>" } else { "" }
-            $nextCommands.Add("pwsh -File .github/skills/agent365-web-ui/scripts/Add-WebUiTab.ps1 -SwaName $swa -Subscription <sub> -TenantId $($plan.solution.tenantId) -AgentType $t -Name `"$($ag.name)`" -LabPrefix $prefix $epHint$acaHint  # (add -AnonAudience/-AuthAudience if a custom MCP is attached)")
+            $sfxArg = if ($sfx) { " -InstanceSuffix $sfx" } else { "" }
+            $nextCommands.Add("pwsh -File .github/skills/agent365-web-ui/scripts/Add-WebUiTab.ps1 -SwaName $swa -Subscription <sub> -TenantId $($plan.solution.tenantId) -AgentType $t -Name `"$($ag.name)`" -LabPrefix $prefix$sfxArg $epHint$acaHint  # (add -AnonAudience/-AuthAudience if a custom MCP is attached)")
         }
         return
     }
@@ -50,7 +60,15 @@ function Invoke-ScaffoldUi {
     Remove-Item -LiteralPath (Join-Path $uiDst 'config.js') -Force -ErrorAction SilentlyContinue
 
     $clientId  = if ($plan.ui.mode -eq 'attach') { $plan.ui.existing.spaAppId } else { '<YOUR_SPA_APP_ID>' }
-    $exposeTypes = @($plan.ui.expose | ForEach-Object { $_.agentType })
+    $suffixMap = Get-InstanceSuffixMap $plan
+    # Resolve every exposed agent (by agentName, else agentType = all instances of that type). DW is skipped below.
+    $exposeAgents = New-Object System.Collections.Generic.List[object]
+    foreach ($ex2 in @($plan.ui.expose)) {
+        $tok = if ($ex2.agentName) { $ex2.agentName } else { $ex2.agentType }
+        foreach ($rag in (Resolve-PlanAgents $plan $tok)) {
+            if ($exposeAgents -notcontains $rag) { $exposeAgents.Add($rag) }
+        }
+    }
     $uiAgents = New-Object System.Collections.Generic.List[object]
 
     # Custom (BYO) MCP: each attached OBO agent reaches the ext_ servers through the Agent 365 gateway
@@ -63,18 +81,21 @@ function Invoke-ScaffoldUi {
     $mcpEnabled = [bool]($plan.customMcp -and $plan.customMcp.enabled)
     $mcpName    = if ($mcpEnabled) { $McpBaseName } else { '' }  # derived from the solution prefix (not asked)
     $mcpAttach  = if ($mcpEnabled) { @($plan.customMcp.attachTo) } else { @() }
+    # Attach targets resolved to a NAME set (each token = an agentName, or an agentType = all instances).
+    $mcpAttachNames = @{}
+    if ($mcpEnabled) { foreach ($att in $mcpAttach) { foreach ($rag in (Resolve-PlanAgents $plan $att)) { $mcpAttachNames[[string]$rag.name] = $true } } }
     $audMap = @{}
     if ($mcpEnabled) {
         foreach ($att in $mcpAttach) {
-            $aag = $plan.agents | Where-Object { $_.type -eq $att } | Select-Object -First 1
-            if (-not $aag) { continue }
-            $mani = Join-Path $RunRoot (Join-Path $aag.name 'ToolingManifest.json')
-            if (-not (Test-Path -LiteralPath $mani)) { continue }
-            try {
-                foreach ($s in (Get-Content -LiteralPath $mani -Raw | ConvertFrom-Json).mcpServers) {
-                    if ($s.mcpServerName -like 'ext_*' -and $s.audience) { $audMap[$s.mcpServerName] = $s.audience }
-                }
-            } catch {}
+            foreach ($aag in (Resolve-PlanAgents $plan $att)) {
+                $mani = Join-Path $RunRoot (Join-Path $aag.name 'ToolingManifest.json')
+                if (-not (Test-Path -LiteralPath $mani)) { continue }
+                try {
+                    foreach ($s in (Get-Content -LiteralPath $mani -Raw | ConvertFrom-Json).mcpServers) {
+                        if ($s.mcpServerName -like 'ext_*' -and $s.audience) { $audMap[$s.mcpServerName] = $s.audience }
+                    }
+                } catch {}
+            }
         }
         # Optional explicit override from the plan (filled after registration, if the manifest scan can't).
         if ($plan.customMcp.audiences) {
@@ -83,10 +104,9 @@ function Invoke-ScaffoldUi {
         }
     }
 
-    foreach ($t in $exposeTypes) {
+    foreach ($ag in $exposeAgents) {
+        $t = $ag.type
         if ($t -like '*-DW') { continue }  # DW never exposed via the SPA
-        $ag = $plan.agents | Where-Object { $_.type -eq $t } | Select-Object -First 1
-        if (-not $ag) { continue }
         $entry = switch ($t) {
             'ACA-OBO' { [ordered]@{ id='obo'; kind='aca'; name="$($ag.name) (ACA, OBO)"; description='OBO agent; /chat sends mail from your mailbox.'; apiBase='https://<YOUR_ACA_OBO_FQDN>'; scope='ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All' } }
             'ACA-S2S' { [ordered]@{ id='s2s'; kind='aca'; name="$($ag.name) (ACA, S2S)"; description='S2S blueprint agent; own identity.'; apiBase='https://<YOUR_ACA_S2S_FQDN>'; scope='api://<YOUR_ACA_S2S_APP_ID>/access_agent_as_user' } }
@@ -97,6 +117,13 @@ function Invoke-ScaffoldUi {
             default   { $null }
         }
         if ($entry) {
+            # Multi-instance: a type with >1 instance suffixes its tab id (and FH session prefix) '-<n>' so
+            # the SPA tabs / session ids stay unique. A lone instance keeps the base id (byte-identical to before).
+            $sfx = [string]$suffixMap[[string]$ag.name]
+            if ($sfx) {
+                $entry['id'] = "$($entry['id'])$sfx"
+                if ($entry.Contains('sessionPrefix')) { $entry['sessionPrefix'] = "$($entry['sessionPrefix'])$sfx" }
+            }
             # Every tab is scaffolded HIDDEN (enabled:false): the sidebar link is revealed only when
             # the agent is live, by flipping this to true in the same config.js edit that fills the
             # agent's FQDN/endpoint after it deploys (see the incremental integration step).
@@ -111,7 +138,7 @@ function Invoke-ScaffoldUi {
             }
             # Attach the custom-MCP token wiring when this OBO agent is a custom-MCP target and its
             # ext_ server audiences are known (from the manifest scan above).
-            if ($mcpEnabled -and ($mcpAttach -contains $t)) {
+            if ($mcpEnabled -and $mcpAttachNames.ContainsKey([string]$ag.name)) {
                 $anonExt = "ext_${mcpName}Anon"; $authExt = "ext_${mcpName}Auth"
                 if ($t -eq 'ACA-OBO' -or $t -eq 'FH-OBO') {
                     $cs = [ordered]@{}
@@ -137,7 +164,7 @@ function Invoke-ScaffoldUi {
     Write-Host "  scaffolded UI ($($plan.ui.mode)) -> generated\$uiFolderName\config.js ($($uiAgents.Count) tab(s))" -ForegroundColor Cyan
     $nextCommands.Add("# UI: create SWA (az staticwebapp create -l $swaRegion --sku Free; SWA Free is region-limited [eastus2/centralus/eastasia/westeurope/westus2] and served from a global CDN, so it need not match the lab region - westeurope may reject new customers, eastus2 is validated), register the SPA app (redirect https://<swa-host> + http://localhost:3000), fill config.js, deploy per docs/setup-web-ui.md (use StaticSitesClient.exe directly from the REPO ROOT with an absolute --app path - the 'npx @azure/static-web-apps-cli deploy' wrapper exits 1), then set UI_ALLOWED_ORIGINS (+ UI_AUDIENCE=<s2s-app-id> for ACA-S2S) on the ACA containers.")
     $nextCommands.Add("# UI sidebar reveal: every tab is scaffolded HIDDEN (enabled:false). As each OBO/S2S agent goes live, in the SAME config.js edit that fills its FQDN/endpoint set that entry's enabled:true to UNHIDE its left-sidebar link, then redeploy the SPA (static re-upload, no build). The shell deploys with all tabs hidden and reveals each one as its agent is wired.")
-    if ($mcpEnabled -and (@($mcpAttach | Where-Object { $_ -eq 'ACA-OBO' -or $_ -eq 'FH-OBO' -or $_ -eq 'FD-OBO' }).Count -gt 0)) {
+    if ($mcpEnabled -and (@($mcpAttach | ForEach-Object { Resolve-PlanAgents $plan $_ } | Where-Object { $_.type -like '*-OBO' }).Count -gt 0)) {
         $nextCommands.Add("# UI + custom MCP (MANDATORY, not optional - every OBO agent must integrate its MCP tools immediately): fill plan.customMcp.audiences with the ext_${mcpName}Anon/Auth BYO app ids right after registration so config.js gets customScopes (ACA/FH-OBO) / customInputs (FD-OBO) automatically; otherwise attach first (add-mcp-servers) then RE-RUN this scaffolder to read them from each agent's ToolingManifest.json. Redeploy the SPA after. then, EACH USER MUST create a SEPARATE one-time Power Platform connection for BOTH ext_${mcpName}Anon (NoAuth) AND ext_${mcpName}Auth (EntraOAuth = OAuth sign-in) at https://make.powerapps.com/connectionsMcp - creating only the anon one is NOT enough (if server_time works but the authenticated whoami comes back from the anon server, the auth connection is missing; the auth server exposes only initialize_server until then). The agent MUST proactively tell the user to create BOTH as themselves, then retry (OBO reuses both across ACA/FH/FD). deploy the SPA with StaticSitesClient.exe directly from the repo root (the 'npx @azure/static-web-apps-cli deploy' wrapper exits 1): & <hash>\StaticSitesClient.exe upload --app <ui-folder> --apiToken <tok> --skipAppBuild true (see docs/setup-web-ui.md).")
     }
 }

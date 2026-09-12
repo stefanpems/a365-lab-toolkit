@@ -62,7 +62,9 @@ the LIVE `config.js` from the SWA as the source of truth, edit ONLY the `agents[
 - **[Add-WebUiTab.ps1](./scripts/Add-WebUiTab.ps1)** — ASSOCIATE one agent: merge one tab (unique id
   `<typeShortId>-<labPrefix>`, `enabled:true`, correct endpoints + `customScopes`/`customInputs`,
   `labPrefix`), tag the SWA `a365ref_<prefix>`, and (ACA) append the origin to `UI_ALLOWED_ORIGINS`
-  (+ `UI_AUDIENCE` for S2S). Used by Lab Builder (attach mode) and the Web UI Creator flow.
+  (+ `UI_AUDIENCE` for S2S). Used by Lab Builder (attach mode) and the Web UI Creator flow. For one of **N
+  instances** of the same type, pass `-InstanceSuffix -<n>` so the id becomes `<typeShortId>-<n>-<labPrefix>`
+  (still ends `-<labPrefix>`, so `Remove-TabsByLab` still finds it) and the FH session prefix stays unique.
 - **[Remove-WebUiTab.ps1](./scripts/Remove-WebUiTab.ps1)** — DEREGISTER: remove a whole lab's tabs
   (`-LabPrefix`) or one agent's tab (`-TabId`), redeploy, and clear `a365ref_<prefix>` when the last tab of
   that lab goes. Used by the Lab Cleaner (per lab); the `-TabId` form detaches a single agent's tab.

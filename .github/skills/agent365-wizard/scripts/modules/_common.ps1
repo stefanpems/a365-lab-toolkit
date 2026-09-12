@@ -19,6 +19,34 @@ $MAP = @{
     'MCS-NH'  = @{ src = $null; deploy = $null; config = 'mcs'; harness = 'NH' }
 }
 
+# ---------------------------------------------------------------- multi-instance suffix
+# A lab may hold N INSTANCES of the same agent type. The naming/id rule (user-mandated): a type with a
+# SINGLE instance carries NO suffix (byte-identical to a single-instance lab); a type with >1 instance
+# suffixes EVERY instance with '-<n>' (1-based, in plan order). This one helper is the single source of
+# truth for that suffix, reused by the name validation, the ACA/FH/FD scaffolders and the web-UI tab ids
+# so the agent name, the derived resources and the SPA tab all agree.
+# Returns a hashtable: agent NAME -> suffix ('' for a lone instance, '-1'/'-2'/... for a multi group).
+function Get-InstanceSuffixMap {
+    param($plan)
+    $map = @{}
+    foreach ($g in (@($plan.agents) | Group-Object -Property type)) {
+        $items = @($g.Group)
+        if ($items.Count -le 1) { $map[[string]$items[0].name] = ''; continue }
+        for ($i = 0; $i -lt $items.Count; $i++) { $map[[string]$items[$i].name] = "-$($i + 1)" }
+    }
+    return $map
+}
+
+# Resolve an expose/attach token to plan agent object(s). A token may be an agent NAME (exact match,
+# preferred — the only unambiguous form for a multi-instance type) or an agent TYPE (backward-compatible:
+# resolves to EVERY instance of that type). Returns an array (possibly empty).
+function Resolve-PlanAgents {
+    param($plan, [string]$Token)
+    $byName = @($plan.agents | Where-Object { [string]$_.name -eq $Token })
+    if ($byName.Count -gt 0) { return $byName }
+    return @($plan.agents | Where-Object { [string]$_.type -eq $Token })
+}
+
 # ---------------------------------------------------------------- Work IQ MCP permission catalog
 # Agent 365 Work IQ MCP servers use the "legacy shared model" (a365 CLI `setup permissions mcp` doc):
 # one shared resource app ($MCP_TOOLING_RESOURCE) with a per-server delegated scope

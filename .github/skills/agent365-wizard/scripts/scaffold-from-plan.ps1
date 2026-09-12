@@ -72,14 +72,21 @@ $namingMode = if ($plan.solution.namingMode) { "$($plan.solution.namingMode)".Tr
 # cap and the per-agent name check can use it.
 function Get-AgentFramework { param($a) if ($a.framework) { "$($a.framework)".Trim() } else { 'MAF' } }
 
+# Multi-instance suffix map (agent NAME -> '' | '-<n>'): a type with a single instance carries no suffix;
+# a type with >1 instance suffixes every instance '-1'/'-2'/... in plan order. Single source of truth for
+# the whole validation + scaffold (see Get-InstanceSuffixMap in modules/_common.ps1).
+$suffixMap = Get-InstanceSuffixMap $plan
+
 # Dynamic prefix cap. The 12-char base ceiling is driven by the CUSTOM MCP (ext_<prefix>Anon / ext_<prefix>Auth
 # must stay <= 20), NOT the agent name. A Digital Worker adds a SECOND ceiling: 'a365 setup all --agent-name
 # <name>' derives the Teams/M365 name.short as "<name> Blueprint", which is rejected above 30 chars. With the
 # fixed <framework> segment the worst case is "<prefix>-<fw>-<hosting>-DW Blueprint", so a DW lab needs a
-# shorter prefix (e.g. 9 for MAF-ACA-DW). Take the strictest applicable ceiling.
+# shorter prefix (e.g. 9 for MAF-ACA-DW). A multi-instance DW type also adds its '-<n>' suffix. Take the
+# strictest applicable ceiling.
 $maxPrefix = 12
 foreach ($a in @($plan.agents | Where-Object { $_.type -like '*-DW' })) {
-    $cap = 30 - "-$(Get-AgentFramework $a)-$($a.type) Blueprint".Length
+    $sfx = [string]$suffixMap[[string]$a.name]
+    $cap = 30 - "-$(Get-AgentFramework $a)-$($a.type)$sfx Blueprint".Length
     if ($cap -lt $maxPrefix) { $maxPrefix = $cap }
 }
 if ($maxPrefix -lt 3) { $maxPrefix = 3 }
@@ -103,18 +110,22 @@ foreach ($a in $plan.agents) {
     # segment (they are not a code framework). Validate them separately from the code families.
     elseif ($a.type -like 'MCS-*') {
         if ($prefix) {
-            $expected = "$prefix-$($a.type)"
+            $sfx = [string]$suffixMap[[string]$a.name]
+            $expected = "$prefix-$($a.type)$sfx"
             if ($a.name -ne $expected) {
-                $errors.Add("$($a.name): MCS agent name must be '<prefix>-MCS-<OH|NH>' = '$expected'. MCS carries no <framework> segment (it is a Copilot Studio agent, not a code framework).")
+                $hint = if ($sfx) { " With >1 instance of this type the name carries the instance suffix '$sfx'." } else { '' }
+                $errors.Add("$($a.name): MCS agent name must be '<prefix>-MCS-<OH|NH>' = '$expected'. MCS carries no <framework> segment (it is a Copilot Studio agent, not a code framework) and is never renamable.$hint")
             }
         }
     }
     # FIXED naming convention for code families: <prefix>-<framework>-<hosting>-<identity> (framework default MAF).
     elseif ($prefix -and $namingMode -ne 'custom') {
         $fw = Get-AgentFramework $a
-        $expected = "$prefix-$fw-$($a.type)"
+        $sfx = [string]$suffixMap[[string]$a.name]
+        $expected = "$prefix-$fw-$($a.type)$sfx"
         if ($a.name -ne $expected) {
-            $errors.Add("$($a.name): agent name must follow the fixed convention <prefix>-<framework>-<hosting>-<identity> = '$expected' (framework '$fw', type '$($a.type)'). The <framework> segment is mandatory so a same-type agent built with a different framework stays distinguishable. (Set solution.namingMode='custom' to free-form agent names.)")
+            $sfxHint = if ($sfx) { " This type has more than one instance, so every instance name carries a 1-based '-<n>' suffix (here '$sfx'); a single-instance type carries NO suffix." } else { ' A type with a single instance carries NO instance suffix.' }
+            $errors.Add("$($a.name): agent name must follow the fixed convention <prefix>-<framework>-<hosting>-<identity>[-<instance>] = '$expected' (framework '$fw', type '$($a.type)').$sfxHint The <framework> segment is mandatory so a same-type agent built with a different framework stays distinguishable. (Set solution.namingMode='custom' to free-form agent names.)")
         }
         # Only MAF has sample source folders today; block silently scaffolding MAF code under another name.
         if ($fw -ne 'MAF') {
@@ -165,6 +176,13 @@ foreach ($a in $plan.agents) {
             $errors.Add("$($a.name): DW blueprint display name '$bp' is $($bp.Length) chars (max 30). Shorten it.")
         }
     }
+}
+
+# Instance uniqueness: N instances of a type each need a UNIQUE name (the '-<n>' suffix guarantees this
+# for default names; a custom-named lab must not reuse a name). A collision would make two agents scaffold
+# into the same generated/<prefix>/<name>/ folder and share resource groups.
+foreach ($d in @($plan.agents | Where-Object { $_.name } | Group-Object -Property name | Where-Object { $_.Count -gt 1 })) {
+    $errors.Add("duplicate agent name '$($d.Name)': $($d.Count) agents (instances) share it. Each instance must have a UNIQUE name — for default names the wizard appends a 1-based '-<n>' suffix when a type has more than one instance.")
 }
 
 # Shared-RG + ACA safety: the generic deploy-aca.ps1 deletes its RG; only S2S/DW named scripts are safe.
@@ -223,8 +241,12 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
         $errors.Add("customMcp.integrationMode '$($plan.customMcp.integrationMode)' is invalid (use 'approve-first' or 'attach-when-approved').")
     }
     foreach ($t in @($plan.customMcp.attachTo)) {
-        if ($t -notlike '*-OBO') { $errors.Add("customMcp.attachTo '$t': custom (BYO) MCP works only on OBO agents (ACA-OBO / FH-OBO / FD-OBO). A BYO server reached through the Agent 365 gateway needs a one-time Power Platform connection OWNED BY THE INVOKING IDENTITY; only an OBO agent invokes as the signed-in user who owns that connection. An S2S (own app identity) or DW (projected agentUser identity) agent invokes as a NON-USER identity that can neither own that connection nor be granted it (sharing is refused in preview with ConnectionSharingNotAllowed 403); S2S also can't mint a custom-audience token from the SPA path (AADSTS82001 app-only / AADSTS82002 OBO). This is a known preview platform limitation, not an unfinished feature.") }
-        elseif (-not ($plan.agents | Where-Object { $_.type -eq $t })) { $errors.Add("customMcp.attachTo '$t' is not among the planned agents.") }
+        # A token is an agent NAME (one instance) or an agent TYPE (all its instances). Every resolved agent must be OBO.
+        $resolved = @(Resolve-PlanAgents $plan $t)
+        if ($resolved.Count -eq 0) { $errors.Add("customMcp.attachTo '$t' matches no planned agent — give an agent name (one instance) or an agent type (all its instances).") }
+        foreach ($ra in $resolved) {
+            if ($ra.type -notlike '*-OBO') { $errors.Add("customMcp.attachTo '$t' resolves to '$($ra.name)' ($($ra.type)): custom (BYO) MCP works only on OBO agents (ACA-OBO / FH-OBO / FD-OBO). A BYO server reached through the Agent 365 gateway needs a one-time Power Platform connection OWNED BY THE INVOKING IDENTITY; only an OBO agent invokes as the signed-in user who owns that connection. An S2S (own app identity) or DW (projected agentUser identity) agent invokes as a NON-USER identity that can neither own that connection nor be granted it (sharing is refused in preview with ConnectionSharingNotAllowed 403); S2S also can't mint a custom-audience token from the SPA path (AADSTS82001 app-only / AADSTS82002 OBO). This is a known preview platform limitation, not an unfinished feature.") }
+        }
     }
 }
 

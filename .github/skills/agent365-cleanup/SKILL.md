@@ -46,6 +46,8 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    `<prefix>-MCS-OH`/`-NH` and solution `<prefix>MCSOH`/`<prefix>MCSNH` even in custom-naming mode), so the
    solution unique name and display name are **always computable from the lab name alone** — the Lab Cleaner
    can therefore delete a lab's MCS agents from the prefix even if the `generated/<prefix>/` folder is gone.
+   With **N instances** of a harness the names/solutions are suffixed (`<prefix>-MCS-OH-1` / `<prefix>MCSOH1`,
+   …), so enumerate them from the archived plan or by listing solutions matching `<prefix>MCS*` before deleting.
 
 ## Scripts (do not re-derive their logic)
 - [scripts/Discover-CleanupResources.ps1](./scripts/Discover-CleanupResources.ps1) — **READ-ONLY**.

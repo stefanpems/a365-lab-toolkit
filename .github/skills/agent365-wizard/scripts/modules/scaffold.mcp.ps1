@@ -85,11 +85,13 @@ function Invoke-ScaffoldCustomMcp {
     }
     $extList = (@($servers | ForEach-Object { if ($_ -eq 'anon') { "ext_${name}Anon" } else { "ext_${name}Auth" } }))
     foreach ($t in @($plan.customMcp.attachTo)) {
-        $ag = $plan.agents | Where-Object { $_.type -eq $t } | Select-Object -First 1
-        if (-not $ag) { continue }
-        # Accumulate the custom ext_ servers; the unified attach section emits one command per agent.
-        if (-not $attachByAgent.ContainsKey($ag.name)) { $attachByAgent[$ag.name] = New-Object System.Collections.Generic.List[string] }
-        $extList | ForEach-Object { if ($attachByAgent[$ag.name] -notcontains $_) { $attachByAgent[$ag.name].Add($_) } }
+        # A token may be an agentName (one instance) or an agentType (all instances of that type).
+        foreach ($ag in (Resolve-PlanAgents $plan $t)) {
+            if ($ag.type -notlike '*-OBO') { continue }
+            # Accumulate the custom ext_ servers; the unified attach section emits one command per agent.
+            if (-not $attachByAgent.ContainsKey($ag.name)) { $attachByAgent[$ag.name] = New-Object System.Collections.Generic.List[string] }
+            $extList | ForEach-Object { if ($attachByAgent[$ag.name] -notcontains $_) { $attachByAgent[$ag.name].Add($_) } }
+        }
     }
     if ($plan.customMcp.propagateToGraph) {
         $nextCommands.Add("# propagate_to_graph: on the ext_${name}Auth app add Microsoft Graph delegated 'User.Read' + admin consent + a client secret, then redeploy deploy-mcp.ps1 with -AuthClientId/-AuthTenantId (secret entered in the terminal). See custom-mcp/README.md.")

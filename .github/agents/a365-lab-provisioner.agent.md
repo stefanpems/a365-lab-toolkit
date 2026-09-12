@@ -261,10 +261,16 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    (`az account show --query tenantId` == the entered id); abort on mismatch. These go only into the
    gitignored plan. This guards the shared, concurrently-flipping `az`/Graph context.
 2. **Select variants** (multi-select checkbox: the **10 variants** — the 8 Agent 365 variants plus
-   **MCS-OH** and **MCS-NH**, the Microsoft Copilot Studio agents). Then **UI mode** (single-select:
+   **MCS-OH** and **MCS-NH**, the Microsoft Copilot Studio agents). For **each** selected variant ask **how
+   many instances** (a whole number ≥ 1, default 1) — use the word **"istanza"/"instance"** (the right term
+   even though a DW blueprint also calls its projected users "instances"). No upper limit on N (only run
+   time + GHCP tokens grow; DW instances also each consume M365 licenses). Emit one `agents[]` entry per
+   instance: a variant with a **single** instance keeps the plain name; with **>1** instance suffix every
+   instance `-<n>` (`<prefix>-MAF-ACA-OBO-1`, `-2`; MCS too → `<prefix>-MCS-OH-1`). Names must be unique.
+   Then **UI mode** (single-select:
    No UI / Create new / Attach to existing). If a UI is chosen, multi-select the **OBO/S2S** agents
-   to expose (DW **and MCS** are excluded — DW routes via Teams/Outlook, MCS lives in Copilot Studio;
-   neither has a SPA endpoint).
+   to expose **by instance name** (DW **and MCS** are excluded — DW routes via Teams/Outlook, MCS lives in
+   Copilot Studio; neither has a SPA endpoint) and write each as `{ "agentName": "<name>" }` in `ui.expose`.
    ⛔ **If UI mode is *Attach to existing*, discover and offer the existing web UIs — never make the user
    type a raw SWA name.** List the Static Web Apps tagged `a365component=web-ui`
    (`az staticwebapp list` then keep those whose `tags.a365component == 'web-ui'`, or
@@ -279,7 +285,9 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    (single-select: None / Anonymous only / Authenticated only / Both); if not None, **do NOT ask a name**
    (it derives from the solution prefix → `ext_<prefix>Anon/Auth`; the prefix must be ≤ 12 alphanumerics),
    ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
-   blocked: they can't own the per-user Power Platform connection a BYO server needs), an **integration
+   blocked: they can't own the per-user Power Platform connection a BYO server needs) — **offer each OBO
+   instance by name** and write chosen instances as agent names in `customMcp.attachTo` (a bare OBO type
+   attaches to every instance of that type), an **integration
    mode** (approve-first (default) / attach-when-approved — see "Custom MCP integration" below), and whether to
    enable `propagate_to_graph` (**default: enable**). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`

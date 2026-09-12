@@ -99,7 +99,20 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
    [scripts/Set-LabTags.ps1](../scripts/Set-LabTags.ps1)) — the stable, folder-independent association the
    Lab Cleaner discovers by tag. Only **lab-owned** resources are tagged; a `reuse-existing`/user-owned
    shared account is never tagged.
-2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
+2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
+1d. **Instances (N per type) — the `-<n>` suffix rule.** A lab may hold **N instances** of the same agent
+   type (each is a separate `agents[]` entry). A type with a **single** instance keeps the plain name (no
+   suffix — byte-identical to a single-instance lab); a type with **more than one** instance suffixes
+   **every** instance with a 1-based `-<n>` in plan order (`<prefix>-<framework>-<hosting>-<identity>-<n>`,
+   e.g. `contoso-MAF-ACA-OBO-1`, `-2`). Instance names must be **unique**; the suffix flows into every
+   derived resource (RG `<name>-rg`, container app, blueprint/identity apps) and the SPA tab id, so
+   instances never collide. **MCS** instances are suffixed too (`<prefix>-MCS-OH-1`; solution unique name
+   `<prefix>MCSOH1`). A **DW** instance suffix is included in the `name.short` ≤ 30 check, so the dynamic
+   prefix cap (rule 1a) subtracts it. In **custom** naming mode the user supplies a distinct name per
+   instance instead. Reference a specific instance in `ui.expose`/`customMcp.attachTo` by **`agentName`**;
+   a bare `agentType` there resolves to **every** instance of that type. (The word *instance* also names a
+   Digital-Worker blueprint's projected agent users — here it means a whole distinct agent copy in the lab.)
+3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
    account + model (FH), and Free-tier Static Web Apps (UI) before committing.
 4. **Custom MCP name IS the solution prefix — it is NOT asked.** Agent 365 registered server names must
    start with `ext_` and be **≤ 20 chars**; the servers are `ext_<prefix>Anon` / `ext_<prefix>Auth`

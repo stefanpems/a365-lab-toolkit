@@ -46,7 +46,7 @@ gitignored.
     {
       "type": "ACA-OBO",                  // one of the 10 supported variants (8 code/prompt + MCS-OH/MCS-NH); the scaffolder $MAP key
       "framework": "MAF",                 // FIXED name segment identifying the agent framework (default "MAF"); today only MAF exists
-      "name": "<prefix>-<framework>-<hosting>-<identity>",  // e.g. contoso-MAF-ACA-OBO — the <framework> segment is mandatory
+      "name": "<prefix>-<framework>-<hosting>-<identity>",  // e.g. contoso-MAF-ACA-OBO — the <framework> segment is mandatory. A lab may hold N INSTANCES of a type: when a type has >1 instance EVERY instance name carries a 1-based '-<n>' suffix (contoso-MAF-ACA-OBO-1, -2); a single instance carries NO suffix.
       "displayNames": {
         "blueprint": "<name> Blueprint",  // OBO/S2S: "<name> Blueprint". DW: "<name>" (NO " Blueprint" suffix — a365 publish derives name.short from it and Teams/M365 rejects name.short > 30 chars)
         "identity": "<name> Identity"
@@ -70,7 +70,7 @@ gitignored.
     },
     {
       "type": "MCS-NH",                    // Copilot Studio variant: MCS-OH (legacy harness) | MCS-NH (GHCP harness)
-      "name": "<prefix>-MCS-<OH|NH>",      // 3-part name, NO framework segment — e.g. contoso-MCS-NH
+      "name": "<prefix>-MCS-<OH|NH>",      // 3-part name, NO framework segment — e.g. contoso-MCS-NH. Never renamable; with >1 instance of the harness the name is suffixed '-<n>' (contoso-MCS-NH-1) and the solution unique name becomes <prefix>MCS<NH><n>.
       "mcp": ["mail"],                     // OPTIONAL A365 tool-gateway MCP: subset of "mail" (tested) / "anon" / "auth" (experimental); [] for none
       "publish": true                      // OPTIONAL — after import, guide the org-wide publication (Availability options -> Show to everyone in my org)
     }
@@ -85,8 +85,8 @@ gitignored.
       "origin": "https://<host>",
       "staticWebApp": "<name>"             // REQUIRED in attach mode; Add-WebUiTab.ps1 -SwaName targets it, tags it a365ref_<prefix>
     },
-    "expose": [                            // OBO/S2S agents only (never DW)
-      { "agentType": "ACA-OBO" }
+    "expose": [                            // OBO/S2S agents only (never DW). Prefer "agentName" (one specific INSTANCE, unambiguous); "agentType" is back-compat = every instance of that type.
+      { "agentName": "<prefix>-MAF-ACA-OBO" }
     ],
     "permissions": {
       "mailConsent": false,                // true if any OBO agent is exposed
@@ -100,7 +100,7 @@ gitignored.
     "servers": ["anon", "auth"],           // which servers to register (subset of anon/auth)
     "resourceGroup": "<prefix>-mcp-rg",     // defaults to <prefix>-mcp-rg
     "region": "<azure-region>",
-    "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO); S2S/DW blocked (see Rules)
+    "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO). Each entry is an agent NAME (one instance) or an agent TYPE (all its instances). S2S/DW blocked (see Rules)
     "integrationMode": "approve-first",     // "approve-first" (default) | "attach-when-approved" (see Rules)
     "propagateToGraph": true                // enable the advanced On-Behalf-Of Graph test (DEFAULT: true)
   }
@@ -163,6 +163,15 @@ gitignored.
   validates `name` == `<prefix>-<framework>-<type>`. The segment keeps a same-type agent built with another
   framework distinguishable. The prefix cap stays **12** (custom-MCP driven, independent of the agent name);
   a **DW** lab lowers it (e.g. 9 for `MAF-ACA-DW`) so `name.short` stays ≤ 30 — see naming-and-validation.md.
+- **Instances (N per type).** A lab may hold **N instances** of the same agent type — each is just another
+  `agents[]` entry. The naming rule: a type with a **single** instance carries **no** suffix (byte-identical
+  to before); a type with **more than one** instance suffixes **every** instance with a 1-based `-<n>`
+  (`contoso-MAF-ACA-OBO-1`, `-2`, …). Every instance name must be **unique**. The suffix flows into the
+  derived resources (RG, container app, blueprint/identity) and the SPA tab id, so instances never collide.
+  In **custom** naming mode the user gives each instance a distinct free-form name instead. To disambiguate
+  a specific instance in `ui.expose` / `customMcp.attachTo`, reference it by **`agentName`** (a bare type
+  there means "every instance of that type"). ("Instance" is the same word the Digital-Worker blueprint uses
+  for its projected agent users — here it means a whole distinct agent copy in the lab.)
 - **`solution.namingMode` = `custom`** relaxes the previous rule for **code agents (ACA/FH/FD)**: each may
   carry a free-form `name` (with matching `displayNames`/`resourceGroup`), validated only structurally
   (start with a letter; letters/digits/hyphens only; the ACA-lowercase and DW ≤ 30 rules still apply). The
