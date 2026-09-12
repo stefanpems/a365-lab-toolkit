@@ -6,7 +6,7 @@ argument-hint: 'Describe what to clean up, or just say start'
 
 # Agent 365 lab cleanup
 
-Delete every resource the [Lab Builder](../../agents/a365-lab-provisioner.agent.md) created
+Delete every resource the [Lab Builder](../../agents/lab-builder.agent.md) created
 for a run — **regardless of the state they are in** (fully deployed, half-deployed, or already
 soft-deleted and waiting in the Entra recycle bin). Do **not** modify the provisioning tool; only read
 it for the naming rules.

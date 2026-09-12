@@ -83,7 +83,7 @@ propagation to Microsoft Graph. The provisioning wizard can deploy, register and
 
 ### Provisioning tooling (the Lab Builder)
 You don't need this to run a pre-built agent, but the wizard that scaffolds and deploys the lab lives
-under `.github/`. The agent [.github/agents/a365-lab-provisioner.agent.md](.github/agents/a365-lab-provisioner.agent.md)
+under `.github/`. The agent [.github/agents/lab-builder.agent.md](.github/agents/lab-builder.agent.md)
 orchestrates focused **skills**; the scaffolder is a thin router that dot-sources per-family/component
 modules and writes everything under the gitignored `generated/`.
 
@@ -91,7 +91,7 @@ modules and writes everything under the gitignored `generated/`.
 a365-lab-toolkit/
 ├─ .github/
 │  ├─ agents/
-│  │  └─ a365-lab-provisioner.agent.md    # the wizard agent (entry point)
+│  │  └─ lab-builder.agent.md    # the wizard agent (entry point)
 │  └─ skills/
 │     ├─ agent365-wizard/                 # orchestrator: interview, plan, validation, discovery
 │     │  ├─ references/                   # variant matrix, naming/validation, plan schema, Work IQ MCP

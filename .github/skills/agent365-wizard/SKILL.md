@@ -8,7 +8,7 @@ argument-hint: "start | plan | scaffold"
 
 Interview the user with the **minimum** questions, produce a **secret-free** deployment plan, then
 generate per-variant scaffolding from templates. Companion agent:
-[a365-lab-provisioner.agent.md](../../agents/a365-lab-provisioner.agent.md).
+[lab-builder.agent.md](../../agents/lab-builder.agent.md).
 
 ## Supported variants (10)
 `ACA-OBO`, `ACA-S2S`, `ACA-DW`, `FH-OBO`, `FH-S2S`, `FH-DW`, `FD-OBO`, `FD-S2S`, and the Microsoft

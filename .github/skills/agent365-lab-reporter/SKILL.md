@@ -7,7 +7,7 @@ argument-hint: 'A lab name (solution prefix, e.g. a09091) and what you want: URL
 # Agent 365 lab reporter
 
 Produce **read-only** information about a lab run created by the
-[Lab Builder](../../agents/a365-lab-provisioner.agent.md), identified by its **lab name** (the solution
+[Lab Builder](../../agents/lab-builder.agent.md), identified by its **lab name** (the solution
 **prefix**, e.g. `a09091`). Two capabilities:
 
 1. **Web UI URL** — resolve the Static Web App URL of a lab.
@@ -83,7 +83,7 @@ any lab configuration.
 
 ## Guardrails
 - **Read-only, always.** Never delete, update or create cloud resources. For teardown, that is the
-  [Lab Cleaner](../../agents/a365-lab-cleanup.agent.md).
+  [Lab Cleaner](../../agents/lab-cleaner.agent.md).
 - **Pin the subscription and verify the tenant before any Graph call** — `az ad`/Graph ignore
   `--subscription` and use the active account; both scripts assert this.
 - **Graph must be reachable** — every category has an Entra component; `Get-LabState.ps1` aborts loudly on
