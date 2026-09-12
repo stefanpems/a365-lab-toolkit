@@ -132,13 +132,19 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
 - **Naming mode** — single-select **Default names** / **Custom names** (`solution.namingMode`, default
   `default`). *Default* keeps the convention above. *Custom* lets you rename each **code** agent
   (ACA/FH/FD): present ONE screen listing every selected code agent with its **default name pre-filled**
-  and an editable field to override it (free-form; must start with a letter and use only letters/digits/
-  hyphens; the ACA-lowercase and DW ≤ 30 rules still apply). Write each override to `agents[].name` (and
-  matching `displayNames`/`resourceGroup`). **MCS agents are NOT renamable** — they keep `<prefix>-MCS-<OH|NH>`
-  so the Lab Cleaner can always compute + delete them from the lab name. When custom names are used the
-  scaffolder emits a `Set-LabTags.ps1` command: run it after the deploys (and again on resume) — it stamps
-  the durable lab tag `a365lab=<prefix>` / `a365lab:<prefix>` on every lab-owned resource so the Lab
-  Cleaner still finds a lab whose agent names don't contain the prefix.
+  and an editable field to override it. ⛔ **STATE the naming rules to the user BEFORE the field** (a
+  priori) — a custom agent name must:
+  - **start with a letter**; contain **only letters, digits and hyphens** (no spaces/underscores/symbols);
+  - have **no consecutive hyphens (`--`) and no trailing hyphen**;
+  - for an **ACA** agent, keep the derived **Container App name (the lowercased name) 2–32 chars**;
+  - for a **DW** agent (ACA-DW/FH-DW), be **≤ 20 chars** so the derived Teams `name.short` (`"<name> Blueprint"`)
+    stays **≤ 30**.
+  Write each override to `agents[].name` (and matching `displayNames`/`resourceGroup`). **MCS agents are
+  NOT renamable** — they keep `<prefix>-MCS-<OH|NH>` so the Lab Cleaner can always compute + delete them.
+  ⛔ **After collecting the names, verify them a posteriori**: run
+  [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) `-ValidateOnly` and, if it reports a
+  name error, **show the offending name + rule and re-ask** — do not proceed until validation passes. When
+  custom names are used the scaffolder also emits a `Set-LabTags.ps1` command (durable lab tag, see step 8).
 - **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.

@@ -121,15 +121,36 @@ foreach ($a in $plan.agents) {
             $errors.Add("$($a.name): framework '$fw' has no sample source yet — only 'MAF' is implemented. The <framework> naming segment is reserved for future frameworks (LangChain/Semantic Kernel/...); set framework to 'MAF', or add the per-framework source folders + variant-map entry before using another code.")
         }
     }
-    # CUSTOM naming mode: the user free-formed this code agent name. Enforce only the STRUCTURAL rules the
-    # derived resource names need (the ACA-lowercase and DW <= 30 checks below still apply to every agent).
+    # CUSTOM naming mode: the user free-formed this code agent name. The convention check is relaxed, but
+    # every rule the DERIVED resource names impose is still enforced here so an invalid custom name is
+    # caught up-front (not at deploy time): structure, no double/trailing hyphen, ACA Container App length
+    # (2-32), and the DW Teams name.short ("<name> Blueprint") <= 30 => name <= 20.
     elseif ($prefix -and $namingMode -eq 'custom' -and $a.type -notlike 'MCS-*') {
-        if ($a.name -notmatch '^[A-Za-z][A-Za-z0-9-]*$') {
-            $errors.Add("$($a.name): custom agent name must start with a letter and contain ONLY letters, digits and hyphens (no spaces, underscores or symbols) — it derives the resource group '<name>-rg', the ACA container app / managed identity, the Entra app registrations and, for a DW, the Teams name.short.")
-        }
         $fw = Get-AgentFramework $a
         if ($fw -ne 'MAF') {
             $errors.Add("$($a.name): framework '$fw' has no sample source yet — only 'MAF' is implemented. Set framework to 'MAF', or add the per-framework source folders + variant-map entry first.")
+        }
+        if ($a.name -notmatch '^[A-Za-z][A-Za-z0-9-]*$') {
+            $errors.Add("$($a.name): custom agent name must start with a letter and contain ONLY letters, digits and hyphens (no spaces, underscores or symbols) — it derives the resource group '<name>-rg', the ACA container app / managed identity, the Entra app registrations and, for a DW, the Teams name.short.")
+        }
+        elseif ($a.name -match '--' -or $a.name.EndsWith('-')) {
+            $errors.Add("$($a.name): custom agent name must not contain consecutive hyphens or end with a hyphen (Azure Container Apps and resource names reject them).")
+        }
+        else {
+            if ($a.type -like 'ACA-*') {
+                $app = $a.name.ToLower()
+                if ($app.Length -lt 2 -or $app.Length -gt 32) {
+                    $errors.Add("$($a.name): an ACA custom name derives the Container App name '$app' ($($app.Length) chars), which must be 2-32 characters.")
+                }
+            }
+            if ($a.type -like '*-DW') {
+                # 'a365 setup all --agent-name <name>' derives the Teams name.short as "<name> Blueprint";
+                # Teams/M365 rejects name.short above 30 chars, so a DW custom name must be <= 20 chars.
+                $short = "$($a.name) Blueprint"
+                if ($short.Length -gt 30) {
+                    $errors.Add("$($a.name): a DW custom name is $($a.name.Length) chars; it must be <= 20 so the derived Teams name.short '$short' stays <= 30 characters.")
+                }
+            }
         }
     }
     # ACA container app name must be lowercase.

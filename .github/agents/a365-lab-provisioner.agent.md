@@ -295,13 +295,17 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    Examples: `contoso`, `sales01`.
    ⛔ **Then ask the naming mode** (single-select **Default names** / **Custom names**, `solution.namingMode`).
    *Custom* lets each **code** agent (ACA/FH/FD) be renamed: show ONE screen listing every selected code
-   agent with its **default name pre-filled** + an editable field (free-form; start with a letter,
-   letters/digits/hyphens only; ACA-lowercase and DW ≤ 30 still apply). Write overrides to `agents[].name`
-   (+ matching `displayNames`/`resourceGroup`). **Never rename MCS agents** — they stay `<prefix>-MCS-<OH|NH>`.
-   With custom names the scaffolder emits `Set-LabTags.ps1`: run it **after each deploy and on resume** (it
-   stamps the durable tag `a365lab=<prefix>`/`a365lab:<prefix>` on lab-owned resources so the Lab Cleaner
-   finds a lab whose agent names don't contain the prefix — tag EARLY, because the Cleaner must also delete
-   half-created labs). It never tags a `reuse-existing`/user-owned shared account.
+   agent with its **default name pre-filled** + an editable field. ⛔ **STATE the naming rules BEFORE the
+   field** (a priori) — a custom name must **start with a letter**, use **only letters/digits/hyphens**,
+   have **no `--` and no trailing `-`**, keep the **ACA Container App name (lowercased) 2–32 chars**, and
+   for a **DW** be **≤ 20 chars** (so the derived Teams `name.short` `"<name> Blueprint"` stays ≤ 30). Write
+   overrides to `agents[].name` (+ matching `displayNames`/`resourceGroup`). **Never rename MCS agents** —
+   they stay `<prefix>-MCS-<OH|NH>`. ⛔ **Verify a posteriori**: run `scaffold-from-plan.ps1 -ValidateOnly`
+   after collecting the names; if it flags a name, show the name + the rule it broke and **re-ask** before
+   proceeding. With custom names the scaffolder emits `Set-LabTags.ps1`: run it **after each deploy and on
+   resume** (it stamps the durable tag `a365lab=<prefix>`/`a365lab:<prefix>` on lab-owned resources so the
+   Lab Cleaner finds a lab whose agent names don't contain the prefix — tag EARLY, because the Cleaner must
+   also delete half-created labs). It never tags a `reuse-existing`/user-owned shared account.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
    for any **ACA** ask the **Azure OpenAI strategy** ONCE (`solution.azureOpenAI`, shared by all ACA):
    **create a new shared account+deployment** (`create-shared`, **default** — lab-owned, deleted by the

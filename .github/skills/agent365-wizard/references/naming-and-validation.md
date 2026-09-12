@@ -83,13 +83,19 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
 1b. **Naming mode (`solution.namingMode`): `default` (or omitted) vs `custom`.** `default` enforces the
    fixed convention `<prefix>-<framework>-<hosting>-<identity>` (rule 1a — byte-identical to before).
    `custom` lets each **code** agent (ACA/FH/FD) carry a **free-form `name`** (with matching
-   `displayNames`/`resourceGroup`), validated only structurally: **start with a letter; letters, digits
-   and hyphens only** (no spaces/underscores/symbols) — the ACA-lowercase (rule 2) and DW `name.short` ≤ 30
-   (rule 1) checks still apply. **MCS agents are never renamable** — they keep `<prefix>-MCS-<OH|NH>` in
-   either mode so the Lab Cleaner can compute + delete them from the lab name alone. Because a custom name
-   need not contain the prefix, the name-based discovery the Lab Cleaner/Reporter use would miss it, so in
-   custom mode the wizard stamps a **durable cloud tag** — `a365lab=<prefix>` on lab-owned Azure resource
-   groups and `a365lab:<prefix>` on lab-owned Entra app registrations + their service principals (via
+   `displayNames`/`resourceGroup`). A custom name is validated against **every rule the derived resource
+   names impose** (the wizard MUST state these to the user *before* asking, and re-check them *after* via
+   `scaffold-from-plan.ps1 -ValidateOnly`):
+   - **starts with a letter**; **letters, digits and hyphens only** (no spaces/underscores/symbols);
+   - **no consecutive hyphens (`--`) and no trailing hyphen** (Azure Container Apps / resource names reject them);
+   - **ACA**: the derived Container App name (the lowercased name) is **2–32 characters**;
+   - **DW** (ACA-DW/FH-DW): the name is **≤ 20 characters** so the derived Teams `name.short`
+     (`"<name> Blueprint"`, from `a365 setup all --agent-name <name>`) stays **≤ 30** (rule 1).
+   **MCS agents are never renamable** — they keep `<prefix>-MCS-<OH|NH>` in either mode so the Lab Cleaner
+   can compute + delete them from the lab name alone. Because a custom name need not contain the prefix, the
+   name-based discovery the Lab Cleaner/Reporter use would miss it, so in custom mode the wizard stamps a
+   **durable cloud tag** — `a365lab=<prefix>` on lab-owned Azure resource groups and `a365lab:<prefix>` on
+   lab-owned Entra app registrations + their service principals (via
    [scripts/Set-LabTags.ps1](../scripts/Set-LabTags.ps1)) — the stable, folder-independent association the
    Lab Cleaner discovers by tag. Only **lab-owned** resources are tagged; a `reuse-existing`/user-owned
    shared account is never tagged.
