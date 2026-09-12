@@ -25,6 +25,17 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    recycle bin**), and — **critically** — the **M365 license assignments** on each agent instance
    (typically Frontier for Autopilots, Teams Enterprise, and M365 E7, but **verify all of them per
    agent and per instance** — they vary). License release must be **guaranteed**.
+4. **Microsoft Copilot Studio (MCS) agents** (`<prefix>-MCS-OH` / `<prefix>-MCS-NH`) — these are **NOT**
+   Azure/Entra resources: they are Power Platform **Solutions** in a **Copilot Studio environment**
+   (Dataverse). They leave **no** Azure RG / Entra identity / M365 license footprint, so the Azure/Entra
+   discovery+removal scripts do not apply. Remove them with the **agent365-copilot-studio** sub-skill's
+   [Remove-McsAgent.ps1](../agent365-copilot-studio/scripts/Remove-McsAgent.ps1): delete the **solution**
+   (`pac solution delete --solution-name <unique>`) and, with the bot id, the **agent**
+   (`pac copilot-studio delete-copilot-agent --bot-id <id>`). Drive it from the plan's
+   `solution.copilotStudio` (target tenant + env) and each MCS agent's solution unique name (the sanitized
+   `<prefix>MCSOH`/`<prefix>MCSNH`). If an MCP client Entra app was created (`New-McsMcpClientApp.ps1`),
+   delete it too (`az ad app delete --id <appId>`). MCS removal needs the **`pac` CLI** (install if
+   missing). Note: MCS-NH consumes Copilot Credits — deleting the agent stops further consumption.
 
 ## Scripts (do not re-derive their logic)
 - [scripts/Discover-CleanupResources.ps1](./scripts/Discover-CleanupResources.ps1) — **READ-ONLY**.

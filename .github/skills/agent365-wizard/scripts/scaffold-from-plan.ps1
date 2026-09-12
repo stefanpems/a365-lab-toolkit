@@ -52,6 +52,7 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 . (Join-Path $moduleDir 'scaffold.aca.ps1')
 . (Join-Path $moduleDir 'scaffold.fh.ps1')
 . (Join-Path $moduleDir 'scaffold.fd.ps1')
+. (Join-Path $moduleDir 'scaffold.mcs.ps1')
 . (Join-Path $moduleDir 'scaffold.ui.ps1')
 . (Join-Path $moduleDir 'scaffold.mcp.ps1')
 . (Join-Path $moduleDir 'scaffold.tools.ps1')
@@ -89,11 +90,21 @@ if (-not $plan.agents -or $plan.agents.Count -eq 0) { $errors.Add('at least one 
 foreach ($a in $plan.agents) {
     if (-not $MAP.ContainsKey($a.type)) {
         if ($a.type -eq 'FD-DW') { $errors.Add("agent type 'FD-DW' is not supported: a Digital Worker runs on a Bot Framework / Teams messaging surface (a hosted container exposing /api/messages), but a Foundry declarative (prompt) agent is platform-run with no container, code or endpoint and cannot host that surface. Use ACA-DW or FH-DW for a Digital Worker.") }
-        else { $errors.Add("unknown agent type '$($a.type)' (supported: ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S).") }
+        else { $errors.Add("unknown agent type '$($a.type)' (supported: ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S, MCS-OH, MCS-NH).") }
         continue
     }
     if (-not $a.name) { $errors.Add("agent of type $($a.type) is missing 'name'.") }
-    # FIXED naming convention: <prefix>-<framework>-<hosting>-<identity> (framework default MAF).
+    # Microsoft Copilot Studio (MCS) agents use a 3-part name <prefix>-MCS-<OH|NH> with NO framework
+    # segment (they are not a code framework). Validate them separately from the code families.
+    elseif ($a.type -like 'MCS-*') {
+        if ($prefix) {
+            $expected = "$prefix-$($a.type)"
+            if ($a.name -ne $expected) {
+                $errors.Add("$($a.name): MCS agent name must be '<prefix>-MCS-<OH|NH>' = '$expected'. MCS carries no <framework> segment (it is a Copilot Studio agent, not a code framework).")
+            }
+        }
+    }
+    # FIXED naming convention for code families: <prefix>-<framework>-<hosting>-<identity> (framework default MAF).
     elseif ($prefix) {
         $fw = Get-AgentFramework $a
         $expected = "$prefix-$fw-$($a.type)"
@@ -174,12 +185,31 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
 
 # agents[].tools validation (registered MCP server unique names to attach, e.g. mcp_MailTools, ext_Foo).
 foreach ($a in $plan.agents) {
-    foreach ($tool in @($a.tools)) {
+    foreach ($tool in @($a.tools | Where-Object { $_ })) {
         if ($tool -notmatch '^(mcp_|ext_)') { $errors.Add("$($a.name): tool '$tool' must be a registered server unique name starting with 'mcp_' or 'ext_' (see 'a365 develop list-available').") }
         elseif (($tool -like 'ext_*') -and ($a.type -notlike '*-OBO')) { $errors.Add("$($a.name): custom BYO server '$tool' can attach only to an OBO agent. An S2S/DW agent invokes as a non-user (own app / agentUser) identity that can't own the Power Platform connection a BYO server needs (ConnectionSharingNotAllowed) — use an *-OBO agent. Work IQ 'mcp_*' servers are fine on any agent.") }
     }
-    if (($a.type -like 'FD-*') -and (@($a.tools).Count -gt 0)) {
+    if (($a.type -like 'FD-*') -and (@($a.tools | Where-Object { $_ }).Count -gt 0)) {
         $errors.Add("$($a.name): FD (prompt) agents do not attach tools via ToolingManifest/add-mcp-servers; leave 'tools' empty (the FD sample wires its tools in agent_config.py).")
+    }
+    if (($a.type -like 'MCS-*') -and (@($a.tools | Where-Object { $_ }).Count -gt 0)) {
+        $errors.Add("$($a.name): MCS (Copilot Studio) agents do not use the 'tools' (ToolingManifest) mechanism — set their MCP integration in 'mcp' (subset of mail/anon/auth), wired via a custom Entra client app in Copilot Studio.")
+    }
+}
+
+# MCS (Copilot Studio) validation: NH needs a target PAYG+Dataverse env; both need the base zips to exist.
+$mcsAgents = @($plan.agents | Where-Object { $_.type -like 'MCS-*' })
+if ($mcsAgents) {
+    $cs = $plan.solution.copilotStudio
+    $baseDir = Join-Path $repoRoot '.github\skills\agent365-copilot-studio\assets\base-solutions'
+    foreach ($a in $mcsAgents) {
+        $zip = if ($a.type -eq 'MCS-OH') { 'AgentOHSol.zip' } else { 'AgentNHSol.zip' }
+        if (-not (Test-Path (Join-Path $baseDir $zip))) { $errors.Add("$($a.name): base solution '$zip' not found under agent365-copilot-studio/assets/base-solutions. Re-extract it with Export-McsBaseSolution.ps1.") }
+        foreach ($mm in @($a.mcp | Where-Object { $_ })) { if ($mm -notin @('mail', 'anon', 'auth')) { $errors.Add("$($a.name): mcp '$mm' is invalid (use mail / anon / auth).") } }
+    }
+    if (-not $cs -or -not $cs.targetTenantId) { $errors.Add("solution.copilotStudio.targetTenantId is required when an MCS agent is planned (the Copilot Studio target tenant).") }
+    if (($mcsAgents | Where-Object { $_.type -eq 'MCS-NH' }) -and (-not $cs -or -not $cs.targetEnvironmentId)) {
+        $errors.Add("solution.copilotStudio.targetEnvironmentId is required for MCS-NH (GitHub Copilot harness): it must be a PAYG-linked, Dataverse-enabled Copilot Studio environment, or preview fails with EnforcementUsageCredits. Verify it with Test-McsPrereqs.ps1 -Harness MCS-NH -EnvironmentId <id>.")
     }
 }
 
@@ -218,6 +248,16 @@ if ($plan.customMcp -and $plan.customMcp.enabled) { Invoke-ScaffoldCustomMcp }
 $nextCommands = $agentCommands
 foreach ($a in $plan.agents) {
     $m = $MAP[$a.type]
+    # MCS (Copilot Studio) agents have NO code sample to copy — they are built by transforming a committed
+    # base solution zip and importing it with pac. Handle them before the src/robocopy path.
+    if ($m.config -eq 'mcs') {
+        $dst = Join-Path $RunRoot $a.name
+        if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $dst | Out-Null
+        Invoke-ScaffoldMcsAgent $a $m $dst
+        Write-Host "  scaffolded $($a.type) -> generated\$prefix\$($a.name)" -ForegroundColor Cyan
+        continue
+    }
     $srcPath = Join-Path $repoRoot $m.src
     if (-not (Test-Path -LiteralPath $srcPath)) { Write-Host "  SKIP $($a.type): sample '$($m.src)' not found." -ForegroundColor Yellow; continue }
     $dst = Join-Path $RunRoot $a.name

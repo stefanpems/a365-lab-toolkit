@@ -35,11 +35,15 @@ gitignored.
       "modelVersion": "2025-04-14",       // optional (defaults to 2025-04-14)
       "auth": "managed-identity",         // "managed-identity" (default) | "api-key"
       "existingResourceGroup": "<name>"   // reuse-existing: RG of the chosen existing account
+    },
+    "copilotStudio": {                    // REQUIRED when any MCS agent is planned (Copilot Studio target)
+      "targetTenantId": "<guid>",         // the Copilot Studio target tenant (often NOT the az tenant; cross-tenant is the norm)
+      "targetEnvironmentId": "<guid>"     // the target PP environment GUID — REQUIRED for MCS-NH (must be PAYG + Dataverse + Copilot Studio); MCS-OH can use any Dataverse env
     }
   },
   "agents": [
     {
-      "type": "ACA-OBO",                  // one of the 8 supported variants (hosting-identity; the scaffolder $MAP key)
+      "type": "ACA-OBO",                  // one of the 10 supported variants (8 code/prompt + MCS-OH/MCS-NH); the scaffolder $MAP key
       "framework": "MAF",                 // FIXED name segment identifying the agent framework (default "MAF"); today only MAF exists
       "name": "<prefix>-<framework>-<hosting>-<identity>",  // e.g. contoso-MAF-ACA-OBO — the <framework> segment is mandatory
       "displayNames": {
@@ -62,6 +66,12 @@ gitignored.
                                              // Defaults to ["mcp_MailTools"] (Work IQ Mail, today's behavior);
                                              // add other Work IQ (mcp_*) / custom (ext_*) servers, or [] to drop Mail.
                                              // FD agents leave this [] (they wire tools in agent_config.py).
+    },
+    {
+      "type": "MCS-NH",                    // Copilot Studio variant: MCS-OH (legacy harness) | MCS-NH (GHCP harness)
+      "name": "<prefix>-MCS-<OH|NH>",      // 3-part name, NO framework segment — e.g. contoso-MCS-NH
+      "mcp": ["mail"],                     // OPTIONAL A365 tool-gateway MCP: subset of "mail" (tested) / "anon" / "auth" (experimental); [] for none
+      "publish": true                      // OPTIONAL — after import, guide the org-wide publication (Availability options -> Show to everyone in my org)
     }
   ],
   "ui": {
@@ -154,6 +164,13 @@ gitignored.
   a **DW** lab lowers it (e.g. 9 for `MAF-ACA-DW`) so `name.short` stays ≤ 30 — see naming-and-validation.md.
 - DW entries: `displayNames.blueprint` = the agent name **without** a `" Blueprint"` suffix and length ≤ 30
   (see naming-and-validation.md); OBO/S2S keep `"<name> Blueprint"`.
+- **MCS (Copilot Studio) entries** use a 3-part name `<prefix>-MCS-<OH|NH>` with **no** `framework`,
+  `displayNames`, `resourceGroup`, `ai`, or `tools` fields. They add an optional `mcp` (subset of
+  `mail`/`anon`/`auth`) and optional `publish` (bool). `solution.copilotStudio.targetTenantId` is required
+  for any MCS agent; `solution.copilotStudio.targetEnvironmentId` is additionally required for **MCS-NH**
+  (must be a PAYG + Dataverse + Copilot Studio env, else `EnforcementUsageCredits`). MCS agents are NOT
+  exposed in the web UI (`ui.expose`) — they live in Copilot Studio / Teams. See the
+  **agent365-copilot-studio** sub-skill.
 - Anything discoverable post-deploy (FQDN, blueprint/app IDs, endpoints) is **omitted** from the plan
   and resolved at scaffold/deploy time.
 - No secrets, ever. `auth: "api-key"` records only the *method*; the key is entered in the terminal.

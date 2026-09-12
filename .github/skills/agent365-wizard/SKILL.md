@@ -1,6 +1,6 @@
 ---
 name: agent365-wizard
-description: 'Provisioning wizard for the Agent 365 agent lab (the Lab Builder agent; sample agents currently built with MAF). Use when creating/planning one or more of the 8 supported variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S), adding the companion web UI, deploying/registering the sample custom MCP servers, or attaching registered MCP tools (Work IQ / custom) to agents. Provides the variant matrix, minimal-question interview flow, naming/validation rules, a secret-free deployment-plan schema, and a read-only discovery script.'
+description: 'Provisioning wizard for the Agent 365 agent lab (the Lab Builder agent; sample agents currently built with MAF). Use when creating/planning one or more of the 10 supported variants (ACA-OBO, ACA-S2S, ACA-DW, FH-OBO, FH-S2S, FH-DW, FD-OBO, FD-S2S, plus the Microsoft Copilot Studio agents MCS-OH and MCS-NH), adding the companion web UI, deploying/registering the sample custom MCP servers, or attaching registered MCP tools (Work IQ / custom) to agents. Provides the variant matrix, minimal-question interview flow, naming/validation rules, a secret-free deployment-plan schema, and a read-only discovery script.'
 argument-hint: "start | plan | scaffold"
 ---
 
@@ -10,8 +10,9 @@ Interview the user with the **minimum** questions, produce a **secret-free** dep
 generate per-variant scaffolding from templates. Companion agent:
 [a365-lab-provisioner.agent.md](../../agents/a365-lab-provisioner.agent.md).
 
-## Supported variants (exactly 8)
-`ACA-OBO`, `ACA-S2S`, `ACA-DW`, `FH-OBO`, `FH-S2S`, `FH-DW`, `FD-OBO`, `FD-S2S`.
+## Supported variants (10)
+`ACA-OBO`, `ACA-S2S`, `ACA-DW`, `FH-OBO`, `FH-S2S`, `FH-DW`, `FD-OBO`, `FD-S2S`, and the Microsoft
+Copilot Studio agents `MCS-OH` (legacy harness) and `MCS-NH` (GitHub Copilot harness).
 FD-DW is intentionally **not** supported (prompt agents cannot be published as autopilot Digital
 Workers). See [references/variant-matrix.md](./references/variant-matrix.md) for per-variant inputs,
 tooling, hosting and endpoint types.
@@ -26,6 +27,7 @@ focused sub-skills; load each only when its area is in scope, and never duplicat
 - **[agent365-aca-agents](../agent365-aca-agents/SKILL.md)** — ACA-OBO/S2S/DW.
 - **[agent365-foundry-hosted-agents](../agent365-foundry-hosted-agents/SKILL.md)** — FH-OBO/S2S/DW.
 - **[agent365-foundry-prompt-agents](../agent365-foundry-prompt-agents/SKILL.md)** — FD-OBO/S2S.
+- **[agent365-copilot-studio](../agent365-copilot-studio/SKILL.md)** — MCS-OH/MCS-NH (Copilot Studio).
 - **[agent365-web-ui](../agent365-web-ui/SKILL.md)** — the shared web SPA.
 - **[agent365-custom-mcp](../agent365-custom-mcp/SKILL.md)** — the optional sample custom MCP.
 
@@ -90,7 +92,7 @@ Write `solution.secretHandling` (`manual` | `assisted`) and follow it exactly fo
 
 ### 2. Select what to create
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
-1. **Variants** — multi-select of the 8 variants (mark DW/FH as "requires Frontier/Foundry").
+1. **Variants** — multi-select of the 10 variants (mark DW/FH as "requires Frontier/Foundry"; MCS as "Copilot Studio, needs pac + a target env — MCS-NH needs PAYG/Copilot Credits").
 2. **Companion UI** — single-select: *No UI* / *Create new UI* / *Attach to existing UI*.
 3. If a UI is chosen — multi-select of the **OBO/S2S** agents to expose (exclude DW: they route via
    Teams/Outlook/Office, not the SPA — see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).

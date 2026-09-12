@@ -1,8 +1,10 @@
 # Variant matrix — inputs, tooling, hosting
 
-Exactly **8** supported variants. **FD-DW is not supported**: a Digital Worker runs on a Bot Framework /
-Teams messaging surface (a hosted container exposing `/api/messages`), but a Foundry declarative (prompt)
-agent is platform-run with no container, code or endpoint and cannot host it — use ACA-DW or FH-DW.
+**10** supported variants: the **8** Agent 365 code/prompt variants below, plus the **2 Microsoft Copilot
+Studio (MCS)** variants (MCS-OH / MCS-NH — see "Microsoft Copilot Studio (MCS) family"). **FD-DW is not
+supported**: a Digital Worker runs on a Bot Framework / Teams messaging surface (a hosted container
+exposing `/api/messages`), but a Foundry declarative (prompt) agent is platform-run with no container,
+code or endpoint and cannot host it — use ACA-DW or FH-DW.
 
 | Variant | Hosting | Identity | Setup tool | Config | Endpoint | Needs Frontier | UI-exposable |
 |---------|---------|----------|-----------|--------|----------|----------------|--------------|
@@ -14,6 +16,8 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 | FH-DW   | Foundry hosted | Digital Worker | `azd` + Foundry ext | `azure.yaml` + `.env` | Bot + Teams | **yes** | no (Teams/Outlook) |
 | FD-OBO  | Prompt (platform) | OBO | Python SDK | `.env` | Project Responses | no | yes |
 | FD-S2S  | Prompt (platform) | S2S | Python SDK | `.env` | Project Responses | no | yes |
+| MCS-OH  | Copilot Studio (Dataverse) | maker/user (delegated) | `pac` CLI | Solution (Dataverse) | Copilot Studio / Teams | no | no (Copilot Studio/Teams) |
+| MCS-NH  | Copilot Studio (Dataverse) | maker/user (delegated) | `pac` CLI | Solution (Dataverse) | Copilot Studio / Teams | no (needs Copilot Credits) | no (Copilot Studio/Teams) |
 
 ## Inputs the wizard MUST ask (grouped)
 
@@ -44,6 +48,26 @@ agent is platform-run with no container, code or endpoint and cannot host it —
 ### Any DW (ACA-DW / FH-DW)
 - Confirm Frontier / Agent 365 enrollment + license capacity.
 - Policy-template choice (portal step — surface as a checkpoint).
+
+### Any MCS (Copilot Studio: MCS-OH / MCS-NH)
+MCS agents are Power Platform **Solutions** imported into a **Copilot Studio environment** with `pac`
+(not Azure/Entra agents). They are built by transforming a committed base solution zip
+(`agent365-copilot-studio/assets/base-solutions/AgentOHSol.zip` = legacy harness, `AgentNHSol.zip` = GHCP
+harness) — NOT regenerated per run. See the **agent365-copilot-studio** sub-skill.
+- **pac CLI** is a prerequisite. If MCS is selected and `pac` is missing → install it
+  (`dotnet tool install --global Microsoft.PowerApps.CLI.Tool`) or drop the MCS agent.
+- **Target Copilot Studio tenant** (`solution.copilotStudio.targetTenantId`) — often NOT the usual az
+  tenant; `pac auth create --tenant <id>` is explicit. Cross-tenant is the norm.
+- **MCS-NH gate (required):** confirm the target PP **environment** is **PAYG-linked + Dataverse-enabled +
+  Copilot Studio**, and capture its **Environment ID** (`solution.copilotStudio.targetEnvironmentId`).
+  Verify with `Test-McsPrereqs.ps1 -Harness MCS-NH -EnvironmentId <id>`; without Copilot Credits the agent
+  fails at preview with `EnforcementUsageCredits`. **MCS-OH has NO such prerequisite** (any Dataverse env).
+- **Optional MCP integration** (`agents[].mcp` = subset of `mail` / `anon` / `auth`): wired via a custom
+  Entra client app on the **Agent 365 tool gateway** (`New-McsMcpClientApp.ps1`) + a guided Copilot Studio
+  MCP-tool step. **Mail** is the tested path; **anon/auth** are experimental (see the sub-skill's
+  `references/mcp-integration-feasibility.md`).
+- **Publish org-wide** (`agents[].publish`): after import, a guided maker-portal step (Availability options
+  -> "Show to everyone in my org").
 
 ### UI (if selected)
 - New UI: name (default `<prefix>-ui`), local-only or Azure Static Web App. **SWA region:** SWA Free is
@@ -120,11 +144,13 @@ FD-OBO uses `CUSTOM_MCP_SERVERS_JSON`, see **Custom MCP** above.)
   code today, so a non-Mail Work IQ tool needs the code generalization noted in that reference.
 
 ## Framework segment in the name (fixed today, multi-framework later)
-Every agent name carries a fixed **`<framework>`** segment: `<prefix>-<framework>-<hosting>-<identity>`
-(e.g. `contoso-MAF-ACA-OBO`). Today the only framework is **MAF**, so the plan writes `framework: "MAF"`
-on every agent (default when omitted). The segment is mandatory so that a same-type agent built with a
-**different** framework (e.g. a LangChain `ACA-OBO` or a Copilot Studio one) stays distinguishable from
-the MAF one — both could coexist as `<prefix>-LC-ACA-OBO` and `<prefix>-MAF-ACA-OBO`.
+Every **code/prompt** agent name carries a fixed **`<framework>`** segment:
+`<prefix>-<framework>-<hosting>-<identity>` (e.g. `contoso-MAF-ACA-OBO`). Today the only framework is
+**MAF**, so the plan writes `framework: "MAF"` on every code/prompt agent (default when omitted).
+
+**Exception — MCS (Copilot Studio) uses a 3-part name with NO framework segment:**
+`<prefix>-MCS-<OH|NH>` (e.g. `contoso-MCS-OH`). MCS is a Copilot Studio agent, not a code framework, so it
+carries no `MAF`/framework token. The scaffolder validates MCS names as `<prefix>-MCS-OH` / `<prefix>-MCS-NH`.
 
 The Agent 365 integration is framework-agnostic (identity, MCP gateway, messaging), so growing the lab to
 other frameworks later means: per-framework source folders (e.g. `aca-langchain/…`), a new short framework

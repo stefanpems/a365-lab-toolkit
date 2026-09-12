@@ -12,6 +12,11 @@ $MAP = @{
     'FH-DW'   = @{ src = 'foundry-hosted\dw';     deploy = $null;                 config = 'fh'  }
     'FD-OBO'  = @{ src = 'foundry-declarative\obo'; deploy = $null;               config = 'fd'  }
     'FD-S2S'  = @{ src = 'foundry-declarative\s2s'; deploy = $null;               config = 'fd'  }
+    # Microsoft Copilot Studio (MCS): NOT code agents. No sample source folder to copy — they are built by
+    # transforming a committed base solution zip (agent365-copilot-studio/assets/base-solutions) and
+    # importing it with pac. src = $null signals the router to skip the robocopy step.
+    'MCS-OH'  = @{ src = $null; deploy = $null; config = 'mcs'; harness = 'OH' }
+    'MCS-NH'  = @{ src = $null; deploy = $null; config = 'mcs'; harness = 'NH' }
 }
 
 # ---------------------------------------------------------------- Work IQ MCP permission catalog
