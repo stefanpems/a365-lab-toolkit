@@ -94,7 +94,13 @@ Write `solution.secretHandling` (`manual` | `assisted`) and follow it exactly fo
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 10 variants (mark DW/FH as "requires Frontier/Foundry"; MCS as "Copilot Studio, needs pac + a target env — MCS-NH needs PAYG/Copilot Credits").
 1a. **Instances per variant** — for each selected variant, ask **how many instances** to create (a whole
-   number ≥ 1; default **1**). Use the word **"istanza"/"instance"** — it is the right term (it is also the
+   number ≥ 1; default **1**). ⛔ **Ask this for EVERY selected variant WITHOUT EXCEPTION — MCS-OH and
+   MCS-NH INCLUDED.** MCS agents have a separate provisioning flow later, but the instance-count question
+   is asked HERE for them too, exactly like ACA/FH/FD — do NOT fold it into the MCS flow and do NOT skip
+   it. **NEVER assume, silently default, infer, or back-fill an MCS instance count** (a total like
+   "MCS-NH ×2" that the user never confirmed is the tell that a question was skipped). Verify you hold a
+   user-provided count for each selected variant before emitting `agents[]`.
+   Use the word **"istanza"/"instance"** — it is the right term (it is also the
    Digital-Worker blueprint's word for its projected agent users; here it means a whole distinct agent copy).
    There is **no upper limit on N** — the only cost of a larger N is script run time and GHCP tokens; still
    surface that DW instances each consume M365 licenses and that Azure/region quota can cap very large N.

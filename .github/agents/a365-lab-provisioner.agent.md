@@ -261,7 +261,15 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    (`az account show --query tenantId` == the entered id); abort on mismatch. These go only into the
    gitignored plan. This guards the shared, concurrently-flipping `az`/Graph context.
 2. **Select variants** (multi-select checkbox: the **10 variants** — the 8 Agent 365 variants plus
-   **MCS-OH** and **MCS-NH**, the Microsoft Copilot Studio agents). For **each** selected variant ask **how
+   **MCS-OH** and **MCS-NH**, the Microsoft Copilot Studio agents). ⛔ **You MUST ask the instance count
+   for EVERY selected variant WITHOUT EXCEPTION — MCS-OH and MCS-NH INCLUDED — before moving on.** The
+   MCS variants follow a separate provisioning flow later, but the instance-count question is NOT part of
+   that flow: it belongs here and must be asked for MCS exactly like for ACA/FH/FD. **NEVER assume,
+   default silently, infer, or back-fill an instance count for any variant (least of all MCS) — if you
+   catch yourself writing a total (e.g. "16 agents", "MCS-NH ×2") that the user did not explicitly
+   confirm, STOP: you skipped a question, go back and ask it.** Practical safeguard: enumerate the
+   selected variants and confirm you have a user-provided count for each one before emitting `agents[]`.
+   For **each** selected variant ask **how
    many instances** (a whole number ≥ 1, default 1) — use the word **"istanza"/"instance"** (the right term
    even though a DW blueprint also calls its projected users "instances"). No upper limit on N (only run
    time + GHCP tokens grow; DW instances also each consume M365 licenses). Emit one `agents[]` entry per
