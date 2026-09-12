@@ -60,6 +60,10 @@ az provider register --namespace Microsoft.OperationalInsights --wait @SubArg | 
 if (-not (az group show -n $RG @SubArg 2>$null)) {
     az group create -n $RG -l $LOC @SubArg | Out-Null
 }
+# Durable component marker so the Web UI & MCP Remover / Lab Builder can find custom MCP instances of
+# this solution (idempotent; applied whether the RG was just created or reused). Ownership by a lab is
+# the separate a365lab tag (Set-LabTags.ps1); a standalone MCP has a365component but no a365lab.
+az group update -n $RG --set "tags.a365component=custom-mcp" @SubArg -o none 2>$null
 
 # Azure Container Registry (create a unique one if none exists in the RG).
 $acr = az acr list -g $RG @SubArg --query "[0].name" -o tsv 2>$null

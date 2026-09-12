@@ -94,6 +94,12 @@ Write `solution.secretHandling` (`manual` | `assisted`) and follow it exactly fo
 Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at a time.
 1. **Variants** — multi-select of the 10 variants (mark DW/FH as "requires Frontier/Foundry"; MCS as "Copilot Studio, needs pac + a target env — MCS-NH needs PAYG/Copilot Credits").
 2. **Companion UI** — single-select: *No UI* / *Create new UI* / *Attach to existing UI*.
+   For **Attach to existing UI**, discover the existing web UIs by the `a365component=web-ui` tag
+   (`az staticwebapp list` → keep `tags.a365component == 'web-ui'`) and let the user PICK one (record it
+   into `ui.existing.staticWebApp`/`origin`/`spaAppId`); the scaffolder then merges each agent's tab
+   surgically with `Add-WebUiTab.ps1` instead of regenerating `config.js`. If none is tagged, point the
+   user to the **Web UI Creator** (or `Set-ComponentTags.ps1 -Retro`). See
+   [agent365-web-ui/SKILL.md](../agent365-web-ui/SKILL.md).
 3. If a UI is chosen — multi-select of the **OBO/S2S** agents to expose (exclude DW: they route via
    Teams/Outlook/Office, not the SPA — see [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)).
 4. **Custom MCP** (single-select): *None* / *Anonymous only* / *Authenticated only* / *Both* — the

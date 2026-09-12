@@ -207,6 +207,14 @@ if ($plan.solution.azureOpenAI) {
     }
 }
 
+# Web UI validation. 'attach' targets an EXISTING (possibly shared) SWA and must name it so the deploy
+# flow can surgically merge tabs (Add-WebUiTab.ps1) instead of regenerating config.js.
+if ($plan.ui -and $plan.ui.mode -eq 'attach') {
+    if (-not ($plan.ui.existing -and $plan.ui.existing.staticWebApp)) {
+        $errors.Add("ui.mode 'attach' requires ui.existing.staticWebApp (the name of the existing Static Web App to attach to). The wizard lists SWAs tagged a365component=web-ui so the user can pick one; also record ui.existing.spaAppId + ui.existing.origin.")
+    }
+}
+
 # Custom MCP validation (optional). The custom MCP name is NOT asked — it IS the solution prefix (the
 # prefix rule above already guarantees a valid ext_<prefix>Anon/Auth: <= 12 lowercase alphanumeric,
 # letter-first, so ext_ stays <= 20).

@@ -76,14 +76,14 @@ gitignored.
     }
   ],
   "ui": {
-    "mode": "none",                        // "none" | "create" | "attach"
+    "mode": "none",                        // "none" | "create" | "attach" (attach = SHARED UI: surgical per-agent Add-WebUiTab.ps1 merge, config.js NOT regenerated)
     "name": "<prefix>-ui",                 // create mode
     "hosting": "static-web-app",           // "local" | "static-web-app"
     "swaRegion": "<azure-region>",         // create + static-web-app
-    "existing": {                          // attach mode
+    "existing": {                          // attach mode — the wizard fills this by picking a SWA tagged a365component=web-ui (never a raw typed name)
       "spaAppId": "<guid>",
       "origin": "https://<host>",
-      "staticWebApp": "<name>"
+      "staticWebApp": "<name>"             // REQUIRED in attach mode; Add-WebUiTab.ps1 -SwaName targets it, tags it a365ref_<prefix>
     },
     "expose": [                            // OBO/S2S agents only (never DW)
       { "agentType": "ACA-OBO" }

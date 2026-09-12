@@ -264,7 +264,18 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    **MCS-OH** and **MCS-NH**, the Microsoft Copilot Studio agents). Then **UI mode** (single-select:
    No UI / Create new / Attach to existing). If a UI is chosen, multi-select the **OBO/S2S** agents
    to expose (DW **and MCS** are excluded — DW routes via Teams/Outlook, MCS lives in Copilot Studio;
-   neither has a SPA endpoint). Then **Custom MCP**
+   neither has a SPA endpoint).
+   ⛔ **If UI mode is *Attach to existing*, discover and offer the existing web UIs — never make the user
+   type a raw SWA name.** List the Static Web Apps tagged `a365component=web-ui`
+   (`az staticwebapp list` then keep those whose `tags.a365component == 'web-ui'`, or
+   `az resource list --tag a365component=web-ui --resource-type Microsoft.Web/staticSites`), present them
+   as a single-select (name + host), and record the pick into `ui.existing` =
+   `{ staticWebApp, origin: "https://<host>", spaAppId: <the SWA's SPA app id> }`. The scaffolder then does
+   **NOT** regenerate `config.js` (that would wipe other labs' tabs); it emits one
+   `Add-WebUiTab.ps1` command per exposed agent (surgical merge — see the deploy ordering below). If no SWA
+   carries the tag, tell the user to create one first with the **Web UI Creator** (or retro-tag an existing
+   one with `Set-ComponentTags.ps1 -SwaName <name>` / `-Retro`), then re-run.
+   Then **Custom MCP**
    (single-select: None / Anonymous only / Authenticated only / Both); if not None, **do NOT ask a name**
    (it derives from the solution prefix → `ext_<prefix>Anon/Auth`; the prefix must be ≤ 12 alphanumerics),
    ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
@@ -351,6 +362,14 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    (a **build-free static re-upload** — only `config.js` changes, no compilation), wire
    `UI_ALLOWED_ORIGINS` (+ `UI_AUDIENCE` for ACA-S2S), and tell the user "you can now test `<agent>` in
    the UI at `https://<swa-host>`." A working surface early and a testable increment per agent.
+   - ⛔ **UI mode *Create new* vs *Attach to existing* differ here.** For a **Create new** UI you edit the
+     lab's own `config.js` in `generated/<prefix>-ui/` and redeploy. For **Attach to existing** you must
+     **NEVER regenerate `config.js`** (it is shared and may hold other labs' tabs): instead run
+     [Add-WebUiTab.ps1](../skills/agent365-web-ui/scripts/Add-WebUiTab.ps1) per agent (the scaffolder emits
+     the exact command). It fetches the LIVE `config.js` from the SWA, merges ONE tab (unique id
+     `<typeShortId>-<prefix>`, `labPrefix:<prefix>`), redeploys, tags the SWA `a365ref_<prefix>` (so the Lab
+     Cleaner can later deregister this lab's tabs without deleting the shared UI), and wires CORS. Other
+     labs' tabs are preserved.
    - ⛔ **Integrate the custom MCP into the tab IMMEDIATELY — never leave an OBO tab as "Mail only".**
      When the agent is a `customMcp.attachTo` target, the `config.js` tab MUST include the custom-token
      wiring so the custom tools work from the first test: **ACA-OBO/FH-OBO** get `customScopes`

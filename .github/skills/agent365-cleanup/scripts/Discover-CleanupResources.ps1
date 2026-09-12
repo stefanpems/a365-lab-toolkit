@@ -220,6 +220,19 @@ function Find-WebUi {
             -Detail "Static Web App in RG $($s.resourceGroup) — host $($s.defaultHostname)" `
             -Action 'delete-swa' -DeleteOrder 38 -Extra @{ resourceGroup = $s.resourceGroup }
     }
+    # SHARED web UIs (created outside this lab) that host THIS lab's agents: they carry the tag
+    # a365ref_<prefix>. We must NOT delete them — only DEREGISTER this lab's tabs (Remove-WebUiTab.ps1)
+    # and clear the tag. A SWA whose name contains the prefix is the lab's OWN UI (deleted above), so
+    # deregistration there is moot; only emit a deregister item for a DIFFERENT (shared) SWA.
+    $refKey = "a365ref_$NameFilter"
+    foreach ($s in @($swa)) {
+        $tags = $s.tags
+        if (-not ($tags -and ($tags.PSObject.Properties.Name -contains $refKey))) { continue }
+        if ($s.name -match [regex]::Escape($NameFilter)) { continue }   # own UI, deleted above
+        Add-Item -Category 'WebUI' -Kind 'webui-registration' -Id "$($s.name)#$NameFilter" -ObjectId $null -DisplayName $s.name `
+            -Detail "Shared web UI '$($s.name)' hosts lab '$NameFilter' agents (tag $refKey) — DEREGISTER the lab's tabs (SWA preserved, other labs untouched)" `
+            -Action 'deregister-webui-tab' -DeleteOrder 5 -Extra @{ swaName = $s.name; labPrefix = $NameFilter; resourceGroup = $s.resourceGroup }
+    }
     # Entra SPA app registration (<prefix>-ui-spa).
     $apps = Get-GraphFiltered 'applications' "startswith(displayName,'$NameFilter')"
     foreach ($a in @($apps)) {

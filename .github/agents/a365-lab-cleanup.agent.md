@@ -109,6 +109,12 @@ exactly which terminal is waiting and that they must type `DELETE` + Enter. Neve
    the exact licenses it holds). The user selects the items to **delete**; unselected items are
    preserved. Split into one multi-select per category if the list is long. Surface every agent instance
    and its licenses explicitly so the user verifies each one.
+   - ⛔ **Shared web UI deregistration is NOT a deletion — surface it clearly.** If discovery found a
+     `deregister-webui-tab` item, it means this lab's agents were attached to a **shared** UI (tagged
+     `a365ref_<prefix>`). Selecting it **removes only this lab's tabs** from that UI (surgical
+     `Remove-WebUiTab.ps1`) and **preserves the shared SWA and every other lab's tabs** — it never deletes
+     the UI. Present it as "Deregister lab `<prefix>` from shared UI `<swa>` (SWA preserved)", distinct from
+     the delete items.
 6. **Final confirmation** — single-select: **Delete N selected resource(s)** / **Run a dry run first
    (-WhatIf)** / **Cancel**. Restate the count and the tenant.
 7. **Delete** — write the selection to `generated/cleanup/<timestamp>/selection.json` and run the

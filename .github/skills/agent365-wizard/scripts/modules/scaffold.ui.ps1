@@ -3,6 +3,37 @@
 # Reads $plan / $repoRoot / $RunRoot / $McpBaseName / $nextCommands from the router scope.
 
 function Invoke-ScaffoldUi {
+    # ATTACH mode: the target is an EXISTING (possibly shared) web UI. NEVER regenerate config.js — that
+    # would wipe every other lab's tab. Instead, emit one Add-WebUiTab.ps1 command per exposed OBO/S2S
+    # agent (it fetches the live config.js from the SWA, merges ONE tab surgically, redeploys, tags the
+    # SWA a365ref_<prefix>, and wires CORS). The plan records ui.existing = { spaAppId, origin, staticWebApp }.
+    if ($plan.ui.mode -eq 'attach') {
+        $ex = $plan.ui.existing
+        $swa = if ($ex -and $ex.staticWebApp) { $ex.staticWebApp } else { '<EXISTING_SWA_NAME>' }
+        $prefix = $plan.solution.prefix
+        $attachTypes = @($plan.ui.expose | ForEach-Object { $_.agentType } | Where-Object { $_ -notlike '*-DW' })
+        Write-Host "  UI (attach) -> shared SWA '$swa': will merge $($attachTypes.Count) tab(s) via Add-WebUiTab.ps1 (config.js NOT regenerated)." -ForegroundColor Cyan
+        $nextCommands.Add("# UI (ATTACH to existing SWA '$swa'): do NOT regenerate config.js. As each OBO/S2S agent below goes live, ASSOCIATE it with a SINGLE surgical merge (fetches the live config.js, adds one tab id '<type>-$prefix', redeploys, tags the SWA a365ref_$prefix, wires CORS). The shared UI's other tabs are preserved.")
+        foreach ($t in $attachTypes) {
+            $ag = $plan.agents | Where-Object { $_.type -eq $t } | Select-Object -First 1
+            if (-not $ag) { continue }
+            $epHint = switch ($t) {
+                'ACA-OBO' { "-ApiBase https://<FQDN>" }
+                'ACA-S2S' { "-ApiBase https://<FQDN> -S2sAppId <S2S_APP_ID>" }
+                'FH-OBO'  { "-Endpoint https://<ACCOUNT>.services.ai.azure.com/api/projects/<PROJECT>/agents/$($ag.name)/endpoint/protocols/invocations?api-version=v1" }
+                'FH-S2S'  { "-Endpoint https://<ACCOUNT>.services.ai.azure.com/api/projects/<PROJECT>/agents/$($ag.name)/endpoint/protocols/openai/responses?api-version=v1" }
+                'FD-OBO'  { "-Endpoint https://<ACCOUNT>.services.ai.azure.com/api/projects/<PROJECT>/openai/v1/responses -AgentName $($ag.name)" }
+                'FD-S2S'  { "-Endpoint https://<ACCOUNT>.services.ai.azure.com/api/projects/<PROJECT>/openai/v1/responses -AgentName $($ag.name)" }
+                default   { "" }
+            }
+            $acaHint = if ($t -like 'ACA-*') { " -AcaApp <container-app> -AcaResourceGroup <rg>" } else { "" }
+            $nextCommands.Add("pwsh -File .github/skills/agent365-web-ui/scripts/Add-WebUiTab.ps1 -SwaName $swa -Subscription <sub> -TenantId $($plan.solution.tenantId) -AgentType $t -Name `"$($ag.name)`" -LabPrefix $prefix $epHint$acaHint  # (add -AnonAudience/-AuthAudience if a custom MCP is attached)")
+        }
+        return
+    }
+
+    # CREATE mode: copy ui/, drop the tenant-specific config.js, and regenerate it from the plan's exposed
+    # OBO/S2S agents (DW is never exposed).
     $uiFolderName = "$($plan.solution.prefix)-ui"
     # SWA Free is only offered in a few regions (eastus2/centralus/eastasia/westeurope/westus2) and SWA
     # serves from a global CDN, so it need not match the lab region. Use the plan's swaRegion (the wizard

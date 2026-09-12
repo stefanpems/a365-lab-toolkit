@@ -184,7 +184,7 @@ uploader directly** — on Windows the `npx @azure/static-web-apps-cli deploy` w
 (it spawns this same uploader but fails to propagate the result), so use the uploader as the primary path:
 
 ```powershell
-az staticwebapp create -n agentframework-ui -g agentframework-ui -l <region> --sku Free
+az staticwebapp create -n agentframework-ui -g agentframework-ui -l <region> --sku Free --tags a365component=web-ui
 $tok = az staticwebapp secrets list -n agentframework-ui -g agentframework-ui --query properties.apiKey -o tsv
 # The uploader is downloaded under %USERPROFILE%\.swa\deploy\<hash>\ (the path is printed on first use).
 $c = "$env:USERPROFILE\.swa\deploy\<hash>\StaticSitesClient.exe"
@@ -195,6 +195,15 @@ Run it **from the repo root** and pass an **absolute `--app` path** to the UI fo
 from inside the UI folder with `--app "."` — the uploader rejects an artifact folder equal to the current
 directory (*"current directory cannot be identical to the artifact folder"*). It prints
 `Deployment Complete :)` and the site URL.
+
+> **Durable component tag:** the `--tags a365component=web-ui` on `az staticwebapp create` marks this SWA
+> as a web UI instance of this solution, so the Lab Builder can list it when a later lab chooses *Attach
+> to an existing web UI*, and the *Web UI & MCP Remover* can find standalone instances. Ownership by one
+> lab is the separate `a365lab=<prefix>` tag; a **standalone** UI (created by the *Web UI Creator*) has
+> `a365component` but **no** `a365lab`, so the Lab Cleaner never deletes it — it only deregisters the
+> lab's tabs. If you created the SWA without the tag, add it later:
+> `az tag update --resource-id $(az staticwebapp show -n <swa> -g <rg> --query id -o tsv) --operation Merge --tags a365component=web-ui`
+> (or run `.github/skills/agent365-wizard/scripts/Set-ComponentTags.ps1 -SwaName <swa> -Subscription <sub> -TenantId <tenant>`).
 
 > **Region:** SWA **Free** is only offered in a few regions (`eastus2`, `centralus`, `eastasia`,
 > `westeurope`, `westus2`) — not every Azure region (e.g. `swedencentral` is unavailable) — and the SPA is

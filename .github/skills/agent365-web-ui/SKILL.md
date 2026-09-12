@@ -40,6 +40,35 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
    §2–§6. Per-host permission specifics (Mail consent for OBO, `UI_AUDIENCE` for ACA-S2S, Foundry
    access for FH/FD) are in that guide.
 
+## Standalone / shared web UIs, association scripts, and tags
+A web UI can be **lab-owned** (created inside a lab run, mode `create`) or **standalone/shared** (created
+by the **Web UI Creator** agent). The difference is entirely in the tags:
+- **`a365component=web-ui`** (on the SWA + its RG + the `<name>-spa` app) marks any web UI instance of this
+  solution. It is what the Lab Builder filters on to list existing UIs for *Attach to an existing web UI*,
+  and what the *Web UI & MCP Remover* filters on to find standalone instances. Add it with
+  `az staticwebapp create ... --tags a365component=web-ui` or later with
+  [Set-ComponentTags.ps1](../agent365-wizard/scripts/Set-ComponentTags.ps1) (`-SwaName <name>` or `-Retro`).
+- **`a365lab=<prefix>`** marks a **lab-owned** UI (deleted by the Lab Cleaner). A **standalone** UI has
+  `a365component` but **no** `a365lab`, so the Lab Cleaner never deletes it.
+- **`a365ref_<prefix>=<yyyyMMdd>`** (on a SHARED SWA) records that lab `<prefix>` has agents integrated
+  here. The Lab Cleaner uses it to find shared UIs and **deregister** that lab's tabs (never delete the UI).
+
+**Attach mode is a SURGICAL MERGE, never a regeneration.** The scaffolder's UI module regenerates
+`config.js` from the plan's `expose[]` — running it in `attach` mode would wipe other labs' tabs, so the
+scaffolder **skips regeneration in attach mode** and instead emits one
+[Add-WebUiTab.ps1](./scripts/Add-WebUiTab.ps1) command per exposed agent. Use these two scripts (both fetch
+the LIVE `config.js` from the SWA as the source of truth, edit ONLY the `agents[]` array, validate with
+`node --check`, and redeploy via `StaticSitesClient.exe`):
+- **[Add-WebUiTab.ps1](./scripts/Add-WebUiTab.ps1)** — ASSOCIATE one agent: merge one tab (unique id
+  `<typeShortId>-<labPrefix>`, `enabled:true`, correct endpoints + `customScopes`/`customInputs`,
+  `labPrefix`), tag the SWA `a365ref_<prefix>`, and (ACA) append the origin to `UI_ALLOWED_ORIGINS`
+  (+ `UI_AUDIENCE` for S2S). Used by Lab Builder (attach mode), Agent Creator, and the Web UI Creator flow.
+- **[Remove-WebUiTab.ps1](./scripts/Remove-WebUiTab.ps1)** — DEREGISTER: remove a whole lab's tabs
+  (`-LabPrefix`) or one agent's tab (`-TabId`), redeploy, and clear `a365ref_<prefix>` when the last tab of
+  that lab goes. Used by the Lab Cleaner (per lab) and the Agent Remover (single tab).
+The pure config transform lives in [_webui-config.ps1](./scripts/_webui-config.ps1) (cloud-free, unit-tested
+offline in `tmp/test-webui-config.ps1`); cloud helpers in [_webui-cloud.ps1](./scripts/_webui-cloud.ps1).
+
 ## Guardrails
 - `config.js` is gitignored (tenant-specific) — create it from `config.js.example`; never commit it.
 - Always `node --check app.js ; node --check config.js` before deploying — one JS error breaks login.

@@ -260,6 +260,19 @@ function Remove-Swa {
     else { Write-Log 'ERROR' "SWA delete failed '$($Item.displayName)': $(( $out | Out-String).Trim())"; Add-Result $Item 'ERROR' 'delete failed' }
 }
 
+# Surgically DEREGISTER a lab's agents from a SHARED web UI (do NOT delete the SWA). Delegates to the
+# web-ui skill's Remove-WebUiTab.ps1: fetches the live config.js, removes every tab owned by the lab,
+# redeploys, and clears the a365ref_<prefix> tag. Used when a lab attached its agents to an existing UI.
+function Remove-WebUiTabRegistration {
+    param($Item)
+    $swa = $Item.swaName; $prefix = $Item.labPrefix
+    if ($WhatIf) { Write-Log 'WHATIF' "would deregister lab '$prefix' tabs from shared web UI '$swa' (SWA preserved)"; Add-Result $Item 'WHATIF' ''; return }
+    $script = (Resolve-Path (Join-Path $PSScriptRoot '..\..\agent365-web-ui\scripts\Remove-WebUiTab.ps1')).Path
+    $out = pwsh -File $script -SwaName $swa -Subscription $sub -TenantId $TenantId -LabPrefix $prefix 2>&1
+    if ($LASTEXITCODE -eq 0) { Write-Log 'OK' "deregistered lab '$prefix' from shared web UI '$swa' (SWA preserved)"; Add-Result $Item 'OK' 'deregistered' }
+    else { Write-Log 'ERROR' "deregister failed on '$swa' for lab '$prefix': $(( $out | Out-String).Trim())"; Add-Result $Item 'ERROR' 'deregister failed' }
+}
+
 function Remove-ResourceGroup {
     param($Item)
     $rg = $Item.id
@@ -319,6 +332,7 @@ foreach ($item in $ordered) {
             'delete-sp' { Remove-ServicePrincipal $item }
             'purge-deleted-item' { Remove-DeletedItem $item }
             'delete-connector' { Remove-Connector $item }
+            'deregister-webui-tab' { Remove-WebUiTabRegistration $item }
             'delete-swa' { Remove-Swa $item }
             'purge-cognitiveservices' { Remove-CognitiveServicesAccount $item }
             'delete-rg' { Remove-ResourceGroup $item }

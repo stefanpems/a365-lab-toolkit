@@ -25,6 +25,21 @@ resource names (the folder-primary path, which also catches a resource created b
 an interrupted run). The three paths (name / tag / plan) are unioned and de-duplicated. **MCS agents are
 never custom-named**, so they stay discoverable by their prefix-derived solution unique name.
 
+### Component tags — shared web UIs / custom MCPs (created outside a lab)
+A web UI or custom MCP can be **standalone/shared** (created by the *Web UI Creator* / *Custom MCP Creator*)
+rather than lab-owned. These carry a **component tag** but **no** `a365lab`:
+- **`a365component=web-ui`** — on the SWA (+ RG + `<name>-spa` app). **`a365component=custom-mcp`** — on the
+  MCP RG (+ its Container Apps + `ext_<Name>*` apps). Applied at creation (`az staticwebapp create --tags`,
+  `deploy-mcp.ps1`) or by [Set-ComponentTags.ps1](../../agent365-wizard/scripts/Set-ComponentTags.ps1).
+- Because a standalone instance has **no `a365lab`**, the Lab Cleaner **never deletes it**. The *Web UI &
+  MCP Remover* deletes standalone instances (found by `a365component` + absence of `a365lab` via
+  [Find-StandaloneComponents.ps1](../scripts/Find-StandaloneComponents.ps1)).
+- **`a365ref_<prefix>=<yyyyMMdd>`** — on a SHARED SWA, one per lab that attached agents to it. The Lab
+  Cleaner discovers a SWA carrying `a365ref_<prefix>` (whose name does NOT contain the prefix → not the
+  lab's own UI) and emits a **`deregister-webui-tab`** item (order 5, before any delete): it runs
+  [Remove-WebUiTab.ps1](../../agent365-web-ui/scripts/Remove-WebUiTab.ps1) `-LabPrefix <prefix>` to remove
+  ONLY this lab's tabs and clear the tag, leaving the shared SWA + other labs' tabs untouched.
+
 ## 1. Web UI
 
 | Layer | Resource | Naming | Cleanup action |

@@ -16,7 +16,12 @@ Write **English** in every file, log, and command you persist. Chat may be in th
 ## What can be cleaned (three categories)
 See [references/resource-model.md](./references/resource-model.md) for the full mapping.
 1. **Web UI** — Azure resources starting from the resource group (`<prefix>-ui-rg`, the Static Web App)
-   and the Entra SPA app registration (`<prefix>-ui-spa`).
+   and the Entra SPA app registration (`<prefix>-ui-spa`). ⛔ **Only a LAB-OWNED UI is deleted.** If the
+   lab's agents were **attached to a shared/standalone UI** (created by the *Web UI Creator*, tagged
+   `a365component=web-ui` with **no** `a365lab`), that UI is **never deleted** — discovery instead finds it
+   by its `a365ref_<prefix>` tag and emits a `deregister-webui-tab` item that surgically removes ONLY this
+   lab's tabs (via [Remove-WebUiTab.ps1](../agent365-web-ui/scripts/Remove-WebUiTab.ps1)) and clears the
+   tag, leaving the shared UI and other labs' tabs intact.
 2. **Custom MCP servers** — Azure resources starting from the resource group (`<slug>-mcp-rg` with its
    containers/environment/registry) **and** the Entra registration (`ext_<Name>…` proxy/resource apps)
    and the Power Platform custom connectors.

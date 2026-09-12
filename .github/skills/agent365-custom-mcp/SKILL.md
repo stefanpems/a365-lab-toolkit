@@ -21,6 +21,17 @@ not duplicate or renumber it here.**
 - The `customMcp.*` block of the plan and the scaffolded `generated/<prefix>/<prefix>-mcp/` copy
   (module [scaffold.mcp.ps1](../agent365-wizard/scripts/modules/scaffold.mcp.ps1)).
 
+## Standalone (shared) custom MCP + component tag
+A custom MCP can be created **inside a lab** (owned by that lab) or **standalone** by the **Custom MCP
+Creator** agent (shared, attachable to later labs' OBO agents). `deploy-mcp.ps1` self-tags the MCP resource
+group **`a365component=custom-mcp`** (also applied by
+[Set-ComponentTags.ps1](../agent365-wizard/scripts/Set-ComponentTags.ps1) `-McpName`/`-Retro`). A
+**standalone** MCP has `a365component` but **no** `a365lab`, so the Lab Cleaner never deletes it; the
+**Web UI & MCP Remover** deletes standalone MCPs (found via
+[Find-StandaloneComponents.ps1](../agent365-cleanup/scripts/Find-StandaloneComponents.ps1)). Whichever
+created it, **one base `<Name>` drives both servers** (`ext_<Name>Anon`/`ext_<Name>Auth`) — the whole
+toolchain keys on `<Name>`, so a single base name is used even when only one server is deployed.
+
 ## Mechanics (grounded in MS Learn)
 - **Two servers, split by auth type** (auth type is per *registration*, not per tool): `/anon/mcp`
   → `ext_<prefix>Anon` (`NoAuth`); `/auth/mcp` → `ext_<prefix>Auth` (`EntraOAuth`).
