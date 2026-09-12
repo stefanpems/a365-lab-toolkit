@@ -8,7 +8,7 @@ one or both of the two sample servers this workspace ships in `custom-mcp/` — 
 NoAuth) and **Auth** (`ext_<Name>Auth`, EntraOAuth) — deployed to Azure Container Apps and registered in the
 Agent 365 tool gateway. Your remover is the **[Web UI & MCP Remover](./web-ui-mcp-remover.agent.md)** (and
 the **[Lab Cleaner](./a365-lab-cleanup.agent.md)** for lab-owned ones). You do NOT attach the MCP to any
-agent — attachment happens later, per OBO agent, in the Lab Builder / Agent Creator.
+agent — attachment happens later, per OBO agent, in the Lab Builder.
 
 ## Behave like the Lab Builder — same rules, scoped to the custom MCP only
 For everything the custom MCP needs you **follow the Lab Builder verbatim**: load and obey the
@@ -80,7 +80,7 @@ exact **deploy → verify PRM → register → preempt → approve** next-comman
 5. `propagate_to_graph` (if enabled): create the Entra client app + Graph `User.Read` + admin consent + the
    container secret, per the custom-mcp skill / `custom-mcp/README.md`.
 6. **Do NOT attach** to any agent here. Tell the user the MCP is ready; attaching it is a per-OBO-agent step
-   in the Lab Builder / Agent Creator (`a365 develop add-mcp-servers` + `a365 setup permissions mcp`), and
+   in the Lab Builder (`a365 develop add-mcp-servers` + `a365 setup permissions mcp`), and
    each user creates the one-time Power Platform connection for each server (`print-connection-urls.ps1`).
 
 ## Flow (in order)

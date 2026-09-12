@@ -6,7 +6,7 @@
 
 .DESCRIPTION
   This is the durable, scriptable form of the "attach an agent to an existing web UI" step. It is used
-  by the Lab Builder (attach mode), the Agent Creator, and the Web UI Creator flow. It NEVER regenerates
+  by the Lab Builder (attach mode) and the Web UI Creator flow. It NEVER regenerates
   config.js: it fetches the LIVE config.js from the SWA (the source of truth — other runs may have added
   tabs), merges one entry by unique id (`<typeShortId>-<labPrefix>`), preserving every other tab and the
   msal block, validates with `node --check`, and redeploys via StaticSitesClient.exe.

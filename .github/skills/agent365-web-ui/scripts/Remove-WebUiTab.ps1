@@ -7,7 +7,7 @@
 
 .DESCRIPTION
   The scriptable inverse of Add-WebUiTab.ps1, used by the Lab Cleaner (deregister a whole lab's agents
-  from a shared UI it did not create) and the Agent Remover (detach one agent's tab). It fetches the
+  from a shared UI it did not create) and single-agent detach via the -TabId form. It fetches the
   LIVE config.js (source of truth), removes exactly the matching entries (preserving every other tab and
   the msal block), validates with `node --check`, and redeploys via StaticSitesClient.exe.
 

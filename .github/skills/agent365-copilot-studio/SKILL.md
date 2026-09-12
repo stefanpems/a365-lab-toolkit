@@ -22,7 +22,7 @@ a **Copilot Studio environment** with the Power Platform CLI (`pac`). Two harnes
 | **MCS-NH** | GitHub Copilot | `cliagent-1.0.0` | `AgentNHSol.zip` | Dataverse **+ PAYG / Copilot Credits** |
 
 Naming (Lab Builder): `<lab-name>-MCS-OH`, `<lab-name>-MCS-NH` (3-part: `<prefix>-MCS-<OH|NH>`; MCS carries
-**no** `MAF` framework segment — it is not a code framework). Agent Creator uses a **free-form** name.
+**no** `MAF` framework segment — it is not a code framework).
 
 The two **base solution zips** in [assets/base-solutions/](assets/base-solutions/) are the creation base
 for every MCS agent (captured from a source tenant; re-extract with `Export-McsBaseSolution.ps1`). We do
@@ -63,7 +63,7 @@ All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.
   `-DisplayName <agent>` and it **auto-discovers the bot GUID** (Dataverse `bots` query with an az token —
   az must be logged into the target tenant) then runs `pac copilot-studio delete-copilot-agent`; or pass
   `-BotId` directly. Removal is **surgical** (single agent) and supports `-WhatIf`. Used by the Lab
-  Cleaner and Agent Remover.
+  Cleaner.
 
 ## Create an MCS agent (end to end)
 1. Ensure pac (`Get-PacCli -Install`).

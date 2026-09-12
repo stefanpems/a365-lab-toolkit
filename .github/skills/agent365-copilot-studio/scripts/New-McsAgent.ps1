@@ -10,7 +10,7 @@
   MCS-OH = legacy standard harness (no special prerequisites). MCS-NH = GitHub Copilot harness (needs a
   PAYG-linked / credit-allocated environment, verified up-front unless -SkipPrereqCheck).
 
-  This is the durable engine behind the Lab Builder / Agent Creator MCS variants: it does NOT regenerate
+  This is the durable engine behind the Lab Builder MCS variants: it does NOT regenerate
   the base solution each run — it reuses the committed base zips captured this session.
 .PARAMETER Harness            MCS-OH / MCS-NH (or OH / NH).
 .PARAMETER DisplayName        Agent display name in Copilot Studio (Lab Builder: <lab>-MCS-OH / <lab>-MCS-NH).

@@ -2,7 +2,7 @@
 .SYNOPSIS
   Remove a Microsoft Copilot Studio (MCS) agent and/or its solution from a Copilot Studio environment.
 .DESCRIPTION
-  Used by the Lab Cleaner and Agent Remover to tear down MCS-OH / MCS-NH agents. Two removals:
+  Used by the Lab Cleaner to tear down MCS-OH / MCS-NH agents. Two removals:
     1. The Power Platform SOLUTION container   -> `pac solution delete --solution-name <unique>` (reliable).
     2. The Copilot Studio AGENT (bot) record   -> `pac copilot-studio delete-copilot-agent --bot-id <id>`.
   Deleting an UNMANAGED solution does not remove its bot component, so to fully remove the agent supply
