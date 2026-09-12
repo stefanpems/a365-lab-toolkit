@@ -23,9 +23,11 @@ persist; you may reply in the chat in the user's language.
   plan's `solution.copilotStudio` + `<prefix>-MCS-*` agents), remove it with the
   **[agent365-copilot-studio](../skills/agent365-copilot-studio/SKILL.md)** sub-skill's
   [Remove-McsAgent.ps1](../skills/agent365-copilot-studio/scripts/Remove-McsAgent.ps1) (needs the `pac`
-  CLI + a browser sign-in to the target tenant): it deletes the solution and, with the bot id, the agent.
-  Still show it in the checkbox review and honour the dry-run gate. Also delete any MCP client Entra app
-  created by `New-McsMcpClientApp.ps1` (`az ad app delete --id <appId>`).
+  CLI + a browser sign-in to the target tenant): pass `-SolutionUniqueName` + `-DisplayName` and it deletes
+  the solution and **auto-discovers the bot GUID** to delete the agent (az must be logged into the target
+  tenant; validated end-to-end 2026-09-12). Still show it in the checkbox review and honour the dry-run
+  gate (`-WhatIf`). Also delete any MCP client Entra app created by `New-McsMcpClientApp.ps1`
+  (`az ad app delete --id <appId>`).
 - **Discovery is read-only; deletion is separate and gated.** Run
   [Discover-CleanupResources.ps1](../skills/agent365-cleanup/scripts/Discover-CleanupResources.ps1)
   first, present the results, and only run

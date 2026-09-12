@@ -30,12 +30,14 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    (Dataverse). They leave **no** Azure RG / Entra identity / M365 license footprint, so the Azure/Entra
    discovery+removal scripts do not apply. Remove them with the **agent365-copilot-studio** sub-skill's
    [Remove-McsAgent.ps1](../agent365-copilot-studio/scripts/Remove-McsAgent.ps1): delete the **solution**
-   (`pac solution delete --solution-name <unique>`) and, with the bot id, the **agent**
-   (`pac copilot-studio delete-copilot-agent --bot-id <id>`). Drive it from the plan's
-   `solution.copilotStudio` (target tenant + env) and each MCS agent's solution unique name (the sanitized
-   `<prefix>MCSOH`/`<prefix>MCSNH`). If an MCP client Entra app was created (`New-McsMcpClientApp.ps1`),
-   delete it too (`az ad app delete --id <appId>`). MCS removal needs the **`pac` CLI** (install if
-   missing). Note: MCS-NH consumes Copilot Credits — deleting the agent stops further consumption.
+   (`pac solution delete --solution-name <unique>`) and the **agent** — pass `-DisplayName <agent>` and it
+   **auto-discovers the bot GUID** (Dataverse query with an az token; az must be in the target tenant),
+   or pass `-BotId`. Drive it from the plan's `solution.copilotStudio` (target tenant + env) and each MCS
+   agent's solution unique name (the sanitized `<prefix>MCSOH`/`<prefix>MCSNH`) + display name
+   (`<prefix>-MCS-OH`/`-NH`). Removal is surgical (single agent) and supports `-WhatIf`. If an MCP client
+   Entra app was created (`New-McsMcpClientApp.ps1`), delete it too (`az ad app delete --id <appId>`). MCS
+   removal needs the **`pac` CLI** (install if missing). Note: MCS-NH consumes Copilot Credits — deleting
+   the agent stops further consumption.
 
 ## Scripts (do not re-derive their logic)
 - [scripts/Discover-CleanupResources.ps1](./scripts/Discover-CleanupResources.ps1) — **READ-ONLY**.

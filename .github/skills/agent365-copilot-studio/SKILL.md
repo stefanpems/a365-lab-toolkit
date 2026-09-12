@@ -59,8 +59,11 @@ All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.
   which bypasses the maker-portal "Async operations disabled" error). Uses the solution UNIQUE name.
 - **`New-McsMcpClientApp.ps1`** — create the Entra client app + ATG delegated permission + admin consent
   for the optional MCP tool integration; prints OAuth values for the Copilot Studio MCP wizard.
-- **`Remove-McsAgent.ps1`** — delete the solution (`pac solution delete`) and, with `-BotId`, the agent
-  (`pac copilot-studio delete-copilot-agent`). Used by the Lab Cleaner and Agent Remover.
+- **`Remove-McsAgent.ps1`** — delete the solution (`pac solution delete`) and the agent. Pass
+  `-DisplayName <agent>` and it **auto-discovers the bot GUID** (Dataverse `bots` query with an az token —
+  az must be logged into the target tenant) then runs `pac copilot-studio delete-copilot-agent`; or pass
+  `-BotId` directly. Removal is **surgical** (single agent) and supports `-WhatIf`. Used by the Lab
+  Cleaner and Agent Remover.
 
 ## Create an MCS agent (end to end)
 1. Ensure pac (`Get-PacCli -Install`).

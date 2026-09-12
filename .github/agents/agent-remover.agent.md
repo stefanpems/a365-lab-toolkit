@@ -32,10 +32,12 @@ Removal is destructive and hard to reverse. Two things must be surgical:
   tab (MCS is never exposed in the SPA), so skip the Azure discover/remove + license + UI-detach steps.
   Instead load **[agent365-copilot-studio](../skills/agent365-copilot-studio/SKILL.md)** and run its
   [Remove-McsAgent.ps1](../skills/agent365-copilot-studio/scripts/Remove-McsAgent.ps1) (needs `pac` + a
-  browser sign-in to the target tenant from the plan's `solution.copilotStudio`): it deletes the solution
-  (`-SolutionUniqueName <prefix>MCS<OH|NH>`) and, with the bot id, the agent. Also delete any MCP client
-  Entra app made by `New-McsMcpClientApp.ps1` (`az ad app delete --id <appId>`). Still discover → checkbox
-  review → delete, and honour the dry-run gate.
+  browser sign-in to the target tenant from the plan's `solution.copilotStudio`): pass
+  `-SolutionUniqueName <prefix>MCS<OH|NH>` + `-DisplayName <prefix>-MCS-<OH|NH>` and it deletes the solution
+  and **auto-discovers the bot GUID** to delete the agent (az must be logged into the target tenant;
+  validated end-to-end 2026-09-12), surgically (single agent). Also delete any MCP client Entra app made
+  by `New-McsMcpClientApp.ps1` (`az ad app delete --id <appId>`). Still discover → checkbox review → delete,
+  and honour the dry-run gate (`-WhatIf`).
 - **Discovery is read-only; deletion is separate and gated.** Run
   [Discover-CleanupResources.ps1](../skills/agent365-cleanup/scripts/Discover-CleanupResources.ps1)
   first, present the results, and only run

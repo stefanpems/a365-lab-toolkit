@@ -13,7 +13,11 @@
 .PARAMETER EnvironmentId      Target environment GUID (resolved to org URL) — or pass -EnvironmentUrl.
 .PARAMETER EnvironmentUrl     Target Dataverse org URL.
 .PARAMETER SolutionUniqueName Solution to delete (as recorded in the plan; e.g. contosoMCSOH).
-.PARAMETER BotId              Optional bot GUID to also delete the agent record.
+.PARAMETER DisplayName        Agent display name — used to AUTO-DISCOVER the bot GUID (via a Dataverse
+                              query with an az token) so -BotId is not needed. Requires az logged into
+                              the target tenant.
+.PARAMETER SchemaName         Optional bot schema name, used as a fallback key for bot-id discovery.
+.PARAMETER BotId              Optional bot GUID to delete the agent directly (skips auto-discovery).
 .PARAMETER WhatIf             Show what would be deleted without deleting.
 #>
 [CmdletBinding(SupportsShouldProcess)]
@@ -22,6 +26,8 @@ param(
     [string]$EnvironmentId,
     [string]$EnvironmentUrl,
     [string]$SolutionUniqueName,
+    [string]$DisplayName,
+    [string]$SchemaName,
     [string]$BotId
 )
 $ErrorActionPreference = 'Stop'
@@ -43,7 +49,14 @@ if (-not $EnvironmentUrl) {
     else { throw "Environment $EnvironmentId not found by 'pac env list'." }
 }
 
-# 1) Delete the agent (bot) record if the id was supplied.
+# Auto-discover the bot GUID from the display name / schema name when -BotId was not supplied.
+if (-not $BotId -and ($DisplayName -or $SchemaName)) {
+    $BotId = Get-McsBotId -OrgUrl $EnvironmentUrl -DisplayName $DisplayName -SchemaName $SchemaName
+    if ($BotId) { Write-Host "  Resolved bot id for '$DisplayName': $BotId" -ForegroundColor DarkGray }
+    else { Write-Host "  Could not auto-resolve the bot id (is az logged into the target tenant?). The agent record won't be deleted unless you pass -BotId." -ForegroundColor Yellow }
+}
+
+# 1) Delete the agent (bot) record if the id is known (supplied or auto-discovered).
 if ($BotId) {
     if ($PSCmdlet.ShouldProcess("$BotId in $EnvironmentUrl", "delete Copilot Studio agent")) {
         Write-Host "  Deleting agent (bot) $BotId ..." -ForegroundColor Cyan
@@ -51,7 +64,7 @@ if ($BotId) {
     }
 }
 else {
-    Write-Host "  No -BotId supplied: the agent record is not auto-deleted. To fully remove it, open the agent in Copilot Studio and note the URL '.../bots/<guid>', then rerun with -BotId <guid>, or delete it in the portal (Settings -> Delete agent)." -ForegroundColor Yellow
+    Write-Host "  No bot id (supplied or discovered): the agent record is not auto-deleted. Pass -DisplayName (with az logged into the target tenant) or -BotId <guid> (from the Copilot Studio URL '.../bots/<guid>'), or delete it in the portal (Settings -> Delete agent)." -ForegroundColor Yellow
 }
 
 # 2) Delete the solution container.

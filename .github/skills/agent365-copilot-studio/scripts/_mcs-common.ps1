@@ -101,6 +101,42 @@ function Assert-PacCli {
     return $p
 }
 
+# ---------------------------------------------------------------- Dataverse bot-id discovery (for removal)
+# Deleting a Copilot Studio AGENT needs its bot GUID (pac copilot-studio delete-copilot-agent --bot-id).
+# The bot GUID is per-environment (assigned on import), so it must be discovered at removal time. We query
+# the Dataverse `bots` table with an az-issued token (works when az is logged into the target tenant).
+function Get-McsDataverseToken {
+    param([Parameter(Mandatory)][string]$OrgUrl)
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) { return $null }
+    $t = az account get-access-token --resource ($OrgUrl.TrimEnd('/')) --query accessToken -o tsv 2>$null
+    if ([string]::IsNullOrWhiteSpace($t)) { return $null }
+    return $t
+}
+
+# Resolve the bot GUID by agent display name (primary) or schema name (fallback). Returns $null when it
+# cannot be resolved (e.g. az not logged into the target tenant) so the caller can fall back to a prompt.
+function Get-McsBotId {
+    param(
+        [Parameter(Mandatory)][string]$OrgUrl,
+        [string]$DisplayName,
+        [string]$SchemaName
+    )
+    $tok = Get-McsDataverseToken -OrgUrl $OrgUrl
+    if (-not $tok) { return $null }
+    $base = $OrgUrl.TrimEnd('/')
+    $clauses = @()
+    if ($DisplayName) { $clauses += "name eq '$($DisplayName.Replace("'", "''"))'" }
+    if ($SchemaName)  { $clauses += "schemaname eq '$($SchemaName.Replace("'", "''"))'" }
+    if ($clauses.Count -eq 0) { return $null }
+    $filter = [uri]::EscapeDataString(($clauses -join ' or '))
+    try {
+        $r = Invoke-RestMethod -Method Get -Uri "$base/api/data/v9.2/bots?`$select=botid,name,schemaname&`$filter=$filter" `
+            -Headers @{ Authorization = "Bearer $tok"; Accept = 'application/json'; 'OData-MaxVersion' = '4.0'; 'OData-Version' = '4.0' }
+        return ($r.value | Select-Object -First 1).botid
+    }
+    catch { return $null }
+}
+
 # ---------------------------------------------------------------- transform: base zip -> renamed zip
 # Sanitize an arbitrary string into a valid Dataverse solution unique name (letters/digits/underscore,
 # must start with a letter). Hyphens and other symbols are stripped.
