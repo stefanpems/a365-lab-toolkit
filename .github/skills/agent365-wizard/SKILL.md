@@ -149,8 +149,9 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
   NOT renamable** — they keep `<prefix>-MCS-<OH|NH>` so the Lab Cleaner can always compute + delete them.
   ⛔ **After collecting the names, verify them a posteriori**: run
   [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) `-ValidateOnly` and, if it reports a
-  name error, **show the offending name + rule and re-ask** — do not proceed until validation passes. When
-  custom names are used the scaffolder also emits a `Set-LabTags.ps1` command (durable lab tag, see step 8).
+  name error, **show the offending name + rule and re-ask** — do not proceed until validation passes. The
+  scaffolder ALWAYS emits a `Set-LabTags.ps1` command (durable lab tag, see step 8) — essential with custom
+  names, still applied with default names for a consistent tag scheme.
 - **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.
@@ -256,13 +257,15 @@ writing. Print the next commands for the user to run; never auto-run destructive
   it hallucinates — use an identity-agnostic prompt**).
 - **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
   at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
-- **Durable lab tag (custom names only).** When `solution.namingMode` = `custom`, run
+- **Durable lab tag (ALWAYS).** Run
   [scripts/Set-LabTags.ps1](./scripts/Set-LabTags.ps1) **after each agent's deploy AND again on resume**
   (it is idempotent): it stamps `a365lab=<prefix>` on lab-owned Azure RGs and `a365lab:<prefix>` on
-  lab-owned Entra apps + SPs so the Lab Cleaner discovers the lab **by tag** even when a custom agent name
-  does not contain the prefix. Tag as EARLY as each resource exists — do not defer to "when the whole lab
-  is live" — because the Lab Cleaner must also delete half-created labs. It never tags a `reuse-existing` /
-  user-owned shared account. Default-named labs do not need it (name discovery already works).
+  lab-owned Entra apps + SPs so the Lab Cleaner discovers the lab **by tag**. It is ESSENTIAL with custom
+  names (which may not contain the prefix) and still applied with default names so the tag scheme is
+  consistent (a lab-owned UI/MCP carries `a365lab`, so the "standalone = `a365component` without
+  `a365lab`" discriminator is always correct). Tag as EARLY as each resource exists — do not defer to
+  "when the whole lab is live" — because the Lab Cleaner must also delete half-created labs. It never tags
+  a `reuse-existing` / user-owned shared account.
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),
   show a bold ⛔ ACTION REQUIRED banner naming which terminal (and how to focus it via the Terminal
   panel dropdown / `N Hidden Terminals`), what to type, and where to get the value

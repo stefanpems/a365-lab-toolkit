@@ -327,17 +327,17 @@ foreach ($a in $plan.agents) {
     Write-Host "  scaffolded $($a.type) -> generated\$prefix\$($a.name)" -ForegroundColor Cyan
 }
 
-# Durable lab tag — CUSTOM naming only. When agents carry custom names that do not contain the prefix,
-# the Lab Cleaner cannot find them by name; Set-LabTags stamps a365lab=<prefix> (Azure RGs) / a365lab:<prefix>
-# (Entra apps + SPs) on every LAB-OWNED resource so cleanup discovers them by tag. Idempotent: run it after
-# the deploys AND again on resume (it closes any gap left between "resource created" and "resource tagged").
-# Default-named labs do not need it (name discovery already works) — so nothing extra is emitted for them.
-if ($namingMode -eq 'custom') {
-    $tagScript = (Join-Path $PSScriptRoot 'Set-LabTags.ps1')
-    $tenantArg = if ($plan.solution.tenantId) { " -TenantId $($plan.solution.tenantId)" } else { '' }
-    $subArg    = if ($plan.solution.subscriptionId) { $plan.solution.subscriptionId } else { '<subscription-id>' }
-    $agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # stamp the durable lab tag (custom names) — re-run after each deploy / on resume")
-}
+# Durable lab tag — ALWAYS. Set-LabTags stamps a365lab=<prefix> (Azure RGs) / a365lab:<prefix> (Entra apps
+# + SPs) on every LAB-OWNED resource. With CUSTOM names it is the ONLY way the Lab Cleaner finds agents
+# whose name does not contain the prefix; with DEFAULT names it is still worth applying so the tag scheme
+# is consistent (a lab-owned UI/MCP carries a365lab, so the "standalone = a365component without a365lab"
+# discriminator used by the Web UI & MCP Remover is always correct). It is a benign, idempotent metadata
+# tag (one key; no functional/cost impact) — run it after the deploys AND again on resume (it closes any
+# gap left between "resource created" and "resource tagged").
+$tagScript = (Join-Path $PSScriptRoot 'Set-LabTags.ps1')
+$tenantArg = if ($plan.solution.tenantId) { " -TenantId $($plan.solution.tenantId)" } else { '' }
+$subArg    = if ($plan.solution.subscriptionId) { $plan.solution.subscriptionId } else { '<subscription-id>' }
+$agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # stamp the durable lab tag a365lab=<prefix> on every lab-owned resource — re-run after each deploy / on resume")
 
 # ---------------------------------------------------------------- summary
 $allCommands = @($preCommands) + @($agentCommands)

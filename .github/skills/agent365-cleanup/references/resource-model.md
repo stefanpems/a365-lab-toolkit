@@ -12,9 +12,10 @@ The two discovery filters:
   lowercased alphanumeric **slug**; Entra apps and connectors use `ext_<Name>…`.
 
 ### Custom-named labs — the durable lab tag (folder-independent anchor)
-When the Lab Builder ran with `solution.namingMode = custom`, a code agent (ACA/FH/FD) can have a name
-that does **not** contain the prefix, so the name filter alone would miss it. The Lab Builder therefore
-stamps a **durable tag** on every **lab-owned** resource, and discovery matches it in addition to the name:
+The Lab Builder stamps a **durable tag** on every **lab-owned** resource (for EVERY lab now — essential
+with custom names, still applied with default names so the tag scheme is consistent), and discovery matches
+it in addition to the name. This matters most when `solution.namingMode = custom`, where a code agent
+(ACA/FH/FD) can have a name that does **not** contain the prefix, so the name filter alone would miss it:
 - **Azure** resource groups → tag `a365lab=<prefix>` (`az group list --query "[?tags.a365lab=='<prefix>']"`).
 - **Entra** app registrations + their service principals → the multi-valued `tags` entry `a365lab:<prefix>`
   (`$filter=tags/any(t:t eq 'a365lab:<prefix>')`).

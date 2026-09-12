@@ -313,9 +313,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    overrides to `agents[].name` (+ matching `displayNames`/`resourceGroup`). **Never rename MCS agents** —
    they stay `<prefix>-MCS-<OH|NH>`. ⛔ **Verify a posteriori**: run `scaffold-from-plan.ps1 -ValidateOnly`
    after collecting the names; if it flags a name, show the name + the rule it broke and **re-ask** before
-   proceeding. With custom names the scaffolder emits `Set-LabTags.ps1`: run it **after each deploy and on
+   proceeding. The scaffolder ALWAYS emits `Set-LabTags.ps1`: run it **after each deploy and on
    resume** (it stamps the durable tag `a365lab=<prefix>`/`a365lab:<prefix>` on lab-owned resources so the
-   Lab Cleaner finds a lab whose agent names don't contain the prefix — tag EARLY, because the Cleaner must
+   Lab Cleaner finds a lab whose agent names don't contain the prefix, and so the "standalone =
+   `a365component` without `a365lab`" discriminator stays correct — tag EARLY, because the Cleaner must
    also delete half-created labs). It never tags a `reuse-existing`/user-owned shared account.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
    for any **ACA** ask the **Azure OpenAI strategy** ONCE (`solution.azureOpenAI`, shared by all ACA):
