@@ -293,6 +293,15 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    managed identities, the Entra apps and the Static Web App. **A Digital Worker lab lowers the cap**
    (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30 with the framework segment.
    Examples: `contoso`, `sales01`.
+   ⛔ **Then ask the naming mode** (single-select **Default names** / **Custom names**, `solution.namingMode`).
+   *Custom* lets each **code** agent (ACA/FH/FD) be renamed: show ONE screen listing every selected code
+   agent with its **default name pre-filled** + an editable field (free-form; start with a letter,
+   letters/digits/hyphens only; ACA-lowercase and DW ≤ 30 still apply). Write overrides to `agents[].name`
+   (+ matching `displayNames`/`resourceGroup`). **Never rename MCS agents** — they stay `<prefix>-MCS-<OH|NH>`.
+   With custom names the scaffolder emits `Set-LabTags.ps1`: run it **after each deploy and on resume** (it
+   stamps the durable tag `a365lab=<prefix>`/`a365lab:<prefix>` on lab-owned resources so the Lab Cleaner
+   finds a lab whose agent names don't contain the prefix — tag EARLY, because the Cleaner must also delete
+   half-created labs). It never tags a `reuse-existing`/user-owned shared account.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
    for any **ACA** ask the **Azure OpenAI strategy** ONCE (`solution.azureOpenAI`, shared by all ACA):
    **create a new shared account+deployment** (`create-shared`, **default** — lab-owned, deleted by the

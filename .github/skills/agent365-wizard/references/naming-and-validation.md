@@ -80,8 +80,20 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
    (`a365 develop list-available` / admin center); ask for a different lab name if taken. **State these
    rules to the user before asking for the lab name.** MS Learn:
    [Azure resource naming rules](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-name-rules#microsoftapp).
-2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
-3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
+1b. **Naming mode (`solution.namingMode`): `default` (or omitted) vs `custom`.** `default` enforces the
+   fixed convention `<prefix>-<framework>-<hosting>-<identity>` (rule 1a — byte-identical to before).
+   `custom` lets each **code** agent (ACA/FH/FD) carry a **free-form `name`** (with matching
+   `displayNames`/`resourceGroup`), validated only structurally: **start with a letter; letters, digits
+   and hyphens only** (no spaces/underscores/symbols) — the ACA-lowercase (rule 2) and DW `name.short` ≤ 30
+   (rule 1) checks still apply. **MCS agents are never renamable** — they keep `<prefix>-MCS-<OH|NH>` in
+   either mode so the Lab Cleaner can compute + delete them from the lab name alone. Because a custom name
+   need not contain the prefix, the name-based discovery the Lab Cleaner/Reporter use would miss it, so in
+   custom mode the wizard stamps a **durable cloud tag** — `a365lab=<prefix>` on lab-owned Azure resource
+   groups and `a365lab:<prefix>` on lab-owned Entra app registrations + their service principals (via
+   [scripts/Set-LabTags.ps1](../scripts/Set-LabTags.ps1)) — the stable, folder-independent association the
+   Lab Cleaner discovers by tag. Only **lab-owned** resources are tagged; a `reuse-existing`/user-owned
+   shared account is never tagged.
+2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).3. **Region capacity** — validate the chosen region supports Container Apps (ACA), the Foundry
    account + model (FH), and Free-tier Static Web Apps (UI) before committing.
 4. **Custom MCP name IS the solution prefix — it is NOT asked.** Agent 365 registered server names must
    start with `ext_` and be **≤ 20 chars**; the servers are `ext_<prefix>Anon` / `ext_<prefix>Auth`

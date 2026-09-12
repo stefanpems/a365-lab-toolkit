@@ -9,6 +9,8 @@
     "secretHandling": "manual",
     "resourceGroupStrategy": "isolated",
     "sharedResourceGroup": "<SOLUTION_PREFIX>-rg",
+    "$comment_namingMode": "OPTIONAL — 'default' (or omit) enforces the fixed agent-name convention <prefix>-<framework>-<hosting>-<identity>. 'custom' lets each ACA/FH/FD agent carry a free-form 'name' (+ matching 'displayNames'/'resourceGroup'); the wizard then stamps a durable tag a365lab=<prefix> (Azure) / a365lab:<prefix> (Entra) on every lab-owned resource (via Set-LabTags.ps1) so the Lab Cleaner still finds the lab. MCS agents always keep the prefix-derived name <prefix>-MCS-<OH|NH>.",
+    "namingMode": "default",
     "$comment_foundry": "OPTIONAL — only if the lab has FH/FD agents. All FH+FD agents share this ONE Foundry footprint. mode 'create-shared' = the wizard provisions one account+project '<SOLUTION_PREFIX>'+model in <SOLUTION_PREFIX>-foundry-rg; mode 'reuse-existing' = deploy into an existing project (set endpoint/account/existingResourceGroup, no provision — the resilient path if new-account hosted-agent provisioning is degraded). Remove this block for the legacy per-agent-account behaviour. FH-DW always keeps its own account.",
     "foundry": {
       "mode": "create-shared",

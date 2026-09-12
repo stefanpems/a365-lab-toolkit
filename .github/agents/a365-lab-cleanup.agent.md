@@ -99,8 +99,11 @@ exactly which terminal is waiting and that they must type `DELETE` + Enter. Neve
    - a separate filter for **Custom MCP** (the `<Name>`), only when that category is selected.
    Explain the filter matches the start of the wizard-generated resource names.
 4. **Discover** — run the discovery script for the selected categories, writing
-   `generated/cleanup/<timestamp>/discovered.json`; read it back. If nothing is found, say so and offer
-   to broaden the filter.
+   `generated/cleanup/<timestamp>/discovered.json`; read it back. **Pass `-PlanPath
+   generated/<prefix>/a365-deployment-plan.json` whenever that archived plan exists** — it seeds the EXACT
+   resource names (folder-primary, incl. **custom** agent names). The script also matches by name and by the
+   **durable lab tag** (`a365lab=<prefix>` / `a365lab:<prefix>`), so a custom-named lab is found even without
+   the folder. If nothing is found, say so and offer to broaden the filter.
 5. **Checkbox review (mandatory human check)** — present the discovered items as a multi-select list,
    grouped by category. Each label = kind + name + key detail (RG contents; for an instance, its UPN and
    the exact licenses it holds). The user selects the items to **delete**; unselected items are

@@ -60,6 +60,11 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 # ---------------------------------------------------------------- validation
 $errors = New-Object System.Collections.Generic.List[string]
 $prefix = $plan.solution.prefix
+# Naming mode: 'default' (absent) enforces the fixed convention <prefix>-<framework>-<hosting>-<identity>;
+# 'custom' lets the user free-form each code agent name (ACA/FH/FD) and relaxes the name check to the
+# STRUCTURAL rules only (still enough to derive valid Azure/Entra names). MCS agents ALWAYS keep the
+# prefix-derived name so the Lab Cleaner can compute + delete them from the lab name alone.
+$namingMode = if ($plan.solution.namingMode) { "$($plan.solution.namingMode)".Trim().ToLower() } else { 'default' }
 
 # Every lab agent name carries a FIXED <framework> segment: <prefix>-<framework>-<hosting>-<identity>
 # (e.g. a90902-MAF-ACA-OBO). framework defaults to MAF; it keeps a same-type agent built with another
@@ -105,15 +110,26 @@ foreach ($a in $plan.agents) {
         }
     }
     # FIXED naming convention for code families: <prefix>-<framework>-<hosting>-<identity> (framework default MAF).
-    elseif ($prefix) {
+    elseif ($prefix -and $namingMode -ne 'custom') {
         $fw = Get-AgentFramework $a
         $expected = "$prefix-$fw-$($a.type)"
         if ($a.name -ne $expected) {
-            $errors.Add("$($a.name): agent name must follow the fixed convention <prefix>-<framework>-<hosting>-<identity> = '$expected' (framework '$fw', type '$($a.type)'). The <framework> segment is mandatory so a same-type agent built with a different framework stays distinguishable.")
+            $errors.Add("$($a.name): agent name must follow the fixed convention <prefix>-<framework>-<hosting>-<identity> = '$expected' (framework '$fw', type '$($a.type)'). The <framework> segment is mandatory so a same-type agent built with a different framework stays distinguishable. (Set solution.namingMode='custom' to free-form agent names.)")
         }
         # Only MAF has sample source folders today; block silently scaffolding MAF code under another name.
         if ($fw -ne 'MAF') {
             $errors.Add("$($a.name): framework '$fw' has no sample source yet — only 'MAF' is implemented. The <framework> naming segment is reserved for future frameworks (LangChain/Semantic Kernel/...); set framework to 'MAF', or add the per-framework source folders + variant-map entry before using another code.")
+        }
+    }
+    # CUSTOM naming mode: the user free-formed this code agent name. Enforce only the STRUCTURAL rules the
+    # derived resource names need (the ACA-lowercase and DW <= 30 checks below still apply to every agent).
+    elseif ($prefix -and $namingMode -eq 'custom' -and $a.type -notlike 'MCS-*') {
+        if ($a.name -notmatch '^[A-Za-z][A-Za-z0-9-]*$') {
+            $errors.Add("$($a.name): custom agent name must start with a letter and contain ONLY letters, digits and hyphens (no spaces, underscores or symbols) — it derives the resource group '<name>-rg', the ACA container app / managed identity, the Entra app registrations and, for a DW, the Teams name.short.")
+        }
+        $fw = Get-AgentFramework $a
+        if ($fw -ne 'MAF') {
+            $errors.Add("$($a.name): framework '$fw' has no sample source yet — only 'MAF' is implemented. Set framework to 'MAF', or add the per-framework source folders + variant-map entry first.")
         }
     }
     # ACA container app name must be lowercase.
@@ -280,6 +296,18 @@ foreach ($a in $plan.agents) {
     # ToolingManifest.json via Set-ToolingManifest). Grouped with the agent that needs it.
     Add-AgentCustomAttach $a $dst
     Write-Host "  scaffolded $($a.type) -> generated\$prefix\$($a.name)" -ForegroundColor Cyan
+}
+
+# Durable lab tag — CUSTOM naming only. When agents carry custom names that do not contain the prefix,
+# the Lab Cleaner cannot find them by name; Set-LabTags stamps a365lab=<prefix> (Azure RGs) / a365lab:<prefix>
+# (Entra apps + SPs) on every LAB-OWNED resource so cleanup discovers them by tag. Idempotent: run it after
+# the deploys AND again on resume (it closes any gap left between "resource created" and "resource tagged").
+# Default-named labs do not need it (name discovery already works) — so nothing extra is emitted for them.
+if ($namingMode -eq 'custom') {
+    $tagScript = (Join-Path $PSScriptRoot 'Set-LabTags.ps1')
+    $tenantArg = if ($plan.solution.tenantId) { " -TenantId $($plan.solution.tenantId)" } else { '' }
+    $subArg    = if ($plan.solution.subscriptionId) { $plan.solution.subscriptionId } else { '<subscription-id>' }
+    $agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # stamp the durable lab tag (custom names) — re-run after each deploy / on resume")
 }
 
 # ---------------------------------------------------------------- summary

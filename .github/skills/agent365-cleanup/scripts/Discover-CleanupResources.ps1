@@ -58,7 +58,12 @@ param(
     [string]$McpNameFilter,
     [Parameter(Mandatory)][string]$Subscription,
     [string]$TenantId,
-    [string]$OutFile
+    [string]$OutFile,
+    # Optional archived plan (generated/<prefix>/a365-deployment-plan.json). When supplied, discovery
+    # ALSO seeds the EXACT resource names from it (including CUSTOM agent names that do not contain the
+    # prefix) and adds any that still exist — the primary, precise path for a lab created with custom
+    # names, and the one that catches a half-created resource that was created before it could be tagged.
+    [string]$PlanPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -439,16 +444,117 @@ if ($Categories -contains 'CustomMcp') { Find-CustomMcp }
 if ($Categories -contains 'Agents') { Find-Agents }
 
 # ---------------------------------------------------------------------------
+# Durable-tag discovery (finds CUSTOM-named resources the name scans above miss). Lab Builder stamps
+# a365lab=<prefix> on lab-owned Azure RGs and a365lab:<prefix> on lab-owned Entra apps/SPs when agents
+# were given custom names. This runs regardless of naming mode (a default lab simply has no such tags).
+# Classify each tagged object into the SELECTED categories so the review stays scoped.
+# ---------------------------------------------------------------------------
+function Find-TaggedResources {
+    if ([string]::IsNullOrWhiteSpace($NameFilter)) { return }
+    $labTag = "a365lab:$NameFilter"
+    Write-Host "Scanning durable lab tag ($labTag)..." -ForegroundColor Cyan
+
+    # Azure resource groups carrying tag a365lab=<prefix>.
+    $rgs = Invoke-AzJson @('group', 'list', '--subscription', $sub, '--query', "[?tags.a365lab=='$NameFilter']", '-o', 'json')
+    foreach ($rg in @($rgs)) {
+        $n = $rg.name
+        $cat = if ($n -match '(?i)ui-rg' -and $n -notmatch '(?i)mcp') { 'WebUI' } elseif ($n -match '(?i)mcp') { 'CustomMcp' } else { 'Agents' }
+        if ($Categories -notcontains $cat) { continue }
+        Add-Item -Category $cat -Kind 'azure-rg' -Id $n -ObjectId $null -DisplayName $n `
+            -Detail ((Get-RgDetail $n) + ' [tag]') -Action 'delete-rg' -DeleteOrder 40 -Extra @{ location = $rg.location }
+        if ($cat -eq 'Agents') {
+            foreach ($c in @(Invoke-AzJson @('cognitiveservices', 'account', 'list', '-g', $n, '--subscription', $sub, '-o', 'json'))) {
+                Add-Item -Category 'Agents' -Kind 'cognitiveservices-account' -Id $c.name -ObjectId $null -DisplayName $c.name `
+                    -Detail "Cognitive Services account (kind $($c.kind)) in RG $n [tag] — delete+purge frees its name + quota" `
+                    -Action 'purge-cognitiveservices' -DeleteOrder 39 -Extra @{ resourceGroup = $n; location = $c.location }
+            }
+        }
+    }
+
+    # Entra apps carrying tag a365lab:<prefix>. tags/any(...) is a supported directory filter.
+    $apps = Get-GraphFiltered 'applications' "tags/any(t:t eq '$labTag')" @('ConsistencyLevel=eventual')
+    foreach ($a in @($apps)) {
+        if (-not $a.displayName) { continue }
+        $cat = if ($a.displayName -match '(?i)ui-spa') { 'WebUI' } elseif ($a.displayName -match '(?i)^ext_') { 'CustomMcp' } else { 'Agents' }
+        if ($Categories -notcontains $cat) { continue }
+        Add-Item -Category $cat -Kind 'entra-app' -Id $a.appId -ObjectId $a.id -DisplayName $a.displayName `
+            -Detail 'Agent/UI/MCP app registration [tag] (deleted + cascades its SP, then purged)' `
+            -Action 'delete-app' -DeleteOrder 20
+    }
+    # Entra service principals carrying the tag that need an explicit delete (identity leftovers whose app is gone).
+    $appIds = @($items | Where-Object { $_.kind -eq 'entra-app' } | ForEach-Object { $_.id })
+    foreach ($sp in (Get-GraphFiltered 'servicePrincipals' "tags/any(t:t eq '$labTag')" @('ConsistencyLevel=eventual'))) {
+        if (-not $sp.displayName -or ($appIds -contains $sp.appId)) { continue }
+        if ($Categories -notcontains 'Agents') { continue }
+        Add-Item -Category 'Agents' -Kind 'entra-sp' -Id $sp.appId -ObjectId $sp.id -DisplayName $sp.displayName `
+            -Detail 'Tagged service principal [tag] (deleted directly, then purged)' `
+            -Action 'delete-sp' -DeleteOrder 22
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Plan-seeded discovery (folder-primary). When the archived plan is available it names every resource
+# EXACTLY — including custom names — so we add each that actually exists. This is the precise path and it
+# catches a resource created before Set-LabTags could tag it (interrupted run). Existence is verified so a
+# never-created reference is skipped.
+# ---------------------------------------------------------------------------
+function Find-PlanSeeded {
+    param($Plan)
+    if (-not $Plan) { return }
+    Write-Host "Scanning plan-named resources (folder-primary)..." -ForegroundColor Cyan
+    $rgStrategy = $Plan.solution.resourceGroupStrategy
+    $sharedRg = if ($Plan.solution.sharedResourceGroup) { $Plan.solution.sharedResourceGroup } else { "$NameFilter-rg" }
+    foreach ($a in @($Plan.agents)) {
+        if ($a.type -like 'MCS-*') { continue }   # MCS = Dataverse; handled by the cleanup SKILL via <prefix>MCS* uniquename.
+        if ($Categories -notcontains 'Agents') { continue }
+        $rg = if ($rgStrategy -eq 'shared') { $sharedRg } elseif ($a.resourceGroup) { $a.resourceGroup } else { "$($a.name)-rg" }
+        if ((az group exists -n $rg --subscription $sub 2>$null) -eq 'true') {
+            Add-Item -Category 'Agents' -Kind 'azure-rg' -Id $rg -ObjectId $null -DisplayName $rg `
+                -Detail ((Get-RgDetail $rg) + ' [plan]') -Action 'delete-rg' -DeleteOrder 40 `
+                -Extra @{ location = (Invoke-AzJson @('group', 'show', '-n', $rg, '--subscription', $sub, '--query', 'location', '-o', 'json')) }
+            foreach ($c in @(Invoke-AzJson @('cognitiveservices', 'account', 'list', '-g', $rg, '--subscription', $sub, '-o', 'json'))) {
+                Add-Item -Category 'Agents' -Kind 'cognitiveservices-account' -Id $c.name -ObjectId $null -DisplayName $c.name `
+                    -Detail "Cognitive Services account (kind $($c.kind)) in RG $rg [plan] — delete+purge frees its name + quota" `
+                    -Action 'purge-cognitiveservices' -DeleteOrder 39 -Extra @{ resourceGroup = $rg; location = $c.location }
+            }
+        }
+        # ACA blueprint/identity app registrations (named by the plan). FH/FD blueprints are Foundry-generated.
+        if ($a.type -like 'ACA-*') {
+            $names = @()
+            if ($a.displayNames.blueprint) { $names += $a.displayNames.blueprint } else { $names += "$($a.name) Blueprint" }
+            if ($a.displayNames.identity) { $names += $a.displayNames.identity } else { $names += "$($a.name) Identity" }
+            foreach ($dn in $names) {
+                foreach ($app in (Get-GraphFiltered 'applications' "displayName eq '$($dn.Replace("'", "''"))'")) {
+                    if (-not $app.displayName) { continue }
+                    Add-Item -Category 'Agents' -Kind 'entra-app' -Id $app.appId -ObjectId $app.id -DisplayName $app.displayName `
+                        -Detail 'Agent blueprint / identity app [plan] (deleted + cascades its SP, then purged)' `
+                        -Action 'delete-app' -DeleteOrder 20
+                }
+            }
+        }
+    }
+}
+
+Find-TaggedResources
+if ($PlanPath -and (Test-Path -LiteralPath $PlanPath)) {
+    $seedPlan = $null
+    try { $seedPlan = Get-Content -LiteralPath $PlanPath -Raw | ConvertFrom-Json } catch { $seedPlan = $null }
+    Find-PlanSeeded $seedPlan
+}
+
+
+# ---------------------------------------------------------------------------
 # Emit.
 # ---------------------------------------------------------------------------
-# De-duplicate: the same recycle-bin object can match more than one category filter (e.g. an
-# ext_<Name> object matches both the CustomMcp and the Agents deleted-item scan). Keep the first
-# occurrence per (kind, objectId); genuinely distinct objects have distinct objectIds and are kept.
+# De-duplicate: the same object can now be found by MORE THAN ONE path (name substring, durable tag,
+# plan-seed) or match more than one category filter. Key on (kind, objectId-or-id) so an Azure RG (which
+# has no objectId) also dedupes; keep the first occurrence. Genuinely distinct objects have distinct ids.
 $seenKey = @{}
 $dedup = New-Object System.Collections.Generic.List[object]
 foreach ($it in $items) {
-    if ($it.objectId) {
-        $k = "$($it.kind)|$($it.objectId)"
+    $idPart = if ($it.objectId) { $it.objectId } else { $it.id }
+    if ($idPart) {
+        $k = "$($it.kind)|$idPart"
         if ($seenKey.ContainsKey($k)) { continue }
         $seenKey[$k] = $true
     }

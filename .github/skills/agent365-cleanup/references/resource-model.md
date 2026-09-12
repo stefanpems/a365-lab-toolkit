@@ -11,6 +11,20 @@ The two discovery filters:
 - **MCP name filter** (Custom MCP) — the custom MCP **`<Name>`** (e.g. `h2256`). Azure resources use its
   lowercased alphanumeric **slug**; Entra apps and connectors use `ext_<Name>…`.
 
+### Custom-named labs — the durable lab tag (folder-independent anchor)
+When the Lab Builder ran with `solution.namingMode = custom`, a code agent (ACA/FH/FD) can have a name
+that does **not** contain the prefix, so the name filter alone would miss it. The Lab Builder therefore
+stamps a **durable tag** on every **lab-owned** resource, and discovery matches it in addition to the name:
+- **Azure** resource groups → tag `a365lab=<prefix>` (`az group list --query "[?tags.a365lab=='<prefix>']"`).
+- **Entra** app registrations + their service principals → the multi-valued `tags` entry `a365lab:<prefix>`
+  (`$filter=tags/any(t:t eq 'a365lab:<prefix>')`).
+The tag is written by [agent365-wizard/scripts/Set-LabTags.ps1](../../agent365-wizard/scripts/Set-LabTags.ps1)
+(idempotent; lab-owned only — a `reuse-existing`/user-owned shared account is never tagged). Discovery also
+accepts the archived plan (`-PlanPath generated/<prefix>/a365-deployment-plan.json`) to seed the **exact**
+resource names (the folder-primary path, which also catches a resource created before it could be tagged in
+an interrupted run). The three paths (name / tag / plan) are unioned and de-duplicated. **MCS agents are
+never custom-named**, so they stay discoverable by their prefix-derived solution unique name.
+
 ## 1. Web UI
 
 | Layer | Resource | Naming | Cleanup action |

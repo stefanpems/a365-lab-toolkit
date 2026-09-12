@@ -129,6 +129,16 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
   **independent of the agent name** (it also satisfies ACA, RG, managed identity, Entra and SWA). **A
   Digital Worker lab lowers the cap** (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30
   once the framework segment is added.
+- **Naming mode** — single-select **Default names** / **Custom names** (`solution.namingMode`, default
+  `default`). *Default* keeps the convention above. *Custom* lets you rename each **code** agent
+  (ACA/FH/FD): present ONE screen listing every selected code agent with its **default name pre-filled**
+  and an editable field to override it (free-form; must start with a letter and use only letters/digits/
+  hyphens; the ACA-lowercase and DW ≤ 30 rules still apply). Write each override to `agents[].name` (and
+  matching `displayNames`/`resourceGroup`). **MCS agents are NOT renamable** — they keep `<prefix>-MCS-<OH|NH>`
+  so the Lab Cleaner can always compute + delete them from the lab name. When custom names are used the
+  scaffolder emits a `Set-LabTags.ps1` command: run it after the deploys (and again on resume) — it stamps
+  the durable lab tag `a365lab=<prefix>` / `a365lab:<prefix>` on every lab-owned resource so the Lab
+  Cleaner still finds a lab whose agent names don't contain the prefix.
 - **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.
@@ -234,6 +244,13 @@ writing. Print the next commands for the user to run; never auto-run destructive
   it hallucinates — use an identity-agnostic prompt**).
 - **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
   at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
+- **Durable lab tag (custom names only).** When `solution.namingMode` = `custom`, run
+  [scripts/Set-LabTags.ps1](./scripts/Set-LabTags.ps1) **after each agent's deploy AND again on resume**
+  (it is idempotent): it stamps `a365lab=<prefix>` on lab-owned Azure RGs and `a365lab:<prefix>` on
+  lab-owned Entra apps + SPs so the Lab Cleaner discovers the lab **by tag** even when a custom agent name
+  does not contain the prefix. Tag as EARLY as each resource exists — do not defer to "when the whole lab
+  is live" — because the Lab Cleaner must also delete half-created labs. It never tags a `reuse-existing` /
+  user-owned shared account. Default-named labs do not need it (name discovery already works).
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),
   show a bold ⛔ ACTION REQUIRED banner naming which terminal (and how to focus it via the Terminal
   panel dropdown / `N Hidden Terminals`), what to type, and where to get the value

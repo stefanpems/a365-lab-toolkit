@@ -37,11 +37,21 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    (`<prefix>-MCS-OH`/`-NH`). Removal is surgical (single agent) and supports `-WhatIf`. If an MCP client
    Entra app was created (`New-McsMcpClientApp.ps1`), delete it too (`az ad app delete --id <appId>`). MCS
    removal needs the **`pac` CLI** (install if missing). Note: MCS-NH consumes Copilot Credits — deleting
-   the agent stops further consumption.
+   the agent stops further consumption. **MCS agents are NEVER given custom names** (the Lab Builder keeps
+   `<prefix>-MCS-OH`/`-NH` and solution `<prefix>MCSOH`/`<prefix>MCSNH` even in custom-naming mode), so the
+   solution unique name and display name are **always computable from the lab name alone** — the Lab Cleaner
+   can therefore delete a lab's MCS agents from the prefix even if the `generated/<prefix>/` folder is gone.
 
 ## Scripts (do not re-derive their logic)
 - [scripts/Discover-CleanupResources.ps1](./scripts/Discover-CleanupResources.ps1) — **READ-ONLY**.
-  Enumerates matching resources for the chosen categories and writes `discovered.json`.
+  Enumerates matching resources for the chosen categories and writes `discovered.json`. It finds resources
+  three ways and de-duplicates: (a) **name** substring match on the prefix (default-named labs); (b) the
+  **durable lab tag** `a365lab=<prefix>` (Azure RGs) / `a365lab:<prefix>` (Entra apps + SPs) that Lab
+  Builder stamps when agents were given **custom names** that do not contain the prefix; (c) **plan-seed** —
+  when `-PlanPath generated/<prefix>/a365-deployment-plan.json` is passed it adds the EXACT resource names
+  from the plan (including custom names, and catching a resource created before it could be tagged during
+  an interrupted run). **Always pass `-PlanPath` when the run's `generated/<prefix>/` folder exists** — it
+  is the precise, folder-primary seed; the tag is the folder-independent safety net.
 - [scripts/Remove-CleanupResources.ps1](./scripts/Remove-CleanupResources.ps1) — **destructive**.
   Consumes the confirmed selection, deletes in dependency order, and writes a **persistent log**.
 - [scripts/Remove-GeneratedFolders.ps1](./scripts/Remove-GeneratedFolders.ps1) — **destructive, local FS**.
@@ -95,7 +105,10 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    - one filter for **Web UI + Agents** (usually the solution prefix, e.g. `h2256`);
    - a separate filter for **Custom MCP** (the `<Name>`), only if that category was selected.
 4. **Discover** — run `Discover-CleanupResources.ps1` for the chosen categories, writing
-   `generated/cleanup/<timestamp>/discovered.json`. Read it back.
+   `generated/cleanup/<timestamp>/discovered.json`. **Pass `-PlanPath generated/<prefix>/a365-deployment-plan.json`
+   whenever that archived plan exists** (folder-primary, precise names incl. custom ones); the script ALSO
+   scans by name and by the durable lab tag (`a365lab=<prefix>` / `a365lab:<prefix>`) so a **custom-named**
+   lab is found even without the folder. Read `discovered.json` back.
 5. **Checkbox review (mandatory human check)** — present the discovered items as a multi-select list,
    grouped by category, each labelled with kind + name + key detail (RG contents; instance UPN and the
    exact licenses it holds). The user selects the items to **delete**; anything left unselected is
