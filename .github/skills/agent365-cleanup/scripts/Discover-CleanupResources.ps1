@@ -18,12 +18,13 @@
                 matching objects still sitting in the Entra recycle bin (deletedItems) from a prior
                 half-finished deletion.
 
-  Agent instances are named `<blueprintName>-iN`, and a blueprint may have a CUSTOM name that does not
-  contain the prefix, so discovery scopes instances to THIS lab by three paths: (a) name-match on the
-  prefix, (a') the archived plan's agent names (the precise catch for custom-named labs), and (b) a
-  Frontier / Agent 365 license sweep that is FILTERED to holders whose name/UPN starts with a lab
-  blueprint name — holders outside the lab (other runs) are skipped, never surfaced. The mandatory human
-  review remains the final safety net.
+  Agent instances (agent users) are scoped to THIS lab by their DURABLE blueprint link, never by the
+  instance's (arbitrary) name: user.identityParentId -> agentIdentity -> agentIdentityBlueprintId (=
+  blueprint appId). The blueprint is matched to the lab by the a365lab tag, the archived plan, or the
+  prefix (the blueprint follows the naming convention, the instance does not). Every instance of a lab
+  blueprint is surfaced regardless of its name; no other lab's instance is ever surfaced. A prefix
+  name-match is kept only as a safety net if the beta blueprint chain is unavailable. The mandatory human
+  review remains the final check.
 
   Output: a JSON array of resource items (also written to -OutFile when supplied). The Remove script
   consumes the selected subset. Nothing here deletes anything.
@@ -200,18 +201,29 @@ function Format-Licenses {
     return , $parts
 }
 
-# True when an agent-instance (agent user) belongs to THIS lab: its display name or UPN local-part starts
-# with a lab blueprint name (the prefix, or a plan agent name — instances are named '<blueprintName>-iN').
-# This scopes the Frontier/Agent365 license sweep to the lab so OTHER labs' instances are never surfaced.
-function Test-InstanceBelongsToLab {
-    param([string]$DisplayName, [string]$Upn, [string[]]$Prefixes)
-    $local = if ($Upn) { ($Upn -split '@', 2)[0] } else { '' }
-    foreach ($p in $Prefixes) {
-        if ([string]::IsNullOrWhiteSpace($p)) { continue }
-        if ($DisplayName -and $DisplayName.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-        if ($local -and $local.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-    }
-    return $false
+# Agent instances are scoped to a lab by their DURABLE blueprint link, NOT by their (arbitrary) name:
+#   user.identityParentId -> agentIdentity (beta) -> agentIdentityBlueprintId (= blueprint appId).
+# An instance belongs to the lab when that blueprint belongs to the lab (tag / plan / prefix — the
+# blueprint, unlike the instance, follows the naming convention). These helpers resolve + cache the chain.
+$script:AgentIdBlueprintCache = @{}   # agentIdentity objectId -> blueprint appId
+$script:BlueprintNameCache = @{}      # blueprint appId       -> blueprint displayName
+function Get-InstanceBlueprintAppId {
+    param([string]$ParentId)
+    if ([string]::IsNullOrWhiteSpace($ParentId)) { return $null }
+    if ($script:AgentIdBlueprintCache.ContainsKey($ParentId)) { return $script:AgentIdBlueprintCache[$ParentId] }
+    $ai = Get-GraphObject "https://graph.microsoft.com/beta/directoryObjects/$ParentId"
+    $bid = if ($ai) { $ai.agentIdentityBlueprintId } else { $null }
+    $script:AgentIdBlueprintCache[$ParentId] = $bid
+    return $bid
+}
+function Get-BlueprintDisplayName {
+    param([string]$AppId)
+    if ([string]::IsNullOrWhiteSpace($AppId)) { return $null }
+    if ($script:BlueprintNameCache.ContainsKey($AppId)) { return $script:BlueprintNameCache[$AppId] }
+    $o = @(Get-GraphFiltered 'applications' "appId eq '$AppId'")
+    $dn = if ($o.Count) { $o[0].displayName } else { $null }
+    $script:BlueprintNameCache[$AppId] = $dn
+    return $dn
 }
 
 # ---------------------------------------------------------------------------
@@ -382,10 +394,10 @@ function Find-Agents {
             -Action 'delete-sp' -DeleteOrder 22
     }
 
-    # Agent instances (agent users). Three lab-scoped discovery paths, de-duplicated by id:
-    #   (a)  users whose display name starts with the prefix;
-    #   (a') users whose display name starts with a plan agent name (custom-named labs);
-    #   (b)  Frontier / Agent 365 license holders FILTERED to this lab's blueprint names (others skipped).
+    # Agent instances (agent users). Scoped to THIS lab by the DURABLE blueprint link, never by the
+    # instance's (arbitrary) name: user.identityParentId -> agentIdentity -> agentIdentityBlueprintId
+    # (= blueprint appId), then the blueprint is matched to the lab by tag / plan / prefix. Every instance
+    # of a lab blueprint is deleted regardless of its name; no other lab's instance is ever surfaced.
     $seen = @{}
     $addUser = {
         param($u, $why)
@@ -401,26 +413,45 @@ function Find-Agents {
             -Extra @{ userPrincipalName = $full.userPrincipalName; licenses = $lic }
     }
 
-    # (a) name-matched users (reliable encoded filter; per-user detail fetched in $addUser).
-    foreach ($u in (Get-GraphFiltered 'users' "startswith(displayName,'$NameFilter')")) { & $addUser $u 'name match' }
-
-    # Agent instances belong to THIS lab when their name starts with a lab blueprint name: the prefix, or a
-    # plan agent name (instances are named '<blueprintName>-iN'). This set scopes the license sweep below so
-    # it can NEVER surface other labs' Frontier/Agent365 instances (the previous unscoped sweep did).
-    $labPrefixes = @(@($NameFilter) + $script:LabAgentNames | Where-Object { $_ } | Select-Object -Unique)
-
-    # (a') plan-seeded custom-named instances: for each lab agent name that does NOT contain the prefix,
-    # find its instances directly (startswith '<agentName>'). This is the PRECISE catch for custom-named
-    # labs and does not depend on the license sweep.
+    # ---- Build this lab's BLUEPRINT identity set (evidence-based: Entra tag + archived plan) ----
+    # (i) appIds of Entra apps carrying the durable tag a365lab:<prefix> (ACA blueprints/identity apps).
+    $labBlueprintAppIds = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($a in (Get-GraphFiltered 'applications' "tags/any(t:t eq 'a365lab:$NameFilter')" @('ConsistencyLevel=eventual'))) {
+        if ($a.appId) { [void]$labBlueprintAppIds.Add($a.appId) }
+    }
+    # (ii) lab blueprint display names from the plan (incl. CUSTOM names that carry no prefix, and the
+    # ' Blueprint' variant the a365 CLI actually registers) — resolved to appIds. This is the anchor for
+    # DW blueprints, which today are not Entra-tagged.
+    $labBlueprintNames = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($an in $script:LabAgentNames) {
-        if ([string]::IsNullOrWhiteSpace($an) -or ($an -match [regex]::Escape($NameFilter))) { continue }
-        foreach ($u in (Get-GraphFiltered 'users' "startswith(displayName,'$($an.Replace("'", "''"))')")) { & $addUser $u "plan agent '$an' instance" }
+        if ($an) { [void]$labBlueprintNames.Add($an); [void]$labBlueprintNames.Add("$an Blueprint") }
+    }
+    foreach ($a in @($script:SeedPlan.agents)) {
+        if ($a.displayNames -and $a.displayNames.blueprint) { [void]$labBlueprintNames.Add($a.displayNames.blueprint) }
+    }
+    foreach ($dn in $labBlueprintNames) {
+        foreach ($a in (Get-GraphFiltered 'applications' "displayName eq '$($dn.Replace("'", "''"))'")) {
+            if ($a.appId) { [void]$labBlueprintAppIds.Add($a.appId) }
+        }
+    }
+    # A resolved blueprint (appId) belongs to the lab when: it is in the tagged/plan appId set, OR its
+    # display name matches a plan blueprint name, OR it starts with the prefix (the blueprint — unlike the
+    # instance — follows the naming convention, so this is a safe, evidence-based fallback for FH/FD too).
+    $blueprintBelongs = {
+        param([string]$AppId)
+        if ([string]::IsNullOrWhiteSpace($AppId)) { return $false }
+        if ($labBlueprintAppIds.Contains($AppId)) { return $true }
+        $dn = Get-BlueprintDisplayName $AppId
+        if (-not $dn) { return $false }
+        $bare = $dn -replace ' Blueprint$', ''
+        if ($labBlueprintNames.Contains($dn) -or $labBlueprintNames.Contains($bare)) { return $true }
+        return $dn.StartsWith($NameFilter, [System.StringComparison]::OrdinalIgnoreCase)
     }
 
-    # (b) license-identified users — SCOPED to this lab. Enumerate Frontier / Agent 365 holders, but add
-    # ONLY those whose name / UPN matches a lab blueprint prefix; holders outside this lab belong to other
-    # labs and are skipped (counted for a console note). This is the safety net for a lab instance not
-    # already caught by (a)/(a') — it never crosses the lab boundary again.
+    # Enumerate agent instance users (every hired instance holds a Frontier / Agent 365 license), then keep
+    # ONLY those whose blueprint belongs to this lab. The license query is just the enumerator; the DURABLE
+    # blueprint link — not the name — decides membership, so custom-named instances (e.g. 'Altair-i1') are
+    # caught and other labs' instances are skipped.
     $map = Get-SkuMap
     $agentSkuIds = @()
     foreach ($kv in $map.GetEnumerator()) {
@@ -430,14 +461,21 @@ function Find-Agents {
     foreach ($skuId in $agentSkuIds) {
         foreach ($u in (Get-GraphFiltered 'users' "assignedLicenses/any(x:x/skuId eq $skuId)" @('ConsistencyLevel=eventual'))) {
             if ($seen.ContainsKey($u.id)) { continue }
-            if (Test-InstanceBelongsToLab -DisplayName $u.displayName -Upn $u.userPrincipalName -Prefixes $labPrefixes) {
-                & $addUser $u "holds agent license $($map[$skuId])"
+            $meta = Get-GraphObject ("https://graph.microsoft.com/beta/users/$($u.id)?" + '$select=' + [uri]::EscapeDataString('id,identityParentId'))
+            $bpAppId = Get-InstanceBlueprintAppId ($meta.identityParentId)
+            if (& $blueprintBelongs $bpAppId) {
+                $bpName = Get-BlueprintDisplayName $bpAppId
+                & $addUser $u "instance of lab blueprint '$bpName'"
             }
             else { $skippedForeign++ }
         }
     }
+    # Safety net for a STANDARD-named lab if the beta blueprint chain is unavailable in this environment:
+    # prefix-named users are lab-owned by construction (a foreign instance never carries our prefix), so
+    # add any not already found. Custom-named instances are handled by the blueprint link above.
+    foreach ($u in (Get-GraphFiltered 'users' "startswith(displayName,'$NameFilter')")) { & $addUser $u 'prefix name match' }
     if ($skippedForeign -gt 0) {
-        Write-Host "  Skipped $skippedForeign Frontier/Agent365 license holder(s) outside this lab's names (belong to other labs)." -ForegroundColor DarkYellow
+        Write-Host "  Skipped $skippedForeign Frontier/Agent365 license holder(s) whose blueprint is not in this lab (other labs)." -ForegroundColor DarkYellow
     }
 
     # Recycle-bin leftovers (apps, service principals, users) from a prior half-finished deletion.

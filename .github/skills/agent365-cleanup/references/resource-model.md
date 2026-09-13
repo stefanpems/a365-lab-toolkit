@@ -118,14 +118,16 @@ project, the ACA-shared Azure OpenAI account) is never prefix-matched and is lef
 
 ### Why instances need special handling (the license guarantee)
 An autopilot is **one blueprint → many instances**, and **each hired instance gets its own agent
-identity + agent user** with its own **M365 licenses**. Instances are named **`<blueprintName>-iN`**, and
-a blueprint may have a **custom** name that does not contain the prefix, so discovery scopes instances to
-the lab three ways: **(a)** name-match on the prefix, **(a′)** the archived plan's agent names (the precise
-catch for custom-named labs), and **(b)** a **Frontier / Agent 365 license sweep filtered** to holders
-whose name/UPN starts with a lab blueprint name — **holders outside the lab (other runs) are skipped**, so
-the review never mixes in another lab's instances. A **soft-delete does not release licenses; only the
-purge does**, so removal (a) removes every license explicitly, (b) soft-deletes the user, (c) purges it
-from the recycle bin, and (d) verifies it is gone. Every step is logged.
+identity + agent user** with its own **M365 licenses**. Instance names are **arbitrary** (chosen at hire
+time), so discovery scopes them to the lab by their **durable blueprint link**, never by name:
+**`user.identityParentId`** → the instance's **`agentIdentity`** → **`agentIdentityBlueprintId`** (= the
+blueprint **appId**). The **blueprint** is matched to the lab by the **`a365lab` tag**, the **archived
+plan**, or the **prefix** (the blueprint — unlike the instance — follows the naming convention). Thus
+**every instance of a lab blueprint is deleted regardless of its name**, and **no other lab's instance is
+ever surfaced**. A prefix name-match is kept only as a safety net if the beta blueprint chain is
+unavailable in the tenant. A **soft-delete does not release licenses; only the purge does**, so removal
+(a) removes every license explicitly, (b) soft-deletes the user, (c) purges it from the recycle bin, and
+(d) verifies it is gone. Every step is logged.
 
 ## Delete order (dependencies)
 `10` agent instances (licenses first) → `20` Entra apps (cascade SPs) → `24` recycle-bin purge →
