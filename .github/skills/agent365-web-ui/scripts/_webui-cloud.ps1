@@ -67,8 +67,15 @@ function Deploy-SwaContent {
     if (-not $exe) { throw "StaticSitesClient.exe not found under ~/.swa/deploy. Run 'npx @azure/static-web-apps-cli --version' once to download it." }
     Push-Location (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path   # repo root
     try {
-        & $exe upload --app $appAbs --apiToken $tok --skipAppBuild true
-        if ($LASTEXITCODE -ne 0) { throw "StaticSitesClient upload failed (exit $LASTEXITCODE)." }
+        # A freshly-created SWA can fail the first 1-2 uploads with "An unknown exception has occurred"
+        # while its backend warms up. Retry a few times before giving up (idempotent static re-upload).
+        $ok = $false
+        for ($i = 1; $i -le 3 -and -not $ok; $i++) {
+            & $exe upload --app $appAbs --apiToken $tok --skipAppBuild true
+            if ($LASTEXITCODE -eq 0) { $ok = $true }
+            elseif ($i -lt 3) { Write-Host "  SWA upload attempt $i failed (exit $LASTEXITCODE); retrying..." -ForegroundColor Yellow; Start-Sleep -Seconds 10 }
+        }
+        if (-not $ok) { throw "StaticSitesClient upload failed after 3 attempts (exit $LASTEXITCODE)." }
     }
     finally { Pop-Location }
 }

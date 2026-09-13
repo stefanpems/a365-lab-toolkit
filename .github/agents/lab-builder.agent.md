@@ -607,6 +607,35 @@ Feasibility conclusion (do not re-derive — act on it):
   asked for the anon `server_time`). That's a model quirk, not an infra bug — all connectors exist and
   map correctly. The OBO agent prompt is hardened to fetch each server's URL fresh, but always confirm
   the user opened the connector whose id matches the server they're testing (anon → `…anonp…`).
+- **⛔ NEVER pipe a deploy script through `Select-Object`/`Out-String` (lab12 run, biggest time sink).**
+  `deploy-aca*.ps1` (and any `az containerapp up`/`create` + `az acr build`) crash with a **colorama
+  `UnicodeEncodeError` (cp1252)** when their stdout is redirected/piped under the Windows console — the
+  crash **aborts the container creation** (empty FQDN `https:///…`, "containerapp does not exist" or
+  `provisioningState=Failed`, plus a spurious `--assignee-object-id: expected one argument`). Run deploy
+  scripts **RAW** with UTF-8 forced (the scripts now set it internally; the OBO script was brought to
+  parity). If a container ends up Failed/no-ingress: `az containerapp delete` it, then re-run the deploy
+  **`-ReuseEnv` RAW** (recreating the managed env also changes the FQDN — re-wire the UI tab + CORS).
+- **⛔ For an OBO custom-MCP agent, ATTACH BEFORE THE SINGLE DEPLOY** (`a365 develop add-mcp-servers
+  ext_…Anon ext_…Auth` → `a365 setup all` → ONE deploy) so the 3-server manifest bakes in one pass. A
+  post-deploy attach forces a **redeploy**, and re-running the plain `deploy-aca.ps1` **deletes+recreates
+  the RG (20–40 min)** — use `-ReuseEnv` or a targeted `az acr build --no-logs` + `az containerapp update
+  --image` instead. **`a365 setup permissions mcp` is OPTIONAL for OBO** (it invokes as the user; the SPA
+  `customScopes` token + the `preempt-proxy-consents` AllPrincipals grants already authorize it) — and it
+  is cwd-sensitive, so skip it for OBO rather than run it from the wrong folder.
+- **`register-external-mcp-server` — run RAW, never kill mid-run.** Do NOT wrap it in `Tee-Object`/
+  `Out-String` (buffers the `Proceed with registration? (y/N)` prompt AND lags the progress lines). Run
+  it raw (mode=async), send `y`, and when it stalls at "Created Entra app … PublicClients" **wait for the
+  async completion** — the connector-creation step is slow but progressing; killing it leaves a PARTIAL
+  registration (2–3 orphan `ext_*Proxy`/`PublicClients` apps to delete by appId; NOT the `-Resource` app).
+- **Custom-MCP `add MCP server` transient `ResponseEnded`** (the gateway `POST /externalMcpServers/add`
+  ends prematurely; `discoverMCPServers` may fail at the same moment) is a **transient gateway hiccup** —
+  delete the partial `ext_<p>Auth-*` proxy apps (keep `-Resource`) and retry; it succeeds on the next try.
+- **SWA first upload after `create` can fail 1–2× ("An unknown exception has occurred")** while the
+  backend warms up — `Deploy-SwaContent` now retries 3×; a manual `StaticSitesClient upload` should be
+  retried 2–3× before investigating.
+- **S2S `Could not add access_agent_as_user scope` is usually a FALSE NEGATIVE** (app-propagation
+  timing). Re-check `az ad app show --id <blueprint> --query "api.oauth2PermissionScopes[?value=='access_agent_as_user'].id"`;
+  the scope is normally already present — only add it manually (Graph PATCH) if it's truly missing.
 
 ## Custom MCP integration (optional sample `custom-mcp/`)
 Load **[agent365-custom-mcp](../skills/agent365-custom-mcp/SKILL.md)** when the custom MCP is in scope.

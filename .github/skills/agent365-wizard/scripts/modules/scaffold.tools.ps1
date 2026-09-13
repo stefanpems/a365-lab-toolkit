@@ -25,7 +25,9 @@ function Add-AgentCustomAttach {
     if ($attachByAgent.ContainsKey($a.name)) { $customExtras = @($attachByAgent[$a.name]) }
     if ($wiqExtras.Count -eq 0 -and $customExtras.Count -eq 0) { return }
 
-    $redeploy = if ($a.type -like 'FH-*') { 'azd deploy' } else { 'rebuild the image (az acr build) + az containerapp update, or run the agent''s deploy-aca*.ps1' }
+    $redeploy = if ($a.type -like 'FH-*') { 'azd deploy' } else { 'rebuild the image RAW (az acr build --no-logs) + az containerapp update --image, OR run the agent''s deploy-aca*.ps1 -ReuseEnv RAW. NEVER the plain deploy (it deletes+recreates the RG: 20-40 min) and NEVER pipe it through Select-Object/Out-String (colorama cp1252 aborts the container creation).' }
+    # BETTER (avoids any redeploy): for an OBO custom-MCP agent, run `a365 develop add-mcp-servers` BEFORE
+    # `a365 setup all` + the SINGLE deploy, so the 3-server manifest is baked in one pass.
 
     if ($wiqExtras.Count -gt 0) {
         $note = if ($a.type -like 'FH-*') { '   # FH-OBO is manifest-driven for ext_ custom MCP; a non-Mail Work IQ tool may still need the code generalization in references/workiq-mcp-integration.md' } else { '   # ACA turn path is manifest-driven — Work IQ token/refresh lessons apply generically (references/workiq-mcp-integration.md)' }
@@ -38,7 +40,10 @@ function Add-AgentCustomAttach {
         $extJoin = ($customExtras -join ' ')
         if ($mode -eq 'approve-first') {
             # Custom MCP approved BEFORE the agents (see the MCP section) -> integrate this agent now.
-            $nextCommands.Add("cd `"$dst`"; a365 develop add-mcp-servers $extJoin; a365 setup permissions mcp --agent-name `"$($a.name)`"   # custom MCP already approved -> integrate $($a.name) immediately (grants the ext_ servers' Tools.ListInvoke.All + McpServersMetadata.Read.All to the blueprint)")
+            # NB: `a365 setup permissions mcp` is OPTIONAL for an OBO agent (it invokes as the signed-in
+            # user; the SPA customScopes delegated token + the preempt-proxy-consents AllPrincipals grants
+            # already authorize the ext_ servers). It is also cwd-sensitive (run from the agent folder).
+            $nextCommands.Add("cd `"$dst`"; a365 develop add-mcp-servers $extJoin   # attach BEFORE the single deploy when possible (bakes the manifest in one pass); OBO does NOT require 'a365 setup permissions mcp'")
         } else {
             # Agents started without waiting for approval -> attach once the servers are approved.
             $nextCommands.Add("# ONLY AFTER the ext_ servers are ADMIN-APPROVED (M365 admin center > Agents > Tools > Requests): cd `"$dst`"; a365 develop add-mcp-servers $extJoin; a365 setup permissions mcp --agent-name `"$($a.name)`"   # if they are not approved yet when $($a.name) deploys, run this manually later to integrate the custom MCP")

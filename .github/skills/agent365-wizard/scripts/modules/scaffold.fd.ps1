@@ -35,7 +35,8 @@ function Invoke-ScaffoldFdAgent {
         # Custom (BYO) MCP servers attached to FD-OBO: declared here (label/url/input) so deploy_agent.py
         # builds one MCPTool + StructuredInputDefinition per server (Authorization header = {{<input>}}).
         # The SPA sends the matching tokens as structured_inputs (config.js obo-fd customInputs).
-        if ($plan.customMcp -and $plan.customMcp.enabled -and (@($plan.customMcp.attachTo) -contains 'FD-OBO')) {
+        # attachTo may list the type 'FD-OBO' (all instances) OR a specific instance name (custom naming).
+        if ($plan.customMcp -and $plan.customMcp.enabled -and ((@($plan.customMcp.attachTo) -contains 'FD-OBO') -or (@($plan.customMcp.attachTo) -contains $a.name))) {
             $mcpName = $McpBaseName  # derived from the solution prefix (not asked)
             $srvs = @($plan.customMcp.servers); if (-not $srvs) { $srvs = @('anon', 'auth') }
             $parts = @()

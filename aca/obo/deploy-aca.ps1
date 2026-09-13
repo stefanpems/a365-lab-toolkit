@@ -18,6 +18,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+# Console UTF-8: avoids UnicodeEncodeError (cp1252) in the 'az acr build' / 'az containerapp up' log
+# stream. NB: still run this script RAW (never pipe through Select-Object/Out-String) — a caller-side
+# pipe reintroduces the colorama cp1252 crash that aborts container creation (empty FQDN).
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+
 # ============================ Parameters ============================
 $RG      = "agentframework-OBO-rg-pl"
 $APP     = "agentframework-obo-sample"
