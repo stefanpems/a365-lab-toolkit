@@ -40,6 +40,13 @@
         type = "ManagedAgentIdentityBlueprint"
         blueprint_id = $MAIBName
       }
+      # Marks the agent as an M365 digital worker (autopilot), matching the current Microsoft
+      # foundry-autopilot-agent reference sample. IMMUTABLE — settable ONLY at the agent's INITIAL
+      # creation (a new version can't change it; an agent created without it must be deleted and
+      # recreated). NOTE: this does NOT resolve the hire-time "Autopilot activity authorization
+      # currently supports only access boundaries ending with '.developers'" error — that is a
+      # platform-side preview gate (a fresh agent WITH m365 still fails), not controlled by this field.
+      digital_worker_type = "m365"
   }
 
   $jsonBody = $agentCreationBody | ConvertTo-Json -Depth 5
@@ -55,7 +62,8 @@
       "Content-Type"  = "application/json"
       "Accept"        = "application/json"
       "Authorization" = "Bearer $aiAzureToken"
-      "Foundry-Features" = "HostedAgents=V1Preview,AgentEndpoints=V1Preview"
+      # DigitalWorker=V1Preview gates the digital_worker_type property used above.
+      "Foundry-Features" = "HostedAgents=V1Preview,AgentEndpoints=V1Preview,DigitalWorker=V1Preview"
   }
 
   Write-Host "Creating agent version at: $agentUrl"
