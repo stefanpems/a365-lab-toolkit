@@ -21,8 +21,11 @@ $appVersion = if ($env:PUBLISH_APP_VERSION) { $env:PUBLISH_APP_VERSION } else { 
 # Publish via the AGENT endpoint (publishAsAutopilot). This is the only publish path that honors
 # `optionalPermissionScopes` — the older AzureML agent-asset endpoint (publishAsDigitalWorker)
 # silently ignores that field, so the MCP tool scopes never reach the blueprint and instances hit
-# AADSTS65001 on Mail. `publishScope` = "Tenant" must match the endpoint authorization scheme set in
-# agent-creation-script.ps1 ("BotServiceTenant"); a mismatch breaks the Bot Service -> Foundry relay.
+# AADSTS65001 on Mail. For an AUTOPILOT `publishScope` is ALWAYS "Tenant" (the blueprint goes to
+# admin approval); the agent endpoint authorization scheme is "BotServiceRbac" (set in
+# agent-creation-script.ps1), NOT "BotServiceTenant". Autopilots relay activity through a hosted
+# pass-through endpoint authorized by Foundry Azure RBAC — using BotServiceTenant makes instance
+# creation fail with "Autopilot activity access boundaries require ... BotServiceRbac authorization".
 $agentPublishUrl = "$($env:AZURE_AI_PROJECT_ENDPOINT)/agents/$($env:AGENT_NAME)/microsoft365/publish?api-version=2025-11-15-preview"
 
 $body = @{

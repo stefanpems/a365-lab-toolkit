@@ -139,20 +139,24 @@
       throw "Failed to create Cognitive Services User role assignment: $roleAssignmentOutput"
   }
 
-  # Patch agent endpoint with activity protocol.
-  # IMPORTANT: the authorization scheme MUST match the publish scope used in
-  # publish-digital-worker.ps1 (appPublishScope). Foundry pairs them as follows:
-  #   publishScope = "Tenant"           -> "BotServiceTenant" (anyone in the tenant can invoke)
-  #   publishScope = "Shared"/"Personal" -> "BotServiceRbac"   (only identities with the required
-  #                                                            Foundry Azure RBAC can invoke)
-  # A mismatch causes the Bot Service -> Foundry relay to be rejected with
-  # 403 "no valid bot service token". Our publish uses "Tenant", so we set "BotServiceTenant".
+  # Patch agent endpoint with the activity protocol + a Bot Service authorization scheme.
+  # ⛔ AUTOPILOTS REQUIRE "BotServiceRbac" HERE — NOT "BotServiceTenant".
+  # The general publish-to-STORE mapping (publishScope "Tenant" -> "BotServiceTenant";
+  # "Shared"/"Personal" -> "BotServiceRbac") applies only to agents published to the Copilot/Teams
+  # agent store. An AUTOPILOT is different: the platform relays each hired instance's activity
+  # through a hosted pass-through endpoint that is authorized by Foundry Azure RBAC, so the endpoint
+  # MUST use "BotServiceRbac" even though the publish body still sends publishScope = "Tenant" (see
+  # publish-digital-worker.ps1). This matches the current Microsoft autopilot reference sample
+  # (github.com/microsoft-foundry/foundry-samples, samples/{python,csharp}/foundry-autopilot-agent).
+  # Using "BotServiceTenant" makes instance creation (hiring) FAIL with:
+  #   "Autopilot activity access boundaries require a hosted pass-through endpoint with
+  #    BotServiceRbac authorization."
   $patchUrl = "$($AzureAIProjectEndpoint)/agents/$($AgentName)?api-version=2025-11-15-preview"
   $patchBody = @{
       agent_endpoint = @{
           protocols = @("activity")
           authorization_schemes = @(
-            @{ "type" = "BotServiceTenant" }
+            @{ "type" = "BotServiceRbac" }
         )
       }
   } | ConvertTo-Json -Depth 5

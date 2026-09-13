@@ -35,6 +35,17 @@ per-variant guides — do not duplicate or renumber them:**
   [setup-MAF-FH-DW.md](../../../docs/setup-MAF-FH-DW.md) §3 Path B.
 - **FH-DW per-instance identity**: route inference via the **project endpoint** (implicit access) so
   each hired instance can call the model without a per-instance role — see §6.2 of that guide.
+- **⛔ FH-DW autopilot endpoint MUST use `BotServiceRbac` — not `BotServiceTenant`.** Instance creation
+  (hiring) fails with *"Autopilot activity access boundaries require a hosted pass-through endpoint with
+  BotServiceRbac authorization."* when the agent endpoint's Bot Service authorization scheme is
+  `BotServiceTenant`. The general publish-to-store mapping (`publishScope` `Tenant` → `BotServiceTenant`,
+  `Shared`/`Personal` → `BotServiceRbac`) applies to store-published agents only; an **autopilot** relays
+  each hired instance's activity through a hosted pass-through endpoint authorized by Foundry Azure RBAC,
+  so the endpoint uses `BotServiceRbac` while the publish body still sends `publishScope = "Tenant"`.
+  `scripts/agent-creation-script.ps1` now patches `BotServiceRbac` (matching the current Microsoft
+  `foundry-autopilot-agent` reference sample). To fix an **existing** blueprint, PATCH its endpoint in
+  place (`agent_endpoint.authorization_schemes = [{ type: "BotServiceRbac" }]`, api-version
+  `2025-11-15-preview`) — no re-provision or version bump needed. See [setup-MAF-FH-DW.md](../../../docs/setup-MAF-FH-DW.md) §6.
 - **`azd deploy` times out on "Polling agent status … (creating)" — read the SINGLE-VERSION item, not
   the versions LIST, and confirm with an actual invoke.**
   azd polls ~30×/6 min then reports "agent deployment timed out (last status: creating)". Check the real

@@ -219,6 +219,25 @@ adding the instance under **Your agents**. Before retrying, verify the authorita
 not another Agent Store app; find it by name/alias in Teams. Registry **Available** can precede
 end-to-end Teams message routing.
 
+> **⛔ Hire fails with *"Autopilot activity access boundaries require a hosted pass-through endpoint
+> with BotServiceRbac authorization."*** The agent endpoint's Bot Service authorization scheme must be
+> **`BotServiceRbac`** for an autopilot — **not** `BotServiceTenant`. The general publish-to-store
+> mapping (`publishScope` `Tenant` → `BotServiceTenant`) does **not** apply to autopilots: the platform
+> relays each hired instance's activity through a hosted pass-through endpoint authorized by Foundry
+> Azure RBAC, so the endpoint must use `BotServiceRbac` while the publish body still sends
+> `publishScope = "Tenant"`. `scripts/agent-creation-script.ps1` now patches `BotServiceRbac`
+> (matching the current Microsoft `foundry-autopilot-agent` reference sample). If an **existing**
+> blueprint was created with `BotServiceTenant`, patch its endpoint in place (no re-provision needed):
+>
+> ```powershell
+> $token = az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv
+> $headers = @{ "Content-Type"="application/json"; "Accept"="application/json"; "Authorization"="Bearer $token"; "Foundry-Features"="HostedAgents=V1Preview,AgentEndpoints=V1Preview" }
+> $body = @{ agent_endpoint = @{ protocols = @("activity"); authorization_schemes = @(@{ "type" = "BotServiceRbac" }) } } | ConvertTo-Json -Depth 5
+> Invoke-RestMethod -Uri "$env:AZURE_AI_PROJECT_ENDPOINT/agents/$env:AGENT_NAME?api-version=2025-11-15-preview" -Method Patch -Headers $headers -Body $body
+> ```
+>
+> Then retry the hire (no need to recreate the blueprint or bump the version).
+
 ### 6.1 Give instances a mailbox + full O365 — add **Microsoft 365 E7** on the Licenses tab
 
 The AI-teammate policy template only assigns the **minimum** — **Frontier for Autopilots (no
