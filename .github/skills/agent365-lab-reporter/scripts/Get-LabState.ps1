@@ -278,6 +278,13 @@ $labTaggedBlueprints = @(Get-GraphFiltered 'applications' "tags/any(t:t eq 'a365
 # Accumulates every blueprint appId proven to belong to this lab (recorded + tagged); used to scope DW instances.
 $labBlueprintIds = @{}
 foreach ($b in $labTaggedBlueprints) { if ($b.appId) { $labBlueprintIds[$b.appId.ToLower()] = $true } }
+# agentIdentity service principals tagged for this lab. Some blueprint apps (e.g. ACA-DW) carry no
+# a365lab tag while their linked identity does; index the blueprint ids those tagged identities point to
+# so the [a365lab] marker can fall back to the identity's tag.
+$labTaggedIdentityBpIds = @{}
+foreach ($sp in @(Get-GraphFiltered 'servicePrincipals' "tags/any(t:t eq 'a365lab:$prefix')" -Beta)) {
+    if ($sp.agentIdentityBlueprintId) { $labTaggedIdentityBpIds["$($sp.agentIdentityBlueprintId)".ToLower()] = $true }
+}
 
 # Rows accumulator for the resource-style sections (uniform schema).
 $sections = [ordered]@{ webui = @(); mcp = @(); foundry = @(); aoai = @() }
@@ -508,7 +515,7 @@ foreach ($ag in $agents) {
     $bpApp = Resolve-BlueprintApp $bpId
     if ($bpApp) {
         $labBlueprintIds[$bpId.ToLower()] = $true
-        $tagged = @($bpApp.tags) -contains "a365lab:$prefix"
+        $tagged = (@($bpApp.tags) -contains "a365lab:$prefix") -or $labTaggedIdentityBpIds.ContainsKey($bpId.ToLower())
         $entraState = 'ok'
         $entraDetail = "blueprint '$($bpApp.displayName)' (appId $bpId)" + ($(if ($tagged) { ' [a365lab]' } else { '' }))
     }
