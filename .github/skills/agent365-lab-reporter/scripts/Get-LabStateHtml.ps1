@@ -222,8 +222,13 @@ W "  </dl>"
 W "</section>"
 
 # 4. Summary (computed from the state arrays so it holds for any configuration).
+# Denominators count only SIGNIFICANT rows (ok/warn/fail); informational (🔵) and not-part-of-this-lab
+# (⚪) rows are excluded so they never inflate the X / Y health ratio.
+function Measure-Significant { param($Rows) @($Rows | Where-Object { $_.state -in @('ok', 'warn', 'fail') }).Count }
 $agents = @($state.agents)
-$agHealthy = @($agents | Where-Object { $_.overall -eq 'ok' }).Count
+$agSig = @($agents | Where-Object { $_.overall -in @('ok', 'warn', 'fail') })
+$agHealthy = @($agSig | Where-Object { $_.overall -eq 'ok' }).Count
+$agTotal = @($agSig).Count
 $webui = @($state.webui)
 $mcp = @($state.customMcp)
 $dwLab = @($state.dwInstances.lab)
@@ -231,9 +236,9 @@ $dwOther = @($state.dwInstances.other)
 W "<section id='summary'>"
 W "  <h2>Summary</h2>"
 W "  <div class='summary'>"
-W "    <div class='card'><div class='n'>$agHealthy / $($agents.Count)</div><div class='l'>Agents healthy</div></div>"
-if ($webui.Count -gt 0) { $uiOk = @($webui | Where-Object { $_.state -eq 'ok' }).Count; W "    <div class='card'><div class='n'>$uiOk / $($webui.Count)</div><div class='l'>Web UI objects healthy</div></div>" }
-if ($mcp.Count -gt 0) { $mcpOk = @($mcp | Where-Object { $_.state -eq 'ok' }).Count; W "    <div class='card'><div class='n'>$mcpOk / $($mcp.Count)</div><div class='l'>Custom MCP objects healthy</div></div>" }
+W "    <div class='card'><div class='n'>$agHealthy / $agTotal</div><div class='l'>Agents healthy</div></div>"
+if ($webui.Count -gt 0) { $uiOk = @($webui | Where-Object { $_.state -eq 'ok' }).Count; W "    <div class='card'><div class='n'>$uiOk / $(Measure-Significant $webui)</div><div class='l'>Web UI objects healthy</div></div>" }
+if ($mcp.Count -gt 0) { $mcpOk = @($mcp | Where-Object { $_.state -eq 'ok' }).Count; W "    <div class='card'><div class='n'>$mcpOk / $(Measure-Significant $mcp)</div><div class='l'>Custom MCP objects healthy</div></div>" }
 W "    <div class='card'><div class='n'>$($dwLab.Count)</div><div class='l'>DW instances (lab-matched)</div></div>"
 W "  </div>"
 W "</section>"
@@ -261,7 +266,7 @@ else {
     }
     W "    </tbody>"
     W "  </table>"
-    W "  <p class='empty'>Entra Agent ID = the named blueprint/identity objects (ACA). FH/FD use a Foundry-managed identity with no named blueprint app (🔵). Compute: ACA = container app running status; FH = Foundry account provisioning state; FD = prompt agent (no dedicated Azure compute).</p>"
+    W "  <p class='empty'>Entra Agent ID = the agent&#39;s blueprint application (agentIdentityBlueprint), resolved from the durable appId recorded in generated/&lt;lab&gt;/&lt;agent&gt;/ and validated by the a365lab Entra tag. FD agents are declarative (defined in the Foundry project — no Entra blueprint app); MCS agents live in Copilot Studio (Dataverse). Compute: ACA = container app running status; FH = Foundry account provisioning state; FD = prompt agent (no dedicated Azure compute).</p>"
 }
 W "</section>"
 
@@ -274,8 +279,8 @@ if (@($state.sharedAoai).Count -gt 0) { Write-ResSection 'aoai' '4b. Shared Azur
 W "<section id='dw'>"
 W "  <h2>5. Digital Worker instances &amp; licenses</h2>"
 if ($dwLab.Count -eq 0) {
-    W "  <p class='empty'>No agent-user instances matching this lab were found (a published-but-not-yet-hired DW has no instances yet).</p>"
-    if ($dwOther.Count -gt 0) { W "  <p class='empty'>($($dwOther.Count) other Frontier / Agent 365 license holder(s) exist in the tenant but do not carry this lab's prefix — likely other labs.)</p>" }
+    W "  <p class='empty'>No agent-user instances linked to this lab&#39;s blueprints were found (a published-but-not-yet-hired DW has no instances yet).</p>"
+    if ($dwOther.Count -gt 0) { W "  <p class='empty'>($($dwOther.Count) other Frontier / Agent 365 license holder(s) exist in the tenant but are not linked to this lab's blueprints — likely other labs.)</p>" }
 }
 else {
     W "  <table>"
@@ -288,7 +293,7 @@ else {
     }
     W "    </tbody>"
     W "  </table>"
-    if ($dwOther.Count -gt 0) { W "  <p class='empty'>(Plus $($dwOther.Count) other Frontier / Agent 365 license holder(s) in the tenant not carrying this lab's prefix — likely other labs; not listed here.)</p>" }
+    if ($dwOther.Count -gt 0) { W "  <p class='empty'>(Plus $($dwOther.Count) other Frontier / Agent 365 license holder(s) in the tenant not linked to this lab's blueprints — likely other labs; not listed here.)</p>" }
 }
 W "</section>"
 

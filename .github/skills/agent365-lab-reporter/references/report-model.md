@@ -14,7 +14,7 @@ and the cleanup resource model
 | 🟡 | present but provisioning / degraded |
 | ❌ | expected but missing, or in a failed state |
 | ⚪ | not part of this lab (not planned / not applicable) |
-| 🔵 | informational (present but no single health verdict, e.g. Foundry-managed identity) |
+| 🔵 | informational (present but no single health verdict, e.g. a declarative agent with no Entra blueprint app) |
 
 ## Acronyms (fixed glossary, right after the legend)
 The report opens with an **Acronyms** section covering exactly the acronyms that appear in it — the agent
@@ -26,9 +26,13 @@ taxonomy `<prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY>` (e.g. `MAF-ACA-OBO`):
 | ACA | Azure Container Apps (agent hosting) |
 | FH | Foundry Hosted (agent hosting) |
 | FD | Foundry Declarative (prompt/declarative agent) |
+| MCS | Microsoft Copilot Studio (low-code agent platform; agents are Dataverse solutions) |
 | OBO | On-Behalf-Of (agent acts with the signed-in user's delegated identity) |
 | S2S | Service-to-Service (agent acts with its own application identity) |
 | DW | Digital Worker (AI-teammate agent hired as an agent user; holds a Frontier / Agent 365 license) |
+| OH | Old Harness (legacy Microsoft Copilot Studio agent runtime; MCS-OH) |
+| NH | New Harness (new Microsoft Copilot Studio agent runtime, based on GitHub Copilot; MCS-NH) |
+| GHCP | GitHub Copilot (the coding-assistant harness the New Harness agents build on) |
 
 `Get-LabState.ps1` owns this glossary (defined once, emitted to `report.md` and stored in `state.json` as
 `acronyms`); `Get-LabStateHtml.ps1` reuses `state.acronyms` verbatim (with a built-in fallback). Keep the
@@ -56,20 +60,28 @@ count, not one row each).
    - **Compute** — ACA: the container app **runningStatus**; FH: the Foundry **account provisioningState**
      (isolated RG or the shared `create-shared` account); FD: 🔵 prompt agent (shared project, no
      dedicated Azure compute).
-   - **Entra Agent ID** — the named blueprint/identity objects. ACA agents create `<name> Blueprint`
-     (app + SP) and (OBO/S2S) `<name> Identity` (SP). FH/FD agents use a **Foundry-managed identity**
-     with no predictably-named blueprint app, so they show 🔵 (not ❌).
+   - **Entra Agent ID** — the agent's **blueprint application** (`agentIdentityBlueprint`). It is
+     resolved by the **durable appId** recorded in `generated/<lab>/<agent>/` (ACA:
+     `a365.generated.config.json` `.agentBlueprintId`; FH: `.azure/<env>/.env`
+     `AGENT_IDENTITY_BLUEPRINT_ID`) — **never** inferred from the agent name, which may be custom — and
+     validated against the `a365lab:<prefix>` Entra tag. FD agents are declarative (defined in the
+     Foundry project, no Entra blueprint app → 🔵); MCS agents live in Copilot Studio / Dataverse (⚪).
    - **Overall** — worst meaningful state across RG/compute/Entra; falls back to the compute state when
-     only informational (so FD shows 🔵).
+     only informational (so FD shows 🔵, MCS ⚪).
 4. **Shared Foundry (create-shared)** — only when `solution.foundry.mode == create-shared`. Same 6
    columns. Rows: `<prefix>-foundry-rg` and its Cognitive Services account (provisioningState).
 5. **Digital Worker instances & licenses** — only when the lab has ACA-DW / FH-DW. Columns
    `Instance (display name) | UPN | Enabled | Licenses`. Instances are agent users holding a Frontier /
-   Agent 365 license whose name/UPN carries the lab prefix; other agent-license holders in the tenant are
-   summarized as a count (they are likely other labs, since instances can be custom-named at hire time).
+   Agent 365 license, scoped to the lab by the **durable blueprint link** (`user.identityParentId` →
+   `agentIdentity` SP → `agentIdentityBlueprintId` ∈ this lab's blueprint set) — **never** by name (an
+   instance can be custom-named at hire time). Other agent-license holders in the tenant are summarized
+   as a count (likely other labs).
 6. **Entra recycle bin** — shown only if soft-deleted apps/SPs/users matching the prefix are pending
    purge (informational — a prior half-finished cleanup).
-7. **Summary** — one-line counts (agents healthy, Web UI, Custom MCP, DW instances).
+7. **Summary** — one-line counts (agents healthy, Web UI, Custom MCP, DW instances). Health ratios (X / Y)
+   count only **significant** rows (✅/🟡/❌); informational (🔵) and not-part-of-this-lab (⚪) rows are
+   excluded from the denominator, so e.g. MCP proxy-app / connector rows and FD/MCS agents never inflate
+   the ratio.
 
 ## HTML rendering (same macro-structure, hosts any lab configuration)
 `Get-LabStateHtml.ps1` renders a self-contained `report.html` from a `state.json` with a **fixed**

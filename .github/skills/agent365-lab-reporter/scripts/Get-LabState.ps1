@@ -91,8 +91,9 @@ function Invoke-AzJson {
 }
 function Get-GraphFiltered {
     # Server-side $filter, URL-encoded as the ONLY query parameter (az.cmd corrupts '&'/quotes/parens).
-    param([string]$Entity, [string]$FilterExpr, [string[]]$Headers)
-    $url = "https://graph.microsoft.com/v1.0/$Entity" + '?$filter=' + [uri]::EscapeDataString($FilterExpr)
+    param([string]$Entity, [string]$FilterExpr, [string[]]$Headers, [switch]$Beta)
+    $base = if ($Beta) { 'https://graph.microsoft.com/beta/' } else { 'https://graph.microsoft.com/v1.0/' }
+    $url = "$base$Entity" + '?$filter=' + [uri]::EscapeDataString($FilterExpr)
     $azArgs = @('rest', '--method', 'GET', '--url', $url, '-o', 'json')
     foreach ($h in $Headers) { $azArgs += @('--headers', $h) }
     $raw = az @azArgs 2>$null
@@ -233,6 +234,50 @@ $allExtApps = @(Get-GraphFiltered 'applications' "startswith(displayName,'ext_$p
 function Test-EntraApp { param([string]$DisplayName) return @($allPrefixApps | Where-Object { $_.displayName -eq $DisplayName }) }
 function Find-ExtApp { param([string]$Pattern) return @($allExtApps | Where-Object { $_.displayName -like $Pattern }) }
 function Find-AgentEntra { param([string]$AgentName) return @(@($allPrefixApps + $allPrefixSps) | Where-Object { $_.displayName -like "$AgentName Blueprint*" -or $_.displayName -like "$AgentName Identity*" }) }
+
+# Durable per-agent blueprint reference (NEVER name-based — agent names can be custom).
+# The run records, under generated/<prefix>/<agentName>/, either the blueprint's Entra appId directly or
+# the agent's instance-identity client id (from which the blueprint is resolved via Graph):
+#   ACA          -> a365.generated.config.json .agentBlueprintId            (blueprint appId)
+#   FH-DW        -> .azure/<env>/.env AGENT_IDENTITY_BLUEPRINT_ID           (blueprint appId)
+#   FH-OBO/S2S   -> .azure/<env>/.env AGENT_<NAME>_INSTANCE_IDENTITY_CLIENT_ID  (agentIdentity appId)
+# FD (declarative) and MCS (Copilot Studio / Dataverse) record no Entra blueprint reference.
+function Get-RecordedBlueprintRef {
+    param([string]$AgentName)
+    $ref = [pscustomobject]@{ blueprintId = $null; identityClientId = $null }
+    if ([string]::IsNullOrWhiteSpace($AgentName)) { return $ref }
+    $base = Join-Path $repoRoot 'generated' $prefix $AgentName
+    if (-not (Test-Path -LiteralPath $base)) { return $ref }
+    $cfg = Join-Path $base 'a365.generated.config.json'
+    if (Test-Path -LiteralPath $cfg) {
+        try { $j = Get-Content -LiteralPath $cfg -Raw | ConvertFrom-Json; if ($j.agentBlueprintId) { $ref.blueprintId = "$($j.agentBlueprintId)"; return $ref } } catch {}
+    }
+    $azureDir = Join-Path $base '.azure'
+    if (Test-Path -LiteralPath $azureDir) {
+        foreach ($envFile in (Get-ChildItem -LiteralPath $azureDir -Recurse -Filter '.env' -File -ErrorAction SilentlyContinue)) {
+            $lines = Get-Content -LiteralPath $envFile.FullName
+            foreach ($line in $lines) {
+                if ($line -match '^\s*AGENT_IDENTITY_BLUEPRINT_ID\s*=\s*"?([0-9a-fA-F-]{36})"?') { $ref.blueprintId = $matches[1]; return $ref }
+            }
+            foreach ($line in $lines) {
+                if ($line -match '^\s*AGENT_.*_INSTANCE_IDENTITY_CLIENT_ID\s*=\s*"?([0-9a-fA-F-]{36})"?') { $ref.identityClientId = $matches[1] }
+            }
+        }
+    }
+    return $ref
+}
+# Resolve a blueprint appId to its Entra application object (beta — agentIdentityBlueprint is a beta type).
+function Resolve-BlueprintApp {
+    param([string]$AppId)
+    if ([string]::IsNullOrWhiteSpace($AppId)) { return $null }
+    return @(Get-GraphFiltered 'applications' "appId eq '$AppId'" -Beta)[0]
+}
+# Blueprint apps tagged for this lab (tag-based Entra augmentation, name-independent).
+$labTaggedBlueprints = @(Get-GraphFiltered 'applications' "tags/any(t:t eq 'a365lab:$prefix')" -Beta |
+    Where-Object { "$($_.'@odata.type')" -match 'agentIdentityBlueprint' })
+# Accumulates every blueprint appId proven to belong to this lab (recorded + tagged); used to scope DW instances.
+$labBlueprintIds = @{}
+foreach ($b in $labTaggedBlueprints) { if ($b.appId) { $labBlueprintIds[$b.appId.ToLower()] = $true } }
 
 # Rows accumulator for the resource-style sections (uniform schema).
 $sections = [ordered]@{ webui = @(); mcp = @(); foundry = @(); aoai = @() }
@@ -446,19 +491,41 @@ foreach ($ag in $agents) {
     elseif ($ag.type -like 'FD-*') {
         $computeState = 'info'; $computeDetail = 'prompt agent (shared Foundry project — no dedicated Azure compute)'
     }
-
-    # Entra Agent ID: ACA agents create a named `<name> Blueprint` app + SP (and OBO/S2S also a
-    # `<name> Identity` SP). FH/FD agents use a Foundry-managed identity with no predictably-named
-    # blueprint app, so report those as informational rather than a misleading failure.
-    $entra = Find-AgentEntra $ag.name
-    if (@($entra).Count -gt 0) {
-        $entraState = 'ok'; $entraDetail = ((@($entra) | ForEach-Object { $_.displayName } | Select-Object -Unique) -join ', ')
+    elseif ($ag.type -like 'MCS-*') {
+        $computeState = 'na'; $computeDetail = 'Copilot Studio (Dataverse) — not queryable via Azure/Graph'
     }
-    elseif ($ag.type -like 'ACA-*') {
-        $entraState = 'fail'; $entraDetail = 'blueprint not found'
+
+    # Entra Agent ID: every ACA/FH agent has an agentIdentityBlueprint application. Its durable Entra
+    # appId is recorded in generated/<prefix>/<agent>/ (never inferred from the — possibly custom — name).
+    # Resolve that appId in Entra (beta) and validate the a365lab tag. FD agents are declarative (defined
+    # in the Foundry project, no Entra blueprint); MCS agents live in Copilot Studio (Dataverse).
+    $ref = Get-RecordedBlueprintRef $ag.name
+    $bpId = $ref.blueprintId
+    if (-not $bpId -and $ref.identityClientId) {
+        $idsp = @(Get-GraphFiltered 'servicePrincipals' "appId eq '$($ref.identityClientId)'" -Beta)[0]
+        if ($idsp -and $idsp.agentIdentityBlueprintId) { $bpId = "$($idsp.agentIdentityBlueprintId)" }
+    }
+    $bpApp = Resolve-BlueprintApp $bpId
+    if ($bpApp) {
+        $labBlueprintIds[$bpId.ToLower()] = $true
+        $tagged = @($bpApp.tags) -contains "a365lab:$prefix"
+        $entraState = 'ok'
+        $entraDetail = "blueprint '$($bpApp.displayName)' (appId $bpId)" + ($(if ($tagged) { ' [a365lab]' } else { '' }))
+    }
+    elseif ($bpId) {
+        $entraState = 'fail'; $entraDetail = "recorded blueprint appId $bpId not found in Entra"
+    }
+    elseif ($ag.type -like 'FD-*') {
+        $entraState = 'info'; $entraDetail = 'declarative agent — defined in the Foundry project (no Entra blueprint app)'
+    }
+    elseif ($ag.type -like 'MCS-*') {
+        $entraState = 'na'; $entraDetail = 'Copilot Studio agent — Dataverse solution (not an Entra/Azure object)'
     }
     else {
-        $entraState = 'info'; $entraDetail = 'Foundry-managed identity (no named blueprint app)'
+        # ACA/FH with no recorded id (older run) — last-resort tag/name lookup, still not trusting the name alone.
+        $entra = Find-AgentEntra $ag.name
+        if (@($entra).Count -gt 0) { $entraState = 'ok'; $entraDetail = ((@($entra) | ForEach-Object { $_.displayName } | Select-Object -Unique) -join ', ') }
+        else { $entraState = 'fail'; $entraDetail = 'blueprint not found (no recorded id)' }
     }
 
     # Overall = worst meaningful state; if only info/na (FD), fall back to the compute state.
@@ -476,6 +543,8 @@ foreach ($ag in $agents) {
 
 # ---------------------------------------------------------------------------
 # 5. Digital Worker instances + licenses (agent users holding a Frontier / Agent 365 license).
+#    An instance name is arbitrary (custom at hire time), so scope by the DURABLE link only:
+#    user.identityParentId -> agentIdentity SP -> agentIdentityBlueprintId ∈ this lab's blueprint set.
 # ---------------------------------------------------------------------------
 $dwTypes = @($agents | Where-Object { $_.type -like '*-DW' } | ForEach-Object { $_.type })
 $dwInstances = @()
@@ -484,25 +553,38 @@ if ($dwTypes.Count -gt 0) {
     $agentSkuIds = @()
     foreach ($kv in $map.GetEnumerator()) { if ($kv.Value -match '(?i)(FRONTIER|AGENT[_ ]?365)') { $agentSkuIds += $kv.Key } }
     $seen = @{}
+    $bpCache = @{}
     foreach ($skuId in $agentSkuIds) {
-        foreach ($u in (Get-GraphFiltered 'users' "assignedLicenses/any(x:x/skuId eq $skuId)" @('ConsistencyLevel=eventual'))) {
+        foreach ($u in (Get-GraphFiltered 'users' "assignedLicenses/any(x:x/skuId eq $skuId)" @('ConsistencyLevel=eventual') -Beta)) {
             if (-not $u.id -or $seen.ContainsKey($u.id)) { continue }
             $seen[$u.id] = $true
-            $full = Get-GraphObject ("https://graph.microsoft.com/v1.0/users/$($u.id)?" + '$select=' + [uri]::EscapeDataString('id,displayName,userPrincipalName,accountEnabled,assignedLicenses'))
+            # Full object via the reliable $filter list pattern (single-object /beta GETs are flaky on this az.cmd).
+            $full = @(Get-GraphFiltered 'users' "id eq '$($u.id)'" -Beta)[0]
             if (-not $full) { $full = $u }
             $lic = Format-Licenses $full.assignedLicenses
-            $matchesPrefix = ($full.displayName -match [regex]::Escape($prefix)) -or ($full.userPrincipalName -match [regex]::Escape($prefix))
+            # Resolve the durable chain: parent agentIdentity SP -> its blueprint appId.
+            $bpId = $null
+            $parent = $full.identityParentId
+            if ($parent) {
+                if (-not $bpCache.ContainsKey($parent)) {
+                    $sp = @(Get-GraphFiltered 'servicePrincipals' "id eq '$parent'" -Beta)[0]
+                    $bpCache[$parent] = if ($sp) { $sp.agentIdentityBlueprintId } else { $null }
+                }
+                $bpId = $bpCache[$parent]
+            }
+            $matchesLab = [bool]($bpId -and $labBlueprintIds.ContainsKey("$bpId".ToLower()))
             $dwInstances += [pscustomobject]@{
                 displayName       = $full.displayName
                 userPrincipalName = $full.userPrincipalName
                 accountEnabled    = [bool]$full.accountEnabled
                 licenses          = @($lic)
-                matchesLab        = [bool]$matchesPrefix
+                blueprintId       = $bpId
+                matchesLab        = $matchesLab
             }
         }
     }
 }
-# Lab-scoped instances first (prefix match), then other agent-license holders as candidates.
+# Lab-scoped instances first (blueprint-linked), then other agent-license holders as candidates.
 $dwLab = @($dwInstances | Where-Object { $_.matchesLab })
 $dwOther = @($dwInstances | Where-Object { -not $_.matchesLab })
 
@@ -533,13 +615,17 @@ if (-not (Test-Path -LiteralPath $OutDir)) { New-Item -ItemType Directory -Force
 # <prefix>-<FRAMEWORK>-<HOSTING>-<IDENTITY> (e.g. MAF-ACA-OBO). Kept in the state model so the HTML
 # renderer reuses the exact same definitions (no drift).
 $glossary = [ordered]@{
-    MAF = 'Microsoft Agent Framework — the framework the sample agents are currently built with.'
-    ACA = 'Azure Container Apps — agent hosting on the managed container platform.'
-    FH  = 'Foundry Hosted — agent hosting managed by Azure AI Foundry.'
-    FD  = 'Foundry Declarative — a prompt (declarative) agent defined in Azure AI Foundry.'
-    OBO = 'On-Behalf-Of — the agent acts using the signed-in user''s delegated identity.'
-    S2S = 'Service-to-Service — the agent acts with its own application identity.'
-    DW  = 'Digital Worker — an AI-teammate agent hired as an agent user (holds a Frontier / Agent 365 license).'
+    MAF  = 'Microsoft Agent Framework — the framework the sample agents are currently built with.'
+    ACA  = 'Azure Container Apps — agent hosting on the managed container platform.'
+    FH   = 'Foundry Hosted — agent hosting managed by Azure AI Foundry.'
+    FD   = 'Foundry Declarative — a prompt (declarative) agent defined in Azure AI Foundry.'
+    MCS  = 'Microsoft Copilot Studio — low-code agent platform; agents are Dataverse solutions.'
+    OBO  = 'On-Behalf-Of — the agent acts using the signed-in user''s delegated identity.'
+    S2S  = 'Service-to-Service — the agent acts with its own application identity.'
+    DW   = 'Digital Worker — an AI-teammate agent hired as an agent user (holds a Frontier / Agent 365 license).'
+    OH   = 'Old Harness — the legacy Microsoft Copilot Studio agent runtime (MCS-OH).'
+    NH   = 'New Harness — the new Microsoft Copilot Studio agent runtime, based on GitHub Copilot (MCS-NH).'
+    GHCP = 'GitHub Copilot — the coding-assistant harness the New Harness Copilot Studio agents build on.'
 }
 
 $state = [ordered]@{
@@ -614,7 +700,7 @@ else {
         Emit ("| ``{0}`` | {1} | {2} | {3} | {4} | {5} |" -f (Escape-Cell $r.name), (Escape-Cell $r.type), $rg, $cp, $en, $ov)
     }
     Emit ''
-    Emit '_Entra Agent ID = the named blueprint/identity objects (ACA). FH/FD use a Foundry-managed identity with no named blueprint app (🔵). Compute: ACA = container app running status; FH = Foundry account provisioning state; FD = prompt agent (no dedicated Azure compute)._'
+    Emit '_Entra Agent ID = the agent''s blueprint application (agentIdentityBlueprint), resolved from the durable appId recorded in generated/<lab>/<agent>/ and validated by the a365lab Entra tag ([a365lab]). FD agents are declarative (defined in the Foundry project — no Entra blueprint app); MCS agents live in Copilot Studio (Dataverse). Compute: ACA = container app running status; FH = Foundry account provisioning state; FD = prompt agent (no dedicated Azure compute)._'
     Emit ''
 }
 
@@ -628,8 +714,8 @@ if ($dwTypes.Count -gt 0) {
     Emit "DW agents in this lab: $((@($dwTypes) | Sort-Object -Unique) -join ', ')."
     Emit ''
     if (@($dwLab).Count -eq 0) {
-        Emit '_No agent-user instances matching this lab were found. If a DW was published but not yet hired, there are no instances yet._'
-        if (@($dwOther).Count -gt 0) { Emit ''; Emit "_(Note: $(@($dwOther).Count) other Frontier / Agent 365 license holder(s) exist in the tenant but do not carry this lab's prefix — likely other labs.)_" }
+        Emit '_No agent-user instances linked to this lab''s blueprints were found. If a DW was published but not yet hired, there are no instances yet._'
+        if (@($dwOther).Count -gt 0) { Emit ''; Emit "_(Note: $(@($dwOther).Count) other Frontier / Agent 365 license holder(s) exist in the tenant but are not linked to this lab's blueprints — likely other labs.)_" }
         Emit ''
     }
     else {
@@ -641,7 +727,7 @@ if ($dwTypes.Count -gt 0) {
             Emit ("| {0} | {1} | {2} | {3} |" -f (Escape-Cell $i.displayName), (Escape-Cell $i.userPrincipalName), $en, (Escape-Cell $lic))
         }
         Emit ''
-        if (@($dwOther).Count -gt 0) { Emit "_(Plus $(@($dwOther).Count) other Frontier / Agent 365 license holder(s) in the tenant not carrying this lab's prefix — likely other labs; not listed here.)_"; Emit '' }
+        if (@($dwOther).Count -gt 0) { Emit "_(Plus $(@($dwOther).Count) other Frontier / Agent 365 license holder(s) in the tenant not linked to this lab's blueprints — likely other labs; not listed here.)_"; Emit '' }
     }
 }
 
@@ -655,15 +741,19 @@ if (@($recycle).Count -gt 0) {
     Emit ''
 }
 
-# Summary counts.
-$agHealthy = @($agentRows | Where-Object { $_.overall -eq 'ok' }).Count
-$agTotal = @($agentRows).Count
+# Summary counts. Denominators count only SIGNIFICANT rows (ok/warn/fail); informational (🔵) and
+# not-part-of-this-lab (⚪) rows are excluded so they never inflate the X / Y health ratio.
+function Measure-Significant { param($Rows) @($Rows | Where-Object { $_.state -in @('ok', 'warn', 'fail') }).Count }
+$agSig = @($agentRows | Where-Object { $_.overall -in @('ok', 'warn', 'fail') })
+$agHealthy = @($agSig | Where-Object { $_.overall -eq 'ok' }).Count
+$agTotal = @($agSig).Count
+$agInfo = @($agentRows | Where-Object { $_.overall -in @('info', 'na') }).Count
 Emit '## Summary'
 Emit ''
-Emit "- **Agents:** $agHealthy / $agTotal healthy (overall ✅ — Azure compute + Entra Agent ID where applicable). FD prompt agents show 🔵 (no queryable Azure/Entra footprint — verify in the Foundry portal)."
-if ($uiPlanned) { $uiOk = @($sections.webui | Where-Object { $_.state -eq 'ok' }).Count; Emit "- **Web UI:** $uiOk / $(@($sections.webui).Count) objects healthy." }
-if ($mcpPlanned) { $mcpOk = @($sections.mcp | Where-Object { $_.state -eq 'ok' }).Count; Emit "- **Custom MCP:** $mcpOk / $(@($sections.mcp).Count) objects healthy." }
-if ($dwTypes.Count -gt 0) { Emit "- **DW instances:** $(@($dwLab).Count) lab-matched, $(@($dwOther).Count) other agent-license holder(s)." }
+Emit "- **Agents:** $agHealthy / $agTotal healthy (Azure compute + Entra blueprint). $agInfo declarative/Copilot Studio agent(s) excluded from the ratio (no queryable Azure/Entra footprint — verify in the Foundry / Copilot Studio portal)."
+if ($uiPlanned) { $uiOk = @($sections.webui | Where-Object { $_.state -eq 'ok' }).Count; Emit "- **Web UI:** $uiOk / $(Measure-Significant $sections.webui) objects healthy." }
+if ($mcpPlanned) { $mcpOk = @($sections.mcp | Where-Object { $_.state -eq 'ok' }).Count; Emit "- **Custom MCP:** $mcpOk / $(Measure-Significant $sections.mcp) objects healthy (informational proxy apps / connectors excluded)." }
+if ($dwTypes.Count -gt 0) { Emit "- **DW instances:** $(@($dwLab).Count) lab-matched (by blueprint link), $(@($dwOther).Count) other agent-license holder(s)." }
 Emit ''
 
 $reportPath = Join-Path $OutDir 'report.md'
