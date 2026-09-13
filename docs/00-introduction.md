@@ -41,9 +41,9 @@ So the types are: `MAF-ACA-OBO`, `MAF-ACA-S2S`, `MAF-ACA-DW`, `MAF-FH-OBO`, `MAF
 
 | Generic name | Sample agent (this lab) | Entra blueprint / app id | Hosting | Protocol / endpoint | Setup guide |
 | --- | --- | --- | --- | --- | --- |
-| **MAF-ACA-OBO** | `AgentFrameworkSample` | `4b6b6f57-a212-4d0d-bd71-e0fa484f9aad` | Azure Container Apps | Bot Framework `/api/messages` + custom `/chat` | [setup-MAF-ACA-OBO.md](setup-MAF-ACA-OBO.md) |
-| **MAF-ACA-S2S** | `AgentFrameworkS2SSample` | `894f3b9c-aa7b-450d-b3c4-20bf5c931022` | Azure Container Apps | Bot Framework `/api/messages` + custom `/chat` | [setup-MAF-ACA-S2S.md](setup-MAF-ACA-S2S.md) |
-| **MAF-ACA-DW** | `AgentFrameworkDWSample` (AI teammate) | `fa48baa5-1de8-4e94-b88e-b72f9b4f2478` | Azure Container Apps | Bot Framework `/api/messages` (Teams) | [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) |
+| **MAF-ACA-OBO** | `AgentFrameworkSample` | `<ACA_OBO_BLUEPRINT_APP_ID>` | Azure Container Apps | Bot Framework `/api/messages` + custom `/chat` | [setup-MAF-ACA-OBO.md](setup-MAF-ACA-OBO.md) |
+| **MAF-ACA-S2S** | `AgentFrameworkS2SSample` | `<ACA_S2S_BLUEPRINT_APP_ID>` | Azure Container Apps | Bot Framework `/api/messages` + custom `/chat` | [setup-MAF-ACA-S2S.md](setup-MAF-ACA-S2S.md) |
+| **MAF-ACA-DW** | `AgentFrameworkDWSample` (AI teammate) | `<ACA_DW_BLUEPRINT_APP_ID>` | Azure Container Apps | Bot Framework `/api/messages` (Teams) | [setup-MAF-ACA-DW.md](setup-MAF-ACA-DW.md) |
 | **MAF-FH-OBO** | `agentframeworkFH-OBO-agent` | Foundry agent identity | Foundry Hosted | **Invocations** (`/invocations`) | [setup-MAF-FH-OBO.md](setup-MAF-FH-OBO.md) |
 | **MAF-FH-S2S** | `agentframeworkFH-S2S-agent` | Foundry agent identity | Foundry Hosted | **Responses** (`/responses`) | [setup-MAF-FH-S2S.md](setup-MAF-FH-S2S.md) |
 | **MAF-FH-DW** | `agentframeworkFH-DW*-agent` | Foundry agent (container) + Azure Bot Service | Foundry Hosted (container) | Bot Framework `/api/messages` via Bot Service (Teams) | [setup-MAF-FH-DW.md](setup-MAF-FH-DW.md) |

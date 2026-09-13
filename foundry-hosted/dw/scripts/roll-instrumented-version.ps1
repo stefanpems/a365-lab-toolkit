@@ -1,16 +1,33 @@
 # Rolls a new hosted agent version that injects Application Insights into the container env.
 # Reuses the existing container image (no rebuild). Idempotent-ish: creates a new version each run.
+[CmdletBinding()]
+param(
+    # Environment-specific values default to env vars so nothing tenant-specific
+    # is hard-coded here. Override on the command line or set the env vars.
+    [string]$AccountName   = $env:FOUNDRY_ACCOUNT_NAME,
+    [string]$ProjectName   = $env:FOUNDRY_PROJECT_NAME,
+    [string]$Agent         = $env:FOUNDRY_AGENT_NAME,
+    [string]$AcrName       = $env:AZURE_CONTAINER_REGISTRY_NAME,
+    [string]$ResourceGroup = $env:AZURE_RESOURCE_GROUP,
+    [string]$AppInsights   = $env:APPINSIGHTS_COMPONENT_NAME
+)
 $ErrorActionPreference = 'Stop'
 
-$ep    = "https://dwfhhxvtywwocznayacct.services.ai.azure.com/api/projects/dwfhhxvtywwocznayproj"
-$agent = "sample-fh-dw-agent"
-$acr   = "dwfhhxvtywwocznayacr.azurecr.io"
-$maib  = "sample-fh-dw-agent-maib"
+foreach ($p in 'AccountName', 'ProjectName', 'Agent', 'AcrName') {
+    if (-not (Get-Variable $p -ValueOnly)) {
+        throw "Missing required value '$p'. Pass -$p or set the matching environment variable."
+    }
+}
 
-# App Insights connection string (dwfh2-appinsights)
+$ep    = "https://$AccountName.services.ai.azure.com/api/projects/$ProjectName"
+$agent = $Agent
+$acr   = "$AcrName.azurecr.io"
+$maib  = "$Agent-maib"
+
+# App Insights connection string
 $conn = $env:APPLICATIONINSIGHTS_CONNECTION_STRING
-if (-not $conn) {
-    $conn = az monitor app-insights component show --app dwfh2-appinsights -g sample-fh-dw-rg --query connectionString -o tsv
+if (-not $conn -and $AppInsights) {
+    $conn = az monitor app-insights component show --app $AppInsights -g $ResourceGroup --query connectionString -o tsv
 }
 
 $tok = az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv

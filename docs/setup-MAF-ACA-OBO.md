@@ -3,7 +3,7 @@
 > Build a blueprint agent that runs on **Azure Container Apps** and acts **on behalf of the
 > signed-in user** (OBO). Mail is sent from the **user's mailbox**. Reference implementation
 > in the first experiment: **`AgentFrameworkSample`** (blueprint app id
-> `4b6b6f57-a212-4d0d-bd71-e0fa484f9aad`).
+> `<ACA_OBO_BLUEPRINT_APP_ID>`).
 
 See [00-introduction.md](00-introduction.md) for concepts. Replace all example
 tenant/subscription/region/name values with your own.
@@ -32,7 +32,7 @@ tenant/subscription/region/name values with your own.
 - **Python 3.12+**, `uv` (`pip install uv`; ensure its Scripts dir is on PATH).
 - Roles: **Global Administrator** (or *Agent ID Developer* + a Global Admin for consents).
 - A **public client app** for local token acquisition (the "Agent 365 CLI" app,
-  `3c5eabff-e557-4da1-a216-700d0d1e5bf7`) — used as `CLIENT_APP_ID`, **not** the agentic
+  `<AGENT365_CLI_CLIENT_APP_ID>`) — used as `CLIENT_APP_ID`, **not** the agentic
   blueprint (an agentic app cannot mint a device-code/WAM user token → `AADSTS82006`).
 
 > **First run in a new tenant — admin consent is requested.** The `3c5eabff-…` app is a

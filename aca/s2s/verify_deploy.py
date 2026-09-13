@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 from dotenv import load_dotenv
 
-CLOUD_FQDN = "agentframework-sample.icybush-c1787b58.polandcentral.azurecontainerapps.io"
+CLOUD_FQDN = os.getenv("ACA_CLOUD_FQDN", "<your-aca-app>.<env-suffix>.<region>.azurecontainerapps.io")
 MAIL_MCP_URL = "https://agent365.svc.cloud.microsoft/agents/servers/mcp_MailTools"
 
 
@@ -141,7 +141,7 @@ def _load_obo_token() -> str:
 MCP_RESOURCE = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
 
 # FQDN of the S2S instance deployed to Azure Container Apps.
-S2S_FQDN = "agentframework-s2s-sample.thankfulcoast-e0e43978.polandcentral.azurecontainerapps.io"
+S2S_FQDN = os.getenv("ACA_S2S_FQDN", "<your-aca-app>.<env-suffix>.<region>.azurecontainerapps.io")
 
 
 async def test_cloud(prompt: str, fqdn: str = S2S_FQDN, from_name: str = "Tester") -> bool:

@@ -4,7 +4,7 @@
 > **ACA** and **Foundry Hosted**). Digital Workers are **not** used here — they are used from
 > Teams / Outlook / Office. Reference implementation: the `ui/` folder (`agentframework-ui`
 > Static Web App, SPA app registration `agentframework-ui-spa` app id
-> `f9fe265c-5fc4-4a4e-8885-600746b05542`).
+> `<WEB_UI_SPA_APP_ID>`).
 
 See [00-introduction.md](00-introduction.md) for concepts. This SPA is vanilla JS + MSAL
 Browser (no build step); it renders one vertical tab per entry in `config.js`.

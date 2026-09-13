@@ -3,7 +3,7 @@
 > Build a blueprint agent that runs on **Azure Container Apps** and acts with its **own
 > application identity** (app-only / `client_credentials`) — **not** on behalf of a user and
 > **not** as an AI teammate. Reference implementation: **`AgentFrameworkS2SSample`**
-> (blueprint app id `894f3b9c-aa7b-450d-b3c4-20bf5c931022`).
+> (blueprint app id `<ACA_S2S_BLUEPRINT_APP_ID>`).
 
 See [00-introduction.md](00-introduction.md) for concepts. This guide only highlights the
 differences from [setup-MAF-ACA-OBO.md](setup-MAF-ACA-OBO.md); steps 0–3 and the
@@ -230,7 +230,7 @@ data). SPA entry:
 ```js
 { id:"s2s", kind:"aca", name:"…",
   apiBase:"https://<fqdn>",
-  scope:"api://894f3b9c-aa7b-450d-b3c4-20bf5c931022/access_agent_as_user" }
+  scope:"api://<ACA_S2S_BLUEPRINT_APP_ID>/access_agent_as_user" }
 ```
 
 ## 9. Verify end-to-end

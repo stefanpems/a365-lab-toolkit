@@ -3,7 +3,7 @@
 > Build an **AI teammate** ("Digital Worker") on **Azure Container Apps**: an agent with its
 > **own Entra agent-user identity**, mailbox, OneDrive, and Teams presence, that users
 > **hire** and interact with from **Teams / Outlook / Office**. Reference implementation:
-> **`AgentFrameworkDWSample`** (blueprint app id `fa48baa5-1de8-4e94-b88e-b72f9b4f2478`).
+> **`AgentFrameworkDWSample`** (blueprint app id `<ACA_DW_BLUEPRINT_APP_ID>`).
 
 See [00-introduction.md](00-introduction.md) for concepts. The **code is identical** to
 MAF-ACA-OBO; what changes is the **blueprint type (AI teammate)**, the **licensing**, and the

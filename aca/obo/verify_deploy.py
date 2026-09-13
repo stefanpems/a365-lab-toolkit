@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 from dotenv import load_dotenv
 
-CLOUD_FQDN = "agentframework-sample.icybush-c1787b58.polandcentral.azurecontainerapps.io"
+CLOUD_FQDN = os.getenv("ACA_CLOUD_FQDN", "<your-aca-app>.<env-suffix>.<region>.azurecontainerapps.io")
 MAIL_MCP_URL = "https://agent365.svc.cloud.microsoft/agents/servers/mcp_MailTools"
 
 

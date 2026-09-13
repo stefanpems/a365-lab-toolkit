@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Read diagnostic logs for the DWFH2 Foundry hosted agent and its Teams gateway.
+    Read diagnostic logs for the Foundry hosted digital-worker agent and its Teams gateway.
 
 .DESCRIPTION
     The message path is:
@@ -44,19 +44,27 @@ param(
     [ValidateSet('gateway', 'sessions', 'session', 'live')]
     [string]$Mode = 'gateway',
     [int]$Minutes = 30,
-    [string]$SessionId
+    [string]$SessionId,
+
+    # --- Environment-specific values (fill in for your own deployment) --------
+    # Defaults come from environment variables so nothing tenant-specific is
+    # hard-coded here. Override on the command line or set the env vars.
+    [string]$SubscriptionId = $env:AZURE_SUBSCRIPTION_ID,
+    [string]$ResourceGroup  = $env:AZURE_RESOURCE_GROUP,
+    [string]$WorkspaceName  = $env:LOG_ANALYTICS_WORKSPACE,
+    [string]$AccountName    = $env:FOUNDRY_ACCOUNT_NAME,
+    [string]$ProjectName    = $env:FOUNDRY_PROJECT_NAME,
+    [string]$AgentName      = $env:FOUNDRY_AGENT_NAME,
+    [string]$AzdEnv         = $env:AZURE_ENV_NAME
 )
 
 $ErrorActionPreference = 'Stop'
 
-# --- Fixed environment values for the dwfh2 deployment ------------------------
-$SubscriptionId = 'd6116047-3fe1-46f0-aa50-14dd661af84e'
-$ResourceGroup  = 'sample-fh-dw-rg'
-$WorkspaceName  = 'dwfh2-logs'
-$AccountName    = 'dwfhhxvtywwocznayacct'
-$ProjectName    = 'dwfhhxvtywwocznayproj'
-$AgentName      = 'sample-fh-dw-agent'
-$AzdEnv         = 'dwfh2'
+foreach ($p in 'SubscriptionId', 'ResourceGroup', 'WorkspaceName', 'AccountName', 'ProjectName', 'AgentName') {
+    if (-not (Get-Variable $p -ValueOnly)) {
+        throw "Missing required value '$p'. Pass -$p or set the matching environment variable."
+    }
+}
 $ProjectEndpoint = "https://$AccountName.services.ai.azure.com/api/projects/$ProjectName"
 # azd needs to resolve the project config (azure.yaml), which lives in the repo root.
 $ProjectDir     = Split-Path -Parent $PSScriptRoot
