@@ -118,11 +118,14 @@ project, the ACA-shared Azure OpenAI account) is never prefix-matched and is lef
 
 ### Why instances need special handling (the license guarantee)
 An autopilot is **one blueprint → many instances**, and **each hired instance gets its own agent
-identity + agent user** with its own **M365 licenses**. Instances are frequently named arbitrarily at
-hire time (e.g. `AFDHDW3I1`), so a name filter can miss them — discovery therefore also lists every
-user holding a **Frontier / Agent 365** license as a candidate. A **soft-delete does not release
-licenses; only the purge does**, so removal (a) removes every license explicitly, (b) soft-deletes the
-user, (c) purges it from the recycle bin, and (d) verifies it is gone. Every step is logged.
+identity + agent user** with its own **M365 licenses**. Instances are named **`<blueprintName>-iN`**, and
+a blueprint may have a **custom** name that does not contain the prefix, so discovery scopes instances to
+the lab three ways: **(a)** name-match on the prefix, **(a′)** the archived plan's agent names (the precise
+catch for custom-named labs), and **(b)** a **Frontier / Agent 365 license sweep filtered** to holders
+whose name/UPN starts with a lab blueprint name — **holders outside the lab (other runs) are skipped**, so
+the review never mixes in another lab's instances. A **soft-delete does not release licenses; only the
+purge does**, so removal (a) removes every license explicitly, (b) soft-deletes the user, (c) purges it
+from the recycle bin, and (d) verifies it is gone. Every step is logged.
 
 ## Delete order (dependencies)
 `10` agent instances (licenses first) → `20` Entra apps (cascade SPs) → `24` recycle-bin purge →

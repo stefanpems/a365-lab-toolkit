@@ -18,9 +18,12 @@
                 matching objects still sitting in the Entra recycle bin (deletedItems) from a prior
                 half-finished deletion.
 
-  Agent instances are frequently given custom names at hire time (e.g. `AFDHDW3I1`) that do NOT contain
-  the agent name, so this script ALSO surfaces every user that holds a Frontier / Agent 365 license as a
-  "license-identified" candidate. The mandatory human review is the safety net for both paths.
+  Agent instances are named `<blueprintName>-iN`, and a blueprint may have a CUSTOM name that does not
+  contain the prefix, so discovery scopes instances to THIS lab by three paths: (a) name-match on the
+  prefix, (a') the archived plan's agent names (the precise catch for custom-named labs), and (b) a
+  Frontier / Agent 365 license sweep that is FILTERED to holders whose name/UPN starts with a lab
+  blueprint name — holders outside the lab (other runs) are skipped, never surfaced. The mandatory human
+  review remains the final safety net.
 
   Output: a JSON array of resource items (also written to -OutFile when supplied). The Remove script
   consumes the selected subset. Nothing here deletes anything.
@@ -197,6 +200,20 @@ function Format-Licenses {
     return , $parts
 }
 
+# True when an agent-instance (agent user) belongs to THIS lab: its display name or UPN local-part starts
+# with a lab blueprint name (the prefix, or a plan agent name — instances are named '<blueprintName>-iN').
+# This scopes the Frontier/Agent365 license sweep to the lab so OTHER labs' instances are never surfaced.
+function Test-InstanceBelongsToLab {
+    param([string]$DisplayName, [string]$Upn, [string[]]$Prefixes)
+    $local = if ($Upn) { ($Upn -split '@', 2)[0] } else { '' }
+    foreach ($p in $Prefixes) {
+        if ([string]::IsNullOrWhiteSpace($p)) { continue }
+        if ($DisplayName -and $DisplayName.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+        if ($local -and $local.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
+}
+
 # ---------------------------------------------------------------------------
 # WebUI discovery.
 # ---------------------------------------------------------------------------
@@ -365,9 +382,10 @@ function Find-Agents {
             -Action 'delete-sp' -DeleteOrder 22
     }
 
-    # Agent instances (agent users). Two discovery paths, de-duplicated by id:
-    #   (a) users whose display name matches the filter;
-    #   (b) users holding a Frontier / Agent 365 license (catches custom-named instances).
+    # Agent instances (agent users). Three lab-scoped discovery paths, de-duplicated by id:
+    #   (a)  users whose display name starts with the prefix;
+    #   (a') users whose display name starts with a plan agent name (custom-named labs);
+    #   (b)  Frontier / Agent 365 license holders FILTERED to this lab's blueprint names (others skipped).
     $seen = @{}
     $addUser = {
         param($u, $why)
@@ -386,16 +404,40 @@ function Find-Agents {
     # (a) name-matched users (reliable encoded filter; per-user detail fetched in $addUser).
     foreach ($u in (Get-GraphFiltered 'users' "startswith(displayName,'$NameFilter')")) { & $addUser $u 'name match' }
 
-    # (b) license-identified users. Find the agent SKUs, then query users holding each.
+    # Agent instances belong to THIS lab when their name starts with a lab blueprint name: the prefix, or a
+    # plan agent name (instances are named '<blueprintName>-iN'). This set scopes the license sweep below so
+    # it can NEVER surface other labs' Frontier/Agent365 instances (the previous unscoped sweep did).
+    $labPrefixes = @(@($NameFilter) + $script:LabAgentNames | Where-Object { $_ } | Select-Object -Unique)
+
+    # (a') plan-seeded custom-named instances: for each lab agent name that does NOT contain the prefix,
+    # find its instances directly (startswith '<agentName>'). This is the PRECISE catch for custom-named
+    # labs and does not depend on the license sweep.
+    foreach ($an in $script:LabAgentNames) {
+        if ([string]::IsNullOrWhiteSpace($an) -or ($an -match [regex]::Escape($NameFilter))) { continue }
+        foreach ($u in (Get-GraphFiltered 'users' "startswith(displayName,'$($an.Replace("'", "''"))')")) { & $addUser $u "plan agent '$an' instance" }
+    }
+
+    # (b) license-identified users — SCOPED to this lab. Enumerate Frontier / Agent 365 holders, but add
+    # ONLY those whose name / UPN matches a lab blueprint prefix; holders outside this lab belong to other
+    # labs and are skipped (counted for a console note). This is the safety net for a lab instance not
+    # already caught by (a)/(a') — it never crosses the lab boundary again.
     $map = Get-SkuMap
     $agentSkuIds = @()
     foreach ($kv in $map.GetEnumerator()) {
         if ($kv.Value -match '(?i)(FRONTIER|AGENT[_ ]?365)') { $agentSkuIds += $kv.Key }
     }
+    $skippedForeign = 0
     foreach ($skuId in $agentSkuIds) {
         foreach ($u in (Get-GraphFiltered 'users' "assignedLicenses/any(x:x/skuId eq $skuId)" @('ConsistencyLevel=eventual'))) {
-            & $addUser $u "holds agent license $($map[$skuId])"
+            if ($seen.ContainsKey($u.id)) { continue }
+            if (Test-InstanceBelongsToLab -DisplayName $u.displayName -Upn $u.userPrincipalName -Prefixes $labPrefixes) {
+                & $addUser $u "holds agent license $($map[$skuId])"
+            }
+            else { $skippedForeign++ }
         }
+    }
+    if ($skippedForeign -gt 0) {
+        Write-Host "  Skipped $skippedForeign Frontier/Agent365 license holder(s) outside this lab's names (belong to other labs)." -ForegroundColor DarkYellow
     }
 
     # Recycle-bin leftovers (apps, service principals, users) from a prior half-finished deletion.
@@ -447,6 +489,21 @@ Fix: re-authenticate, then re-run this discovery:
 
 Detail: $graphProbe
 "@
+}
+
+# ---------------------------------------------------------------------------
+# Preload the archived plan once (folder-primary). Its agent names — INCLUDING custom names that do not
+# contain the prefix — scope agent-instance discovery to THIS lab (instances are named '<agentName>-iN'),
+# which is what stops the license sweep in Find-Agents from surfacing OTHER labs' Frontier/Agent365
+# instances. Reused below by Find-PlanSeeded so the plan is parsed only once.
+# ---------------------------------------------------------------------------
+$script:SeedPlan = $null
+$script:LabAgentNames = @()
+if ($PlanPath -and (Test-Path -LiteralPath $PlanPath)) {
+    try { $script:SeedPlan = Get-Content -LiteralPath $PlanPath -Raw | ConvertFrom-Json } catch { $script:SeedPlan = $null }
+    if ($script:SeedPlan) {
+        $script:LabAgentNames = @($script:SeedPlan.agents | Where-Object { $_.name -and $_.type -notlike 'MCS-*' } | ForEach-Object { $_.name })
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -549,11 +606,7 @@ function Find-PlanSeeded {
 }
 
 Find-TaggedResources
-if ($PlanPath -and (Test-Path -LiteralPath $PlanPath)) {
-    $seedPlan = $null
-    try { $seedPlan = Get-Content -LiteralPath $PlanPath -Raw | ConvertFrom-Json } catch { $seedPlan = $null }
-    Find-PlanSeeded $seedPlan
-}
+if ($script:SeedPlan) { Find-PlanSeeded $script:SeedPlan }
 
 
 # ---------------------------------------------------------------------------
