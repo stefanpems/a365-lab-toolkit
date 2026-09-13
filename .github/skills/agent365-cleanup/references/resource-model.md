@@ -81,6 +81,7 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 | Entra | Blueprint app (+ its SP) | `<agent-name> Blueprint` | `delete-app` + purge |
 | Entra | Agent identity app / SP | `<agent-name> Identity` | `delete-app` + purge |
 | Entra | **Agent instances** (agent users) | custom names given at hire (may NOT contain the prefix) | `remove-licenses-and-delete-user` |
+| Entra | **Agent-instance identity** (`agentIdentity`, a `ServiceIdentity` SP) | the instance's `identityParentId` object (custom-named), or a prefix-named orphan from a failed hire | `delete-sp` + purge |
 | M365 | **Licenses on each instance** | Frontier for Autopilots (no Teams), Teams Enterprise, M365 E7 (verify all — they vary per instance) | removed explicitly + released by purge |
 | Entra recycle bin | Any app / SP / user left soft-deleted from a prior attempt | matches the filter | `purge-deleted-item` |
 

@@ -378,20 +378,30 @@ function Find-Agents {
             -Detail 'Agent blueprint / identity app (deleted + cascades its SP, then purged)' `
             -Action 'delete-app' -DeleteOrder 20
     }
-    # Entra service principals that need explicit deletion: agent-identity leftovers ('<name> Identity')
-    # that have no matching app in this tenant. Skip SPs that cascade from an app we already listed, and
-    # container-app managed identities (lowercase '<name>-<hosting>-<identity>') removed with their RG.
+    # Entra service principals that need explicit deletion. Skip SPs that cascade from an app we already
+    # listed. $seenSp de-duplicates against the agent-instance agentIdentity path further below.
     $agentAppNames = @($items | Where-Object { $_.category -eq 'Agents' -and $_.kind -eq 'entra-app' } | ForEach-Object { $_.displayName })
+    $seenSp = @{}
     foreach ($sp in (Get-GraphFiltered 'servicePrincipals' "startswith(displayName,'$NameFilter')")) {
         if (-not $sp.displayName) { continue }
         if ($agentAppNames -contains $sp.displayName) { continue }
-        # Only agent-identity leftovers ('<name> Identity') need an explicit SP delete: blueprint SPs
-        # cascade from their app, container / MCP managed identities go with their resource group, and
-        # agent-instance SPs are handled by the agent-instance (user) path below.
-        if ($sp.displayName -notmatch '(?i) Identity$') { continue }
+        # Two kinds of prefix-named SP need an explicit delete (both lab-owned by the prefix): an agent
+        # IDENTITY leftover ('<name> Identity') whose app is gone, and an agent-INSTANCE identity (a
+        # ServiceIdentity named '<instance>-iN', e.g. from a failed/orphaned hire) that the ' Identity'
+        # match misses. Blueprint SPs cascade from their app; container / MCP MANAGED identities
+        # (servicePrincipalType ManagedIdentity) go with their resource group and are left alone here.
+        # EXCLUDE MCS (Microsoft Copilot Studio) agent identities: MCS agents are a SEPARATE Dataverse /
+        # pac removal path, never the Azure/Entra scan (their SP is ServiceIdentity + prefix-named too).
+        $isIdentityLeftover = $sp.displayName -match '(?i) Identity$'
+        $isMcsIdentity = ($sp.displayName -match '(?i)\(Microsoft Copilot Studio\)\s*$') -or ($sp.displayName -match '(?i)-MCS-')
+        $isAgentInstanceId = ($sp.servicePrincipalType -eq 'ServiceIdentity') -and -not $isMcsIdentity
+        if (-not ($isIdentityLeftover -or $isAgentInstanceId)) { continue }
+        if ($seenSp.ContainsKey($sp.id)) { continue }
+        $seenSp[$sp.id] = $true
+        $spDetail = if ($isIdentityLeftover) { 'Agent identity / leftover service principal (deleted directly, then purged)' }
+        else { 'Agent instance identity (agentIdentity / ServiceIdentity) — deleted directly, then purged' }
         Add-Item -Category 'Agents' -Kind 'entra-sp' -Id $sp.appId -ObjectId $sp.id -DisplayName $sp.displayName `
-            -Detail 'Agent identity / leftover service principal (deleted directly, then purged)' `
-            -Action 'delete-sp' -DeleteOrder 22
+            -Detail $spDetail -Action 'delete-sp' -DeleteOrder 22
     }
 
     # Agent instances (agent users). Scoped to THIS lab by the DURABLE blueprint link, never by the
@@ -466,6 +476,15 @@ function Find-Agents {
             if (& $blueprintBelongs $bpAppId) {
                 $bpName = Get-BlueprintDisplayName $bpAppId
                 & $addUser $u "instance of lab blueprint '$bpName'"
+                # Also remove the instance's OWN agentIdentity (ServiceIdentity SP). identityParentId IS its
+                # objectId; the prefix SP scan above misses custom-named ones ('<instance>-iN', no prefix).
+                $aiId = $meta.identityParentId
+                if ($aiId -and -not $seenSp.ContainsKey($aiId)) {
+                    $seenSp[$aiId] = $true
+                    Add-Item -Category 'Agents' -Kind 'entra-sp' -Id $aiId -ObjectId $aiId -DisplayName "$($u.displayName) (agentIdentity)" `
+                        -Detail "Agent instance identity (agentIdentity / ServiceIdentity) of '$($u.displayName)' — deleted directly, then purged" `
+                        -Action 'delete-sp' -DeleteOrder 22
+                }
             }
             else { $skippedForeign++ }
         }
