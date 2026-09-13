@@ -265,6 +265,28 @@ def basic_success(entry: dict) -> bool:
     return not any(b in reply for b in bad)
 
 
+# S2S agents expose no delegated Mail nor custom BYO MCP tools; only 'hello' is coherent for them.
+TOOL_CATEGORIES = {"MCP Mail access", "Custom MCP Anon access", "Custom MCP Auth access"}
+
+
+def agent_role(agent: dict) -> str:
+    """Return 'obo' or 's2s' from the agent id (obo*/s2s*), falling back to its name; default 'obo'."""
+    aid = (agent.get("id") or "").lower()
+    if aid.startswith("s2s"):
+        return "s2s"
+    if aid.startswith("obo"):
+        return "obo"
+    name = (agent.get("name") or "").lower()
+    return "s2s" if "s2s" in name else "obo"
+
+
+def category_supported(agent: dict, category: str) -> bool:
+    """A tool category is coherent only for OBO agents; 'hello' is coherent for every agent."""
+    if category in TOOL_CATEGORIES:
+        return agent_role(agent) == "obo"
+    return True
+
+
 # ----------------------------- orchestration -----------------------------
 def build_plan(lib, counts, anon_server, auth_server):
     """counts: {type: n}. Returns a flat list of {type, prompt, condition}."""
@@ -305,6 +327,18 @@ def run_send(args):
     for agent_id in selected:
         agent = agents_by_id[agent_id]
         for item in plan:
+            if not category_supported(agent, item["type"]):
+                entry = {
+                    "agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
+                    "prompt": item["prompt"], "condition": item["condition"],
+                    "status": None, "reply": None, "skipped": True,
+                    "skip_reason": "S2S agent has no Mail/custom-MCP tool for this category",
+                    "basic_pass": None,
+                }
+                results.append(entry)
+                print(f"[SKIP] {agent_id} <{item['type']}> :: incoherent for S2S "
+                      "(no Mail/custom MCP) - not sent", flush=True)
+                continue
             try:
                 out = send_to_agent(cfg, args.cache, args.user, agent, item["prompt"])
             except Exception as e:
@@ -312,7 +346,7 @@ def run_send(args):
             entry = {
                 "agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
                 "prompt": item["prompt"], "condition": item["condition"],
-                "status": out["status"], "reply": out["reply"],
+                "status": out["status"], "reply": out["reply"], "skipped": False,
             }
             entry["basic_pass"] = basic_success(entry)
             results.append(entry)
@@ -320,10 +354,13 @@ def run_send(args):
             print(f"[{mark}] {agent_id} <{item['type']}> :: {item['prompt'][:60]} => "
                   f"HTTP {entry['status']} :: {str(entry['reply'])[:120]}", flush=True)
 
+    sent = [r for r in results if not r.get("skipped")]
     summary = {
         "total": len(results),
-        "basic_pass": sum(1 for r in results if r["basic_pass"]),
-        "basic_fail": sum(1 for r in results if not r["basic_pass"]),
+        "sent": len(sent),
+        "skipped": sum(1 for r in results if r.get("skipped")),
+        "basic_pass": sum(1 for r in sent if r["basic_pass"]),
+        "basic_fail": sum(1 for r in sent if not r["basic_pass"]),
         "user": _current_user(cfg, args.cache, args.user),
         "results": results,
     }
@@ -331,7 +368,8 @@ def run_send(args):
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, ensure_ascii=False)
         print(f"Wrote {args.out}", flush=True)
-    print(f"SUMMARY: {summary['basic_pass']}/{summary['total']} passed the basic check.", flush=True)
+    print(f"SUMMARY: {summary['basic_pass']}/{summary['sent']} sent passed the basic check; "
+          f"{summary['skipped']} skipped (incoherent for S2S).", flush=True)
     return 0 if summary["basic_fail"] == 0 else 1
 
 

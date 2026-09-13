@@ -21,8 +21,11 @@ response against a success condition. It runs **interactively** (asks the operat
 | `Custom MCP Anon access` | calls the anon BYO MCP (`ext_<prefix>Anon`) | OBO agents with the custom MCP attached |
 | `Custom MCP Auth access` | calls the auth BYO MCP (`ext_<prefix>Auth`) | OBO agents with the custom MCP attached |
 
-S2S agents have no Mail/custom tools, so mail/anon/auth prompts against them are expected to fail — the
-agent should warn if the operator selects that combination.
+**Coherence rule (hard).** OBO agents (`obo`, `obo-fh`, `obo-fd`) support all four categories; S2S
+agents (`s2s`, `s2s-fh`, `s2s-fd`) expose no delegated Mail nor custom BYO MCP, so **only `hello` is
+coherent for them**. Never send `MCP Mail access` / `Custom MCP Anon access` / `Custom MCP Auth access`
+to an S2S agent — warning is not enough. The engine enforces this too: an incoherent agent×category
+pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
 
 ## Authentication (must read)
 - The engine mints **delegated user tokens** with MSAL using the **SPA client id** in `config.js`
@@ -44,14 +47,18 @@ agent should warn if the operator selects that combination.
    `python send_prompts.py agents --config <config.js>` to list the agent ids.
 3. **Which agents** — multi-select from the listed ids (`obo`, `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`,
    `s2s-fd`).
-4. **How many prompts per category** — ask for a count for each of the four categories
-   (`hello`, `MCP Mail access`, `Custom MCP Anon access`, `Custom MCP Auth access`).
+4. **How many prompts per category** — always ask the `hello` count. Ask the `MCP Mail access` /
+   `Custom MCP Anon access` / `Custom MCP Auth access` counts **only if at least one OBO agent is
+   selected**, and apply those three categories **only to the OBO agents**. When the selection mixes S2S
+   and tool categories, **split the run into separate `send` invocations** — `hello` to all selected
+   agents, and the tool categories to the OBO agents only — never a single combined `send`.
 5. **Ensure sign-in** — if there is no cached account, run `login` first (browser).
 6. **Send** — run `send_prompts.py send` with the chosen ids/counts and `--out results.json`.
 7. **Evaluate + report** — read `results.json`; for each entry judge whether `condition` is satisfied in
-   `reply` (semantic, case-insensitive) and present a PASS/FAIL table plus an overall count. The engine's
-   `basic_pass` is a first-pass safety net (HTTP 2xx + non-empty + no error markers); the agent's
-   semantic judgement is authoritative.
+   `reply` (semantic, case-insensitive) and present a **PASS / FAIL / N/A** table (entries the engine
+   marked `skipped:true` are `N/A`, i.e. not applicable, and must not be counted as failures) plus an
+   overall count. The engine's `basic_pass` is a first-pass safety net (HTTP 2xx + non-empty + no error
+   markers) computed over the **sent** prompts only; the agent's semantic judgement is authoritative.
 
 ## Unattended flow (GitHub Copilot CLI + Windows Task Scheduler)
 All inputs come from the command line — the agent must not prompt. Example the scheduled task runs:
@@ -64,9 +71,11 @@ python .github/skills/prompts-sender/scripts/send_prompts.py send \
   --out prompts-run.json
 ```
 
-The process exit code is `0` only if every prompt passed the basic check; the JSON in `--out` carries
-each response + condition for the agent's semantic evaluation and for logging. A scheduled GHCP CLI
-invocation passes the same choices as arguments (agents + per-category counts + optional `--user`).
+The process exit code is `0` only if every **sent** prompt passed the basic check; incoherent
+agent×category pairs are **skipped** (never sent, reported `skipped:true`) and do not affect the exit
+code. The JSON in `--out` carries each response + condition (and `skipped`/`skip_reason`) for the
+agent's semantic evaluation and for logging. A scheduled GHCP CLI invocation passes the same choices as
+arguments (agents + per-category counts + optional `--user`).
 
 ## Notes / guardrails
 - **Never** include the trailing `(condition)` in the message sent to an agent.

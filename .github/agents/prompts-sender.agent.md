@@ -21,10 +21,16 @@ the user's language, but nothing you persist to disk is ever in another language
   parenthesised text is the **success condition** you evaluate against the response, not part of the
   prompt.
 - **Random selection.** Pick prompts at random from each requested category (the engine does this).
+- **Coherent prompts only (per agent tools).** OBO agents support all four categories; S2S agents
+  (`s2s`, `s2s-fh`, `s2s-fd`) have no Mail/custom-MCP tools, so **only `hello` is coherent for them**.
+  NEVER send `MCP Mail access` / `Custom MCP Anon access` / `Custom MCP Auth access` to an S2S agent.
+  When a selection mixes S2S with tool categories, **split into separate `send` invocations** (hello to
+  all; tool categories to OBO only). The engine also skips incoherent pairs as a safety net, marking
+  them `skipped` (reported `N/A`, never `FAIL`).
 - **You are the authoritative evaluator.** After the engine returns responses, judge (semantically,
-  case-insensitive) whether each `condition` is satisfied in the matching `reply`, and report PASS/FAIL
-  per prompt plus an overall count. The engine's `basic_pass` is only a first-pass safety net for the
-  unattended exit code.
+  case-insensitive) whether each `condition` is satisfied in the matching `reply`, and report
+  PASS / FAIL / N/A per prompt (engine-`skipped` entries are `N/A`) plus an overall count. The engine's
+  `basic_pass` is only a first-pass safety net for the unattended exit code.
 
 ## Authentication (must communicate)
 - The engine mints delegated user tokens with MSAL using the **SPA public client** from the lab's
@@ -45,14 +51,17 @@ the user's language, but nothing you persist to disk is ever in another language
    Run `python .github/skills/prompts-sender/scripts/send_prompts.py agents --config <config.js>` to
    list the agent ids and show them.
 2. **Which agents** — multi-select from the listed ids.
-3. **How many prompts per category** — ask a count for each: `hello`, `MCP Mail access`,
-   `Custom MCP Anon access`, `Custom MCP Auth access`. Warn if a mail/anon/auth count is set for an
-   S2S agent (no Mail/custom tools there → expected failures).
+3. **How many prompts per category** — always ask the `hello` count. Ask the `MCP Mail access` /
+   `Custom MCP Anon access` / `Custom MCP Auth access` counts **only when at least one OBO agent is
+   selected**, and apply those three categories to the OBO agents only (never to S2S).
 4. **Ensure sign-in** — if no cached account, run `login` (browser) and wait for it to complete.
 5. **Send** — run `send_prompts.py send` with the chosen `--agents` and per-category counts and
-   `--out <results.json>`.
-6. **Evaluate + report** — read the results JSON and present a PASS/FAIL table (agent, category, prompt,
-   the condition, and whether the response satisfied it) plus an overall pass count and the JSON path.
+   `--out <results.json>`. If the selection mixes S2S agents with tool categories, issue **two**
+   invocations — `--hello N` for all selected agents, and the tool-category counts for the OBO agents
+   only — so nothing incoherent is ever sent.
+6. **Evaluate + report** — read the results JSON and present a **PASS / FAIL / N/A** table (agent,
+   category, prompt, the condition, and whether the response satisfied it; entries with `skipped:true`
+   are `N/A` and must not count as failures) plus an overall pass count and the JSON path.
 
 ## Unattended flow (GitHub Copilot CLI + Windows Task Scheduler)
 - Read ALL inputs from the command line (config path, agent ids, per-category counts, optional `--user`,
