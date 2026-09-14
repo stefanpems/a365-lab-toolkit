@@ -18,9 +18,27 @@ per-variant guides — do not duplicate or renumber them:**
 
 ## Flow
 1. Scaffold via the router: [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1).
-2. FH-OBO/S2S: `azd provision` → **create the model deployment + grant RBAC** → `azd deploy`.
+2. FH-OBO/S2S: `azd provision` → **create the model deployment + grant RBAC** → `azd deploy` →
+   **grant OtelWrite + restart** (observability, see below).
 3. FH-DW (governed subscription): `azd provision` → out-of-band blueprint (Solution A) →
-   `azd provision` again → admin-center publish + Teams Developer Portal Bot ID = blueprint.
+   `azd provision` again → admin-center publish + Teams Developer Portal Bot ID = blueprint →
+   **grant OtelWrite + restart** (observability, see below).
+
+## Observability (OTEL — enabled by default in code)
+All three FH agents initialize OpenTelemetry at startup: Azure Monitor export (via the
+Foundry-injected `APPLICATIONINSIGHTS_CONNECTION_STRING`) **and** the A365 observability
+exporter. FH-DW authenticates the exporter with the per-turn agentic token exchange
+(`TurnContext`); FH-OBO/S2S use an **app-only managed-identity** token for the observability
+resource. All init is fully guarded — a telemetry failure never breaks an agent turn.
+For the A365 exporter to actually write, the agent identity SP needs the
+`Agent365.Observability.OtelWrite` **application** role. After `azd deploy`, assign it and
+restart the container:
+```powershell
+./foundry-hosted/scripts/assign-observability-role.ps1 -PrincipalId <agent-identity-SP-objectId>
+```
+The `PrincipalId` is the SP objectId the exporter presents (the one named in a `403` from the
+observability endpoint). Without the grant the agent still runs — telemetry to A365 is simply
+skipped (App Insights export is unaffected). See [setup-MAF-FH-OBO.md](../../../docs/setup-MAF-FH-OBO.md) §5.
 
 ## Known corrections (apply these)
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does **not** create the model deployment

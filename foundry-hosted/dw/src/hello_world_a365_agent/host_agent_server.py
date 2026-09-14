@@ -170,6 +170,7 @@ def create_and_run_host(agent_class: type[AgentInterface], *agent_args, **agent_
         use_microsoft_opentelemetry(
             enable_a365=True,
             enable_azure_monitor=False,
+            a365_enable_observability_exporter=True,
             a365_token_resolver=lambda agent_id, tenant_id: (
                 get_cached_agentic_token(tenant_id, agent_id) or ""
             ),

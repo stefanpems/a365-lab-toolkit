@@ -25,14 +25,37 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("s2s-foundry-agent")
 
+# Agent365Observability resource (appId); app-only .default scope for the exporter token.
+_OBSERVABILITY_SCOPE = "9b975845-388f-4429-889e-eab1ef63949c/.default"
+_obs_credential = None
+
+
+def _resolve_observability_token(agent_id: str, tenant_id: str) -> str:
+    """Best-effort app-only token for the A365 observability exporter.
+
+    Uses the container's managed identity (``DefaultAzureCredential``). Returns "" on any
+    failure so the exporter degrades to a no-op and never affects an agent turn. Requires
+    the ``Agent365.Observability.OtelWrite`` application role on the agent identity SP.
+    """
+    global _obs_credential
+    try:
+        from azure.identity import DefaultAzureCredential
+
+        if _obs_credential is None:
+            _obs_credential = DefaultAzureCredential()
+        return _obs_credential.get_token(_OBSERVABILITY_SCOPE).token
+    except Exception as ex:  # noqa: BLE001 - telemetry must never break the agent
+        logger.warning("Observability token acquisition failed: %s", ex)
+        return ""
+
 
 def _init_observability() -> None:
-    """Initialize OpenTelemetry (span enrichment + Application Insights only).
+    """Initialize OpenTelemetry (Application Insights + A365 exporter).
 
-    Fully guarded: any failure here must never affect an agent turn. The A365
-    observability *exporter* is intentionally left OFF (no OtelWrite role dependency);
-    only span enrichment (``enable_a365``) and Azure Monitor export (when Foundry
-    injects ``APPLICATIONINSIGHTS_CONNECTION_STRING``) are enabled.
+    Fully guarded: any failure here must never affect an agent turn. Azure Monitor export
+    runs when Foundry injects ``APPLICATIONINSIGHTS_CONNECTION_STRING``; the A365
+    observability exporter uses an app-only managed-identity token (see
+    :func:`_resolve_observability_token`).
     """
     conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING") or os.getenv(
         "ApplicationInsights__ConnectionString"
@@ -48,7 +71,12 @@ def _init_observability() -> None:
     try:
         from microsoft.opentelemetry import use_microsoft_opentelemetry
 
-        use_microsoft_opentelemetry(enable_a365=True, enable_azure_monitor=False)
+        use_microsoft_opentelemetry(
+            enable_a365=True,
+            enable_azure_monitor=False,
+            a365_enable_observability_exporter=True,
+            a365_token_resolver=_resolve_observability_token,
+        )
     except Exception as ex:  # noqa: BLE001 - telemetry must never break the agent
         logger.warning("Microsoft OpenTelemetry distro not initialized: %s", ex)
 
