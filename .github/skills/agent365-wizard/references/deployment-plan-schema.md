@@ -96,13 +96,21 @@ gitignored.
   },
   "customMcp": {                            // optional sample custom MCP server (custom-mcp/)
     "enabled": false,
-    "publisher": "<Publisher>",             // registration metadata, e.g. Contoso
-    "servers": ["anon", "auth"],           // which servers to register (subset of anon/auth)
-    "resourceGroup": "<prefix>-mcp-rg",     // defaults to <prefix>-mcp-rg
+    "mode": "create",                       // "create" (DEFAULT/omit — deploy+register a NEW ext_<prefix>Anon/Auth pair) | "attach" (reuse an EXISTING pair: no deploy/register, just attach it to the OBO agents)
+    "publisher": "<Publisher>",             // registration metadata, e.g. Contoso (create mode only; ignored in attach)
+    "servers": ["anon", "auth"],           // which servers to register (create) / attach (attach) — subset of anon/auth
+    "resourceGroup": "<prefix>-mcp-rg",     // create mode: defaults to <prefix>-mcp-rg
     "region": "<azure-region>",
+    "existing": {                           // attach mode — the wizard fills this by PICKING a discovered pair (a custom MCP instance tagged a365component=custom-mcp = Custom MCP Creator standalone, or another existing ext_ pair in Azure)
+      "name": "<BaseName>",                 // REQUIRED in attach mode; the servers are ext_<BaseName>Anon / ext_<BaseName>Auth (<= 12 alphanumeric)
+      "servers": ["anon", "auth"],          // which servers the existing pair actually has
+      "resourceGroup": "<name>-mcp-rg",     // optional (informational — the existing MCP's RG, if in Azure)
+      "source": "custom-mcp-creator"        // "custom-mcp-creator" (standalone, tagged) | "azure" (another existing custom MCP)
+    },
     "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO). Each entry is an agent NAME (one instance) or an agent TYPE (all its instances). S2S/DW blocked (see Rules)
     "integrationMode": "approve-first",     // "approve-first" (default) | "attach-when-approved" (see Rules)
-    "propagateToGraph": true                // enable the advanced On-Behalf-Of Graph test (DEFAULT: true)
+    "propagateToGraph": true,               // create: enable the advanced On-Behalf-Of Graph test (DEFAULT: true). attach: reflects the EXISTING pair's capability (not configured here)
+    "audiences": { "anon": "<app-id>", "auth": "<app-id>" }  // optional — the ext_ BYO resource app ids; lets the SPA wire customScopes immediately (else resolved from ToolingManifest.json after attach)
   }
 }
 ```
@@ -154,6 +162,18 @@ gitignored.
   integrates them immediately as it is provisioned (with permissions); `attach-when-approved` = start the
   agents right away and integrate each OBO agent only if the servers are approved by the time it deploys,
   otherwise run the per-agent attach later. The wizard asks this right after the custom MCP is registered.
+- `customMcp.mode` (optional, default `create`) chooses between **deploying a new pair** and **reusing an
+  existing one** — the symmetric counterpart of `ui.mode` `create`/`attach`. `create` (or omitting `mode`)
+  is byte-identical to before: the wizard copies `custom-mcp/`, deploys the containers and registers
+  `ext_<prefix>Anon` / `ext_<prefix>Auth`. `attach` reuses an **existing** pair (`customMcp.existing.name` →
+  `ext_<name>Anon`/`ext_<name>Auth`): **nothing is deployed, registered or consent-pre-empted** — the
+  scaffolder only accumulates the existing `ext_` servers for the per-OBO attach (`a365 develop
+  add-mcp-servers`) and reminds the operator that the pair must already be admin-approved in this tenant and
+  that each user still creates the one-time Power Platform connections. The candidate pairs come **primarily
+  from the Custom MCP Creator** (standalone instances tagged `a365component=custom-mcp`, discoverable by
+  `discover-environment.ps1` / `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and **secondarily** from any
+  other existing `ext_*Anon`/`ext_*Auth` pair (`a365 develop list-available`). In attach mode the prefix
+  need **not** encode the MCP name (the ext_ names come from `existing.name`), and `publisher` is ignored.
 - **The scaffold folder is `generated/<prefix>/`** — every folder for a run (each `<agent-name>`, the
   `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP) lives under that single per-run root. To run the
   wizard N times and create N coexisting copies, give each run a **different prefix** (the wizard checks

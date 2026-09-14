@@ -290,14 +290,28 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    carries the tag, tell the user to create one first with the **Web UI Creator** (or retro-tag an existing
    one with `Set-ComponentTags.ps1 -SwaName <name>` / `-Retro`), then re-run.
    Then **Custom MCP**
-   (single-select: None / Anonymous only / Authenticated only / Both); if not None, **do NOT ask a name**
+   (single-select: None / Anonymous only / Authenticated only / Both). If not None, ask **create vs attach**
+   (single-select **Create new** / **Attach to existing pair**, `customMcp.mode` = `create`/`attach`),
+   mirroring the Web UI. ⛔ **For *Attach to existing pair*, discover and offer the existing pairs — never
+   make the user type a raw name.** List custom MCP instances **primarily** from the **Custom MCP Creator**
+   (standalone, tagged `a365component=custom-mcp`) and **secondarily** any other existing pair — run
+   `discover-environment.ps1` (its `customMcpInstances` = RGs tagged `a365component=custom-mcp`, with the
+   derived `ext_<name>Anon/Auth` + which servers exist + `standalone`/`source`) and, for authoritative
+   registered names, `a365 develop list-available` (group `ext_*` into Anon/Auth pairs). Present them as a
+   single-select (base name + servers + standalone/lab-owner), keep only pairs that actually have the
+   server type(s) the user chose, and record the pick into `customMcp.existing` =
+   `{ name, servers, resourceGroup, source }`. In attach mode **do NOT ask a publisher** and **nothing is
+   deployed or registered** (see the deploy ordering). If no pair is found, tell the user to create one
+   first with the **Custom MCP Creator**, then re-run — or pick *Create new*.
+   For *Create new*, **do NOT ask a name**
    (it derives from the solution prefix → `ext_<prefix>Anon/Auth`; the prefix must be ≤ 12 alphanumerics),
-   ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
+   ask a publisher. In **both** modes ask which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
    blocked: they can't own the per-user Power Platform connection a BYO server needs) — **offer each OBO
    instance by name** and write chosen instances as agent names in `customMcp.attachTo` (a bare OBO type
    attaches to every instance of that type), an **integration
    mode** (approve-first (default) / attach-when-approved — see "Custom MCP integration" below), and whether to
-   enable `propagate_to_graph` (**default: enable**). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
+   enable `propagate_to_graph` (**default: enable**; in attach mode this only *reflects* whether the chosen
+   pair already has it — it is not configured here). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
    Mail for **OBO/DW agents**. ⛔ **EXCLUDE every S2S agent from the Mail selection entirely** — do NOT
@@ -374,6 +388,13 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      servers in parallel; each OBO agent integrates automatically **only if the servers are already
      approved** when it deploys, otherwise run the per-agent attach block later (the scaffolder emits it
      as a clearly-marked manual step). **S2S/DW never attach the custom MCP.**
+   - ⛔ **`customMcp.mode: attach` (reuse an existing pair) SKIPS deploy + register entirely.** The
+     `ext_<name>Anon/Auth` servers already exist (Custom MCP Creator standalone, or another existing custom
+     MCP), so there is **nothing to deploy, register or consent-pre-empt** — the scaffolder emits only the
+     per-OBO `a365 develop add-mcp-servers <existing ext_ names>` plus the reminders. Just **verify the pair
+     is admin-approved in THIS tenant** (if the Custom MCP Creator already approved it, it is) and go
+     straight to attaching it as each OBO agent is created. The per-user Power Platform connections are
+     **still required** (run `custom-mcp/print-connection-urls.ps1 -Name <existing name>`).
 3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js` and **unhide it** (set that
    entry's `enabled: true` — tabs are scaffolded `enabled: false` and hidden until then), redeploy the UI
    (a **build-free static re-upload** — only `config.js` changes, no compilation), wire
@@ -651,6 +672,16 @@ the agents → each OBO integrates immediately) or *attach-when-approved* (agent
 approved, else manually later). **S2S and DW are blocked** — a non-user (own app / `agentUser`) identity
 can't own the per-user Power Platform connection a BYO server needs (`ConnectionSharingNotAllowed`; S2S
 also can't mint the token from the SPA).
+**Create vs attach** (`customMcp.mode`, mirrors the Web UI): *create* (default) deploys + registers a new
+`ext_<prefix>Anon/Auth` pair; *attach* **reuses an existing pair** (`customMcp.existing.name` →
+`ext_<name>Anon/Auth`) and **skips deploy + register + preempt** entirely — the candidates come primarily
+from the **Custom MCP Creator** (standalone, tagged `a365component=custom-mcp`; discover with
+`discover-environment.ps1` `customMcpInstances` or `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and
+secondarily from any other existing `ext_*` pair (`a365 develop list-available`). Attach still needs the
+pair **admin-approved** in this tenant and the per-user **Power Platform connections**
+(`print-connection-urls.ps1 -Name <existing name>`). Present discovered pairs as a pick list — never a
+typed name. **The technical attach step is identical** (`a365 develop add-mcp-servers <existing ext_ names>`),
+which is why attaching to a pre-registered pair works regardless of who created it.
 Full mechanics and the `propagate_to_graph` advanced setup: that skill + [custom-mcp/README.md](../../custom-mcp/README.md).
 
 ## Registered MCP tools (Work IQ / catalog / third-party)

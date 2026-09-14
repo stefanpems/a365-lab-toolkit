@@ -120,16 +120,26 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    separate tabs; write each chosen one as `{ "agentName": "<name>" }` in `ui.expose` (a bare
    `{ "agentType": "<type>" }` is still accepted and means every instance of that type).
 4. **Custom MCP** (single-select): *None* / *Anonymous only* / *Authenticated only* / *Both* — the
-   sample [custom-mcp/](../../../custom-mcp/README.md). If not None, **do NOT ask a name** (it derives
+   sample [custom-mcp/](../../../custom-mcp/README.md). If not None, ask **create vs attach**
+   (single-select *Create new* / *Attach to existing pair*, `customMcp.mode` = `create`/`attach`), the
+   symmetric counterpart of the Web UI's create/attach. For **Attach to existing pair**, discover the
+   candidate pairs — **primarily** the Custom MCP Creator standalone instances (tagged
+   `a365component=custom-mcp`, via `discover-environment.ps1` `customMcpInstances` or
+   `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and **secondarily** any other existing `ext_*Anon`/
+   `ext_*Auth` pair (`a365 develop list-available`) — let the user PICK one and record it into
+   `customMcp.existing` (`name`/`servers`/`resourceGroup`/`source`); the scaffolder then **skips
+   deploy+register** and only emits the per-OBO attach. If none is found, point the user to the **Custom
+   MCP Creator** (or pick *Create new*). For **Create new**, **do NOT ask a name** (it derives
    from the solution prefix → `ext_<prefix>Anon` / `ext_<prefix>Auth`; the prefix must be ≤ 12
-   alphanumerics), ask a publisher name, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO`
+   alphanumerics), ask a publisher name. In **both** modes ask which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO`
    only — S2S/DW are blocked: they can't own the per-user Power Platform connection a BYO server needs;
    see custom-mcp/README.md) — **list each OBO instance individually by name**; write chosen instances as
    agent names in `customMcp.attachTo` (a bare OBO type there attaches to every instance of that type), an
    **integration mode** (*approve-first* (default) = approve the servers before the
    agents, integrate each OBO immediately; *attach-when-approved* = agents first, integrate
    when approved else manually later), and whether to enable `propagate_to_graph` (advanced
-   On-Behalf-Of Graph test; **default: enable**). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
+   On-Behalf-Of Graph test; **default: enable** in create mode; in attach mode it only *reflects* the
+   existing pair's capability). Writes `customMcp` in the plan. The **prefix** is the unique per-copy key
    (Azure resources `<prefix>-mcp-*`, folder `generated/<prefix>/<prefix>-mcp/`, registrations all
    derive from it) — for N coexisting copies use a different prefix each run; check the tenant
    (`a365 develop list-available`) and ask again if `ext_<prefix>*` collides.

@@ -4,7 +4,8 @@
   READ-ONLY environment discovery for the Agent 365 provisioning wizard.
 .DESCRIPTION
   Emits JSON with the current tenant/subscription, Azure OpenAI accounts, Foundry (Cognitive
-  Services AIServices) accounts, and Static Web Apps, so the wizard can pre-fill plan defaults.
+  Services AIServices) accounts, Static Web Apps (for UI attach mode), and custom MCP instances tagged
+  a365component=custom-mcp (for customMcp attach mode), so the wizard can pre-fill plan defaults.
   Performs NO mutations: only 'az ... show/list'. Requires an existing 'az login'.
 .PARAMETER Subscription
   Optional subscription id to pin. Defaults to the current az context.
@@ -43,6 +44,7 @@ $result = [ordered]@{
     azureOpenAI     = @()
     foundryAccounts = @()
     staticWebApps   = @()
+    customMcpInstances = @()
 }
 
 # --- Azure OpenAI accounts (kind = OpenAI) ---
@@ -62,6 +64,35 @@ $swa = Get-AzJson (@('staticwebapp', 'list', '-o', 'json') + $subArg)
 if ($swa) {
     $result.staticWebApps = @($swa | ForEach-Object {
         [ordered]@{ name = $_.name; resourceGroup = $_.resourceGroup; defaultHostname = $_.defaultHostname }
+    })
+}
+
+# --- Custom MCP instances (for customMcp attach mode) — RGs tagged a365component=custom-mcp ---
+# Primary source for "attach to an existing custom MCP pair": the Custom MCP Creator (standalone, no
+# a365lab) and any lab-owned MCP RG (a365lab present). Each RG is <slug>-mcp-rg; the registered servers
+# are ext_<slug>Anon / ext_<slug>Auth (slug = lowercased). The containers reveal which servers exist.
+$mcpRgs = Get-AzJson (@('group', 'list', '--query', "[?tags.a365component=='custom-mcp']", '-o', 'json') + $subArg)
+if ($mcpRgs) {
+    $result.customMcpInstances = @($mcpRgs | ForEach-Object {
+        $rg = $_
+        $slug = $rg.name -replace '-mcp-rg$', ''
+        $cas = @(Get-AzJson (@('containerapp', 'list', '-g', $rg.name, '--query', '[].{name:name, fqdn:properties.configuration.ingress.fqdn}', '-o', 'json') + $subArg))
+        $servers = @()
+        if ($cas | Where-Object { $_.name -like '*-anon-ca' }) { $servers += 'anon' }
+        if ($cas | Where-Object { $_.name -like '*-auth-ca' }) { $servers += 'auth' }
+        $labOwner = if ($rg.tags -and ($rg.tags.PSObject.Properties.Name -contains 'a365lab')) { $rg.tags.a365lab } else { $null }
+        [ordered]@{
+            name          = $slug
+            resourceGroup = $rg.name
+            location      = $rg.location
+            standalone    = (-not $labOwner)          # standalone (Custom MCP Creator) if no a365lab tag
+            labOwner      = $labOwner                  # else the owning lab prefix
+            source        = if ($labOwner) { 'azure' } else { 'custom-mcp-creator' }
+            servers       = $servers
+            anonServer    = "ext_${slug}Anon"
+            authServer    = "ext_${slug}Auth"
+            containers    = @($cas | ForEach-Object { $_.name })
+        }
     })
 }
 
