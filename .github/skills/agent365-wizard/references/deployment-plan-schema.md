@@ -37,6 +37,15 @@ gitignored.
       "auth": "managed-identity",         // "managed-identity" (default) | "api-key"
       "existingResourceGroup": "<name>"   // reuse-existing: RG of the chosen existing account
     },
+    "observability": {                    // OPTIONAL — wire the sample agents' OpenTelemetry to Application Insights
+      "appInsights": {
+        "mode": "none",                   // "none" (default/omit = no wiring) | "create-shared" (lab-owned resource) | "reuse-existing" (existing user-owned resource)
+        "resourceGroup": "<prefix>-appinsights-rg", // create-shared: dedicated lab-owned RG (deleted by the Lab Cleaner via the prefix)
+        "name": "<prefix>-appinsights",   // create-shared: the Application Insights resource name
+        "existingResourceGroup": "<name>",// reuse-existing: RG of the existing resource
+        "existingName": "<name>"          // reuse-existing: the existing Application Insights resource name
+      }
+    },
     "copilotStudio": {                    // REQUIRED when any MCS agent is planned (Copilot Studio target)
       "targetTenantId": "<guid>",         // the Copilot Studio target tenant (often NOT the az tenant; cross-tenant is the norm)
       "targetEnvironmentId": "<guid>"     // the target PP environment GUID — REQUIRED for MCS-NH (must be PAYG + Dataverse + Copilot Studio); MCS-OH can use any Dataverse env
@@ -96,13 +105,21 @@ gitignored.
   },
   "customMcp": {                            // optional sample custom MCP server (custom-mcp/)
     "enabled": false,
-    "publisher": "<Publisher>",             // registration metadata, e.g. Contoso
-    "servers": ["anon", "auth"],           // which servers to register (subset of anon/auth)
-    "resourceGroup": "<prefix>-mcp-rg",     // defaults to <prefix>-mcp-rg
+    "mode": "create",                       // "create" (DEFAULT/omit — deploy+register a NEW ext_<prefix>Anon/Auth pair) | "attach" (reuse an EXISTING pair: no deploy/register, just attach it to the OBO agents)
+    "publisher": "<Publisher>",             // registration metadata, e.g. Contoso (create mode only; ignored in attach)
+    "servers": ["anon", "auth"],           // which servers to register (create) / attach (attach) — subset of anon/auth
+    "resourceGroup": "<prefix>-mcp-rg",     // create mode: defaults to <prefix>-mcp-rg
     "region": "<azure-region>",
+    "existing": {                           // attach mode — the wizard fills this by PICKING a discovered pair (a custom MCP instance tagged a365component=custom-mcp = Custom MCP Creator standalone, or another existing ext_ pair in Azure)
+      "name": "<BaseName>",                 // REQUIRED in attach mode; the servers are ext_<BaseName>Anon / ext_<BaseName>Auth (<= 12 alphanumeric)
+      "servers": ["anon", "auth"],          // which servers the existing pair actually has
+      "resourceGroup": "<name>-mcp-rg",     // optional (informational — the existing MCP's RG, if in Azure)
+      "source": "custom-mcp-creator"        // "custom-mcp-creator" (standalone, tagged) | "azure" (another existing custom MCP)
+    },
     "attachTo": [],                         // OBO agents only (ACA-OBO/FH-OBO/FD-OBO). Each entry is an agent NAME (one instance) or an agent TYPE (all its instances). S2S/DW blocked (see Rules)
     "integrationMode": "approve-first",     // "approve-first" (default) | "attach-when-approved" (see Rules)
-    "propagateToGraph": true                // enable the advanced On-Behalf-Of Graph test (DEFAULT: true)
+    "propagateToGraph": true,               // create: enable the advanced On-Behalf-Of Graph test (DEFAULT: true). attach: reflects the EXISTING pair's capability (not configured here)
+    "audiences": { "anon": "<app-id>", "auth": "<app-id>" }  // optional — the ext_ BYO resource app ids; lets the SPA wire customScopes immediately (else resolved from ToolingManifest.json after attach)
   }
 }
 ```
@@ -139,6 +156,20 @@ gitignored.
   `existingResourceGroup`), with **no** creation, and cleanup never touches it. Each deploy grants the app's
   managed identity **Cognitive Services OpenAI User** on the resolved account. When the block is **absent**,
   the legacy per-agent `ai.account`/`ai.deployment` behaviour is unchanged.
+- `solution.observability.appInsights` (optional) wires the sample agents' **OpenTelemetry** to an
+  **Application Insights** resource (the agents already read `APPLICATIONINSIGHTS_CONNECTION_STRING` at
+  startup). `mode` = `none` (**default**, or omit the block — no wiring, backward compatible) | `create-shared`
+  (the wizard creates a **lab-owned** resource `<prefix>-appinsights` in `<prefix>-appinsights-rg`, tagged
+  `a365lab` and deleted by the Lab Cleaner via the prefix like `<prefix>-foundry-rg`) | `reuse-existing`
+  (wire to an existing **user-owned** resource `existingName`/`existingResourceGroup`; cleanup never touches
+  it). The wiring is host-specific (grounded in Microsoft Learn): **ACA** agents get the connection string
+  injected into the container as a normal env var (resolved at deploy time via `az monitor app-insights
+  component show`; **never** stored in the secret-free plan). **FH** agents get the *platform-reserved*
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` **only when the resource is CONNECTED to the Foundry project**
+  (project monitoring) — that project connection has **no supported az one-liner** (portal-only), so the
+  scaffolder emits a **manual gate** (Foundry portal → project → Agents → Traces → **Connect**). For
+  `reuse-existing` **Foundry** the project is user-owned, so the gate warns that connecting App Insights
+  modifies it. `mode: none` (or omitting the block) preserves all existing labs.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics
@@ -154,6 +185,18 @@ gitignored.
   integrates them immediately as it is provisioned (with permissions); `attach-when-approved` = start the
   agents right away and integrate each OBO agent only if the servers are approved by the time it deploys,
   otherwise run the per-agent attach later. The wizard asks this right after the custom MCP is registered.
+- `customMcp.mode` (optional, default `create`) chooses between **deploying a new pair** and **reusing an
+  existing one** — the symmetric counterpart of `ui.mode` `create`/`attach`. `create` (or omitting `mode`)
+  is byte-identical to before: the wizard copies `custom-mcp/`, deploys the containers and registers
+  `ext_<prefix>Anon` / `ext_<prefix>Auth`. `attach` reuses an **existing** pair (`customMcp.existing.name` →
+  `ext_<name>Anon`/`ext_<name>Auth`): **nothing is deployed, registered or consent-pre-empted** — the
+  scaffolder only accumulates the existing `ext_` servers for the per-OBO attach (`a365 develop
+  add-mcp-servers`) and reminds the operator that the pair must already be admin-approved in this tenant and
+  that each user still creates the one-time Power Platform connections. The candidate pairs come **primarily
+  from the Custom MCP Creator** (standalone instances tagged `a365component=custom-mcp`, discoverable by
+  `discover-environment.ps1` / `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and **secondarily** from any
+  other existing `ext_*Anon`/`ext_*Auth` pair (`a365 develop list-available`). In attach mode the prefix
+  need **not** encode the MCP name (the ext_ names come from `existing.name`), and `publisher` is ignored.
 - **The scaffold folder is `generated/<prefix>/`** — every folder for a run (each `<agent-name>`, the
   `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP) lives under that single per-run root. To run the
   wizard N times and create N coexisting copies, give each run a **different prefix** (the wizard checks

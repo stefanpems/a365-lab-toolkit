@@ -18,6 +18,13 @@ function Invoke-ScaffoldFhAgent {
     # src/. Custom ext_ are appended later by `a365 develop add-mcp-servers` (see scaffold.tools.ps1).
     $fhManifest = if ($a.type -eq 'FH-DW') { Join-Path $dst 'src\hello_world_a365_agent\ToolingManifest.json' } else { Join-Path $dst 'ToolingManifest.json' }
     Set-ToolingManifest -Path $fhManifest -Tools @($a.tools)
+    # App Insights (optional): emit the one-time create-shared resource command + the one-time FH manual
+    # gate to connect it to the Foundry project (the reserved connection string is platform-injected only
+    # when the App Insights resource is connected to the project). No-op when observability is 'none'.
+    if ((Resolve-AppInsightsTarget $plan).mode -ne 'none') {
+        foreach ($c in (Get-AppInsightsCreateCommand $plan)) { $nextCommands.Add($c) }
+        foreach ($c in (Get-AppInsightsFhGate $plan (Resolve-FoundryTarget $plan $a))) { $nextCommands.Add($c) }
+    }
     if ($a.type -ne 'FH-DW') {
         $envPath = Join-Path $dst '.env'
         $proto = if ($a.type -eq 'FH-S2S') { 'responses' } else { 'invocations' }
@@ -82,6 +89,35 @@ function Invoke-ScaffoldFhAgent {
             if (Test-Path -LiteralPath $fp) {
                 (Get-Content -LiteralPath $fp -Raw).Replace('sample-fh-dw-agent', $a.name) | Set-Content -LiteralPath $fp
             }
+        }
+        # Give the DW's DEDICATED Foundry account/project/ACR lab-tied names instead of the opaque
+        # dwfh<hash> defaults (each DW keeps its own — not shared, even with other DWs). Only the GENERATED
+        # copy is rewritten; the source template keeps its dwfh default (manual clones unaffected).
+        #   * project  = fully readable (scoped to the account -> no global collision): <base> lowercased.
+        #   * account/ACR = readable alphanumeric prefix + the bicep uniqueString(rg) hash, because the
+        #     account FQDN (<name>.services.ai.azure.com) and the ACR name are GLOBALLY unique (and ACR
+        #     forbids hyphens). <base> = the agent name if it already carries the prefix (default naming),
+        #     else '<prefix>-dw-<name>' so a CUSTOM-named DW still references the lab.
+        $dwBase   = if ($a.name -imatch ('^' + [regex]::Escape($plan.solution.prefix))) { $a.name } else { "$($plan.solution.prefix)-dw-$($a.name)" }
+        $dwProj   = ((($dwBase.ToLower() -replace '[^a-z0-9-]', '-') -replace '-{2,}', '-')).Trim('-')
+        $dwAlnum  = ($dwBase.ToLower() -replace '[^a-z0-9]', '')
+        if ($dwAlnum.Length -gt 20) { $dwAlnum = $dwAlnum.Substring(0, 20) }   # keep account/ACR within Azure length limits (<= 20 + 13-char hash + suffix)
+        $us = '${uniqueString(resourceGroup().id)}'   # literal bicep expression (kept for global uniqueness)
+        $biPath = Join-Path $dst 'infra\main.bicep'
+        if (Test-Path -LiteralPath $biPath) {
+            $t = Get-Content -LiteralPath $biPath -Raw
+            $t = $t.Replace("'dwfh${us}acct'", "'${dwAlnum}${us}acct'")
+            $t = $t.Replace("'dwfh${us}proj'", "'${dwProj}'")
+            $t = $t.Replace("'dwfh${us}acr'", "'${dwAlnum}${us}acr'")
+            Set-Content -LiteralPath $biPath -Value $t
+        }
+        $jsPath = Join-Path $dst 'infra\main.json'
+        if (Test-Path -LiteralPath $jsPath) {
+            $t = Get-Content -LiteralPath $jsPath -Raw
+            $t = $t.Replace("[format('dwfh{0}acct', uniqueString(resourceGroup().id))]", "[format('${dwAlnum}{0}acct', uniqueString(resourceGroup().id))]")
+            $t = $t.Replace("[format('dwfh{0}proj', uniqueString(resourceGroup().id))]", "${dwProj}")
+            $t = $t.Replace("[format('dwfh{0}acr', uniqueString(resourceGroup().id))]", "[format('${dwAlnum}{0}acr', uniqueString(resourceGroup().id))]")
+            Set-Content -LiteralPath $jsPath -Value $t
         }
         # Solution A (governed subscription): the ARM deploymentScript that creates the managed
         # agent identity blueprint needs shared-key storage, which tenant policy may block

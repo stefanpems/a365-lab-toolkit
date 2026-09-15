@@ -225,6 +225,20 @@ if ($plan.solution.azureOpenAI) {
     }
 }
 
+# Observability / App Insights strategy (optional solution.observability.appInsights). When present, the
+# sample agents' OpenTelemetry exports to an Application Insights resource. none = no-op (default);
+# create-shared = the wizard creates a lab-owned resource (deleted by the Lab Cleaner); reuse-existing =
+# an existing user-owned resource (never touched). Absent = unchanged (no observability wiring).
+if ($plan.solution.observability -and $plan.solution.observability.appInsights) {
+    $ai = $plan.solution.observability.appInsights
+    if ($ai.mode -notin @('none', 'create-shared', 'reuse-existing')) {
+        $errors.Add("solution.observability.appInsights.mode '$($ai.mode)' is invalid (use 'none' = no wiring, 'create-shared' = the wizard creates one lab-owned Application Insights for the lab, or 'reuse-existing' = wire the agents to an Application Insights you already have).")
+    }
+    if ($ai.mode -eq 'reuse-existing' -and (-not $ai.existingName -or -not $ai.existingResourceGroup)) {
+        $errors.Add("solution.observability.appInsights.mode 'reuse-existing' requires 'existingName' + 'existingResourceGroup' (the existing Application Insights resource and its resource group, so the deploy can resolve its connection string / connect it to the Foundry project).")
+    }
+}
+
 # Web UI validation. 'attach' targets an EXISTING (possibly shared) SWA and must name it so the deploy
 # flow can surgically merge tabs (Add-WebUiTab.ps1) instead of regenerating config.js.
 if ($plan.ui -and $plan.ui.mode -eq 'attach') {
@@ -237,6 +251,25 @@ if ($plan.ui -and $plan.ui.mode -eq 'attach') {
 # prefix rule above already guarantees a valid ext_<prefix>Anon/Auth: <= 12 lowercase alphanumeric,
 # letter-first, so ext_ stays <= 20).
 if ($plan.customMcp -and $plan.customMcp.enabled) {
+    $mcpMode = if ($plan.customMcp.mode) { "$($plan.customMcp.mode)".Trim().ToLower() } else { 'create' }
+    if ($mcpMode -notin @('create', 'attach')) {
+        $errors.Add("customMcp.mode '$($plan.customMcp.mode)' is invalid (use 'create' = deploy+register a NEW ext_<prefix>Anon/Auth pair, or 'attach' = reuse an EXISTING pair from the Custom MCP Creator / another existing custom MCP: no deploy/register, only attach it to the OBO agents).")
+    }
+    if ($mcpMode -eq 'attach') {
+        $ex = $plan.customMcp.existing
+        if (-not ($ex -and $ex.name)) {
+            $errors.Add("customMcp.mode 'attach' requires customMcp.existing.name (the base <Name> of the existing pair; the servers are ext_<Name>Anon / ext_<Name>Auth). The wizard lists custom MCP instances tagged a365component=custom-mcp (Custom MCP Creator standalone) and any other existing ext_ pair so the user can PICK one — never a raw typed name.")
+        }
+        else {
+            $exSlug = ($ex.name -replace '[^A-Za-z0-9]', '').ToLower()
+            if ($exSlug.Length -lt 1 -or $exSlug.Length -gt 12) {
+                $errors.Add("customMcp.existing.name '$($ex.name)' is invalid: after slugifying (lowercase alphanumeric) it must be 1-12 chars so ext_<Name>Anon / ext_<Name>Auth stay <= 20 (the Agent 365 server-name limit).")
+            }
+        }
+        if (@($plan.customMcp.attachTo).Count -eq 0) {
+            $errors.Add("customMcp.mode 'attach' with an empty customMcp.attachTo has nothing to do — list the OBO agent(s) (ACA-OBO / FH-OBO / FD-OBO) to attach the existing pair to.")
+        }
+    }
     if ($plan.customMcp.integrationMode -and ($plan.customMcp.integrationMode -notin @('approve-first', 'attach-when-approved'))) {
         $errors.Add("customMcp.integrationMode '$($plan.customMcp.integrationMode)' is invalid (use 'approve-first' or 'attach-when-approved').")
     }
@@ -292,6 +325,13 @@ if ($ValidateOnly) { exit 0 }
 # All generated folders for THIS run live under one per-run root: generated/<prefix>/.
 $RunRoot     = Join-Path $OutRoot $prefix
 $McpBaseName = if ($prefix) { ($prefix -replace '[^A-Za-z0-9]', '').ToLower() } else { '' }
+# Custom MCP ATTACH mode: the ext_ servers come from an EXISTING pair (Custom MCP Creator standalone, or
+# another existing custom MCP), so the base name is the CHOSEN pair's name, NOT this lab's prefix. The
+# custom-MCP + UI modules key ext_<name>Anon/Auth (and the SPA customScopes) off $McpBaseName, so point it
+# at the existing pair before Phase 1. In create mode (or when customMcp is absent/disabled) it is unchanged.
+if ($plan.customMcp -and $plan.customMcp.enabled -and "$($plan.customMcp.mode)".Trim().ToLower() -eq 'attach' -and $plan.customMcp.existing -and $plan.customMcp.existing.name) {
+    $McpBaseName = ($plan.customMcp.existing.name -replace '[^A-Za-z0-9]', '').ToLower()
+}
 New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
 # Archive the plan with the run so the per-lab plan survives the next run overwriting the root copy.
 try { Copy-Item -LiteralPath $PlanPath -Destination (Join-Path $RunRoot 'a365-deployment-plan.json') -Force -ErrorAction Stop } catch { Write-Host "  note: could not archive the plan to $RunRoot ($($_.Exception.Message))" -ForegroundColor DarkYellow }

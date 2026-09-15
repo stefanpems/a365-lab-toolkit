@@ -13,5 +13,11 @@ agent-framework-foundry-hosting>=1.0.0a260630
 azure-identity
 httpx>=0.24.0
 
+# Observability (Phase 1): A365 span enrichment + Azure Monitor export. Pinned to the
+# same versions the FH-DW sample already ships. The A365 exporter stays OFF here, so no
+# OtelWrite role dependency is introduced.
+microsoft-opentelemetry>=0.1.0a3
+azure-monitor-opentelemetry>=1.6.0
+
 # Local dev
 python-dotenv

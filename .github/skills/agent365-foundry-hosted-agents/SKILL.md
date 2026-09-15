@@ -18,9 +18,39 @@ per-variant guides — do not duplicate or renumber them:**
 
 ## Flow
 1. Scaffold via the router: [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1).
-2. FH-OBO/S2S: `azd provision` → **create the model deployment + grant RBAC** → `azd deploy`.
+2. FH-OBO/S2S: `azd provision` → **create the model deployment + grant RBAC** → `azd deploy` →
+   **grant OtelWrite + restart** (observability, see below).
 3. FH-DW (governed subscription): `azd provision` → out-of-band blueprint (Solution A) →
-   `azd provision` again → admin-center publish + Teams Developer Portal Bot ID = blueprint.
+   `azd provision` again → admin-center publish + Teams Developer Portal Bot ID = blueprint →
+   **grant OtelWrite + restart** (observability, see below).
+
+## Observability (OTEL — enabled by default in code)
+All three FH agents initialize OpenTelemetry at startup: Azure Monitor export (via the
+Foundry-injected `APPLICATIONINSIGHTS_CONNECTION_STRING`) **and** the A365 observability
+exporter. FH-DW authenticates the exporter with the per-turn agentic token exchange
+(`TurnContext`); FH-OBO/S2S use an **app-only managed-identity** token for the observability
+resource. All init is fully guarded — a telemetry failure never breaks an agent turn.
+For the A365 exporter to actually write, the agent identity SP needs the
+`Agent365.Observability.OtelWrite` **application** role. After `azd deploy`, assign it and
+restart the container:
+```powershell
+./foundry-hosted/scripts/assign-observability-role.ps1 -PrincipalId <agent-identity-SP-objectId>
+```
+The `PrincipalId` is the SP objectId the exporter presents (the one named in a `403` from the
+observability endpoint). Without the grant the agent still runs — telemetry to A365 is simply
+skipped (App Insights export is unaffected). See [setup-MAF-FH-OBO.md](../../../docs/setup-MAF-FH-OBO.md) §5.
+
+**Application Insights via the wizard (`solution.observability.appInsights`).** The Azure Monitor
+export above only fires when Foundry injects `APPLICATIONINSIGHTS_CONNECTION_STRING`, and Foundry
+injects it **only when an Application Insights resource is connected to the project** (project
+monitoring). The Lab Builder can provision/point that resource (`create-shared` = a lab-owned
+`<prefix>-appinsights`, `reuse-existing` = an existing one, `none` = default/off), but the
+project↔App Insights link itself is **portal-only** — there is no supported `az` one-liner — so the
+scaffolder emits a **manual gate**: Foundry portal → project → **Agents → Traces → Connect** (or
+Manage → Project details → Connected resources → Add connection), then redeploy/restart the FH agents.
+⛔ For a `reuse-existing` **Foundry** project (user-owned), connecting App Insights **modifies that
+project** — do it only with the owner's consent. (ACA agents instead get the connection string
+injected as a normal container env var by the deploy.)
 
 ## Known corrections (apply these)
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does **not** create the model deployment
@@ -28,7 +58,16 @@ per-variant guides — do not duplicate or renumber them:**
   account deployment create … gpt-4.1`) and grants **Cognitive Services User** before `azd deploy`.
 - **FH-DW naming**: the sample hardcodes the agent name in Bicep/scripts (not `azure.yaml`); the
   scaffolder rewrites every occurrence to `<prefix>-FH-DW`. Verify the deployed agent uses the planned
-  name and is not reusing a pre-existing lab agent.
+  name and is not reusing a pre-existing lab agent. **The scaffolder also renames the DW's DEDICATED
+  Foundry account/project/ACR** away from the opaque `dwfh<hash>` defaults to **lab-tied** names (each DW
+  keeps its own — never shared, even with other DWs): the **project** is fully readable (`<base>`, scoped
+  to the account so no global collision), while the **account** (`<base-alnum><uniqueString>acct`) and
+  **ACR** (`<base-alnum><uniqueString>acr`, alphanumeric — ACR forbids hyphens) keep the bicep
+  `uniqueString(resourceGroup().id)` hash because the account FQDN and ACR name are **globally unique**.
+  `<base>` = the agent name when it already carries the prefix (default naming), else `<prefix>-dw-<name>`
+  so a **custom-named** DW still references the lab. Only the GENERATED copy is rewritten; the source
+  template keeps its `dwfh` default (manual clones unaffected). The `.azure` env `ACCOUNT_NAME`/`PROJECT_NAME`
+  outputs still carry the real provisioned names, so `read-logs.ps1` / `roll-instrumented-version.ps1` work unchanged.
 - **FH-DW governed subscription**: the ARM deploymentScript that creates the blueprint needs shared-key
   storage (may be policy-blocked). Use **Solution A** (out-of-band blueprint via
   `scripts/create-agent-blueprint.ps1`), not a policy waiver — see

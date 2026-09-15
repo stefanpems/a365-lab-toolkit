@@ -9,6 +9,37 @@ function Invoke-ScaffoldCustomMcp {
     # web UI), so ext_<Name>Anon/Auth and the <name>-mcp-* Azure resources are unique per run without a
     # separate question. $McpBaseName = slugified prefix (set by the router).
     $name      = $McpBaseName
+
+    # ATTACH mode: reuse an EXISTING custom MCP pair (Custom MCP Creator standalone, or another existing
+    # custom MCP in Azure). Do NOT copy custom-mcp/, deploy, register or pre-empt consents — the servers
+    # already exist and are (or must be) admin-approved. Only accumulate the ext_ servers for the per-OBO
+    # attach and emit the reminders (approval + the per-user Power Platform connection). The router pointed
+    # $McpBaseName at the existing pair's name, so ext_<name>Anon/Auth resolve to the real registered servers.
+    if ("$($plan.customMcp.mode)".Trim().ToLower() -eq 'attach') {
+        $ex = $plan.customMcp.existing
+        $servers = @($plan.customMcp.servers)
+        if (-not $servers) { $servers = @($ex.servers) }
+        if (-not $servers) { $servers = @('anon', 'auth') }
+        $extList = @($servers | ForEach-Object { if ($_ -eq 'anon') { "ext_${name}Anon" } else { "ext_${name}Auth" } })
+        $srcLabel = if ($ex -and $ex.source -eq 'azure') { 'existing custom MCP in Azure' } else { 'Custom MCP Creator standalone instance' }
+        Write-Host "  custom MCP (ATTACH) -> reuse existing pair '$name' ($($extList -join ', ')); no deploy/register." -ForegroundColor Cyan
+        $nextCommands.Add("# CUSTOM MCP (ATTACH to existing '$name' - $srcLabel): NOTHING is deployed or registered. The servers $($extList -join ' / ') already exist. Ensure they are ADMIN-APPROVED in THIS tenant (M365 admin center > Agents > Tools; if the Custom MCP Creator already registered + approved them, they are). Each OBO agent below attaches them via 'a365 develop add-mcp-servers'.")
+        $connName = if ($ex -and $ex.name) { $ex.name } else { $name }
+        $nextCommands.Add("cd `"$repoRoot`"; .\custom-mcp\print-connection-urls.ps1 -Name $connName   # per-user Power Platform connections are STILL required (created ONCE per user, reused by every OBO agent). Give BOTH ext_${name}Anon (NoAuth) and ext_${name}Auth (OAuth sign-in) URLs to the user before any custom-tool test.")
+        # Accumulate the ext_ servers for the per-OBO attach (identical to create mode's tail).
+        foreach ($t in @($plan.customMcp.attachTo)) {
+            foreach ($ag in (Resolve-PlanAgents $plan $t)) {
+                if ($ag.type -notlike '*-OBO') { continue }
+                if (-not $attachByAgent.ContainsKey($ag.name)) { $attachByAgent[$ag.name] = New-Object System.Collections.Generic.List[string] }
+                $extList | ForEach-Object { if ($attachByAgent[$ag.name] -notcontains $_) { $attachByAgent[$ag.name].Add($_) } }
+            }
+        }
+        if ($plan.customMcp.propagateToGraph) {
+            $nextCommands.Add("# propagate_to_graph: this REUSES the existing ext_${name}Auth app's Graph configuration - nothing to set up here (it was configured when the pair was created). If the existing pair was NOT built with propagate_to_graph, that advanced test won't work until its owner adds it (see custom-mcp/README.md).")
+        }
+        return
+    }
+
     $mcpSlug   = $McpBaseName
     $mcpFolderName = "$($plan.solution.prefix)-mcp"
     $mcpSrc = Join-Path $repoRoot 'custom-mcp'

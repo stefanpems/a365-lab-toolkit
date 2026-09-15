@@ -79,10 +79,21 @@ function Invoke-ScaffoldAcaAgent {
         $mkAoai = "az group create -n $($aoai.resourceGroup) -l $($plan.solution.region) -o none; az cognitiveservices account create -n $($aoai.account) -g $($aoai.resourceGroup) -l $($plan.solution.region) --kind OpenAI --sku S0 --custom-domain $($aoai.account) --yes -o none; az cognitiveservices account deployment create -n $($aoai.account) -g $($aoai.resourceGroup) --deployment-name $($aoai.deployment) --model-name $($aoai.deployment) --model-version $modelVer --model-format OpenAI --sku-name GlobalStandard --sku-capacity 20 -o none"
         $nextCommands.Add("$mkAoai   # SHARED Azure OpenAI (create-shared): create the lab's ONE account '$($aoai.account)' + deployment '$($aoai.deployment)' in '$($aoai.resourceGroup)' (lab-owned; deleted by the Lab Cleaner via the '$($plan.solution.prefix)' prefix). Run ONCE before the ACA deploys; each deploy grants the app's managed identity Cognitive Services OpenAI User on it.")
     }
+    # App Insights (optional): create-shared emits the resource-creation command ONCE, ahead of the deploys.
+    $aiTarget = Resolve-AppInsightsTarget $plan
+    if ($aiTarget.mode -ne 'none') {
+        foreach ($c in (Get-AppInsightsCreateCommand $plan)) { $nextCommands.Add($c) }
+    }
     # -AoaiRg is the resolved account RG (create-shared: <prefix>-aoai-rg; reuse-existing: existingResourceGroup);
     # falls back to the <AOAI_RG> placeholder only in legacy per-agent mode where no shared RG is known.
     $aoaiRgArg = if ($aoai.resourceGroup) { $aoai.resourceGroup } else { '<AOAI_RG>' }
     $nextCommands.Add("cd `"$dst`"; a365 setup all --agent-name `"$($a.name)`"$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg $aoaiRgArg -AoaiAcc $($aoai.account)$reuse$dwNote")
+    # App Insights (optional): inject the connection string into the ACA container AFTER the deploy so the
+    # agent's OpenTelemetry exports to it (ACA reads APPLICATIONINSIGHTS_CONNECTION_STRING as a normal env var).
+    if ($aiTarget.mode -ne 'none') {
+        $connExpr = Get-AppInsightsConnExpr $aiTarget
+        $nextCommands.Add("cd `"$dst`"; az containerapp update -n $app -g $rg --set-env-vars APPLICATIONINSIGHTS_CONNECTION_STRING=$connExpr -o none   # APP INSIGHTS: inject the '$($aiTarget.name)' connection string into the '$app' container (run AFTER the deploy above; the container must exist). The agent reads it at startup and exports OpenTelemetry to Application Insights.")
+    }
     if ($a.type -eq 'ACA-DW') {
         # DW publish: register the real endpoint, regenerate the package for THIS blueprint, then upload it in the admin center.
         # a365 publish is CWD-SENSITIVE: it reads THIS folder's config and drops manifest/ in the CURRENT dir -> the leading cd is mandatory.

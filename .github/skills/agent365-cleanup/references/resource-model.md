@@ -78,6 +78,7 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 | Azure | FH Foundry account / project / ACR / model / Bot Service (DW) / UAMI | inside the agent RG | ACR/model/Bot/UAMI covered by the RG delete; the **Cognitive Services account** (+ its project) is **delete+purged first** (order 39) so it does not linger soft-deleted |
 | Azure | **Shared** Foundry account + project + model (`solution.foundry` `create-shared`) | `<prefix>-foundry-rg` | account **delete+purged** (order 39), then `delete-rg` removes the RG — both matched by the prefix filter (lab-owned) |
 | Azure | **Shared** Azure OpenAI account + deployment (`solution.azureOpenAI` `create-shared`) | `<prefix>-aoai-rg` (account `<prefix>aoai`) | account **delete+purged** (order 39), then `delete-rg` removes the RG — both matched by the prefix filter (lab-owned) |
+| Azure | **Shared** Application Insights (`solution.observability.appInsights` `create-shared`) | `<prefix>-appinsights-rg` (resource `<prefix>-appinsights`) | `delete-rg` removes the RG (App Insights does **not** soft-delete, so **no** purge is needed) — matched by the prefix filter + the `a365lab` tag (lab-owned) |
 | Entra | Blueprint app (+ its SP) | `<agent-name> Blueprint` | `delete-app` + purge |
 | Entra | Agent identity app / SP | `<agent-name> Identity` | `delete-app` + purge |
 | Entra | **Agent instances** (agent users) | custom names given at hire (may NOT contain the prefix) | `remove-licenses-and-delete-user` |
@@ -96,6 +97,11 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
   OpenAI account (supplied via `account`/`existingResourceGroup`). Its RG is not prefix-named, so the prefix
   filter will not match it — and it must **not** be deleted. (`create-shared` is the opposite: its
   `<prefix>-aoai-rg` + account `<prefix>aoai` **are** lab-owned and ARE deleted + purged by the prefix filter.)
+- **`solution.observability.appInsights` `reuse-existing`** points the agents at a **pre-existing, user-owned**
+  Application Insights resource (`existingName`/`existingResourceGroup`). Its RG is not prefix-named and is
+  **not** tagged `a365lab`, so neither filter matches it — and it must **not** be deleted. (`create-shared`
+  is the opposite: its `<prefix>-appinsights-rg` **is** lab-owned + tagged and IS deleted by `delete-rg`; no
+  purge is needed because App Insights does not soft-delete.)
 - **FD (prompt) agents** reuse a **shared** Foundry account/project (e.g. `rg-a365-foundry-agent` /
   `a365f-…`). It is pre-existing and shared — a prefix filter will not match it, and it must not be
   deleted. FD cleanup is limited to the blueprint app + instances (+ the Foundry agent object, which

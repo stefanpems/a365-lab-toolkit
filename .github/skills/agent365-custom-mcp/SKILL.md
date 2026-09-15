@@ -32,6 +32,23 @@ group **`a365component=custom-mcp`** (also applied by
 created it, **one base `<Name>` drives both servers** (`ext_<Name>Anon`/`ext_<Name>Auth`) — the whole
 toolchain keys on `<Name>`, so a single base name is used even when only one server is deployed.
 
+## Create vs attach (`customMcp.mode`) — reuse an existing pair without redeploying
+The Lab Builder can either **create** a new pair or **attach** an existing one (the symmetric counterpart
+of the Web UI's create/attach):
+- **`create`** (default): copy `custom-mcp/`, deploy the container(s), register `ext_<prefix>Anon/Auth`,
+  pre-empt consents, admin-approve — the full flow below.
+- **`attach`**: reuse an **already-registered** pair. `customMcp.existing.name` gives the base `<Name>`
+  (→ `ext_<Name>Anon`/`ext_<Name>Auth`); the scaffolder **does NOT copy, deploy, register or pre-empt** —
+  it only accumulates the existing `ext_` servers for the per-OBO `a365 develop add-mcp-servers` and
+  reminds the operator that (a) the pair must already be **admin-approved in this tenant** (if the Custom
+  MCP Creator approved it, it is) and (b) each user still creates the one-time **Power Platform
+  connections** (`print-connection-urls.ps1 -Name <Name>`). Candidate pairs come **primarily** from the
+  Custom MCP Creator (standalone, tagged `a365component=custom-mcp` — discover with
+  `discover-environment.ps1` `customMcpInstances` or the cleanup lister
+  `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and **secondarily** from any other existing
+  `ext_*Anon`/`ext_*Auth` pair (`a365 develop list-available`). The attach step is technically identical
+  regardless of who registered the pair, which is why cross-lab / standalone reuse works.
+
 ## Mechanics (grounded in MS Learn)
 - **Two servers, split by auth type** (auth type is per *registration*, not per tool): `/anon/mcp`
   → `ext_<prefix>Anon` (`NoAuth`); `/auth/mcp` → `ext_<prefix>Auth` (`EntraOAuth`).

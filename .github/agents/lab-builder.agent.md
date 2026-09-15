@@ -283,21 +283,52 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    type a raw SWA name.** List the Static Web Apps tagged `a365component=web-ui`
    (`az staticwebapp list` then keep those whose `tags.a365component == 'web-ui'`, or
    `az resource list --tag a365component=web-ui --resource-type Microsoft.Web/staticSites`), present them
-   as a single-select (name + host), and record the pick into `ui.existing` =
-   `{ staticWebApp, origin: "https://<host>", spaAppId: <the SWA's SPA app id> }`. The scaffolder then does
+   as a single-select (name + host + owning lab), and record the pick into `ui.existing` =
+   `{ staticWebApp, origin: "https://<host>", spaAppId: <the SWA's SPA app id> }`. ⛔ **Cross-lab
+   dependency gate — if the picked SWA is owned by a DIFFERENT lab** (its tags carry `a365lab=<owner>`
+   with `<owner>` ≠ this run's prefix), then IMMEDIATELY after the pick — before any other question —
+   present a single-select gate that names the dependency in plain words (e.g. *"lab12b will reuse lab12's
+   web UI; if lab12 is later torn down, lab12b's tabs disappear"*) with **Confirm reuse (accept the
+   dependency)** / **Re-select a different existing UI** / **Create a new UI instead**; only continue on
+   explicit *Confirm*, re-run the picker on *Re-select*, or switch `ui.mode` to `create` on *Create*. A
+   **standalone/shared** UI (`a365component=web-ui` with **no** `a365lab`, from the Web UI Creator) is the
+   intended shared target and does **NOT** trigger the gate. The scaffolder then does
    **NOT** regenerate `config.js` (that would wipe other labs' tabs); it emits one
    `Add-WebUiTab.ps1` command per exposed agent (surgical merge — see the deploy ordering below). If no SWA
    carries the tag, tell the user to create one first with the **Web UI Creator** (or retro-tag an existing
    one with `Set-ComponentTags.ps1 -SwaName <name>` / `-Retro`), then re-run.
    Then **Custom MCP**
-   (single-select: None / Anonymous only / Authenticated only / Both); if not None, **do NOT ask a name**
+   (single-select: None / Anonymous only / Authenticated only / Both). If not None, ask **create vs attach**
+   (single-select **Create new** / **Attach to existing pair**, `customMcp.mode` = `create`/`attach`),
+   mirroring the Web UI. ⛔ **For *Attach to existing pair*, discover and offer the existing pairs — never
+   make the user type a raw name.** List custom MCP instances **primarily** from the **Custom MCP Creator**
+   (standalone, tagged `a365component=custom-mcp`) and **secondarily** any other existing pair — run
+   `discover-environment.ps1` (its `customMcpInstances` = RGs tagged `a365component=custom-mcp`, with the
+   derived `ext_<name>Anon/Auth` + which servers exist + `standalone`/`source`) and, for authoritative
+   registered names, `a365 develop list-available` (group `ext_*` into Anon/Auth pairs). Present them as a
+   single-select (base name + servers + standalone/lab-owner), keep only pairs that actually have the
+   server type(s) the user chose, and record the pick into `customMcp.existing` =
+   `{ name, servers, resourceGroup, source }`. ⛔ **Cross-lab dependency gate — if the picked pair is
+   owned by a DIFFERENT lab** (its RG carries `a365lab=<owner>` with `<owner>` ≠ this run's prefix;
+   `discover-environment.ps1` reports `labOwner`/`standalone:false`), then IMMEDIATELY after the pick —
+   before any other question — present a single-select gate naming the dependency in plain words (e.g.
+   *"lab12b will reuse lab12's custom MCP pair; if lab12 is later torn down, lab12b loses those tools"*)
+   with **Confirm reuse (accept the dependency)** / **Re-select a different existing pair** / **Create a
+   new pair instead**; only continue on explicit *Confirm*, re-run the picker on *Re-select*, or switch
+   `customMcp.mode` to `create` on *Create*. A **standalone/shared** pair (`a365component=custom-mcp` with
+   **no** `a365lab`, from the Custom MCP Creator) is the intended shared target and does **NOT** trigger
+   the gate. In attach mode **do NOT ask a publisher** and **nothing is
+   deployed or registered** (see the deploy ordering). If no pair is found, tell the user to create one
+   first with the **Custom MCP Creator**, then re-run — or pick *Create new*.
+   For *Create new*, **do NOT ask a name**
    (it derives from the solution prefix → `ext_<prefix>Anon/Auth`; the prefix must be ≤ 12 alphanumerics),
-   ask a publisher, which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
+   ask a publisher. In **both** modes ask which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO` only — S2S/DW are
    blocked: they can't own the per-user Power Platform connection a BYO server needs) — **offer each OBO
    instance by name** and write chosen instances as agent names in `customMcp.attachTo` (a bare OBO type
    attaches to every instance of that type), an **integration
    mode** (approve-first (default) / attach-when-approved — see "Custom MCP integration" below), and whether to
-   enable `propagate_to_graph` (**default: enable**). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
+   enable `propagate_to_graph` (**default: enable**; in attach mode this only *reflects* whether the chosen
+   pair already has it — it is not configured here). Finally, per **ACA-*/FH-*** agent, ask which **registered MCP tools** to
    attach: **show ALL Work IQ servers from `a365 develop list-available` but make only `mcp_MailTools`
    selectable** (the rest visible-but-disabled, noting only tested tools are enabled for now); pre-select
    Mail for **OBO/DW agents**. ⛔ **EXCLUDE every S2S agent from the Mail selection entirely** — do NOT
@@ -340,7 +371,12 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    Lab Cleaner) or **reuse an existing account+deployment** (`reuse-existing` — only then ask which one);
    for any **FH or FD** ask the **Foundry-resource strategy** ONCE (`solution.foundry`, shared by all
    FH+FD): **create one shared account+project+model** (`create-shared`, **default**) or **reuse an
-   existing account+project** (`reuse-existing`); Frontier/licensing for DW; UI permissions.
+   existing account+project** (`reuse-existing`); for any **FH or ACA** ask the **Application Insights
+   strategy** ONCE (`solution.observability.appInsights`, optional, **default `none`**): **create a
+   shared lab-owned resource** (`create-shared`), **reuse an existing** (`reuse-existing`), or **skip**
+   (`none`) — state that ACA gets the connection string injected as a container env var while **FH gets
+   it only via a portal project-connection MANUAL GATE**, and that with a `reuse-existing` **Foundry**
+   the FH gate WARNS it modifies the user-owned project; Frontier/licensing for DW; UI permissions.
 5. **Discovery + review** — run the read-only discovery script; show ONE editable review screen with
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
 6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
@@ -374,6 +410,13 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
      servers in parallel; each OBO agent integrates automatically **only if the servers are already
      approved** when it deploys, otherwise run the per-agent attach block later (the scaffolder emits it
      as a clearly-marked manual step). **S2S/DW never attach the custom MCP.**
+   - ⛔ **`customMcp.mode: attach` (reuse an existing pair) SKIPS deploy + register entirely.** The
+     `ext_<name>Anon/Auth` servers already exist (Custom MCP Creator standalone, or another existing custom
+     MCP), so there is **nothing to deploy, register or consent-pre-empt** — the scaffolder emits only the
+     per-OBO `a365 develop add-mcp-servers <existing ext_ names>` plus the reminders. Just **verify the pair
+     is admin-approved in THIS tenant** (if the Custom MCP Creator already approved it, it is) and go
+     straight to attaching it as each OBO agent is created. The per-user Power Platform connections are
+     **still required** (run `custom-mcp/print-connection-urls.ps1 -Name <existing name>`).
 3. As each **OBO/S2S** agent goes live, **add its tab** to `config.js` and **unhide it** (set that
    entry's `enabled: true` — tabs are scaffolded `enabled: false` and hidden until then), redeploy the UI
    (a **build-free static re-upload** — only `config.js` changes, no compilation), wire
@@ -651,6 +694,16 @@ the agents → each OBO integrates immediately) or *attach-when-approved* (agent
 approved, else manually later). **S2S and DW are blocked** — a non-user (own app / `agentUser`) identity
 can't own the per-user Power Platform connection a BYO server needs (`ConnectionSharingNotAllowed`; S2S
 also can't mint the token from the SPA).
+**Create vs attach** (`customMcp.mode`, mirrors the Web UI): *create* (default) deploys + registers a new
+`ext_<prefix>Anon/Auth` pair; *attach* **reuses an existing pair** (`customMcp.existing.name` →
+`ext_<name>Anon/Auth`) and **skips deploy + register + preempt** entirely — the candidates come primarily
+from the **Custom MCP Creator** (standalone, tagged `a365component=custom-mcp`; discover with
+`discover-environment.ps1` `customMcpInstances` or `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and
+secondarily from any other existing `ext_*` pair (`a365 develop list-available`). Attach still needs the
+pair **admin-approved** in this tenant and the per-user **Power Platform connections**
+(`print-connection-urls.ps1 -Name <existing name>`). Present discovered pairs as a pick list — never a
+typed name. **The technical attach step is identical** (`a365 develop add-mcp-servers <existing ext_ names>`),
+which is why attaching to a pre-registered pair works regardless of who created it.
 Full mechanics and the `propagate_to_graph` advanced setup: that skill + [custom-mcp/README.md](../../custom-mcp/README.md).
 
 ## Registered MCP tools (Work IQ / catalog / third-party)
@@ -749,6 +802,28 @@ project + model deployment. Two modes:
 - **FH-DW always keeps its own account** (Bot Service + managed-agent-identity blueprint bicep). FD-only
   labs must use `reuse-existing` (a prompt agent has no azd project to provision a shared account from).
   Omit `solution.foundry` entirely to keep the legacy per-agent-account behaviour.
+
+## Application Insights strategy (`solution.observability.appInsights`) — optional OTEL sink
+Ask this ONCE for the whole lab (only if there are FH or ACA agents; **default `none`** so existing labs
+are unchanged). The sample agents already read `APPLICATIONINSIGHTS_CONNECTION_STRING` at startup; this
+option provisions/points the resource and wires it. Three modes:
+- **`create-shared`**: the wizard creates a **lab-owned** Application Insights `<prefix>-appinsights` in
+  `<prefix>-appinsights-rg` (the scaffolder emits `az monitor app-insights component create` ONCE ahead of
+  the agent deploys). `Set-LabTags.ps1` tags the RG `a365lab`; the Lab Cleaner deletes it via the prefix
+  (App Insights does **not** soft-delete, so no purge is needed).
+- **`reuse-existing`**: wire to an existing **user-owned** resource (`existingName`/`existingResourceGroup`);
+  cleanup never touches it.
+- **`none`** (or omit the block): no wiring.
+⛔ **Host-specific wiring (grounded in Microsoft Learn — do NOT fabricate a Foundry-connection CLI):**
+- **ACA** agents read the connection string as a normal container env var, so the scaffolder emits a
+  post-deploy `az containerapp update --set-env-vars APPLICATIONINSIGHTS_CONNECTION_STRING=<resolved>`
+  (resolved at deploy time via `az monitor app-insights component show`; **never** stored in the plan).
+- **FH** agents get the **platform-reserved** `APPLICATIONINSIGHTS_CONNECTION_STRING` **only when the
+  App Insights resource is CONNECTED to the Foundry project** (project monitoring). That project connection
+  is **portal-only** (no supported `az` one-liner), so the scaffolder emits a **MANUAL GATE** with the exact
+  portal steps (Foundry portal → project → Agents → Traces → **Connect**), do ONCE per project, then
+  redeploy/restart the FH agents. ⛔ **When the Foundry strategy is `reuse-existing` the project is
+  user-owned — the gate WARNS that connecting App Insights modifies it; proceed only with consent.**
 
 ## Output
 End every turn with a short status: what was decided, what is still open, the exact next action, and

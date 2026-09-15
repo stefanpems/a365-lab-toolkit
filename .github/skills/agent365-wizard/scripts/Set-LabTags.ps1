@@ -193,6 +193,10 @@ if ($plan -and $plan.solution.foundry -and $plan.solution.foundry.mode -eq 'crea
 if ($plan -and $plan.solution.azureOpenAI -and $plan.solution.azureOpenAI.mode -eq 'create-shared') {
     Set-RgTag -Rg $(if ($plan.solution.azureOpenAI.resourceGroup) { $plan.solution.azureOpenAI.resourceGroup } else { "$Prefix-aoai-rg" })
 }
+# Shared App Insights (create-shared only — reuse-existing is user-owned, never tag).
+if ($plan -and $plan.solution.observability -and $plan.solution.observability.appInsights -and $plan.solution.observability.appInsights.mode -eq 'create-shared') {
+    Set-RgTag -Rg $(if ($plan.solution.observability.appInsights.resourceGroup) { $plan.solution.observability.appInsights.resourceGroup } else { "$Prefix-appinsights-rg" })
+}
 
 # Web UI (create mode): the UI RG + the SPA app registration.
 if ($plan -and $plan.ui -and $plan.ui.mode -eq 'create') {
@@ -201,7 +205,10 @@ if ($plan -and $plan.ui -and $plan.ui.mode -eq 'create') {
 }
 
 # Custom MCP: the MCP RG + every ext_<prefix>* registration/proxy/resource app.
-if ($plan -and $plan.customMcp -and $plan.customMcp.enabled) {
+# ONLY in CREATE mode. In ATTACH mode (customMcp.mode = 'attach') the ext_<name>Anon/Auth pair is
+# REUSED — owned by another lab or a standalone Custom MCP Creator instance — so it must NEVER be
+# tagged as this lab's, or the Lab Cleaner would later delete a shared / other-lab MCP.
+if ($plan -and $plan.customMcp -and $plan.customMcp.enabled -and ($plan.customMcp.mode -ne 'attach')) {
     $mcpRg = if ($plan.customMcp.resourceGroup) { $plan.customMcp.resourceGroup } else { "$Prefix-mcp-rg" }
     Set-RgTag -Rg $mcpRg
     Set-AppTagByPrefix -NamePrefix "ext_$Prefix"
