@@ -201,7 +201,10 @@ if ($plan -and $plan.ui -and $plan.ui.mode -eq 'create') {
 }
 
 # Custom MCP: the MCP RG + every ext_<prefix>* registration/proxy/resource app.
-if ($plan -and $plan.customMcp -and $plan.customMcp.enabled) {
+# ONLY in CREATE mode. In ATTACH mode (customMcp.mode = 'attach') the ext_<name>Anon/Auth pair is
+# REUSED — owned by another lab or a standalone Custom MCP Creator instance — so it must NEVER be
+# tagged as this lab's, or the Lab Cleaner would later delete a shared / other-lab MCP.
+if ($plan -and $plan.customMcp -and $plan.customMcp.enabled -and ($plan.customMcp.mode -ne 'attach')) {
     $mcpRg = if ($plan.customMcp.resourceGroup) { $plan.customMcp.resourceGroup } else { "$Prefix-mcp-rg" }
     Set-RgTag -Rg $mcpRg
     Set-AppTagByPrefix -NamePrefix "ext_$Prefix"
