@@ -283,8 +283,16 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    type a raw SWA name.** List the Static Web Apps tagged `a365component=web-ui`
    (`az staticwebapp list` then keep those whose `tags.a365component == 'web-ui'`, or
    `az resource list --tag a365component=web-ui --resource-type Microsoft.Web/staticSites`), present them
-   as a single-select (name + host), and record the pick into `ui.existing` =
-   `{ staticWebApp, origin: "https://<host>", spaAppId: <the SWA's SPA app id> }`. The scaffolder then does
+   as a single-select (name + host + owning lab), and record the pick into `ui.existing` =
+   `{ staticWebApp, origin: "https://<host>", spaAppId: <the SWA's SPA app id> }`. ⛔ **Cross-lab
+   dependency gate — if the picked SWA is owned by a DIFFERENT lab** (its tags carry `a365lab=<owner>`
+   with `<owner>` ≠ this run's prefix), then IMMEDIATELY after the pick — before any other question —
+   present a single-select gate that names the dependency in plain words (e.g. *"lab12b will reuse lab12's
+   web UI; if lab12 is later torn down, lab12b's tabs disappear"*) with **Confirm reuse (accept the
+   dependency)** / **Re-select a different existing UI** / **Create a new UI instead**; only continue on
+   explicit *Confirm*, re-run the picker on *Re-select*, or switch `ui.mode` to `create` on *Create*. A
+   **standalone/shared** UI (`a365component=web-ui` with **no** `a365lab`, from the Web UI Creator) is the
+   intended shared target and does **NOT** trigger the gate. The scaffolder then does
    **NOT** regenerate `config.js` (that would wipe other labs' tabs); it emits one
    `Add-WebUiTab.ps1` command per exposed agent (surgical merge — see the deploy ordering below). If no SWA
    carries the tag, tell the user to create one first with the **Web UI Creator** (or retro-tag an existing
@@ -300,7 +308,16 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    registered names, `a365 develop list-available` (group `ext_*` into Anon/Auth pairs). Present them as a
    single-select (base name + servers + standalone/lab-owner), keep only pairs that actually have the
    server type(s) the user chose, and record the pick into `customMcp.existing` =
-   `{ name, servers, resourceGroup, source }`. In attach mode **do NOT ask a publisher** and **nothing is
+   `{ name, servers, resourceGroup, source }`. ⛔ **Cross-lab dependency gate — if the picked pair is
+   owned by a DIFFERENT lab** (its RG carries `a365lab=<owner>` with `<owner>` ≠ this run's prefix;
+   `discover-environment.ps1` reports `labOwner`/`standalone:false`), then IMMEDIATELY after the pick —
+   before any other question — present a single-select gate naming the dependency in plain words (e.g.
+   *"lab12b will reuse lab12's custom MCP pair; if lab12 is later torn down, lab12b loses those tools"*)
+   with **Confirm reuse (accept the dependency)** / **Re-select a different existing pair** / **Create a
+   new pair instead**; only continue on explicit *Confirm*, re-run the picker on *Re-select*, or switch
+   `customMcp.mode` to `create` on *Create*. A **standalone/shared** pair (`a365component=custom-mcp` with
+   **no** `a365lab`, from the Custom MCP Creator) is the intended shared target and does **NOT** trigger
+   the gate. In attach mode **do NOT ask a publisher** and **nothing is
    deployed or registered** (see the deploy ordering). If no pair is found, tell the user to create one
    first with the **Custom MCP Creator**, then re-run — or pick *Create new*.
    For *Create new*, **do NOT ask a name**

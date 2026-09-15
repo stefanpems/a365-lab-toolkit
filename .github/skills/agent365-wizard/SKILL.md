@@ -111,7 +111,16 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    For **Attach to existing UI**, discover the existing web UIs by the `a365component=web-ui` tag
    (`az staticwebapp list` → keep `tags.a365component == 'web-ui'`) and let the user PICK one (record it
    into `ui.existing.staticWebApp`/`origin`/`spaAppId`); the scaffolder then merges each agent's tab
-   surgically with `Add-WebUiTab.ps1` instead of regenerating `config.js`. If none is tagged, point the
+   surgically with `Add-WebUiTab.ps1` instead of regenerating `config.js`. ⛔ **Cross-lab dependency
+   gate** — if the picked SWA is **owned by a DIFFERENT lab** (its tags carry `a365lab=<owner>` with
+   `<owner>` ≠ this run's prefix), then IMMEDIATELY after the pick — before any other question — present a
+   single-select gate that spells out the dependency in plain words (e.g. *"lab12b will reuse lab12's web
+   UI; if lab12 is later torn down, lab12b's tabs disappear"*) with **Confirm reuse (accept the
+   dependency)** / **Re-select a different existing UI** / **Create a new UI instead**. Only proceed on
+   explicit *Confirm*; on *Re-select* re-run the picker; on *Create* switch `ui.mode` to `create` and run
+   the create-new flow. A **standalone/shared** UI (tag `a365component=web-ui` but **no** `a365lab`, from
+   the **Web UI Creator**) is the intended shared target and does **NOT** trigger the gate — the Lab
+   Cleaner never deletes it. If none is tagged, point the
    user to the **Web UI Creator** (or `Set-ComponentTags.ps1 -Retro`). See
    [agent365-web-ui/SKILL.md](../agent365-web-ui/SKILL.md).
 3. If a UI is chosen — multi-select of the **OBO/S2S** agents to expose (exclude DW: they route via
@@ -128,7 +137,17 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
    `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and **secondarily** any other existing `ext_*Anon`/
    `ext_*Auth` pair (`a365 develop list-available`) — let the user PICK one and record it into
    `customMcp.existing` (`name`/`servers`/`resourceGroup`/`source`); the scaffolder then **skips
-   deploy+register** and only emits the per-OBO attach. If none is found, point the user to the **Custom
+   deploy+register** and only emits the per-OBO attach. ⛔ **Cross-lab dependency gate** — if the picked
+   pair is **owned by a DIFFERENT lab** (its RG carries `a365lab=<owner>` with `<owner>` ≠ this run's
+   prefix; `discover-environment.ps1` reports this as `labOwner`/`standalone:false`), then IMMEDIATELY
+   after the pick — before any other question — present a single-select gate that spells out the
+   dependency in plain words (e.g. *"lab12b will reuse lab12's custom MCP pair; if lab12 is later torn
+   down, lab12b loses those tools"*) with **Confirm reuse (accept the dependency)** / **Re-select a
+   different existing pair** / **Create a new pair instead**. Only proceed on explicit *Confirm*; on
+   *Re-select* re-run the picker; on *Create* switch `customMcp.mode` to `create` and run the create-new
+   flow. A **standalone/shared** pair (tag `a365component=custom-mcp` but **no** `a365lab`, from the
+   **Custom MCP Creator**) is the intended shared target and does **NOT** trigger the gate — the Lab
+   Cleaner never deletes it. If none is found, point the user to the **Custom
    MCP Creator** (or pick *Create new*). For **Create new**, **do NOT ask a name** (it derives
    from the solution prefix → `ext_<prefix>Anon` / `ext_<prefix>Auth`; the prefix must be ≤ 12
    alphanumerics), ask a publisher name. In **both** modes ask which **OBO** agents to attach to (`ACA-OBO`/`FH-OBO`/`FD-OBO`
