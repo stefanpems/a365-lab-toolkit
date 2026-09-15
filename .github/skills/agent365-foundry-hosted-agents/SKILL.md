@@ -58,7 +58,16 @@ injected as a normal container env var by the deploy.)
   account deployment create … gpt-4.1`) and grants **Cognitive Services User** before `azd deploy`.
 - **FH-DW naming**: the sample hardcodes the agent name in Bicep/scripts (not `azure.yaml`); the
   scaffolder rewrites every occurrence to `<prefix>-FH-DW`. Verify the deployed agent uses the planned
-  name and is not reusing a pre-existing lab agent.
+  name and is not reusing a pre-existing lab agent. **The scaffolder also renames the DW's DEDICATED
+  Foundry account/project/ACR** away from the opaque `dwfh<hash>` defaults to **lab-tied** names (each DW
+  keeps its own — never shared, even with other DWs): the **project** is fully readable (`<base>`, scoped
+  to the account so no global collision), while the **account** (`<base-alnum><uniqueString>acct`) and
+  **ACR** (`<base-alnum><uniqueString>acr`, alphanumeric — ACR forbids hyphens) keep the bicep
+  `uniqueString(resourceGroup().id)` hash because the account FQDN and ACR name are **globally unique**.
+  `<base>` = the agent name when it already carries the prefix (default naming), else `<prefix>-dw-<name>`
+  so a **custom-named** DW still references the lab. Only the GENERATED copy is rewritten; the source
+  template keeps its `dwfh` default (manual clones unaffected). The `.azure` env `ACCOUNT_NAME`/`PROJECT_NAME`
+  outputs still carry the real provisioned names, so `read-logs.ps1` / `roll-instrumented-version.ps1` work unchanged.
 - **FH-DW governed subscription**: the ARM deploymentScript that creates the blueprint needs shared-key
   storage (may be policy-blocked). Use **Solution A** (out-of-band blueprint via
   `scripts/create-agent-blueprint.ps1`), not a policy waiver — see
