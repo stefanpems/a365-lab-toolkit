@@ -110,3 +110,6 @@ in `input` so the agent can answer "who am I?".
 - Prompt agents run the agent loop on the platform — you ship **no code/container**, only the
   definition (model + instructions + tools).
 - OBO here = per-request Mail token via a **structured input** that fills the MCP tool header.
+- **Observability:** FD (prompt) agents have **no** OTEL / Application Insights wiring — they run the
+  platform prompt loop and are deployed via the Azure AI Projects SDK, not the Agent Framework OTEL distro.
+  The Lab Builder's `solution.observability.appInsights` option therefore does **not** apply to FD agents.

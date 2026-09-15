@@ -51,4 +51,17 @@ function Invoke-ScaffoldMcsAgent {
     if ($a.publish) {
         $nextCommands.Add("#   ^ publish '$($a.name)': Copilot Studio -> agent -> (reconfigure user auth if prompted) -> Publish -> Channels -> Teams and Microsoft 365 Copilot -> Availability options -> 'Show to everyone in my org'.")
     }
+
+    # 5) App Insights observability gate (optional). MCS connects App Insights PER-AGENT in Copilot Studio
+    #    (Settings > Advanced > Application Insights) -- NOT via an Azure env var / Foundry-project connection
+    #    like ACA/FH. The resource lives in the AZURE tenant; the agent in the Copilot Studio TARGET tenant
+    #    (cross-tenant is fine: the connection string is just an instrumentation key + ingestion endpoint).
+    $aiTarget = Resolve-AppInsightsTarget $plan
+    if ($aiTarget.mode -ne 'none') {
+        # Ensure the create-shared resource is created even in an MCS-ONLY lab (no ACA/FH agent runs the
+        # create command). Get-AppInsightsCreateCommand is run-once guarded, so a mixed lab emits it just once.
+        foreach ($c in (Get-AppInsightsCreateCommand $plan)) { $nextCommands.Add($c) }
+        $connCmd = "az monitor app-insights component show --app $($aiTarget.name) -g $($aiTarget.resourceGroup) --query connectionString -o tsv"
+        $nextCommands.Add("# APP INSIGHTS (MCS MANUAL GATE for '$($a.name)', do ONCE per agent): 1) in the AZURE tenant get the connection string -> $connCmd  2) in Copilot Studio (https://copilotstudio.microsoft.com, target tenant $tenant) open agent '$($a.name)' -> Settings -> Advanced -> Application Insights, paste the Connection string, optionally enable 'Enable logging' / 'Log conversation details', Save. This per-agent portal step is how an MCS agent gets telemetry (there is NO Azure env var / project connection for MCS). Documented for the standard harness (MCS-OH); MCS-NH (new GitHub Copilot harness) is experimental. The resource '$($aiTarget.name)' can be the SAME lab App Insights used by ACA/FH.")
+    }
 }

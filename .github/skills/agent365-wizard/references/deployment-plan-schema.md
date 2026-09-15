@@ -169,7 +169,10 @@ gitignored.
   (project monitoring) — that project connection has **no supported az one-liner** (portal-only), so the
   scaffolder emits a **manual gate** (Foundry portal → project → Agents → Traces → **Connect**). For
   `reuse-existing` **Foundry** the project is user-owned, so the gate warns that connecting App Insights
-  modifies it. `mode: none` (or omitting the block) preserves all existing labs.
+  modifies it. **MCS** (Copilot Studio) agents connect App Insights **per agent in the Copilot Studio portal**
+  (Settings → Advanced → Application Insights → paste the connection string) — the scaffolder emits a durable
+  per-agent gate (standard harness / MCS-OH documented; MCS-NH experimental; cross-tenant-safe). **FD** agents
+  have no observability wiring. `mode: none` (or omitting the block) preserves all existing labs.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics

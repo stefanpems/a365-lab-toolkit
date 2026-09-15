@@ -13,9 +13,10 @@ agent-framework-foundry-hosting>=1.0.0a260630
 azure-identity
 httpx>=0.24.0
 
-# Observability (Phase 1): A365 span enrichment + Azure Monitor export. Pinned to the
-# same versions the FH-DW sample already ships. The A365 exporter stays OFF here, so no
-# OtelWrite role dependency is introduced.
+# Observability (Phase 2): A365 span enrichment + Azure Monitor export + the A365 observability exporter,
+# which is ENABLED in main.py (a365_enable_observability_exporter=True). Pinned to the same versions the
+# FH-DW sample ships. The exporter needs the Agent365.Observability.OtelWrite app role on the agent
+# identity SP -- see foundry-hosted/scripts/assign-observability-role.ps1 (granted at/after deploy).
 microsoft-opentelemetry>=0.1.0a3
 azure-monitor-opentelemetry>=1.6.0
 

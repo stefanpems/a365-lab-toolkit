@@ -371,12 +371,14 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    Lab Cleaner) or **reuse an existing account+deployment** (`reuse-existing` — only then ask which one);
    for any **FH or FD** ask the **Foundry-resource strategy** ONCE (`solution.foundry`, shared by all
    FH+FD): **create one shared account+project+model** (`create-shared`, **default**) or **reuse an
-   existing account+project** (`reuse-existing`); for any **FH or ACA** ask the **Application Insights
+   existing account+project** (`reuse-existing`); for any **FH, ACA, or MCS** ask the **Application Insights
    strategy** ONCE (`solution.observability.appInsights`, optional, **default `none`**): **create a
    shared lab-owned resource** (`create-shared`), **reuse an existing** (`reuse-existing`), or **skip**
-   (`none`) — state that ACA gets the connection string injected as a container env var while **FH gets
-   it only via a portal project-connection MANUAL GATE**, and that with a `reuse-existing` **Foundry**
-   the FH gate WARNS it modifies the user-owned project; Frontier/licensing for DW; UI permissions.
+   (`none`) — state that ACA gets the connection string injected as a container env var, **FH gets
+   it only via a portal project-connection MANUAL GATE** (and with a `reuse-existing` **Foundry** the FH
+   gate WARNS it modifies the user-owned project), and **MCS gets a per-agent Copilot Studio portal gate**
+   (Settings > Advanced > Application Insights); FD agents have no observability wiring; Frontier/licensing
+   for DW; UI permissions.
 5. **Discovery + review** — run the read-only discovery script; show ONE editable review screen with
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
 6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
@@ -804,8 +806,8 @@ project + model deployment. Two modes:
   Omit `solution.foundry` entirely to keep the legacy per-agent-account behaviour.
 
 ## Application Insights strategy (`solution.observability.appInsights`) — optional OTEL sink
-Ask this ONCE for the whole lab (only if there are FH or ACA agents; **default `none`** so existing labs
-are unchanged). The sample agents already read `APPLICATIONINSIGHTS_CONNECTION_STRING` at startup; this
+Ask this ONCE for the whole lab (only if there are FH, ACA, or MCS agents; **default `none`** so existing
+labs are unchanged). The sample agents already read `APPLICATIONINSIGHTS_CONNECTION_STRING` at startup; this
 option provisions/points the resource and wires it. Three modes:
 - **`create-shared`**: the wizard creates a **lab-owned** Application Insights `<prefix>-appinsights` in
   `<prefix>-appinsights-rg` (the scaffolder emits `az monitor app-insights component create` ONCE ahead of
@@ -824,6 +826,14 @@ option provisions/points the resource and wires it. Three modes:
   portal steps (Foundry portal → project → Agents → Traces → **Connect**), do ONCE per project, then
   redeploy/restart the FH agents. ⛔ **When the Foundry strategy is `reuse-existing` the project is
   user-owned — the gate WARNS that connecting App Insights modifies it; proceed only with consent.**
+- **MCS** agents connect App Insights **per agent in Copilot Studio** (agent → Settings → Advanced →
+  Application Insights → paste the **Connection string** → optionally enable logging → Save) — NOT an Azure
+  env var / Foundry-project connection. The scaffolder emits a durable **MCS manual gate** next-command
+  (get the connection string in the Azure tenant, then paste it in Copilot Studio's target tenant —
+  cross-tenant is fine, it is only an instrumentation key + ingestion endpoint). Documented for the
+  standard harness (MCS-OH); MCS-NH is experimental.
+- **FD** agents (prompt) have **no** OTEL/App Insights wiring — they run the platform prompt loop and are
+  deployed via the Azure AI Projects SDK, not the Agent Framework OTEL distro.
 
 ## Output
 End every turn with a short status: what was decided, what is still open, the exact next action, and

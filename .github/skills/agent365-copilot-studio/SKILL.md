@@ -83,6 +83,26 @@ All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.
 Reconfigure user authentication per agent, re-add icon/description if needed, republish for channels,
 and (NH) confirm PAYG covers the env.
 
+## Observability (Application Insights)
+MCS agents are **not** OTEL code agents — they get telemetry by **connecting an Azure Application Insights
+resource to each agent IN Copilot Studio** (a per-agent portal step; there is NO Azure env var / Foundry
+project connection like the ACA/FH families). This is wired only when the Lab Builder plan sets
+`solution.observability.appInsights` (mode `create-shared` | `reuse-existing`); with `none` (default) it
+is skipped, and the scaffolder emits a durable **MCS manual gate** next-command per agent:
+1. In the **Azure** tenant, read the resource's connection string:
+   `az monitor app-insights component show --app <name> -g <rg> --query connectionString -o tsv`.
+2. In **Copilot Studio** ([copilotstudio.microsoft.com](https://copilotstudio.microsoft.com), the **target**
+   tenant), open the agent → **Settings → Advanced → Application Insights** → paste the **Connection string**
+   → optionally enable **Enable logging** / **Log conversation details** → **Save**.
+- **Cross-tenant is fine**: the App Insights resource lives in the Azure tenant while the agent lives in the
+  Copilot Studio target tenant — the connection string is just an instrumentation key + ingestion endpoint,
+  so the **same lab App Insights** can serve ACA/FH **and** MCS.
+- **Harness support**: connecting App Insights via **Settings → Advanced** is documented for the **standard
+  harness (MCS-OH)**; for **MCS-NH** (new GitHub Copilot harness) it is **experimental** (same caveat as the
+  custom MCP tools).
+- For richer dashboards, the connected resource also feeds the Copilot Agent Kit **Agent Insights Hub**
+  (an optional Dataverse/Power Platform add-on, out of scope here).
+
 ## Lessons (verified this session — keep)
 - Maker-portal export error "Async operations are currently disabled for this organization" ->
   `pac solution export` bypasses it (synchronous path).

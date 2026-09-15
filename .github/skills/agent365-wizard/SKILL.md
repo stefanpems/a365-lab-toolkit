@@ -227,7 +227,7 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
   note for the full root-cause analysis and the external reproduction playbook. **FH-DW keeps its own
   account** (Bot Service + blueprint bicep). FD-only labs must use reuse-existing. Legacy per-agent
   accounts still work if `solution.foundry` is omitted.
-- Any **FH or ACA** → **Application Insights strategy** (`solution.observability.appInsights`), asked
+- Any **FH, ACA, or MCS** → **Application Insights strategy** (`solution.observability.appInsights`), asked
   ONCE for the whole lab (optional; **default `none`** so existing labs are unchanged): **(A) create a
   shared, lab-owned Application Insights** (`create-shared` — `<prefix>-appinsights` in
   `<prefix>-appinsights-rg`, tagged `a365lab`, deleted by the Lab Cleaner via the prefix) **or (B) reuse
@@ -239,6 +239,12 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
   which is a **portal-only** action, so the scaffolder emits a **manual gate** (Foundry portal → project →
   Agents → Traces → **Connect**). ⛔ **If the Foundry strategy is `reuse-existing` (a user-owned project),
   the FH connect gate WARNS that connecting App Insights modifies that project — do it only with consent.**
+  **MCS** agents connect App Insights **per agent in Copilot Studio** (agent → Settings → Advanced →
+  Application Insights → paste the **Connection string** → Save) — the scaffolder emits a durable **MCS
+  manual gate** next-command (standard harness / MCS-OH is documented; MCS-NH is experimental). The same
+  lab App Insights resource can serve every type; MCS is cross-tenant-safe (the connection string is only
+  an instrumentation key + ingestion endpoint). **FD** agents have **no** OTEL/App Insights wiring (they
+  run the platform prompt loop, deployed via the Azure AI Projects SDK, not the Agent Framework distro).
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.
 - **UI** → if exposing OBO: Mail consent (`McpServers.Mail.All`); if exposing ACA-S2S: blueprint
