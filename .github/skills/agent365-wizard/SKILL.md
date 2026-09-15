@@ -239,11 +239,20 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
   which is a **portal-only** action, so the scaffolder emits a **manual gate** (Foundry portal → project →
   Agents → Traces → **Connect**). ⛔ **If the Foundry strategy is `reuse-existing` (a user-owned project),
   the FH connect gate WARNS that connecting App Insights modifies that project — do it only with consent.**
-  **MCS** agents connect App Insights **per agent in Copilot Studio** (agent → Settings → Advanced →
-  Application Insights → paste the **Connection string** → Save) — the scaffolder emits a durable **MCS
-  manual gate** next-command (standard harness / MCS-OH is documented; MCS-NH is experimental). The same
-  lab App Insights resource can serve every type; MCS is cross-tenant-safe (the connection string is only
-  an instrumentation key + ingestion endpoint). **FD** agents have **no** OTEL/App Insights wiring (they
+  **MCS** agents have telemetry on **two** independent sinks — so the baseline is **never** "no telemetry":
+  **(1) Agent 365 observability is ALREADY ON automatically** for every MCS agent (no action; visible in
+  M365 admin center / Defender / Purview; needs an E7 or Agent 365 license in the tenant). **(2) Application
+  Insights is optional/additional**, with two mutually-exclusive scopes: **GLOBAL** (environment-level,
+  *preview*) covers **both** harnesses (OH **and** NH) but **requires the Copilot Studio environment to be a
+  Managed Environment** and is configured **once** in PPAC (export package, type Copilot Studio); **LOCAL**
+  (per-agent → Settings → Advanced → Application Insights → paste the **Connection string** → Save) is
+  **MCS-OH only**. **Invite the user to FIRST evaluate** whether the target env is a Managed Environment
+  and, if so, whether env-level (global) telemetry is **already** configured — if yes, nothing to do (OH &
+  NH covered). **Only if not**, have them choose **global** (if they meet the Managed-Env requirement),
+  **local** (OH only), or **none** (they keep the Agent 365 telemetry). The scaffolder emits this as a
+  durable MCS telemetry decision block; the same lab App Insights resource can serve every type and both
+  scopes; MCS is cross-tenant-safe (the connection string is only an instrumentation key + ingestion
+  endpoint). **FD** agents have **no** OTEL/App Insights wiring (they
   run the platform prompt loop, deployed via the Azure AI Projects SDK, not the Agent Framework distro).
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.

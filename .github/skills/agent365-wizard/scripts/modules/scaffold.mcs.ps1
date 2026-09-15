@@ -52,16 +52,37 @@ function Invoke-ScaffoldMcsAgent {
         $nextCommands.Add("#   ^ publish '$($a.name)': Copilot Studio -> agent -> (reconfigure user auth if prompted) -> Publish -> Channels -> Teams and Microsoft 365 Copilot -> Availability options -> 'Show to everyone in my org'.")
     }
 
-    # 5) App Insights observability gate (optional). MCS connects App Insights PER-AGENT in Copilot Studio
-    #    (Settings > Advanced > Application Insights) -- NOT via an Azure env var / Foundry-project connection
-    #    like ACA/FH. The resource lives in the AZURE tenant; the agent in the Copilot Studio TARGET tenant
-    #    (cross-tenant is fine: the connection string is just an instrumentation key + ingestion endpoint).
+    # 5) Telemetry / observability communication (MCS-specific). MCS agents have TWO independent sinks:
+    #    (a) Agent 365 observability is ALREADY ON automatically (no action) -- visible in M365 admin center /
+    #        Defender / Purview; needs an E7 or Agent 365 license in the tenant.
+    #    (b) Azure Application Insights is OPTIONAL/additional, in two mutually-exclusive scopes:
+    #        GLOBAL = environment-level (preview): covers BOTH harnesses (OH+NH), requires a MANAGED ENVIRONMENT,
+    #        configured ONCE in PPAC (export package type 'Copilot Studio'); LOCAL = per-agent, MCS-OH ONLY.
+    $envLevelDocs = 'https://learn.microsoft.com/microsoft-copilot-studio/advanced-environment-level-agent-telemetry'
+    $nextCommands.Add("# TELEMETRY for '$($a.name)' ($($a.type)): Agent 365 observability is ALREADY ACTIVE automatically -- no action needed (view it in M365 admin center / Defender / Purview; requires an E7 or Agent 365 license in the tenant). Application Insights below is OPTIONAL and ADDITIONAL.")
+    $nextCommands.Add("#   ^ App Insights -- FIRST EVALUATE: is the target Copilot Studio environment '$envId' a MANAGED ENVIRONMENT, and is ENVIRONMENT-LEVEL (global) App Insights telemetry ALREADY configured for it? If YES -> this agent is ALREADY covered (OH and NH) -- do NOTHING. If NOT, choose ONE option below:")
+    if ($harness -eq 'NH') {
+        $nextCommands.Add("#     - GLOBAL (env-level; the ONLY App Insights option for MCS-NH): requires a Managed Environment. Configure ONCE in Power Platform admin center -> environment '$envId' -> Export to Application Insights (export package type 'Copilot Studio'). Covers every agent (OH+NH) in the env. Docs: $envLevelDocs")
+        $nextCommands.Add("#     - NONE: skip App Insights and keep ONLY the Agent 365 telemetry above. (Per-agent LOCAL telemetry is NOT available for the GitHub Copilot harness / MCS-NH.)")
+    }
+    else {
+        $nextCommands.Add("#     - GLOBAL (env-level, preview): requires a Managed Environment; covers OH+NH at once. Configure ONCE in PPAC -> environment '$envId' -> Export to Application Insights (package type 'Copilot Studio'). Docs: $envLevelDocs")
+        $nextCommands.Add("#     - LOCAL (per-agent, MCS-OH only): connect THIS agent to App Insights in Copilot Studio (concrete steps below, if a lab App Insights resource is configured).")
+        $nextCommands.Add("#     - NONE: skip App Insights and keep ONLY the Agent 365 telemetry above.")
+    }
+    # Concrete commands only when a lab App Insights resource exists (create-shared / reuse-existing). The
+    # SAME resource serves the LOCAL per-agent connection (OH) and the GLOBAL env-level export target.
     $aiTarget = Resolve-AppInsightsTarget $plan
     if ($aiTarget.mode -ne 'none') {
         # Ensure the create-shared resource is created even in an MCS-ONLY lab (no ACA/FH agent runs the
         # create command). Get-AppInsightsCreateCommand is run-once guarded, so a mixed lab emits it just once.
         foreach ($c in (Get-AppInsightsCreateCommand $plan)) { $nextCommands.Add($c) }
         $connCmd = "az monitor app-insights component show --app $($aiTarget.name) -g $($aiTarget.resourceGroup) --query connectionString -o tsv"
-        $nextCommands.Add("# APP INSIGHTS (MCS MANUAL GATE for '$($a.name)', do ONCE per agent): 1) in the AZURE tenant get the connection string -> $connCmd  2) in Copilot Studio (https://copilotstudio.microsoft.com, target tenant $tenant) open agent '$($a.name)' -> Settings -> Advanced -> Application Insights, paste the Connection string, optionally enable 'Enable logging' / 'Log conversation details', Save. This per-agent portal step is how an MCS agent gets telemetry (there is NO Azure env var / project connection for MCS). Documented for the standard harness (MCS-OH); MCS-NH (new GitHub Copilot harness) is experimental. The resource '$($aiTarget.name)' can be the SAME lab App Insights used by ACA/FH.")
+        if ($harness -eq 'OH') {
+            $nextCommands.Add("# APP INSIGHTS -- LOCAL (per-agent) for '$($a.name)' [MCS-OH], do ONCE: 1) in the AZURE tenant get the connection string -> $connCmd  2) in Copilot Studio (https://copilotstudio.microsoft.com, target tenant $tenant) open agent '$($a.name)' -> Settings -> Advanced -> Application Insights, paste the Connection string, optionally enable 'Enable logging' / 'Log conversation details', Save. Resource '$($aiTarget.name)' can be the SAME lab App Insights used by ACA/FH and the SAME target for the GLOBAL env-level export.")
+        }
+        else {
+            $nextCommands.Add("# APP INSIGHTS -- for '$($a.name)' [MCS-NH] use the GLOBAL env-level export only; point the PPAC export package at the lab resource. Get its connection string with -> $connCmd  (per-agent LOCAL is NOT available for NH).")
+        }
     }
 }

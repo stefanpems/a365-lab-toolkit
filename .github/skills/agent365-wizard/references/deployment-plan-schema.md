@@ -169,9 +169,14 @@ gitignored.
   (project monitoring) — that project connection has **no supported az one-liner** (portal-only), so the
   scaffolder emits a **manual gate** (Foundry portal → project → Agents → Traces → **Connect**). For
   `reuse-existing` **Foundry** the project is user-owned, so the gate warns that connecting App Insights
-  modifies it. **MCS** (Copilot Studio) agents connect App Insights **per agent in the Copilot Studio portal**
-  (Settings → Advanced → Application Insights → paste the connection string) — the scaffolder emits a durable
-  per-agent gate (standard harness / MCS-OH documented; MCS-NH experimental; cross-tenant-safe). **FD** agents
+  modifies it. **MCS** (Copilot Studio) agents have telemetry on **two** independent sinks: **Agent 365
+  observability is ALREADY ON automatically** (no action; M365 admin center / Defender / Purview; needs an
+  E7 or Agent 365 license) and, **optionally**, **Application Insights** in one of two scopes — **GLOBAL**
+  (environment-level, *preview*; covers **both** OH **and** NH; **requires a Managed Environment**;
+  configured once in PPAC as an export package of type Copilot Studio) or **LOCAL** (per-agent → Settings →
+  Advanced → Application Insights; **MCS-OH only**). The scaffolder emits a durable MCS telemetry decision
+  block that invites the user to first check whether the env is Managed / already globally instrumented,
+  then pick global / local / none (cross-tenant-safe). **FD** agents
   have no observability wiring. `mode: none` (or omitting the block) preserves all existing labs.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
