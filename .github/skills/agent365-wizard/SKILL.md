@@ -227,6 +227,18 @@ Driven by [references/variant-matrix.md](./references/variant-matrix.md):
   note for the full root-cause analysis and the external reproduction playbook. **FH-DW keeps its own
   account** (Bot Service + blueprint bicep). FD-only labs must use reuse-existing. Legacy per-agent
   accounts still work if `solution.foundry` is omitted.
+- Any **FH or ACA** → **Application Insights strategy** (`solution.observability.appInsights`), asked
+  ONCE for the whole lab (optional; **default `none`** so existing labs are unchanged): **(A) create a
+  shared, lab-owned Application Insights** (`create-shared` — `<prefix>-appinsights` in
+  `<prefix>-appinsights-rg`, tagged `a365lab`, deleted by the Lab Cleaner via the prefix) **or (B) reuse
+  an existing resource** (`reuse-existing` — the user gives `existingName` + `existingResourceGroup`;
+  never deleted) **or (C) skip** (`none`). State the host-specific wiring so expectations are correct:
+  **ACA** agents get `APPLICATIONINSIGHTS_CONNECTION_STRING` injected into the container (a deploy-time
+  `az monitor app-insights component show` — never stored in the plan); **FH** agents get the
+  *platform-reserved* connection string **only when the resource is CONNECTED to the Foundry project**,
+  which is a **portal-only** action, so the scaffolder emits a **manual gate** (Foundry portal → project →
+  Agents → Traces → **Connect**). ⛔ **If the Foundry strategy is `reuse-existing` (a user-owned project),
+  the FH connect gate WARNS that connecting App Insights modifies that project — do it only with consent.**
 - Any **DW** (ACA-DW / FH-DW) → confirm Frontier/Agent 365 enrollment, license capacity, policy
   template choice. Surface the portal steps as verifiable checkpoints.
 - **UI** → if exposing OBO: Mail consent (`McpServers.Mail.All`); if exposing ACA-S2S: blueprint

@@ -40,6 +40,18 @@ The `PrincipalId` is the SP objectId the exporter presents (the one named in a `
 observability endpoint). Without the grant the agent still runs — telemetry to A365 is simply
 skipped (App Insights export is unaffected). See [setup-MAF-FH-OBO.md](../../../docs/setup-MAF-FH-OBO.md) §5.
 
+**Application Insights via the wizard (`solution.observability.appInsights`).** The Azure Monitor
+export above only fires when Foundry injects `APPLICATIONINSIGHTS_CONNECTION_STRING`, and Foundry
+injects it **only when an Application Insights resource is connected to the project** (project
+monitoring). The Lab Builder can provision/point that resource (`create-shared` = a lab-owned
+`<prefix>-appinsights`, `reuse-existing` = an existing one, `none` = default/off), but the
+project↔App Insights link itself is **portal-only** — there is no supported `az` one-liner — so the
+scaffolder emits a **manual gate**: Foundry portal → project → **Agents → Traces → Connect** (or
+Manage → Project details → Connected resources → Add connection), then redeploy/restart the FH agents.
+⛔ For a `reuse-existing` **Foundry** project (user-owned), connecting App Insights **modifies that
+project** — do it only with the owner's consent. (ACA agents instead get the connection string
+injected as a normal container env var by the deploy.)
+
 ## Known corrections (apply these)
 - **FH-OBO/FH-S2S 404 `DeploymentNotFound`**: `azd provision` does **not** create the model deployment
   nor grant data-plane RBAC. The generated next-command creates the model (`az cognitiveservices

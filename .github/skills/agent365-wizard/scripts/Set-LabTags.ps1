@@ -193,6 +193,10 @@ if ($plan -and $plan.solution.foundry -and $plan.solution.foundry.mode -eq 'crea
 if ($plan -and $plan.solution.azureOpenAI -and $plan.solution.azureOpenAI.mode -eq 'create-shared') {
     Set-RgTag -Rg $(if ($plan.solution.azureOpenAI.resourceGroup) { $plan.solution.azureOpenAI.resourceGroup } else { "$Prefix-aoai-rg" })
 }
+# Shared App Insights (create-shared only — reuse-existing is user-owned, never tag).
+if ($plan -and $plan.solution.observability -and $plan.solution.observability.appInsights -and $plan.solution.observability.appInsights.mode -eq 'create-shared') {
+    Set-RgTag -Rg $(if ($plan.solution.observability.appInsights.resourceGroup) { $plan.solution.observability.appInsights.resourceGroup } else { "$Prefix-appinsights-rg" })
+}
 
 # Web UI (create mode): the UI RG + the SPA app registration.
 if ($plan -and $plan.ui -and $plan.ui.mode -eq 'create') {

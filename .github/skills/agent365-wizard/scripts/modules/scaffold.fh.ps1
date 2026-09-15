@@ -18,6 +18,13 @@ function Invoke-ScaffoldFhAgent {
     # src/. Custom ext_ are appended later by `a365 develop add-mcp-servers` (see scaffold.tools.ps1).
     $fhManifest = if ($a.type -eq 'FH-DW') { Join-Path $dst 'src\hello_world_a365_agent\ToolingManifest.json' } else { Join-Path $dst 'ToolingManifest.json' }
     Set-ToolingManifest -Path $fhManifest -Tools @($a.tools)
+    # App Insights (optional): emit the one-time create-shared resource command + the one-time FH manual
+    # gate to connect it to the Foundry project (the reserved connection string is platform-injected only
+    # when the App Insights resource is connected to the project). No-op when observability is 'none'.
+    if ((Resolve-AppInsightsTarget $plan).mode -ne 'none') {
+        foreach ($c in (Get-AppInsightsCreateCommand $plan)) { $nextCommands.Add($c) }
+        foreach ($c in (Get-AppInsightsFhGate $plan (Resolve-FoundryTarget $plan $a))) { $nextCommands.Add($c) }
+    }
     if ($a.type -ne 'FH-DW') {
         $envPath = Join-Path $dst '.env'
         $proto = if ($a.type -eq 'FH-S2S') { 'responses' } else { 'invocations' }

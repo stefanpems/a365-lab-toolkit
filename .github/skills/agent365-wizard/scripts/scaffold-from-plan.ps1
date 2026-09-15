@@ -225,6 +225,20 @@ if ($plan.solution.azureOpenAI) {
     }
 }
 
+# Observability / App Insights strategy (optional solution.observability.appInsights). When present, the
+# sample agents' OpenTelemetry exports to an Application Insights resource. none = no-op (default);
+# create-shared = the wizard creates a lab-owned resource (deleted by the Lab Cleaner); reuse-existing =
+# an existing user-owned resource (never touched). Absent = unchanged (no observability wiring).
+if ($plan.solution.observability -and $plan.solution.observability.appInsights) {
+    $ai = $plan.solution.observability.appInsights
+    if ($ai.mode -notin @('none', 'create-shared', 'reuse-existing')) {
+        $errors.Add("solution.observability.appInsights.mode '$($ai.mode)' is invalid (use 'none' = no wiring, 'create-shared' = the wizard creates one lab-owned Application Insights for the lab, or 'reuse-existing' = wire the agents to an Application Insights you already have).")
+    }
+    if ($ai.mode -eq 'reuse-existing' -and (-not $ai.existingName -or -not $ai.existingResourceGroup)) {
+        $errors.Add("solution.observability.appInsights.mode 'reuse-existing' requires 'existingName' + 'existingResourceGroup' (the existing Application Insights resource and its resource group, so the deploy can resolve its connection string / connect it to the Foundry project).")
+    }
+}
+
 # Web UI validation. 'attach' targets an EXISTING (possibly shared) SWA and must name it so the deploy
 # flow can surgically merge tabs (Add-WebUiTab.ps1) instead of regenerating config.js.
 if ($plan.ui -and $plan.ui.mode -eq 'attach') {

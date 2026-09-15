@@ -139,7 +139,16 @@ gives the Playground URL and the **Invocations endpoint** (shape:
 
 ## 5. Observability
 
-Foundry auto-injects `APPLICATIONINSIGHTS_CONNECTION_STRING`. For the A365 exporter, assign
+Foundry auto-injects `APPLICATIONINSIGHTS_CONNECTION_STRING` **only when an Application Insights
+resource is connected to the project** (project monitoring). To connect it: Foundry portal → your
+project → **Agents → Traces → Connect** (or Manage → Project details → Connected resources → Add
+connection), pick/create the resource, **Connect**, then redeploy/restart the agent. The Lab Builder
+can provision or point to that resource with `solution.observability.appInsights`
+(`create-shared` | `reuse-existing` | `none`) and emits this connect step as a **manual gate** —
+the project↔App Insights link is portal-only (no supported `az` one-liner). ⛔ For a **reuse-existing**
+Foundry project (user-owned), connecting App Insights **modifies that project** — do it only with consent.
+
+For the A365 exporter, assign
 the app role **`Agent365.Observability.OtelWrite`** (`8f71190c-00c8-461d-a63b-f74abde9ba52`) to
 the **agent identity SP**, resource = the **`Agent365Observability`** SP
 (objId, e.g. `4cc9c6a8-…`):

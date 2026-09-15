@@ -371,7 +371,12 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    Lab Cleaner) or **reuse an existing account+deployment** (`reuse-existing` — only then ask which one);
    for any **FH or FD** ask the **Foundry-resource strategy** ONCE (`solution.foundry`, shared by all
    FH+FD): **create one shared account+project+model** (`create-shared`, **default**) or **reuse an
-   existing account+project** (`reuse-existing`); Frontier/licensing for DW; UI permissions.
+   existing account+project** (`reuse-existing`); for any **FH or ACA** ask the **Application Insights
+   strategy** ONCE (`solution.observability.appInsights`, optional, **default `none`**): **create a
+   shared lab-owned resource** (`create-shared`), **reuse an existing** (`reuse-existing`), or **skip**
+   (`none`) — state that ACA gets the connection string injected as a container env var while **FH gets
+   it only via a portal project-connection MANUAL GATE**, and that with a `reuse-existing` **Foundry**
+   the FH gate WARNS it modifies the user-owned project; Frontier/licensing for DW; UI permissions.
 5. **Discovery + review** — run the read-only discovery script; show ONE editable review screen with
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
 6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
@@ -797,6 +802,28 @@ project + model deployment. Two modes:
 - **FH-DW always keeps its own account** (Bot Service + managed-agent-identity blueprint bicep). FD-only
   labs must use `reuse-existing` (a prompt agent has no azd project to provision a shared account from).
   Omit `solution.foundry` entirely to keep the legacy per-agent-account behaviour.
+
+## Application Insights strategy (`solution.observability.appInsights`) — optional OTEL sink
+Ask this ONCE for the whole lab (only if there are FH or ACA agents; **default `none`** so existing labs
+are unchanged). The sample agents already read `APPLICATIONINSIGHTS_CONNECTION_STRING` at startup; this
+option provisions/points the resource and wires it. Three modes:
+- **`create-shared`**: the wizard creates a **lab-owned** Application Insights `<prefix>-appinsights` in
+  `<prefix>-appinsights-rg` (the scaffolder emits `az monitor app-insights component create` ONCE ahead of
+  the agent deploys). `Set-LabTags.ps1` tags the RG `a365lab`; the Lab Cleaner deletes it via the prefix
+  (App Insights does **not** soft-delete, so no purge is needed).
+- **`reuse-existing`**: wire to an existing **user-owned** resource (`existingName`/`existingResourceGroup`);
+  cleanup never touches it.
+- **`none`** (or omit the block): no wiring.
+⛔ **Host-specific wiring (grounded in Microsoft Learn — do NOT fabricate a Foundry-connection CLI):**
+- **ACA** agents read the connection string as a normal container env var, so the scaffolder emits a
+  post-deploy `az containerapp update --set-env-vars APPLICATIONINSIGHTS_CONNECTION_STRING=<resolved>`
+  (resolved at deploy time via `az monitor app-insights component show`; **never** stored in the plan).
+- **FH** agents get the **platform-reserved** `APPLICATIONINSIGHTS_CONNECTION_STRING` **only when the
+  App Insights resource is CONNECTED to the Foundry project** (project monitoring). That project connection
+  is **portal-only** (no supported `az` one-liner), so the scaffolder emits a **MANUAL GATE** with the exact
+  portal steps (Foundry portal → project → Agents → Traces → **Connect**), do ONCE per project, then
+  redeploy/restart the FH agents. ⛔ **When the Foundry strategy is `reuse-existing` the project is
+  user-owned — the gate WARNS that connecting App Insights modifies it; proceed only with consent.**
 
 ## Output
 End every turn with a short status: what was decided, what is still open, the exact next action, and

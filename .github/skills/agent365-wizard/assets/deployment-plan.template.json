@@ -32,6 +32,16 @@
       "modelVersion": "2025-04-14",
       "auth": "managed-identity",
       "existingResourceGroup": ""
+    },
+    "$comment_observability": "OPTIONAL — wires the sample agents' OpenTelemetry to an Application Insights resource. appInsights.mode 'none' (DEFAULT / omit the block = no wiring, backward compatible) | 'create-shared' (the wizard creates a LAB-OWNED Application Insights '<SOLUTION_PREFIX>-appinsights' in <SOLUTION_PREFIX>-appinsights-rg, deleted by the Lab Cleaner via the prefix) | 'reuse-existing' (wire to an existing user-owned resource via existingResourceGroup/existingName; never deleted). ACA agents get the connection string injected as a container env var; FH agents get it from the platform ONLY when the resource is CONNECTED to the Foundry PROJECT (portal-only project connection — the scaffolder emits a manual gate).",
+    "observability": {
+      "appInsights": {
+        "mode": "none",
+        "resourceGroup": "<SOLUTION_PREFIX>-appinsights-rg",
+        "name": "<SOLUTION_PREFIX>-appinsights",
+        "existingResourceGroup": "",
+        "existingName": ""
+      }
     }
   },
   "agents": [

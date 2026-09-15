@@ -37,6 +37,15 @@ gitignored.
       "auth": "managed-identity",         // "managed-identity" (default) | "api-key"
       "existingResourceGroup": "<name>"   // reuse-existing: RG of the chosen existing account
     },
+    "observability": {                    // OPTIONAL — wire the sample agents' OpenTelemetry to Application Insights
+      "appInsights": {
+        "mode": "none",                   // "none" (default/omit = no wiring) | "create-shared" (lab-owned resource) | "reuse-existing" (existing user-owned resource)
+        "resourceGroup": "<prefix>-appinsights-rg", // create-shared: dedicated lab-owned RG (deleted by the Lab Cleaner via the prefix)
+        "name": "<prefix>-appinsights",   // create-shared: the Application Insights resource name
+        "existingResourceGroup": "<name>",// reuse-existing: RG of the existing resource
+        "existingName": "<name>"          // reuse-existing: the existing Application Insights resource name
+      }
+    },
     "copilotStudio": {                    // REQUIRED when any MCS agent is planned (Copilot Studio target)
       "targetTenantId": "<guid>",         // the Copilot Studio target tenant (often NOT the az tenant; cross-tenant is the norm)
       "targetEnvironmentId": "<guid>"     // the target PP environment GUID — REQUIRED for MCS-NH (must be PAYG + Dataverse + Copilot Studio); MCS-OH can use any Dataverse env
@@ -147,6 +156,20 @@ gitignored.
   `existingResourceGroup`), with **no** creation, and cleanup never touches it. Each deploy grants the app's
   managed identity **Cognitive Services OpenAI User** on the resolved account. When the block is **absent**,
   the legacy per-agent `ai.account`/`ai.deployment` behaviour is unchanged.
+- `solution.observability.appInsights` (optional) wires the sample agents' **OpenTelemetry** to an
+  **Application Insights** resource (the agents already read `APPLICATIONINSIGHTS_CONNECTION_STRING` at
+  startup). `mode` = `none` (**default**, or omit the block — no wiring, backward compatible) | `create-shared`
+  (the wizard creates a **lab-owned** resource `<prefix>-appinsights` in `<prefix>-appinsights-rg`, tagged
+  `a365lab` and deleted by the Lab Cleaner via the prefix like `<prefix>-foundry-rg`) | `reuse-existing`
+  (wire to an existing **user-owned** resource `existingName`/`existingResourceGroup`; cleanup never touches
+  it). The wiring is host-specific (grounded in Microsoft Learn): **ACA** agents get the connection string
+  injected into the container as a normal env var (resolved at deploy time via `az monitor app-insights
+  component show`; **never** stored in the secret-free plan). **FH** agents get the *platform-reserved*
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` **only when the resource is CONNECTED to the Foundry project**
+  (project monitoring) — that project connection has **no supported az one-liner** (portal-only), so the
+  scaffolder emits a **manual gate** (Foundry portal → project → Agents → Traces → **Connect**). For
+  `reuse-existing` **Foundry** the project is user-owned, so the gate warns that connecting App Insights
+  modifies it. `mode: none` (or omitting the block) preserves all existing labs.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics

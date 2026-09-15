@@ -231,6 +231,69 @@ function Get-SharedAoaiProvisioner {
     ($plan.agents | Where-Object { $_.type -like 'ACA-*' } | Select-Object -First 1).name
 }
 
+# ---------------------------------------------------------------- Observability / App Insights (optional)
+# solution.observability.appInsights wires the sample agents' OpenTelemetry to an Application Insights
+# resource. Modes: 'none' (default / absent = no-op, backward compatible) | 'create-shared' (the wizard
+# creates a LAB-OWNED App Insights <prefix>-appinsights in <prefix>-appinsights-rg, deleted by the Lab
+# Cleaner via the prefix) | 'reuse-existing' (an existing user-owned resource; cleanup never touches it).
+# Wiring differs by host (grounded in MS Learn):
+#   * ACA agents read APPLICATIONINSIGHTS_CONNECTION_STRING as a normal container env var -> the deploy
+#     injects it (resolved at deploy time via 'az monitor app-insights component show'; never stored in
+#     the secret-free plan).
+#   * FH agents get it from the PLATFORM: Foundry injects the reserved APPLICATIONINSIGHTS_CONNECTION_STRING
+#     into hosted containers ONLY when the App Insights resource is CONNECTED to the Foundry PROJECT
+#     (project monitoring). That project connection has NO supported az one-liner (portal-only), so the
+#     scaffolder emits a MANUAL GATE with the exact portal steps rather than a fabricated command.
+$script:AppInsightsResourceEmitted = $false
+$script:AppInsightsFhGateEmitted   = $false
+
+# Resolve the effective App Insights target from solution.observability.appInsights.
+function Resolve-AppInsightsTarget {
+    param($plan)
+    $t = [ordered]@{ mode = 'none'; resourceGroup = $null; name = $null }
+    $ai = if ($plan.solution.observability) { $plan.solution.observability.appInsights } else { $null }
+    if ($ai -and $ai.mode) {
+        $t.mode = $ai.mode
+        if ($ai.mode -eq 'create-shared') {
+            $t.resourceGroup = if ($ai.resourceGroup) { $ai.resourceGroup } else { "$($plan.solution.prefix)-appinsights-rg" }
+            $t.name          = if ($ai.name) { $ai.name } else { "$($plan.solution.prefix)-appinsights" }
+        }
+        elseif ($ai.mode -eq 'reuse-existing') {
+            $t.resourceGroup = $ai.existingResourceGroup
+            $t.name          = $ai.existingName
+        }
+    }
+    return $t
+}
+
+# ONE-TIME create-shared App Insights resource-creation command (empty array if none/reuse-existing/already emitted).
+function Get-AppInsightsCreateCommand {
+    param($plan)
+    $ai = Resolve-AppInsightsTarget $plan
+    if ($ai.mode -ne 'create-shared' -or $script:AppInsightsResourceEmitted) { return @() }
+    $script:AppInsightsResourceEmitted = $true
+    $r = $plan.solution.region
+    return @("az extension add -n application-insights -o none; az group create -n $($ai.resourceGroup) -l $r -o none; az monitor app-insights component create --app $($ai.name) -g $($ai.resourceGroup) -l $r --application-type web --kind web -o none   # SHARED App Insights (create-shared): the lab's ONE Application Insights '$($ai.name)' in '$($ai.resourceGroup)' (lab-owned; run Set-LabTags to tag it, deleted by the Lab Cleaner via the '$($plan.solution.prefix)' prefix). Run ONCE before wiring the agents below.")
+}
+
+# az expression resolving the App Insights connection string at deploy time (ACA env injection).
+function Get-AppInsightsConnExpr {
+    param($ai)
+    "(az monitor app-insights component show --app $($ai.name) -g $($ai.resourceGroup) --query connectionString -o tsv)"
+}
+
+# ONE-TIME FH manual gate: connect the App Insights resource to the Foundry project so the platform
+# injects APPLICATIONINSIGHTS_CONNECTION_STRING into the hosted containers. $ft = Resolve-FoundryTarget.
+function Get-AppInsightsFhGate {
+    param($plan, $ft)
+    $ai = Resolve-AppInsightsTarget $plan
+    if ($ai.mode -eq 'none' -or $script:AppInsightsFhGateEmitted) { return @() }
+    $script:AppInsightsFhGateEmitted = $true
+    $proj = if ($ft.project) { "'$($ft.project)'" } else { 'the shared Foundry project' }
+    $ownWarn = if ($ft.mode -eq 'reuse-existing') { ' [!] This project is USER-OWNED (foundry reuse-existing) - connecting App Insights modifies it; do this only if you own it / have consent.' } else { '' }
+    return @("# APP INSIGHTS (FH MANUAL GATE, do ONCE per project): Foundry injects the platform-reserved APPLICATIONINSIGHTS_CONNECTION_STRING into hosted agent containers ONLY when an Application Insights resource is CONNECTED to the Foundry PROJECT (project monitoring). There is NO supported az one-liner for this connection. Connect '$($ai.name)' (RG $($ai.resourceGroup)) to $proj in the Foundry portal (https://ai.azure.com): open the project > Agents > Traces > Connect (or Manage > Project details > Connected resources > Add connection), pick the App Insights resource, Connect. Then redeploy/restart the FH agents so they pick up the injected connection string.$ownWarn")
+}
+
 # ---------------------------------------------------------------- ToolingManifest reconciler
 # Make a scaffolded ToolingManifest.json AUTHORITATIVE: keep exactly the servers whose uniqueName is
 # in $Tools, drop the rest. The samples ship `mcp_MailTools`, so this KEEPS Mail when selected and
