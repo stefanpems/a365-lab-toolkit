@@ -36,8 +36,11 @@ function Invoke-ScaffoldMcsAgent {
     }
 
     # 2) Build + import the agent (transform base zip -> pac import --publish-changes). -InstallPac installs
-    #    pac if missing; the target-tenant sign-in is interactive (browser).
-    $nextCommands.Add("pwsh -File `"$csScripts\New-McsAgent.ps1`" -Harness $($a.type) -DisplayName `"$($a.name)`" -Tenant `"$tenant`" -EnvironmentId `"$envId`" -InstallPac$pubFlag   # transform base zip + pac solution import --publish-changes (browser sign-in to the target tenant)")
+    #    pac if missing; the target-tenant sign-in is interactive (browser). -IsolateSchemaName rewrites the
+    #    bot SCHEMA token (default 'new_AgentOH2' / 'cr47b_agentnh2_URxM4c') to one derived from this agent's
+    #    unique solution name, so 2+ same-harness MCS agents in ONE environment become DISTINCT bots instead
+    #    of colliding on the shared base schema at import (the base token is identical across the base zip).
+    $nextCommands.Add("pwsh -File `"$csScripts\New-McsAgent.ps1`" -Harness $($a.type) -DisplayName `"$($a.name)`" -Tenant `"$tenant`" -EnvironmentId `"$envId`" -IsolateSchemaName -InstallPac$pubFlag   # transform base zip (UNIQUE bot schema name per agent) + pac solution import --publish-changes (browser sign-in to the target tenant)")
 
     # 3) Optional MCP tool integration via the A365 tool gateway (Entra client app + guided Copilot Studio step).
     if ($mcp) {

@@ -39,9 +39,13 @@ for every MCS agent (captured from a source tenant; re-extract with `Export-McsB
   Copilot Studio** and get its **Environment ID**; verify with `Test-McsPrereqs.ps1 -Harness MCS-NH
   -EnvironmentId <id>`. Without credits the agent fails at preview with `EnforcementUsageCredits`. **MCS-OH
   has no such prerequisite.**
-- **Rename only the DISPLAY name** by default (validated path). Never rewrite the bot schema token unless
-  isolating multiple same-harness agents in ONE env (`-IsolateSchemaName`). The solution unique+friendly
-  name is always rewritten so solutions coexist.
+- **Rename the DISPLAY name + the bot SCHEMA token.** The Lab Builder wizard now passes `-IsolateSchemaName`
+  so every MCS agent gets a UNIQUE bot schema (derived from its solution unique name) — required so 2+
+  same-harness agents in ONE environment become distinct bots instead of colliding on the shared base
+  token (`new_AgentOH2` / `cr47b_agentnh2_URxM4c`) at import. The solution unique+friendly name is always
+  rewritten too. (Manual `New-McsAgent.ps1` runs still default to display-name-only unless you pass
+  `-IsolateSchemaName`; this only governs the bot schema, NOT where Copilot Studio stores per-env settings
+  such as the Application Insights connection string, which live at environment/service scope.)
 - **Secrets never in chat.** The MCP client-app secret is written to a gitignored `*.secret.txt` file, never
   printed. Do not read it back.
 - **STOP before any cross-tenant import** and confirm the target tenant/environment with the user.
