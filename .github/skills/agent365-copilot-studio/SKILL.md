@@ -113,7 +113,17 @@ is skipped, and the scaffolder emits a durable **MCS manual gate** next-command 
 - `pac solution import --path <zip> --environment <orgUrl> --publish-changes` imports without switching the
   active profile.
 - MCS-NH `EnforcementUsageCredits` = env not linked to PAYG / no Copilot Credits. MCS-OH never hits this.
-
+- **`New-McsMcpClientApp.ps1` is RUN-ONCE per lab**: it reuses the Entra app by display name but
+  **resets the client secret on every run**, so calling it per agent invalidates the secret for
+  already-wired agents. Run it once (e.g. `-Tools Mail Anon Auth -McpPrefix <pair>`), reuse the same
+  client id + gitignored secret in every agent's Copilot Studio MCP wizard, and add each tool's callback
+  URL as a Web redirect URI on that one app. (The scaffolder emits it once per MCS agent — collapse to one.)
+- **MCS-only lab wanting anon/auth**: there is no OBO agent to attach a custom pair to, so set
+  `customMcp.mode=attach` with `existing.name=<pair>` and `attachTo: []`. This repoints the scaffolder's
+  `$McpBaseName` to the reused pair so `New-McsMcpClientApp -McpPrefix <pair>` targets `ext_<pair>Anon/Auth`,
+  and emits the per-user Power Platform connection URLs. The validator allows empty `attachTo` only when
+  MCS agents request anon/auth (see deployment-plan-schema.md). The reused pair must be admin-approved and
+  its containers live; auth token-forwarding from an MCS agent is experimental/unverified.
 Canonical references: [references/system-instructions.md](references/system-instructions.md),
 [references/mcp-integration-feasibility.md](references/mcp-integration-feasibility.md). The cross-tenant
 lessons also live in workspace memory `repo/copilot-studio-cross-tenant.md`.

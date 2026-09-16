@@ -27,13 +27,20 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Mail', 'Anon', 'Auth')][string[]]$Tools = @('Mail'),
+    [string[]]$Tools = @('Mail'),
     [string]$AppName = 'MCS MCP Client (ATG)',
     [string]$Tenant,
     [string]$McpPrefix,
     [string]$OutDir
 )
 $ErrorActionPreference = 'Stop'
+
+# Normalize -Tools: accept both an array (in-session call) and a single comma-separated string (the only
+# form that survives `pwsh -File -Tools Mail,Anon,Auth`, where the whole token arrives as one string).
+$Tools = @($Tools | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$validTools = @('Mail', 'Anon', 'Auth')
+$badTools = @($Tools | Where-Object { $_ -notin $validTools })
+if ($badTools) { throw "Invalid -Tools value(s): $($badTools -join ', '). Valid: $($validTools -join ', ')." }
 
 $ATG_APP_ID = 'ea9ffc3e-8a23-4a7d-836d-234d7c7565c1'   # Agent 365 Tooling Gateway (first-party)
 # Delegated scope per selected tool. Mail is confirmed; custom BYO servers reuse the ATG /.default scope

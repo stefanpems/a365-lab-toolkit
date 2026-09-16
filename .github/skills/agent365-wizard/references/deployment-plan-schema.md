@@ -205,6 +205,11 @@ gitignored.
   `discover-environment.ps1` / `Find-StandaloneComponents.ps1 -Kind custom-mcp`) and **secondarily** from any
   other existing `ext_*Anon`/`ext_*Auth` pair (`a365 develop list-available`). In attach mode the prefix
   need **not** encode the MCP name (the ext_ names come from `existing.name`), and `publisher` is ignored.
+  `attach` normally requires a non-empty `attachTo`, **except in an MCS-only lab**: when the plan has no
+  OBO agents but has **MCS agents whose `mcp` requests `anon`/`auth`**, `attachTo` may be `[]` — the reused
+  pair is there only to source the ext_ prefix for the Copilot Studio MCP wizard (`New-McsMcpClientApp
+  -McpPrefix <existing.name>`) and to emit the per-user Power Platform connection URLs; MCS agents wire the
+  tool in Copilot Studio, not via `add-mcp-servers`.
 - **The scaffold folder is `generated/<prefix>/`** — every folder for a run (each `<agent-name>`, the
   `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP) lives under that single per-run root. To run the
   wizard N times and create N coexisting copies, give each run a **different prefix** (the wizard checks

@@ -267,7 +267,14 @@ if ($plan.customMcp -and $plan.customMcp.enabled) {
             }
         }
         if (@($plan.customMcp.attachTo).Count -eq 0) {
-            $errors.Add("customMcp.mode 'attach' with an empty customMcp.attachTo has nothing to do — list the OBO agent(s) (ACA-OBO / FH-OBO / FD-OBO) to attach the existing pair to.")
+            # Empty attachTo is normally a no-op error. EXCEPTION: an MCS-only lab may reuse an existing
+            # pair purely to source anon/auth for its Copilot Studio agents (agents[].mcp = anon/auth),
+            # which are wired via New-McsMcpClientApp -McpPrefix (Copilot Studio portal), NOT via
+            # add-mcp-servers on an OBO agent. In that case the pair legitimately has no OBO attach target.
+            $mcsAnonAuth = @($plan.agents | Where-Object { ($_.type -like 'MCS-*') -and (@($_.mcp | Where-Object { $_ -in @('anon', 'auth') }).Count -gt 0) })
+            if ($mcsAnonAuth.Count -eq 0) {
+                $errors.Add("customMcp.mode 'attach' with an empty customMcp.attachTo has nothing to do — list the OBO agent(s) (ACA-OBO / FH-OBO / FD-OBO) to attach the existing pair to (or, for an MCS-only lab, add MCS agents whose 'mcp' requests anon/auth so the reused pair supplies them via the Copilot Studio MCP wizard).")
+            }
         }
     }
     if ($plan.customMcp.integrationMode -and ($plan.customMcp.integrationMode -notin @('approve-first', 'attach-when-approved'))) {

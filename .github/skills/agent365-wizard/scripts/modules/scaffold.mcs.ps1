@@ -41,9 +41,12 @@ function Invoke-ScaffoldMcsAgent {
 
     # 3) Optional MCP tool integration via the A365 tool gateway (Entra client app + guided Copilot Studio step).
     if ($mcp) {
-        $toolArgs = ($mcp | ForEach-Object { switch ($_) { 'mail' { 'Mail' } 'anon' { 'Anon' } 'auth' { 'Auth' } } }) -join ' '
+        # Comma-join (NOT space): a [string[]] param passed via `pwsh -File` only binds the FIRST space-separated
+        # token and treats the rest as positional args (Anon -> -AppName, Auth -> -Tenant), silently dropping tools.
+        $toolArgs = ($mcp | ForEach-Object { switch ($_) { 'mail' { 'Mail' } 'anon' { 'Anon' } 'auth' { 'Auth' } } }) -join ','
         $prefixArg = if (($mcp -contains 'anon') -or ($mcp -contains 'auth')) { " -McpPrefix `"$McpBaseName`"" } else { '' }
-        $nextCommands.Add("pwsh -File `"$csScripts\New-McsMcpClientApp.ps1`" -Tools $toolArgs -Tenant `"$tenant`"$prefixArg   # creates the Entra client app + ATG scope + admin consent; prints OAuth values for the Copilot Studio MCP wizard (az must be logged into the target tenant)")
+        # A lab-specific -AppName keeps each lab's MCS MCP client app isolated (never clobbers another lab's app or its secret).
+        $nextCommands.Add("pwsh -File `"$csScripts\New-McsMcpClientApp.ps1`" -Tools $toolArgs -Tenant `"$tenant`" -AppName `"$($plan.solution.prefix) MCS MCP Client (ATG)`"$prefixArg   # creates the Entra client app + ATG scope + admin consent; prints OAuth values for the Copilot Studio MCP wizard (az must be logged into the target tenant). RUN ONCE per lab (it RESETS the secret each run) - reuse the same client id+secret for every agent's wizard.")
         $nextCommands.Add("#   ^ then in Copilot Studio: agent '$($a.name)' -> Tools -> Add a tool -> Model Context Protocol -> OAuth 2.0 Manual, using the printed values (Mail is tested; Anon/Auth are experimental — see agent365-copilot-studio/references/mcp-integration-feasibility.md).")
     }
 
