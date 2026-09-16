@@ -49,6 +49,15 @@ for every MCS agent (captured from a source tenant; re-extract with `Export-McsB
 - **Secrets never in chat.** The MCP client-app secret is written to a gitignored `*.secret.txt` file, never
   printed. Do not read it back.
 - **STOP before any cross-tenant import** and confirm the target tenant/environment with the user.
+- **Run pac imports SERIALLY — one at a time, and never issue another command in the SAME terminal while a
+  `pac solution import` is in flight.** A concurrent command shares the pac auth/lock and can corrupt or
+  abort the in-flight import (the solution zip builds but the import does not land; re-run it alone). Wait
+  for each import to fully return before the next command.
+- **First interactive sign-in is expected.** The FIRST MCS import of a run opens a browser to authenticate
+  pac to the TARGET tenant (profile `mcs-target`); later imports reuse it silently. Tell the user up-front
+  WHY the window opens and to sign in as an ADMIN of the target Copilot Studio tenant (not their Azure/corp
+  account if different). See `New-McsAgent.ps1` (it prints a clear banner and skips the prompt when a
+  matching profile already exists).
 
 ## Scripts (durable — do NOT regenerate agent code each run)
 All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.
@@ -76,10 +85,30 @@ All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.
 3. Create: `New-McsAgent.ps1 -Harness MCS-OH|MCS-NH -DisplayName <name> -Tenant <target> -EnvironmentId
    <id> [-Publish]`. It transforms the base zip, auths to the target tenant (browser sign-in), imports +
    publishes, and (with `-Publish`) prints the org-wide availability step.
-4. **Optional MCP tools** (guided): `New-McsMcpClientApp.ps1 -Tools Mail[,Anon,Auth] -Tenant <target>
-   [-McpPrefix <prefix>]`, then add the MCP tool in Copilot Studio (Tools -> Add a tool -> Model Context
-   Protocol -> OAuth 2.0 Manual) with the printed values. Mail is tested; Anon/Auth are experimental
+4. **Optional MCP tools** (guided): run `New-McsMcpClientApp.ps1 -Tools Mail[,Anon,Auth] -Tenant <target>
+   [-McpPrefix <prefix>] [-AppName "<lab> MCS MCP Client (ATG)"]` **once per lab** (it resets the secret each
+   run — reuse the same client id/secret for every agent). Then add the tool in Copilot Studio per agent —
+   **ALWAYS state these explicitly to the user**:
+   - **Tools → Add a tool → filter by "Model Context Protocol" FIRST** (so you pick MCP **servers**, not
+     similarly-named connectors), then **OAuth 2.0 → Manual** with the printed values.
+   - **Mail**: search **"Work IQ"** and select **exactly "Mail MCP" on OH** / **"Work IQ" on NH**.
+   - **Custom `ext_`**: search **"ext_"** (or paste the full `ext_<prefix>Anon` / `ext_<prefix>Auth`). ⚠️
+     **Today this works only on OH.** **MCS-NH BLOCKS** adding custom `ext_` MCP servers from the Agent 365
+     tool gateway — on NH only Mail works.
+   - **During Add, Copilot Studio asks to CREATE A CONNECTION** (sign in). For `ext_` servers this prompt
+     **may repeat several times** — create it each time.
+   - **Connections are SHARED across a lab**: a Power Platform connection is owned by the **signing-in user**
+     and scoped to **(connector, environment)**, **not** to the agent — so every agent in the lab that uses
+     the same tool as the same user reuses the same connection (create each **once**). This is the normal
+     per-user connection-reuse model, **not** a symptom of a problem.
+   Mail is tested; `ext_` Anon likely works (after the activation below), `ext_` Auth is experimental
    (see [references/mcp-integration-feasibility.md](references/mcp-integration-feasibility.md)).
+4b. **Activate the custom `ext_` servers (OH only) — REQUIRED before they return data.** The `ext_` tools
+   stay **inert** until activated, once per server:
+   1. In a **first test chat** with the agent, explicitly ask it to call the **`initialize_server`** tool of
+      the `ext_` server (anon or auth).
+   2. When that tool asks, **re-create the Power Platform connection** it points to.
+   Only **after** this sequence does the `ext_` server return data on later turns.
 5. **Publish org-wide:** in Copilot Studio open the agent -> reconfigure user auth if prompted -> Publish
    -> Channels -> Teams and Microsoft 365 Copilot -> **Availability options -> Show to everyone in my org**.
 

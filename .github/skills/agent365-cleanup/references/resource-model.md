@@ -23,10 +23,12 @@ The tag is written by [agent365-wizard/scripts/Set-LabTags.ps1](../../agent365-w
 (idempotent; lab-owned only — a `reuse-existing`/user-owned shared account is never tagged). Discovery also
 accepts the archived plan (`-PlanPath generated/<prefix>/a365-deployment-plan.json`) to seed the **exact**
 resource names (the folder-primary path, which also catches a resource created before it could be tagged in
-an interrupted run). The three paths (name / tag / plan) are unioned and de-duplicated. **MCS agents are
-never custom-named**, so they stay discoverable by their prefix-derived solution unique name; with **N
-instances** of a harness the names/solutions are suffixed (`<prefix>-MCS-OH-1` / `<prefix>MCSOH1`, …), so
-enumerate them from the archived plan's `agents[]`, or by listing solutions matching `<prefix>MCS*`.
+an interrupted run). The three paths (name / tag / plan) are unioned and de-duplicated. **MCS agents may be
+given a custom Copilot Studio DISPLAY name (custom naming mode), but their SOLUTION unique name is always
+prefix-derived** (`<prefix>MCS<OH|NH>[<n>]`), so they stay discoverable by the prefix even without the plan;
+with **N instances** of a harness the names/solutions are suffixed (`<prefix>-MCS-OH-1` / `<prefix>MCSOH1`, …),
+so enumerate them from the archived plan's `agents[]` (which also carries the custom display name for the
+bot-by-name deletion), or by listing solutions matching `<prefix>MCS*`.
 
 ### Component tags — shared web UIs / custom MCPs (created outside a lab)
 A web UI or custom MCP can be **standalone/shared** (created by the *Web UI Creator* / *Custom MCP Creator*)

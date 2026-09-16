@@ -67,8 +67,18 @@ if ($ScaffoldOnly) {
 if ($Tenant) {
     $active = (& $pac auth list) 2>$null
     if (-not ($active -match $Tenant)) {
-        Write-Host "A browser sign-in will open — sign in as an admin of tenant $Tenant." -ForegroundColor Yellow
+        Write-Host "" -ForegroundColor Yellow
+        Write-Host "=== INTERACTIVE SIGN-IN REQUIRED (pac / Power Platform) ===" -ForegroundColor Yellow
+        Write-Host "  A browser window is about to open to authenticate the Power Platform CLI to the TARGET" -ForegroundColor Yellow
+        Write-Host "  Copilot Studio tenant ($Tenant)." -ForegroundColor Yellow
+        Write-Host "  -> Sign in as an ADMIN of THAT tenant (the Dataverse / Power Platform admin of the target" -ForegroundColor Yellow
+        Write-Host "     environment), NOT your Azure/corporate account if they are different." -ForegroundColor Yellow
+        Write-Host "  This happens only ONCE per tenant per machine: the profile 'mcs-target' is then reused" -ForegroundColor Yellow
+        Write-Host "  SILENTLY by every later import in this run. This is expected, not an error." -ForegroundColor Yellow
         & $pac auth create --name "mcs-target" --tenant $Tenant | Out-Null
+    }
+    else {
+        Write-Host "  Reusing existing pac profile for target tenant $Tenant (no browser sign-in needed)." -ForegroundColor DarkGray
     }
 }
 

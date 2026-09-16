@@ -185,8 +185,8 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
   Digital Worker lab lowers the cap** (e.g. **9** for `MAF-ACA-DW`) so the Teams `name.short` stays ≤ 30
   once the framework segment is added.
 - **Naming mode** — single-select **Default names** / **Custom names** (`solution.namingMode`, default
-  `default`). *Default* keeps the convention above. *Custom* lets you rename each **code** agent
-  (ACA/FH/FD): present ONE screen listing every selected code agent **instance** with its **default name
+  `default`). *Default* keeps the convention above. *Custom* lets you rename each agent (ACA/FH/FD **and
+  MCS**): present ONE screen listing every selected agent **instance** with its **default name
   pre-filled** (multi-instance defaults already carry the `-<n>` suffix) and an editable field to override
   it. ⛔ **STATE the naming rules to the user BEFORE the field** (a
   priori) — a custom agent name must:
@@ -195,8 +195,11 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
   - for an **ACA** agent, keep the derived **Container App name (the lowercased name) 2–32 chars**;
   - for a **DW** agent (ACA-DW/FH-DW), be **≤ 20 chars** so the derived Teams `name.short` (`"<name> Blueprint"`)
     stays **≤ 30**.
-  Write each override to `agents[].name` (and matching `displayNames`/`resourceGroup`). **MCS agents are
-  NOT renamable** — they keep `<prefix>-MCS-<OH|NH>` so the Lab Cleaner can always compute + delete them.
+  Write each override to `agents[].name` (and, for code agents, matching `displayNames`/`resourceGroup`).
+  **MCS agents ARE renamable in custom mode**, but only the **Copilot Studio display name** is free-form: the
+  scaffolder keeps the **solution unique name prefix-derived** (`<prefix>MCS<OH|NH>[<n>]`) and the bot schema
+  isolated, so the **Lab Cleaner's prefix fallback still finds and deletes them even without the
+  `generated/<prefix>/` folder**. In **default** mode MCS keep `<prefix>-MCS-<OH|NH>` (display = solution).
   ⛔ **After collecting the names, verify them a posteriori**: run
   [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) `-ValidateOnly` and, if it reports a
   name error, **show the offending name + rule and re-ask** — do not proceed until validation passes. The

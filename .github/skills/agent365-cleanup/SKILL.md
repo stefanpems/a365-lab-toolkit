@@ -42,12 +42,16 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    (`<prefix>-MCS-OH`/`-NH`). Removal is surgical (single agent) and supports `-WhatIf`. If an MCP client
    Entra app was created (`New-McsMcpClientApp.ps1`), delete it too (`az ad app delete --id <appId>`). MCS
    removal needs the **`pac` CLI** (install if missing). Note: MCS-NH consumes Copilot Credits — deleting
-   the agent stops further consumption. **MCS agents are NEVER given custom names** (the Lab Builder keeps
-   `<prefix>-MCS-OH`/`-NH` and solution `<prefix>MCSOH`/`<prefix>MCSNH` even in custom-naming mode), so the
-   solution unique name and display name are **always computable from the lab name alone** — the Lab Cleaner
-   can therefore delete a lab's MCS agents from the prefix even if the `generated/<prefix>/` folder is gone.
-   With **N instances** of a harness the names/solutions are suffixed (`<prefix>-MCS-OH-1` / `<prefix>MCSOH1`,
-   …), so enumerate them from the archived plan or by listing solutions matching `<prefix>MCS*` before deleting.
+   the agent stops further consumption. **In custom naming mode an MCS agent may have a free-form Copilot
+   Studio DISPLAY name**, but the Lab Builder keeps its **solution unique name prefix-derived**
+   (`<prefix>MCSOH`/`<prefix>MCSNH`[`<n>`]), so the **solution** is **always computable from the lab name
+   alone** — the Lab Cleaner can still delete a lab's MCS agents from the prefix (list solutions matching
+   `<prefix>MCS*`) even if the `generated/<prefix>/` folder is gone. The **display name** (needed for the
+   bot-by-name deletion) comes from the archived plan's `agents[]`; when the plan is gone, deleting the
+   solution still removes the agent's Dataverse components (pass `-BotId` if you have it for the extra
+   `delete-copilot-agent`). With **N instances** of a harness the names/solutions are suffixed
+   (`<prefix>-MCS-OH-1` / `<prefix>MCSOH1`, …), so enumerate them from the archived plan or by listing
+   solutions matching `<prefix>MCS*` before deleting.
 
 ## Scripts (do not re-derive their logic)
 - [scripts/Discover-CleanupResources.ps1](./scripts/Discover-CleanupResources.ps1) — **READ-ONLY**.

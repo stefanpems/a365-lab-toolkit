@@ -91,11 +91,15 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
    - **ACA**: the derived Container App name (the lowercased name) is **2–32 characters**;
    - **DW** (ACA-DW/FH-DW): the name is **≤ 20 characters** so the derived Teams `name.short`
      (`"<name> Blueprint"`, from `a365 setup all --agent-name <name>`) stays **≤ 30** (rule 1).
-   **MCS agents are never renamable** — they keep `<prefix>-MCS-<OH|NH>` in either mode so the Lab Cleaner
-   can compute + delete them from the lab name alone. Because a custom name need not contain the prefix, the
-   name-based discovery the Lab Cleaner/Reporter use would miss it, so in custom mode the wizard stamps a
-   **durable cloud tag** — `a365lab=<prefix>` on lab-owned Azure resource groups and `a365lab:<prefix>` on
-   lab-owned Entra app registrations + their service principals (via
+   **MCS agents are renamable in `custom` mode, but only the Copilot Studio DISPLAY name is free-form**
+   (validated for structure: starts with a letter; letters/digits/hyphens only; no `--`/trailing hyphen).
+   The scaffolder keeps the **solution unique name prefix-derived** (`<prefix>MCS<OH|NH>[<n>]`) and the bot
+   schema isolated, so the Lab Cleaner's **prefix fallback** (solutions matching `<prefix>MCS*`) still finds
+   and deletes them from the lab name alone — even without the `generated/<prefix>/` folder. In `default`
+   mode MCS keep `<prefix>-MCS-<OH|NH>` (display == solution). Because a code-agent custom name need not
+   contain the prefix, the name-based discovery the Lab Cleaner/Reporter use would miss it, so in custom mode
+   the wizard stamps a **durable cloud tag** — `a365lab=<prefix>` on lab-owned Azure resource groups and
+   `a365lab:<prefix>` on lab-owned Entra app registrations + their service principals (via
    [scripts/Set-LabTags.ps1](../scripts/Set-LabTags.ps1)) — the stable, folder-independent association the
    Lab Cleaner discovers by tag. Only **lab-owned** resources are tagged; a `reuse-existing`/user-owned
    shared account is never tagged.

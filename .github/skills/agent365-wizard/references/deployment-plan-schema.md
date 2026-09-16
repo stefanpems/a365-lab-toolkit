@@ -17,7 +17,7 @@ gitignored.
     "secretHandling": "manual",           // "manual" (default; the user handles secrets, the agent never reads/echoes them) | "assisted" (opt-in, THROWAWAY test labs only; the agent may read the blueprint secret from the setup log / 'a365 setup blueprint --show-secret' and supply it to the deploy; never echoed in chat; rotate after)
     "resourceGroupStrategy": "isolated",  // "isolated" | "shared"
     "sharedResourceGroup": "<name>",      // only when strategy = "shared"
-    "namingMode": "default",              // OPTIONAL — "default" (or omit): enforce <prefix>-<framework>-<hosting>-<identity>. "custom": each ACA/FH/FD agent carries a free-form "name" (+ matching displayNames/resourceGroup); the wizard stamps a durable tag a365lab=<prefix> (Azure) / a365lab:<prefix> (Entra) on every lab-owned resource (Set-LabTags.ps1) so the Lab Cleaner still finds the lab. MCS agents always keep <prefix>-MCS-<OH|NH>.
+    "namingMode": "default",              // OPTIONAL — "default" (or omit): enforce <prefix>-<framework>-<hosting>-<identity>. "custom": each ACA/FH/FD agent carries a free-form "name" (+ matching displayNames/resourceGroup); the wizard stamps a durable tag a365lab=<prefix> (Azure) / a365lab:<prefix> (Entra) on every lab-owned resource (Set-LabTags.ps1) so the Lab Cleaner still finds the lab. In custom mode MCS agents may carry a free-form DISPLAY name; their solution unique name stays prefix-derived (<prefix>MCS<OH|NH>[<n>]) so the Lab Cleaner's prefix fallback is unaffected.
     "foundry": {                          // OPTIONAL — shared Foundry footprint for ALL FH + FD agents
       "mode": "create-shared",            // "create-shared" (one account+project+model for the lab) | "reuse-existing"
       "resourceGroup": "<prefix>-foundry-rg", // create-shared: dedicated RG for the shared account
@@ -79,7 +79,7 @@ gitignored.
     },
     {
       "type": "MCS-NH",                    // Copilot Studio variant: MCS-OH (legacy harness) | MCS-NH (GHCP harness)
-      "name": "<prefix>-MCS-<OH|NH>",      // 3-part name, NO framework segment — e.g. contoso-MCS-NH. Never renamable; with >1 instance of the harness the name is suffixed '-<n>' (contoso-MCS-NH-1) and the solution unique name becomes <prefix>MCS<NH><n>.
+      "name": "<prefix>-MCS-<OH|NH>",      // 3-part name, NO framework segment — e.g. contoso-MCS-NH. In custom naming mode the DISPLAY name may be free-form; the solution unique name stays prefix-derived. With >1 instance of the harness the name is suffixed '-<n>' (contoso-MCS-NH-1) and the solution unique name becomes <prefix>MCS<NH><n>.
       "mcp": ["mail"],                     // OPTIONAL A365 tool-gateway MCP: subset of "mail" (tested) / "anon" / "auth" (experimental); [] for none
       "publish": true                      // OPTIONAL — after import, guide the org-wide publication (Availability options -> Show to everyone in my org)
     }
@@ -233,12 +233,16 @@ gitignored.
   (start with a letter; letters/digits/hyphens only; the ACA-lowercase and DW ≤ 30 rules still apply). The
   wizard then runs `Set-LabTags.ps1` to stamp `a365lab=<prefix>` (Azure RGs) / `a365lab:<prefix>` (Entra apps
   + SPs) on every **lab-owned** resource, so the Lab Cleaner discovers the lab by **tag** even when a custom
-  name does not contain the prefix. `default` (or omitting `namingMode`) is byte-identical to before. **MCS
-  agents keep `<prefix>-MCS-<OH|NH>` in either mode** so cleanup can compute + delete them from the lab name.
+  name does not contain the prefix. `default` (or omitting `namingMode`) is byte-identical to before. **In
+  `custom` mode MCS agents may carry a free-form DISPLAY name**, but the scaffolder keeps their **solution
+  unique name prefix-derived** (`<prefix>MCS<OH|NH>[<n>]`) and the bot schema isolated, so the Lab Cleaner's
+  prefix fallback (solutions matching `<prefix>MCS*`) still finds + deletes them from the lab name alone; in
+  `default` mode display == solution (`<prefix>-MCS-<OH|NH>`).
 - DW entries: `displayNames.blueprint` = the agent name **without** a `" Blueprint"` suffix and length ≤ 30
   (see naming-and-validation.md); OBO/S2S keep `"<name> Blueprint"`.
 - **MCS (Copilot Studio) entries** use a 3-part name `<prefix>-MCS-<OH|NH>` with **no** `framework`,
-  `displayNames`, `resourceGroup`, `ai`, or `tools` fields. They add an optional `mcp` (subset of
+  `displayNames`, `resourceGroup`, `ai`, or `tools` fields (in `custom` naming mode the `name` may be a
+  free-form display name; the solution unique name is still pinned to `<prefix>MCS<OH|NH>[<n>]`). They add an optional `mcp` (subset of
   `mail`/`anon`/`auth`) and optional `publish` (bool). `solution.copilotStudio.targetTenantId` is required
   for any MCS agent; `solution.copilotStudio.targetEnvironmentId` is additionally required for **MCS-NH**
   (must be a PAYG + Dataverse + Copilot Studio env, else `EnforcementUsageCredits`). MCS agents are NOT

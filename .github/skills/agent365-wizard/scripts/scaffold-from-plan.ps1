@@ -109,12 +109,23 @@ foreach ($a in $plan.agents) {
     # Microsoft Copilot Studio (MCS) agents use a 3-part name <prefix>-MCS-<OH|NH> with NO framework
     # segment (they are not a code framework). Validate them separately from the code families.
     elseif ($a.type -like 'MCS-*') {
-        if ($prefix) {
+        if ($prefix -and $namingMode -ne 'custom') {
             $sfx = [string]$suffixMap[[string]$a.name]
             $expected = "$prefix-$($a.type)$sfx"
             if ($a.name -ne $expected) {
                 $hint = if ($sfx) { " With >1 instance of this type the name carries the instance suffix '$sfx'." } else { '' }
-                $errors.Add("$($a.name): MCS agent name must be '<prefix>-MCS-<OH|NH>' = '$expected'. MCS carries no <framework> segment (it is a Copilot Studio agent, not a code framework) and is never renamable.$hint")
+                $errors.Add("$($a.name): in DEFAULT naming mode an MCS agent name must be '<prefix>-MCS-<OH|NH>' = '$expected'. MCS carries no <framework> segment (Copilot Studio agent, not a code framework). Set solution.namingMode='custom' to free-form the display name.$hint")
+            }
+        }
+        elseif ($prefix -and $namingMode -eq 'custom') {
+            # Custom DISPLAY name for the Copilot Studio agent. The SOLUTION unique name stays prefix-derived
+            # (<prefix>MCS<OH|NH>[<n>], pinned by scaffold.mcs.ps1) so the Lab Cleaner's prefix fallback
+            # (solutions matching '<prefix>MCS*') is unaffected; only the visible display name is free-form.
+            if ($a.name -notmatch '^[A-Za-z][A-Za-z0-9-]*$') {
+                $errors.Add("$($a.name): a custom MCS agent name must start with a letter and contain ONLY letters, digits and hyphens (no spaces, underscores or symbols).")
+            }
+            elseif ($a.name -match '--' -or $a.name.EndsWith('-')) {
+                $errors.Add("$($a.name): a custom MCS agent name must not contain consecutive hyphens or end with a hyphen.")
             }
         }
     }

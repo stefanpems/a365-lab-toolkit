@@ -40,7 +40,17 @@ function Invoke-ScaffoldMcsAgent {
     #    bot SCHEMA token (default 'new_AgentOH2' / 'cr47b_agentnh2_URxM4c') to one derived from this agent's
     #    unique solution name, so 2+ same-harness MCS agents in ONE environment become DISTINCT bots instead
     #    of colliding on the shared base schema at import (the base token is identical across the base zip).
-    $nextCommands.Add("pwsh -File `"$csScripts\New-McsAgent.ps1`" -Harness $($a.type) -DisplayName `"$($a.name)`" -Tenant `"$tenant`" -EnvironmentId `"$envId`" -IsolateSchemaName -InstallPac$pubFlag   # transform base zip (UNIQUE bot schema name per agent) + pac solution import --publish-changes (browser sign-in to the target tenant)")
+    #    Pin the SOLUTION unique name to the prefix-derived <prefix>MCS<OH|NH>[<n>] EVEN when the display
+    #    name is custom, so the Lab Cleaner's prefix fallback (solutions matching '<prefix>MCS*') still finds
+    #    the agent without the archived plan. For DEFAULT names this equals ConvertTo-SolutionUniqueName($a.name)
+    #    (byte-identical to before); for CUSTOM names it decouples the visible display name from cleanup discovery.
+    $prefixSlug = ($plan.solution.prefix -replace '[^A-Za-z0-9]', '')
+    $sameType   = @($plan.agents | Where-Object { $_.type -eq $a.type })
+    $ordinal    = ([Array]::IndexOf(@($sameType | ForEach-Object { $_.name }), $a.name)) + 1
+    $solUnique  = if ($sameType.Count -gt 1) { "${prefixSlug}MCS${harness}${ordinal}" } else { "${prefixSlug}MCS${harness}" }
+    # BROWSER SIGN-IN gate (#2): make it explicit WHY a browser may open and WITH WHICH identity.
+    $nextCommands.Add("# BROWSER SIGN-IN (pac) for '$($a.name)': the import below authenticates to the TARGET Copilot Studio tenant ($tenant). A browser window opens ONLY when there is no valid pac profile for that tenant yet (typically just the FIRST MCS agent of the run, or after a profile expires); later imports reuse the profile SILENTLY. When it opens, sign in as an ADMIN of the TARGET Copilot Studio tenant (the Power Platform / Dataverse admin of env '$envId') -- NOT your Azure/corp account if they differ. This is expected, not an error.")
+    $nextCommands.Add("pwsh -File `"$csScripts\New-McsAgent.ps1`" -Harness $($a.type) -DisplayName `"$($a.name)`" -SolutionUniqueName `"$solUnique`" -Tenant `"$tenant`" -EnvironmentId `"$envId`" -IsolateSchemaName -InstallPac$pubFlag   # transform base zip (display name '$($a.name)', solution '$solUnique', UNIQUE bot schema) + pac solution import --publish-changes (browser sign-in to the target tenant on first use)")
 
     # 3) Optional MCP tool integration via the A365 tool gateway (Entra client app + guided Copilot Studio step).
     if ($mcp) {
@@ -50,7 +60,29 @@ function Invoke-ScaffoldMcsAgent {
         $prefixArg = if (($mcp -contains 'anon') -or ($mcp -contains 'auth')) { " -McpPrefix `"$McpBaseName`"" } else { '' }
         # A lab-specific -AppName keeps each lab's MCS MCP client app isolated (never clobbers another lab's app or its secret).
         $nextCommands.Add("pwsh -File `"$csScripts\New-McsMcpClientApp.ps1`" -Tools $toolArgs -Tenant `"$tenant`" -AppName `"$($plan.solution.prefix) MCS MCP Client (ATG)`"$prefixArg   # creates the Entra client app + ATG scope + admin consent; prints OAuth values for the Copilot Studio MCP wizard (az must be logged into the target tenant). RUN ONCE per lab (it RESETS the secret each run) - reuse the same client id+secret for every agent's wizard.")
-        $nextCommands.Add("#   ^ then in Copilot Studio: agent '$($a.name)' -> Tools -> Add a tool -> Model Context Protocol -> OAuth 2.0 Manual, using the printed values (Mail is tested; Anon/Auth are experimental — see agent365-copilot-studio/references/mcp-integration-feasibility.md).")
+        # MCP tool ADD — explicit, per-harness guidance (#4). Always filter the picker by 'Model Context
+        # Protocol' first (so you pick MCP servers, not similarly-named connectors), then search per tool.
+        $nextCommands.Add("#   ^ ADD MCP TOOLS to '$($a.name)' in Copilot Studio (Tools -> Add a tool). ALWAYS filter the picker by 'Model Context Protocol' FIRST so you pick MCP SERVERS, NOT connectors with a similar name. Use OAuth 2.0 Manual with the printed client id/secret + scope.")
+        if ($mcp -contains 'mail') {
+            if ($harness -eq 'OH') {
+                $nextCommands.Add("#      - MAIL: search 'Work IQ' and select EXACTLY 'Mail MCP' (this is the OH label). During Add it asks to CREATE A CONNECTION (sign in) -> do it.")
+            }
+            else {
+                $nextCommands.Add("#      - MAIL: search 'Work IQ' and select EXACTLY 'Work IQ' (this is the NH label). During Add it asks to CREATE A CONNECTION (sign in) -> do it.")
+            }
+        }
+        if (($mcp -contains 'anon') -or ($mcp -contains 'auth')) {
+            if ($harness -eq 'OH') {
+                $nextCommands.Add("#      - CUSTOM ext_ (OH only): search 'ext_' (or paste the full name, e.g. ext_${McpBaseName}Anon / ext_${McpBaseName}Auth) and add each one. During Add it asks to CREATE A CONNECTION; for ext_ servers this prompt MAY REPEAT several times -> create the connection each time it asks.")
+                $nextCommands.Add("#      - ACTIVATION for ext_ (OH, do ONCE per server) (#5): the ext_ tools stay INERT until activated. In a FIRST test chat with '$($a.name)', explicitly ask the agent to call the 'initialize_server' tool of the ext_ server (anon or auth); THEN, when that tool asks, RE-CREATE the Power Platform connection it points to. Only AFTER this sequence does the ext_ server return data on later turns.")
+            }
+            else {
+                $nextCommands.Add("#      - CUSTOM ext_ on NH: NOT SUPPORTED TODAY. MCS-NH (GitHub Copilot harness) BLOCKS adding custom ext_ MCP servers from the Agent 365 tool gateway. Skip anon/auth for '$($a.name)' -> only Mail ('Work IQ') works on NH.")
+            }
+        }
+        # Shared-connection note (#4): connections are per-USER, per-connector, per-environment (not per-agent).
+        $nextCommands.Add("#      - SHARED CONNECTIONS: the Power Platform connections created here are OWNED BY THE SIGNING-IN USER and scoped to (connector, environment), NOT to the agent. Every agent in THIS lab that uses the same tool as the same user REUSES the same connection, so you create each connection ONCE for the whole lab. This is the normal Power Platform per-user connection-reuse model, NOT a symptom of a problem.")
+        $nextCommands.Add("#   ^ see agent365-copilot-studio/references/mcp-integration-feasibility.md (Mail is tested; ext_ Anon likely works after activation, ext_ Auth experimental; NH cannot use ext_).")
     }
 
     # 4) Guided org-wide publication (maker-portal action; import already ran Publish All Customizations).
