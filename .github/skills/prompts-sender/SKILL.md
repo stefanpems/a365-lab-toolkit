@@ -42,19 +42,38 @@ pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
 ## Interactive flow
 1. **Runtime-model gate** (optional, consistent with the other lab agents): show the active chat model,
    let the operator confirm/continue.
-2. **Locate the lab config** — ask for the lab prefix (e.g. `a09091`) and use
-   `generated/<prefix>/<prefix>-ui/config.js`, or ask for an explicit `config.js` path. Run
-   `python send_prompts.py agents --config <config.js>` to list the agent ids.
-3. **Which agents** — multi-select from the listed ids (`obo`, `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`,
+2. **Explain the web UI dependency + what is supported (before locating any config).** The sender needs
+   a web UI's `config.js` as the **agent manifest** — for each agent it holds the `endpoint`/`apiBase`,
+   the OAuth `scope`s and the MSAL **SPA `clientId`** that mints the delegated tokens (Azure CLI cannot
+   mint the Mail/S2S/custom tokens). It is the manifest that matters, not the rendered page. State the
+   coverage:
+   - **Supported:** the 6 SPA-callable agents — ACA-OBO (`obo`), ACA-S2S (`s2s`), FH-OBO (`obo-fh`),
+     FH-S2S (`s2s-fh`), FD-OBO (`obo-fd`), FD-S2S (`s2s-fd`).
+   - **Not supported — Digital Workers (ACA-DW, FH-DW):** not implemented — no synchronous HTTP endpoint,
+     absent from `config.js`, triggered by **email** to their mailbox (a future email-trigger mode could
+     add them).
+   - **Not supported — Copilot Studio agents (MCS-OH, MCS-NH):** not implemented — surfaced via Teams /
+     M365 Copilot (Direct Line / Copilot Studio API), not the MSAL SPA `config.js`; different channel and
+     auth model.
+3. **Gate — lab-associated or standalone web UI?**
+   - **Lab-associated** → ask the lab prefix (e.g. `a09091`) and use
+     `generated/<prefix>/<prefix>-ui/config.js`, or an explicit `config.js` path. The on-disk file can be
+     **stale** (another lab attached agents to the same SWA) — when in doubt fetch the **LIVE** `config.js`
+     from the SWA origin.
+   - **Standalone/shared** → discover Static Web Apps tagged **`a365component=web-ui` with NO `a365lab`**
+     (`az staticwebapp list` → keep `tags.a365component == 'web-ui'` and no `a365lab`); present them, let
+     the operator pick one, and fetch that SWA's **LIVE** `config.js`.
+   Then run `python send_prompts.py agents --config <config.js>` to list the agent ids.
+4. **Which agents** — multi-select from the listed ids (`obo`, `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`,
    `s2s-fd`).
-4. **How many prompts per category** — always ask the `hello` count. Ask the `MCP Mail access` /
+5. **How many prompts per category** — always ask the `hello` count. Ask the `MCP Mail access` /
    `Custom MCP Anon access` / `Custom MCP Auth access` counts **only if at least one OBO agent is
    selected**, and apply those three categories **only to the OBO agents**. When the selection mixes S2S
    and tool categories, **split the run into separate `send` invocations** — `hello` to all selected
    agents, and the tool categories to the OBO agents only — never a single combined `send`.
-5. **Ensure sign-in** — if there is no cached account, run `login` first (browser).
-6. **Send** — run `send_prompts.py send` with the chosen ids/counts and `--out results.json`.
-7. **Evaluate + report** — read `results.json`; for each entry judge whether `condition` is satisfied in
+6. **Ensure sign-in** — if there is no cached account, run `login` first (browser).
+7. **Send** — run `send_prompts.py send` with the chosen ids/counts and `--out results.json`.
+8. **Evaluate + report** — read `results.json`; for each entry judge whether `condition` is satisfied in
    `reply` (semantic, case-insensitive) and present a **PASS / FAIL / N/A** table (entries the engine
    marked `skipped:true` are `N/A`, i.e. not applicable, and must not be counted as failures) plus an
    overall count. The engine's `basic_pass` is a first-pass safety net (HTTP 2xx + non-empty + no error
