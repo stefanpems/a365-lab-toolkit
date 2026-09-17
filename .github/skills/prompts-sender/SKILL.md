@@ -197,10 +197,14 @@ python scripts/send_prompts_mcs.py send   --manifest generated/<prefix>/mcs-mani
 **Coherence (MCS).** `hello` is always coherent and **all** tool categories are ALWAYS offered and sent
 by default. The manifest `tools` list is an **allow-list**: **empty** (the `discover` default) = send
 every requested category (the Lab Builder MCS-OH typology ships Mail + custom Anon/Auth); a **populated**
-list restricts to the declared tools (`"mail"`/`"anon"`/`"auth"`). A base MCS-OH agent with no wired tool
-returns only its **greeting** — that is a valid `hello` PASS, but for a tool category a greeting-only
-reply is a **FAIL** (the tool wasn't invoked), not a false pass. `N/A` is only for MCS-NH (auto-skipped)
-or a category a populated `tools` allow-list excludes.
+list restricts to the declared tools (`"mail"`/`"anon"`/`"auth"`). Evaluating a tool category's reply:
+- **connector consent card** (`connectors/consentCard`, e.g. "Work IQ Mail MCP") → **N/A (consent
+  required)** naming the connection: the tool **is wired** but the Direct-to-Engine channel needs a
+  one-time interactive **Connect** (it works in Teams/Copilot Studio), so it can't be exercised head-less.
+- **greeting-only** reply (no answer, no consent card) → **FAIL** (tool absent / not invoked).
+- a real tool answer → judged against the `condition`.
+`hello` is a valid PASS on the greeting even when a consent card also appears. `N/A` also covers MCS-NH
+(auto-skipped) and categories a populated `tools` allow-list excludes.
 
 ## Notes / guardrails
 - **Never** include the trailing `(condition)` in the message sent to an agent.

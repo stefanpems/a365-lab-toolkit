@@ -246,6 +246,37 @@ def _is_message_text(act) -> str | None:
     return None
 
 
+def _iter_textblocks(node):
+    """Recursively yield every Adaptive Card TextBlock element dict under `node`."""
+    if isinstance(node, dict):
+        if node.get("type") == "TextBlock":
+            yield node
+        for v in node.values():
+            yield from _iter_textblocks(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _iter_textblocks(v)
+
+
+_CONSENT_HEADINGS = {"connect to continue", "this connection can:"}
+
+
+def _consent_card_connection(act) -> str | None:
+    """If `act` is a Copilot Studio connector consent card, return the connection display name."""
+    if "consentcard" not in str(getattr(act, "name", "") or "").lower():
+        return None
+    for at in (getattr(act, "attachments", None) or []):
+        content = getattr(at, "content", None)
+        if not isinstance(content, dict):
+            continue
+        for el in _iter_textblocks(content.get("body") or []):
+            if str(el.get("weight", "")).lower() == "bolder":
+                txt = (el.get("text") or "").strip()
+                if txt and txt.lower() not in _CONSENT_HEADINGS:
+                    return txt
+    return "a connector"
+
+
 async def _ask_once(agent: dict, token: str, message: str) -> dict:
     """Open a conversation, ask one question, and collect the agent's message text.
 
@@ -267,7 +298,12 @@ async def _ask_once(agent: dict, token: str, message: str) -> dict:
             greeting.append(t)
 
     answer: list[str] = []
+    consent_connections: list[str] = []
     async for act in client.ask_question(message, conversation_id):
+        conn = _consent_card_connection(act)
+        if conn:
+            consent_connections.append(conn)
+            continue
         t = _is_message_text(act)
         if t:
             answer.append(t)
@@ -278,8 +314,12 @@ async def _ask_once(agent: dict, token: str, message: str) -> dict:
     # greeting_only = the agent produced NO real answer and we fell back to the start-conversation
     # greeting. That satisfies a `hello` smoke test but NOT a tool/mail category (the tool never ran).
     greeting_only = (not reply_answer) and bool(reply_greeting)
+    # A connector consent card (no real answer yet) means the tool IS wired but needs a one-time
+    # interactive Connect on this channel — not testable head-less, so flag it distinctly (N/A, not FAIL).
+    consent_required = bool(consent_connections) and not reply_answer
     return {"status": 200 if reply else 502, "reply": reply or None, "raw": "",
-            "greeting_only": greeting_only}
+            "greeting_only": greeting_only, "consent_required": consent_required,
+            "consent_connections": sorted(set(consent_connections))}
 
 
 def send_to_mcs(agent: dict, token: str, message: str) -> dict:
@@ -362,6 +402,18 @@ def run_send(args):
                 results.append(entry)
                 print(f"[SKIP] {agent_id} <{item['type']}> :: NH harness not supported by this API",
                       flush=True)
+                continue
+            if item["type"] != "hello" and out.get("consent_required"):
+                conns = ", ".join(out.get("consent_connections") or []) or "a connector"
+                entry = {"agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
+                         "prompt": item["prompt"], "condition": item["condition"],
+                         "status": out["status"], "reply": out["reply"], "skipped": True,
+                         "skip_reason": f"connector consent required ({conns}) — the tool is wired but "
+                                        "needs a one-time interactive Connect for the Direct-to-Engine "
+                                        "channel; cannot be exercised head-less",
+                         "basic_pass": None}
+                results.append(entry)
+                print(f"[N/A ] {agent_id} <{item['type']}> :: consent required ({conns})", flush=True)
                 continue
             entry = {"agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
                      "prompt": item["prompt"], "condition": item["condition"],

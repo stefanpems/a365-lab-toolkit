@@ -148,9 +148,12 @@ B6. **Send** — run
    `send_prompts_mcs.py send --manifest <mcs-manifest.json> --agents <ids> --hello N [--mail N --anon N
    --auth N] --out <results.json>`.
 B7. **Evaluate + report** — same **PASS / FAIL / N/A** table as Branch A. A greeting is a valid `hello`
-   PASS, but for a tool category a **greeting-only** reply (no tool output) is a **FAIL** — it reveals the
-   agent has no Mail/custom MCP tool wired (or didn't invoke it). `N/A` is reserved for MCS-NH agents
-   (auto-skipped) and for categories a populated `tools` allow-list intentionally excludes.
+   PASS. For a tool category, if the reply is a **connector consent card** (`connectors/consentCard`,
+   e.g. "Work IQ Mail MCP"), the tool **is wired** but needs a one-time interactive **Connect** on the
+   Direct-to-Engine channel — record it as **N/A (consent required)** with the connection name, NOT a
+   FAIL (the agent works, e.g. from Teams). A **greeting-only** reply with no consent card is a **FAIL**
+   (tool absent / not invoked). `N/A` also covers MCS-NH agents (auto-skipped) and categories a populated
+   `tools` allow-list intentionally excludes.
 
 ## Unattended flow (GitHub Copilot CLI + Windows Task Scheduler)
 - Read ALL inputs from the command line and do **not** ask questions. Pick the engine by what is passed:
