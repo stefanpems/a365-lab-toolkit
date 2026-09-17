@@ -30,11 +30,18 @@ MANIFEST (JSON) — the MCS analogue of config.js
     "agents": [
       { "id": "mcs-oh", "name": "<lab>-MCS-OH", "harness": "OH",
         "environmentId": "<cs-env-guid>", "agentIdentifier": "<bot schema name>",
-        "directConnectUrl": null }
+        "directConnectUrl": null, "tools": [] }
     ]
   }
+  `tools` (optional) declares which BYO tools the agent has wired ("mail" / "anon" / "auth"); a prompt
+  category that needs a tool the agent doesn't declare is skipped (N/A), like the base engine's S2S guard.
+  Only the STANDARD harness (MCS-OH) is supported; NH agents are auto-skipped.
 
 USAGE
+  Build a manifest from a LIVE Copilot Studio env (needs `az login` into the target tenant):
+    python send_prompts_mcs.py discover --env-id <guid> --env-url <orgUrl> --tenant <tid> \
+        --client-id <appId-with-Copilots.Invoke> --name-filter MCS-OH --oh-only --out mcs.json
+
   Login once (per user, against the target tenant):
     python send_prompts_mcs.py login  --manifest <mcs.json> [--user <upn>]
 
@@ -80,6 +87,29 @@ DEFAULT_SCOPE = "https://api.powerplatform.com/.default"
 # The Direct-to-Engine / Copilots.Invoke API serves the STANDARD harness only. A GitHub Copilot harness
 # (MCS-NH) agent answers any prompt with this notice instead of a real reply — treat it as unsupported.
 NH_UNSUPPORTED_MARKER = "doesn't support agents built with the github copilot harness"
+
+# Map a prompt category to the tool an MCS agent must have wired for that category to be coherent.
+# `hello` needs no tool. Mail / anon / auth are coherent only if the agent declares the tool in its
+# manifest `tools` list (e.g. ["mail","anon","auth"]) — mirrors the base engine's S2S coherence guard.
+TOOL_CATEGORY_KEY = {
+    "MCP Mail access": "mail",
+    "Custom MCP Anon access": "anon",
+    "Custom MCP Auth access": "auth",
+}
+
+
+def _slug(name: str) -> str:
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+
+
+def category_supported_mcs(agent: dict, category: str) -> bool:
+    """`hello` is always coherent; a tool category needs the tool declared in the agent's `tools` list."""
+    key = TOOL_CATEGORY_KEY.get(category)
+    if key is None:
+        return True
+    return key in [str(t).lower() for t in (agent.get("tools") or [])]
 
 
 # ----------------------------- manifest -----------------------------
@@ -173,8 +203,6 @@ def _current_user(cfg, cache_path, user):
     except Exception:
         return None
 
-
-# ----------------------------- Copilot Studio client -----------------------------
 def _settings_for(agent: dict):
     from microsoft_agents.copilotstudio.client import AgentType, ConnectionSettings, PowerPlatformCloud
 
@@ -288,6 +316,17 @@ def run_send(args):
     for agent_id in selected:
         agent = by_id[agent_id]
         for item in plan:
+            if not category_supported_mcs(agent, item["type"]):
+                entry = {"agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
+                         "prompt": item["prompt"], "condition": item["condition"],
+                         "status": None, "reply": None, "skipped": True,
+                         "skip_reason": f"MCS agent has no '{TOOL_CATEGORY_KEY[item['type']]}' tool "
+                                        "wired for this category",
+                         "basic_pass": None}
+                results.append(entry)
+                print(f"[SKIP] {agent_id} <{item['type']}> :: no matching tool wired - not sent",
+                      flush=True)
+                continue
             if args.dry_run:
                 out = {"status": None, "reply": "[dry-run: not sent]", "raw": ""}
                 entry = {"agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
@@ -337,6 +376,78 @@ def run_send(args):
     return 0 if summary["basic_fail"] == 0 else 1
 
 
+def _infer_harness(name: str) -> str:
+    n = (name or "").upper()
+    if "MCS-NH" in n or n.endswith("-NH") or "-NH-" in n:
+        return "NH"
+    if "MCS-OH" in n or n.endswith("-OH") or "-OH-" in n:
+        return "OH"
+    return "?"
+
+
+def run_discover(args):
+    """Build an MCS manifest from a live Copilot Studio environment (Dataverse bots query, no browser).
+
+    Uses an Azure CLI access token for the environment's org URL to read published bots, then writes a
+    manifest ready for `login` / `send`. Requires `az login` into the TARGET tenant beforehand.
+    """
+    import subprocess
+
+    import requests
+
+    env_url = args.env_url.rstrip("/")
+    tok = subprocess.run(
+        ["az", "account", "get-access-token", "--resource", env_url, "--query", "accessToken", "-o", "tsv"],
+        capture_output=True, text=True, shell=(os.name == "nt"),
+    )
+    if tok.returncode != 0 or not tok.stdout.strip():
+        sys.stderr.write(f"az token failed for {env_url}: {tok.stderr.strip()}\n"
+                         "Run 'az login' into the target tenant first.\n")
+        return 2
+    headers = {"Authorization": "Bearer " + tok.stdout.strip(), "Accept": "application/json"}
+    r = requests.get(f"{env_url}/api/data/v9.2/bots?$select=name,schemaname,statecode", headers=headers,
+                     timeout=60)
+    if r.status_code >= 300:
+        sys.stderr.write(f"Dataverse bots query failed: HTTP {r.status_code} {r.text[:300]}\n")
+        return 2
+
+    name_filter = (args.name_filter or "").lower()
+    agents = []
+    for b in r.json().get("value", []):
+        name = b.get("name") or ""
+        if b.get("statecode") != 0:  # only published/active bots
+            continue
+        if name_filter and name_filter not in name.lower():
+            continue
+        harness = _infer_harness(name)
+        if args.oh_only and harness == "NH":
+            continue
+        agents.append({
+            "id": _slug(name),
+            "name": name,
+            "harness": harness,
+            "environmentId": args.env_id,
+            "agentIdentifier": b.get("schemaname"),
+            "directConnectUrl": None,
+            "tools": [],
+        })
+
+    agents.sort(key=lambda a: a["id"])
+    manifest = {
+        "msal": {"clientId": args.client_id,
+                 "authority": f"https://login.microsoftonline.com/{args.tenant}"},
+        "scope": DEFAULT_SCOPE,
+        "agents": agents,
+    }
+    with open(args.out, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    print(f"Wrote {args.out} with {len(agents)} agent(s):", flush=True)
+    for a in agents:
+        print(f"  {a['id']:24} | harness={a['harness']:2} | schema={a['agentIdentifier']} | {a['name']}",
+              flush=True)
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Prompts Sender — MCS (Copilot Studio) path")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -348,6 +459,15 @@ def main(argv=None):
 
     sub.add_parser("login", parents=[common])
     sub.add_parser("agents", parents=[common])
+
+    pd = sub.add_parser("discover", help="Build a manifest from a live Copilot Studio environment")
+    pd.add_argument("--env-id", required=True, help="Power Platform environment GUID (pac env list)")
+    pd.add_argument("--env-url", required=True, help="Environment org URL (e.g. https://orgXXXX.crm.dynamics.com)")
+    pd.add_argument("--tenant", required=True, help="Target tenant id")
+    pd.add_argument("--client-id", required=True, help="Public-client app id with Copilots.Invoke consent")
+    pd.add_argument("--name-filter", default=None, help="Only include bots whose name contains this substring")
+    pd.add_argument("--oh-only", action="store_true", help="Exclude NH-harness bots (unsupported by this API)")
+    pd.add_argument("--out", required=True, help="Write the manifest JSON to this path")
 
     pu = sub.add_parser("url", parents=[common])
     pu.add_argument("--agents", required=True, help="Comma-separated agent ids")
@@ -369,6 +489,8 @@ def main(argv=None):
         return login(load_manifest(args.manifest), args.cache, args.user)
     if args.cmd == "agents":
         return run_agents(load_manifest(args.manifest))
+    if args.cmd == "discover":
+        return run_discover(args)
     if args.cmd == "url":
         return run_url(load_manifest(args.manifest), args.agents)
     if args.cmd == "send":

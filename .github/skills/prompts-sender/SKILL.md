@@ -1,17 +1,23 @@
 # Prompts Sender — skill
 
 Operational knowledge for the **Prompts Sender** agent. It sends batches of prompts to the
-SPA-callable Lab Builder agents (the six OBO/S2S agents exposed in a lab's web UI) and checks each
-response against a success condition. It runs **interactively** (asks the operator) or **unattended**
-(all inputs on the command line — for GitHub Copilot CLI launched by Windows Task Scheduler).
+SPA-callable Lab Builder agents (the six OBO/S2S agents exposed in a lab's web UI) **and to Copilot
+Studio MCS-OH agents** (via a separate discovery step, no web UI), and checks each response against a
+success condition. It runs **interactively** (asks the operator) or **unattended** (all inputs on the
+command line — for GitHub Copilot CLI launched by Windows Task Scheduler).
 
 ## Components (this skill folder)
 - `references/prompt-library.md` — the random source of prompts. Four categories, four prompts each.
   Every prompt ends with a `(success condition)`; the sender **strips** that parenthesis before sending
   and uses it only to judge the response.
-- `scripts/send_prompts.py` — the engine: reads a lab's `ui/config.js`, authenticates via MSAL (the
-  SPA public client), picks random prompts, sends them, records responses, and writes JSON results.
-- `scripts/requirements.txt` — `msal`, `requests`.
+- `scripts/send_prompts.py` — the **web-UI engine**: reads a lab's `ui/config.js`, authenticates via MSAL
+  (the SPA public client), picks random prompts, sends them, records responses, and writes JSON results.
+- `scripts/send_prompts_mcs.py` — the **MCS-OH engine**: builds a manifest from a live Copilot Studio
+  environment (`discover`), mints a Power Platform delegated token, and sends prompts over the
+  Direct-to-Engine API (no browser automation). Shares this skill's prompt library + report model.
+- `scripts/requirements.txt` — `msal`, `requests` (web-UI engine).
+- `scripts/requirements-mcs.txt` — `msal`, `microsoft-agents-copilotstudio-client` (MCS-OH engine).
+- `references/mcs-feasibility.md` — the MCS-OH design, prerequisites and live-validation record.
 
 ## Prompt categories → agents
 | Category | Meaning | Sensible agents |
@@ -42,26 +48,21 @@ pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
 ## Interactive flow
 1. **Runtime-model gate** (optional, consistent with the other lab agents): show the active chat model,
    let the operator confirm/continue.
-2. **Explain the web UI dependency + what is supported (before locating any config).** The sender needs
-   a web UI's `config.js` as the **agent manifest** — for each agent it holds the `endpoint`/`apiBase`,
-   the OAuth `scope`s and the MSAL **SPA `clientId`** that mints the delegated tokens (Azure CLI cannot
-   mint the Mail/S2S/custom tokens). It is the manifest that matters, not the rendered page. State the
-   coverage:
-   - **Supported:** the 6 SPA-callable agents — ACA-OBO (`obo`), ACA-S2S (`s2s`), FH-OBO (`obo-fh`),
-     FH-S2S (`s2s-fh`), FD-OBO (`obo-fd`), FD-S2S (`s2s-fd`).
-   - **Not supported — Digital Workers (ACA-DW, FH-DW):** not implemented — no synchronous HTTP endpoint,
-     absent from `config.js`, triggered by **email** to their mailbox (a future email-trigger mode could
-     add them).
-   - **Copilot Studio agents (MCS-OH, MCS-NH) — experimental (prototype, MCS-OH validated live):** not part
-     of `config.js`; they are reached over the Power Platform **Direct-to-Engine** API via the Microsoft 365
-     Agents SDK Copilot Studio client (delegated user token, scope `https://api.powerplatform.com/.default`,
-     **no** browser automation). A working prototype lives in
-     [scripts/send_prompts_mcs.py](scripts/send_prompts_mcs.py) with its own JSON manifest.
-     **MCS-OH (standard harness) is validated**; **MCS-NH (GitHub Copilot harness) is NOT supported** by this
-     API (auto-skipped). See [references/mcs-feasibility.md](references/mcs-feasibility.md) for the design,
-     prerequisites (a public-client app with the `Copilot Studio.Copilots.Invoke` delegated permission) and
-     open items. Not yet wired into the interactive/unattended flows below.
-3. **Gate — lab-associated or standalone web UI?**
+2. **Explain the two surfaces + what is supported (before locating any config).** The sender reaches two
+   surfaces: **web-UI agents** (need a web UI's `config.js` as the manifest — `endpoint`/`apiBase`, OAuth
+   `scope`s, MSAL **SPA `clientId`**; Azure CLI cannot mint the Mail/S2S/custom tokens) and **MCS-OH
+   agents** (a separate discovery step, no web UI). State the coverage:
+   - **Web-UI (supported):** the 6 SPA-callable agents — ACA-OBO (`obo`), ACA-S2S (`s2s`), FH-OBO
+     (`obo-fh`), FH-S2S (`s2s-fh`), FD-OBO (`obo-fd`), FD-S2S (`s2s-fd`).
+   - **Copilot Studio (supported — MCS-OH only):** reached over the Power Platform **Direct-to-Engine**
+     API via the Microsoft 365 Agents SDK Copilot Studio client (delegated token, scope
+     `https://api.powerplatform.com/.default`, **no** browser automation). Handled by the separate
+     **MCS-OH branch** (see "MCS-OH (Copilot Studio) path" below). **MCS-NH (GitHub Copilot harness) is
+     NOT supported** by this API and is auto-skipped (`N/A`).
+   - **Not supported — Digital Workers (ACA-DW, FH-DW):** no synchronous HTTP endpoint, absent from
+     `config.js`, triggered by **email** to their mailbox (a future email-trigger mode could add them).
+   Then ask the **surface gate** — web-UI agents, MCS-OH agents, or both — and run the matching branch.
+3. **Gate (web-UI branch) — lab-associated or standalone web UI?**
    - **Lab-associated** → ask the lab prefix (e.g. `a09091`) and use
      `generated/<prefix>/<prefix>-ui/config.js`, or an explicit `config.js` path. The on-disk file can be
      **stale** (another lab attached agents to the same SWA) — when in doubt fetch the **LIVE** `config.js`
@@ -101,6 +102,64 @@ agent×category pairs are **skipped** (never sent, reported `skipped:true`) and 
 code. The JSON in `--out` carries each response + condition (and `skipped`/`skip_reason`) for the
 agent's semantic evaluation and for logging. A scheduled GHCP CLI invocation passes the same choices as
 arguments (agents + per-category counts + optional `--user`).
+
+For **MCS-OH** the scheduled task uses the MCS engine with a pre-built manifest:
+```
+python .github/skills/prompts-sender/scripts/send_prompts_mcs.py send \
+  --manifest generated/a09091/mcs-manifest.json \
+  --agents a09091-mcs-oh-1 --hello 1 \
+  --out prompts-run-mcs.json
+```
+
+## MCS-OH (Copilot Studio) path
+MCS-OH agents are **not** in `config.js`. They are reached over the Power Platform **Direct-to-Engine**
+API via the Microsoft 365 Agents SDK Copilot Studio client — a delegated user token, **no browser
+automation**. Only the **standard harness (MCS-OH)** is supported; **MCS-NH** (GitHub Copilot harness) is
+auto-skipped (the API returns a "doesn't support … GitHub Copilot harness" notice). Full design and the
+live-validation record: [references/mcs-feasibility.md](references/mcs-feasibility.md).
+
+**One-time prerequisites**
+1. `pip install -r scripts/requirements-mcs.txt`.
+2. `az login` into the **target** Copilot Studio tenant (needed for `discover`).
+3. A **public-client** Entra app with the Power Platform **`Copilot Studio.Copilots.Invoke`** delegated
+   permission + admin consent. Create it once (target tenant):
+   ```
+   # 1) app with the delegated permission (Power Platform API 8578e004-…, scope id 204440d3-…):
+   $rra = '[{"resourceAppId":"8578e004-a5c6-46e7-913e-12f58912df43","resourceAccess":[{"id":"204440d3-c1d0-4826-b570-99eb6f5e2aeb","type":"Scope"}]}]'
+   $rra | Set-Content $env:TEMP\rra.json -Encoding utf8
+   az ad app create --display-name "Prompts Sender MCS Client (Copilots.Invoke)" \
+     --sign-in-audience AzureADMyOrg --is-fallback-public-client true \
+     --public-client-redirect-uris "http://localhost" --required-resource-accesses "@$env:TEMP\rra.json"
+   # 2) service principal + admin consent (use the returned appId):
+   az ad sp create --id <appId>
+   az ad app permission admin-consent --id <appId>
+   ```
+
+**Build the manifest (discover — no web UI)**
+```
+python scripts/send_prompts_mcs.py discover \
+  --env-id <env-guid> --env-url https://orgXXXX.crm.dynamics.com \
+  --tenant <target-tenant-id> --client-id <appId> \
+  --name-filter MCS-OH --oh-only --out generated/<prefix>/mcs-manifest.json
+```
+Get `env-guid` + org URL from `pac env list`. `discover` reads the published bots (Dataverse) and writes
+one manifest agent per MCS-OH bot (`id` = slugged display name, `agentIdentifier` = bot schema name,
+`tools: []`).
+
+**Sign in + send**
+```
+python scripts/send_prompts_mcs.py login  --manifest generated/<prefix>/mcs-manifest.json
+python scripts/send_prompts_mcs.py agents --manifest generated/<prefix>/mcs-manifest.json
+python scripts/send_prompts_mcs.py send   --manifest generated/<prefix>/mcs-manifest.json \
+  --agents <ids> --hello 1 [--mail 1 --anon 1 --auth 1] --out results-mcs.json
+```
+
+**Coherence (MCS).** `hello` is always coherent. `MCP Mail access` / `Custom MCP Anon access` /
+`Custom MCP Auth access` are sent **only** to an MCS agent whose manifest `tools` list declares the tool
+(`"mail"` / `"anon"` / `"auth"`); otherwise the engine skips them (`N/A`, like the S2S guard). `discover`
+sets `tools: []`, so by default only `hello` is sent — enable a category by editing the agent's `tools`.
+A base MCS-OH agent with no generative/topic answer returns its **greeting**, which is a valid `hello`
+response (the engine falls back to the greeting when the answer stream is empty).
 
 ## Notes / guardrails
 - **Never** include the trailing `(condition)` in the message sent to an agent.
