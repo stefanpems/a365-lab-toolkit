@@ -52,13 +52,15 @@ pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
    - **Not supported — Digital Workers (ACA-DW, FH-DW):** not implemented — no synchronous HTTP endpoint,
      absent from `config.js`, triggered by **email** to their mailbox (a future email-trigger mode could
      add them).
-   - **Copilot Studio agents (MCS-OH, MCS-NH) — experimental (prototype):** not part of `config.js`; they
-     are reached over the Power Platform **Direct-to-Engine** API via the Microsoft 365 Agents SDK Copilot
-     Studio client (delegated user token, scope `https://api.powerplatform.com/.default`, **no** browser
-     automation). A working prototype lives in [scripts/send_prompts_mcs.py](scripts/send_prompts_mcs.py)
-     with its own JSON manifest; see [references/mcs-feasibility.md](references/mcs-feasibility.md) for the
-     design, prerequisites (a public-client app with the `Copilot Studio.Copilots.Invoke` delegated
-     permission) and open items. Not yet wired into the interactive/unattended flows below.
+   - **Copilot Studio agents (MCS-OH, MCS-NH) — experimental (prototype, MCS-OH validated live):** not part
+     of `config.js`; they are reached over the Power Platform **Direct-to-Engine** API via the Microsoft 365
+     Agents SDK Copilot Studio client (delegated user token, scope `https://api.powerplatform.com/.default`,
+     **no** browser automation). A working prototype lives in
+     [scripts/send_prompts_mcs.py](scripts/send_prompts_mcs.py) with its own JSON manifest.
+     **MCS-OH (standard harness) is validated**; **MCS-NH (GitHub Copilot harness) is NOT supported** by this
+     API (auto-skipped). See [references/mcs-feasibility.md](references/mcs-feasibility.md) for the design,
+     prerequisites (a public-client app with the `Copilot Studio.Copilots.Invoke` delegated permission) and
+     open items. Not yet wired into the interactive/unattended flows below.
 3. **Gate — lab-associated or standalone web UI?**
    - **Lab-associated** → ask the lab prefix (e.g. `a09091`) and use
      `generated/<prefix>/<prefix>-ui/config.js`, or an explicit `config.js` path. The on-disk file can be

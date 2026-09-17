@@ -77,6 +77,10 @@ except ImportError:
 
 DEFAULT_SCOPE = "https://api.powerplatform.com/.default"
 
+# The Direct-to-Engine / Copilots.Invoke API serves the STANDARD harness only. A GitHub Copilot harness
+# (MCS-NH) agent answers any prompt with this notice instead of a real reply — treat it as unsupported.
+NH_UNSUPPORTED_MARKER = "doesn't support agents built with the github copilot harness"
+
 
 # ----------------------------- manifest -----------------------------
 def load_manifest(path: str) -> dict:
@@ -199,24 +203,39 @@ def connection_url(agent: dict) -> str:
     )
 
 
+def _is_message_text(act) -> str | None:
+    if act is not None and getattr(act, "type", None) == "message" and getattr(act, "text", None):
+        return act.text
+    return None
+
+
 async def _ask_once(agent: dict, token: str, message: str) -> dict:
-    """Open a conversation, ask one question, and collect the agent's message text."""
+    """Open a conversation, ask one question, and collect the agent's message text.
+
+    The greeting text arrives on the start-conversation stream; the answer arrives on the ask stream.
+    We keep both: the answer is authoritative, and the greeting is the fallback (a 'hello' smoke test is
+    satisfied by the greeting even when the agent has no generative/topic answer for the free-form prompt).
+    """
     from microsoft_agents.copilotstudio.client import CopilotClient
 
     client = CopilotClient(_settings_for(agent), token)
 
     conversation_id = None
+    greeting: list[str] = []
     async for act in client.start_conversation(emit_start_conversation_event=True):
-        if act is not None and getattr(act, "conversation", None) is not None:
+        if conversation_id is None and getattr(act, "conversation", None) is not None:
             conversation_id = act.conversation.id
-            break
+        t = _is_message_text(act)
+        if t:
+            greeting.append(t)
 
-    texts: list[str] = []
+    answer: list[str] = []
     async for act in client.ask_question(message, conversation_id):
-        if act is not None and getattr(act, "type", None) == "message" and getattr(act, "text", None):
-            texts.append(act.text)
+        t = _is_message_text(act)
+        if t:
+            answer.append(t)
 
-    reply = "\n".join(texts).strip()
+    reply = "\n".join(answer).strip() or "\n".join(greeting).strip()
     return {"status": 200 if reply else 502, "reply": reply or None, "raw": ""}
 
 
@@ -278,6 +297,18 @@ def run_send(args):
                 print(f"[DRY] {agent_id} <{item['type']}> :: {item['prompt'][:60]}", flush=True)
                 continue
             out = send_to_mcs(agent, token, item["prompt"])
+            reply_l = (out.get("reply") or "").lower()
+            if NH_UNSUPPORTED_MARKER in reply_l:
+                entry = {"agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
+                         "prompt": item["prompt"], "condition": item["condition"],
+                         "status": out["status"], "reply": out["reply"], "skipped": True,
+                         "skip_reason": "GitHub Copilot harness (MCS-NH) not supported by the "
+                                        "Direct-to-Engine API; use the standard harness (MCS-OH)",
+                         "basic_pass": None}
+                results.append(entry)
+                print(f"[SKIP] {agent_id} <{item['type']}> :: NH harness not supported by this API",
+                      flush=True)
+                continue
             entry = {"agent": agent_id, "agent_name": agent.get("name"), "type": item["type"],
                      "prompt": item["prompt"], "condition": item["condition"],
                      "status": out["status"], "reply": out["reply"], "skipped": False}
@@ -291,6 +322,7 @@ def run_send(args):
     summary = {
         "total": len(results),
         "sent": len(sent),
+        "skipped": sum(1 for r in results if r.get("skipped")),
         "basic_pass": sum(1 for r in sent if r["basic_pass"]),
         "basic_fail": sum(1 for r in sent if not r["basic_pass"]),
         "user": None if args.dry_run else _current_user(cfg, args.cache, args.user),
@@ -300,7 +332,8 @@ def run_send(args):
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, ensure_ascii=False)
         print(f"Wrote {args.out}", flush=True)
-    print(f"SUMMARY: {summary['basic_pass']}/{summary['sent']} sent passed the basic check.", flush=True)
+    print(f"SUMMARY: {summary['basic_pass']}/{summary['sent']} sent passed the basic check; "
+          f"{summary['skipped']} skipped.", flush=True)
     return 0 if summary["basic_fail"] == 0 else 1
 
 
