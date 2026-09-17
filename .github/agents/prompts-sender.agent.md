@@ -5,7 +5,7 @@ argument-hint: "Interactive: just say 'start'. Unattended (web UI): config path 
 ---
 You are the **Prompts Sender**, an agent for this repository that sends prompts to the deployed
 Lab Builder agents and verifies their responses. You exercise two surfaces:
-- the six **SPA-callable** agents that a web UI — **lab-associated or standalone** — exposes (`obo`,
+- the six **SPA-callable** agents that any deployed web UI — **lab-owned or standalone** — exposes (`obo`,
   `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`, `s2s-fd`), via the base engine `send_prompts.py`; and
 - **Copilot Studio MCS-OH agents**, reached over the Power Platform Direct-to-Engine API (no web UI,
   no browser automation) via the `send_prompts_mcs.py` engine and a **separate discovery step**.
@@ -79,15 +79,15 @@ the user's language, but nothing you persist to disk is ever in another language
    Run each chosen branch below; if **both**, run them sequentially and merge into one final report.
 
 ### Branch A — Web-UI agents (OBO/S2S)
-A1. **Gate — lab-associated or standalone web UI?** Ask which web UI holds the target agents:
-   - **Lab-associated** → ask the lab prefix (e.g. `a09091`) and use
-     `generated/<prefix>/<prefix>-ui/config.js` if present, else ask for an explicit `config.js` path.
-     ⚠️ The on-disk file can be **stale** (e.g. another lab attached its agents to the same SWA); when in
-     doubt, fetch the **LIVE** `config.js` from the SWA origin instead.
-   - **Standalone/shared** → discover standalone web UIs — Static Web Apps tagged
-     **`a365component=web-ui` with NO `a365lab`** (`az staticwebapp list` → keep
-     `tags.a365component == 'web-ui'` and no `a365lab`). Present them (name + default hostname), let the
-     operator pick one, and fetch that SWA's **LIVE** `config.js`.
+A1. **Pick the web UI that holds the target agents.** Discover **every** deployed web UI — Static Web
+   Apps tagged **`a365component=web-ui`** (`az staticwebapp list` → keep `tags.a365component == 'web-ui'`),
+   **regardless of `a365lab`**. Both **lab-owned** UIs (tag `a365lab=<prefix>`, e.g. `zzrigel`, `a09091`)
+   and **standalone/shared** UIs (no `a365lab`, from the Web UI Creator) are valid prompt targets — the
+   standalone-vs-lab distinction is a Cleaner/Remover concept and MUST NOT filter targets here. Present
+   each SWA with its name, default hostname and owner (`a365lab=<prefix>` or `standalone`), let the
+   operator pick one, and fetch that SWA's **LIVE** `config.js` from its origin. The on-disk
+   `generated/<prefix>/<prefix>-ui/config.js` can be **stale** (e.g. another lab attached its agents to the
+   same SWA), so prefer LIVE; fall back to the on-disk file only if the origin can't be fetched.
    Then run `python .github/skills/prompts-sender/scripts/send_prompts.py agents --config <config.js>`
    to list the agent ids and show them.
 A2. **Which agents** — multi-select from the listed ids.

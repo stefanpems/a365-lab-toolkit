@@ -62,15 +62,15 @@ pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
    - **Not supported — Digital Workers (ACA-DW, FH-DW):** no synchronous HTTP endpoint, absent from
      `config.js`, triggered by **email** to their mailbox (a future email-trigger mode could add them).
    Then ask the **surface gate** — web-UI agents, MCS-OH agents, or both — and run the matching branch.
-3. **Gate (web-UI branch) — lab-associated or standalone web UI?**
-   - **Lab-associated** → ask the lab prefix (e.g. `a09091`) and use
-     `generated/<prefix>/<prefix>-ui/config.js`, or an explicit `config.js` path. The on-disk file can be
-     **stale** (another lab attached agents to the same SWA) — when in doubt fetch the **LIVE** `config.js`
-     from the SWA origin.
-   - **Standalone/shared** → discover Static Web Apps tagged **`a365component=web-ui` with NO `a365lab`**
-     (`az staticwebapp list` → keep `tags.a365component == 'web-ui'` and no `a365lab`); present them, let
-     the operator pick one, and fetch that SWA's **LIVE** `config.js`.
-   Then run `python send_prompts.py agents --config <config.js>` to list the agent ids.
+3. **Pick the web UI (web-UI branch).** Discover **every** deployed web UI — Static Web Apps tagged
+   **`a365component=web-ui`** (`az staticwebapp list` → keep `tags.a365component == 'web-ui'`),
+   **regardless of `a365lab`**. Both **lab-owned** UIs (`a365lab=<prefix>`) and **standalone/shared** UIs
+   (no `a365lab`) are valid prompt targets — never filter one out; the standalone-vs-lab distinction is a
+   Cleaner/Remover concept, not a prompt-target filter. Present each with name + default hostname + owner
+   (`a365lab=<prefix>` or `standalone`), let the operator pick one, and fetch that SWA's **LIVE**
+   `config.js` from its origin (the on-disk `generated/<prefix>/<prefix>-ui/config.js` can be stale, so
+   prefer LIVE; fall back to on-disk only if the origin is unreachable). Then run
+   `python send_prompts.py agents --config <config.js>` to list the agent ids.
 4. **Which agents** — multi-select from the listed ids (`obo`, `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`,
    `s2s-fd`).
 5. **How many prompts per category** — always ask the `hello` count. Ask the `MCP Mail access` /
