@@ -105,6 +105,14 @@ A6. **Evaluate + report** — read the results JSON and present a **PASS / FAIL 
    are `N/A` and must not count as failures) plus an overall pass count and the JSON path.
 
 ### Branch B — Copilot Studio MCS-OH agents (separate step — no web UI)
+> **MCS-OH is scoped to a Copilot Studio ENVIRONMENT, never to a lab or a web UI.** MCS agents are
+> **never** in a web UI's `config.js` — that is the whole reason this is a **separate flow**. So:
+> **never** search a web UI / a lab's `config.js` for MCS agents, **never** tie a manifest to a lab
+> `<prefix>`, and **never** present "lab `<x>` has no MCS-OH agents" as a finding (it is meaningless —
+> MCS agents belong to an environment, not a lab). Discover them **only** via `pac env list` +
+> `send_prompts_mcs.py discover` against the chosen environment, and report them as the environment's
+> agents. When the surface gate is **both**, keep the two reports clearly separated (Web-UI agents vs
+> the Copilot Studio environment's MCS-OH agents) — do not imply the MCS agents belong to the web UI's lab.
 B1. **Prerequisites (state them, then confirm).** MCS-OH needs (a) `az login` into the **target** Copilot
    Studio tenant, and (b) a **public-client** Entra app with the Power Platform
    **`Copilot Studio.Copilots.Invoke`** delegated permission + admin consent (one-time; SKILL.md has the
@@ -116,10 +124,12 @@ B2. **Discover the agents (no web UI involved).** Get the Copilot Studio environ
    python .github/skills/prompts-sender/scripts/send_prompts_mcs.py discover \
      --env-id <env-guid> --env-url <orgUrl> --tenant <target-tenant-id> \
      --client-id <appId-with-Copilots.Invoke> --name-filter MCS-OH --oh-only \
-     --out generated/<prefix>/mcs-manifest.json
+     --out generated/copilot-studio/mcs-manifest-<env-guid>.json
    ```
-   Present the discovered MCS-OH agent ids. (`--name-filter` narrows to lab MCS-OH agents; `--oh-only`
-   drops any NH agent, which this API can't serve anyway.)
+   Present the discovered MCS-OH agent ids. (`--name-filter MCS-OH` narrows by display name to the
+   standard-harness agents; `--oh-only` drops any NH agent, which this API can't serve anyway.) The
+   manifest is **environment-scoped** — write it under `generated/copilot-studio/`, never under a lab
+   `generated/<prefix>/` folder.
 B3. **Which agents** — multi-select from the discovered MCS-OH ids.
 B4. **Which prompts** — always offer `hello`. Offer `MCP Mail access` / `Custom MCP Anon access` /
    `Custom MCP Auth access` **only for agents whose manifest `tools` declares the tool** (`mail`/`anon`/
@@ -144,11 +154,11 @@ B7. **Evaluate + report** — same **PASS / FAIL / N/A** table as Branch A. MCS-
     --agents obo,obo-fh,obo-fd --hello 1 --mail 1 --anon 1 --auth 1 \
     --out prompts-run.json
   ```
-- MCS-OH agents (manifest built once by `discover`, or committed alongside the lab):
+- MCS-OH agents (manifest built once by `discover`, environment-scoped under `generated/copilot-studio/`):
   ```
   python .github/skills/prompts-sender/scripts/send_prompts_mcs.py send \
-    --manifest generated/a09091/mcs-manifest.json \
-    --agents a09091-mcs-oh-1 --hello 1 \
+    --manifest generated/copilot-studio/mcs-manifest-<env-guid>.json \
+    --agents <mcs-oh-agent-id> --hello 1 \
     --out prompts-run-mcs.json
   ```
 - Both engines' exit code is `0` only if every **sent** prompt passed the basic check (incoherent/NH
