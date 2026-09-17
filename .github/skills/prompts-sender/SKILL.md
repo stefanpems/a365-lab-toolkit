@@ -60,6 +60,20 @@ pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
   ```
   > If login instead returns **`AADSTS7000218`** ("must contain 'client_assertion' or 'client_secret'"),
   > the app is missing **Allow public client flows** — the `isFallbackPublicClient = $true` above sets it.
+- **Custom BYO tool scopes must be admin-consented on the SPA.** For an OBO agent with a custom MCP, the
+  send needs a silent token per BYO audience (`<audience>/Tools.ListInvoke.All`). The browser SPA consents
+  to these at first use, but the CLI's **silent** flow cannot — if a send fails with
+  **`Silent token failed for <audience>/Tools.ListInvoke.All`**, the `<prefix>-ui-spa` app is missing that
+  permission. Grant + admin-consent it (per BYO audience), then re-send:
+  ```powershell
+  $spa='<spa-app-id>'; $byo='<byo-audience-app-id>'
+  $scopeId = az ad sp show --id $byo --query "oauth2PermissionScopes[?value=='Tools.ListInvoke.All'].id | [0]" -o tsv
+  az ad app permission add --id $spa --api $byo --api-permissions "$scopeId=Scope"
+  az ad app permission admin-consent --id $spa    # run as a TARGET-tenant admin
+  ```
+  Web UIs whose custom MCP was attached per [docs/setup-web-ui.md](../../../docs/setup-web-ui.md) §6c
+  already have this. **Mail prompts are optional** — a send can skip `--mail` and still exercise hello +
+  the custom tools.
 - **Multi-context (future v2):** the cache holds multiple accounts; `--user <upn>` selects which account
   mints tokens. Seeding a new user still needs one interactive sign-in for that user. The engine and
   agent are already parameterised for this; v2 will iterate a set of users in one run.

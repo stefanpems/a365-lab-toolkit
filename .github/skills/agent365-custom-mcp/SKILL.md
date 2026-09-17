@@ -161,6 +161,12 @@ of the Web UI's create/attach):
   be shipped WITH `customScopes` — never "Mail only".** The **S2S** and **DW** tabs still can't: S2S
   can't mint the custom-audience token from the SPA (`AADSTS82001`/`82002`) and DW isn't in the SPA at
   all — test those via the agentic / Bot Framework path (Teams / `/api/messages`) if ever needed.
+  - **Pre-consent the SPA for each BYO audience (`Tools.ListInvoke.All`).** The browser SPA can consent
+    to a new custom scope at first use, but a **headless caller** (the Prompts Sender CLI reusing the
+    SPA client for silent tokens) cannot — so after attaching a custom MCP to an OBO tab, **grant +
+    admin-consent** the `<prefix>-ui-spa` app for `Tools.ListInvoke.All` on each `ext_<name>Anon/Auth`
+    BYO audience, per [docs/setup-web-ui.md](../../../docs/setup-web-ui.md) §6c. Skipping it leaves the
+    CLI with `Silent token failed for <audience>/Tools.ListInvoke.All`.
   Tell-tale of a NON-call: `server_time` returns a **past** date or a wrong hash (the model
   hallucinated because the tool wasn't actually invoked — check `customScopes` + the Power Platform
   connection). ⛔ **Each `ext_` server needs its OWN Power Platform connection (anon AND auth

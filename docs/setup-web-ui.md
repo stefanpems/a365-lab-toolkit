@@ -93,6 +93,14 @@ hit "Need admin approval". Which ones depend on the agents you expose:
 | Azure Machine Learning Services (`18a66f5f-dbdf-4c17-9dd7-1634712a9cbe`) | `user_impersonation` (`1a7925b5-f871-417a-9b8b-303f9f29fa10`) | `https://ai.azure.com/.default` for **Foundry** agents |
 | Agent 365 Tools (`ea9ffc3e-8a23-4a7d-836d-234d7c7565c1`) | `McpServers.Mail.All` (`be685e8e-277f-43ec-aff6-087fdca57ca3`) | **OBO** Mail token (ACA + Foundry OBO) |
 | ACA S2S blueprint | `api://<s2s-app-id>/access_agent_as_user` | **ACA S2S** `/chat` |
+| Custom BYO tool app(s) `ext_<name>Anon` / `ext_<name>Auth` | `Tools.ListInvoke.All` (per BYO audience) | **OBO** custom MCP tool calls (see §6c) |
+
+> **OBO + custom MCP: pre-consent the BYO tool scopes (§6c).** In the browser the SPA can obtain
+> these `Tools.ListInvoke.All` tokens via a one-time **incremental consent** at first use, but a
+> **headless caller** (the **Prompts Sender** CLI, which reuses the SPA client for silent tokens)
+> cannot consent interactively — `acquire_token_silent` returns `null` and the tool call fails. So
+> when an OBO agent exposes a custom MCP, **grant + admin-consent the SPA for each BYO audience** per
+> §6c, exactly like the S2S scope in §6b.
 
 > **The resource service principals must exist in the tenant.** Agent 365 Tools
 > (`ea9ffc3e-…`) is created by `a365 setup` during agent onboarding; if
@@ -291,6 +299,27 @@ az ad app permission admin-consent --id <SPA_APPID>
 > **The OBO agent does NOT need `UI_AUDIENCE`.** Its SPA token targets the **Mail** resource
 > (`ea9ffc3e-…/McpServers.Mail.All`), so its `aud` is the Mail MCP, not the agent — leave
 > `UI_AUDIENCE` unset for OBO (the `/chat` still validates signature, issuer and expiry).
+
+### 6c. OBO + custom MCP only — grant & admin-consent the SPA for each BYO tool scope
+
+When an OBO agent exposes a custom (BYO) MCP, `config.js` gives that tab a `customScopes` map
+(`{ <BYO-audience>: "<BYO-audience>/Tools.ListInvoke.All" }`), and both the browser SPA and the
+**Prompts Sender** CLI mint a delegated token per audience. The browser can consent to a new scope
+at runtime; the CLI's **silent** flow cannot — so the SPA must be **granted + admin-consented** for
+`Tools.ListInvoke.All` on **each** `ext_<name>Anon` / `ext_<name>Auth` **BYO** app (not the proxy or
+resource apps). The BYO app ids are the `customScopes` audiences in `config.js` (also in the custom
+MCP's `ToolingManifest.json`). Run per BYO audience:
+
+```powershell
+$byo = "<byo-audience-app-id>"   # e.g. an ext_<name>Anon / ext_<name>Auth BYO app id
+$scopeId = az ad sp show --id $byo --query "oauth2PermissionScopes[?value=='Tools.ListInvoke.All'].id | [0]" -o tsv
+az ad app permission add --id <SPA_APPID> --api $byo --api-permissions "$scopeId=Scope"
+az ad app permission admin-consent --id <SPA_APPID>    # run as a TARGET-tenant admin
+```
+
+> This is the same privilege the browser SPA already requests interactively — pre-consenting just
+> moves it to setup, removing the first-use prompt **and** unblocking the headless CLI. It does not
+> grant the SPA anything the user couldn't already consent to at runtime.
 
 ## 7. Verify
 
