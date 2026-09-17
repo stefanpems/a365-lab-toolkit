@@ -135,18 +135,22 @@ B2. **Discover the PROJECT's agents (from the environment, not a web UI).** Ask 
    ids. If none are found, report that **this project** has no MCS-OH agents in the environment — do NOT
    widen the filter to list other projects' agents.
 B3. **Which agents** — multi-select from the discovered MCS-OH ids.
-B4. **Which prompts** — always offer `hello`. Offer `MCP Mail access` / `Custom MCP Anon access` /
-   `Custom MCP Auth access` **only for agents whose manifest `tools` declares the tool** (`mail`/`anon`/
-   `auth`); otherwise those categories are **skipped (`N/A`)**. If unsure whether an agent has a tool
-   wired, keep to `hello`. To enable a tool category, add it to that agent's `tools` list in the manifest.
+B4. **How many prompts per category — ALWAYS ask all four** (like Branch A): ask the `hello`, `MCP Mail
+   access`, `Custom MCP Anon access` and `Custom MCP Auth access` counts for the selected MCS-OH agents,
+   and **send them** — the Lab Builder MCS-OH typology ships those tools, so do NOT pre-suppress them.
+   The engine sends every requested category when the agent's manifest `tools` list is **empty**
+   (unrestricted); a **populated** `tools` list restricts to the declared tools. A tool prompt that
+   returns only the agent's greeting (no tool output) is recorded as **FAIL** (the tool wasn't
+   invoked/wired), never a false PASS.
 B5. **Ensure sign-in** — if there is no cached account, run
    `send_prompts_mcs.py login --manifest <mcs-manifest.json>` (browser) and wait for it to complete.
 B6. **Send** — run
    `send_prompts_mcs.py send --manifest <mcs-manifest.json> --agents <ids> --hello N [--mail N --anon N
    --auth N] --out <results.json>`.
-B7. **Evaluate + report** — same **PASS / FAIL / N/A** table as Branch A. MCS-NH agents and un-wired tool
-   categories appear as `N/A` (never `FAIL`); the greeting is a valid `hello` response for a base MCS-OH
-   agent that has no generative/topic answer for free-form prompts.
+B7. **Evaluate + report** — same **PASS / FAIL / N/A** table as Branch A. A greeting is a valid `hello`
+   PASS, but for a tool category a **greeting-only** reply (no tool output) is a **FAIL** — it reveals the
+   agent has no Mail/custom MCP tool wired (or didn't invoke it). `N/A` is reserved for MCS-NH agents
+   (auto-skipped) and for categories a populated `tools` allow-list intentionally excludes.
 
 ## Unattended flow (GitHub Copilot CLI + Windows Task Scheduler)
 - Read ALL inputs from the command line and do **not** ask questions. Pick the engine by what is passed:

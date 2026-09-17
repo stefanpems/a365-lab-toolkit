@@ -194,12 +194,13 @@ python scripts/send_prompts_mcs.py send   --manifest generated/<prefix>/mcs-mani
   --agents <ids> --hello 1 [--mail 1 --anon 1 --auth 1] --out results-mcs.json
 ```
 
-**Coherence (MCS).** `hello` is always coherent. `MCP Mail access` / `Custom MCP Anon access` /
-`Custom MCP Auth access` are sent **only** to an MCS agent whose manifest `tools` list declares the tool
-(`"mail"` / `"anon"` / `"auth"`); otherwise the engine skips them (`N/A`, like the S2S guard). `discover`
-sets `tools: []`, so by default only `hello` is sent — enable a category by editing the agent's `tools`.
-A base MCS-OH agent with no generative/topic answer returns its **greeting**, which is a valid `hello`
-response (the engine falls back to the greeting when the answer stream is empty).
+**Coherence (MCS).** `hello` is always coherent and **all** tool categories are ALWAYS offered and sent
+by default. The manifest `tools` list is an **allow-list**: **empty** (the `discover` default) = send
+every requested category (the Lab Builder MCS-OH typology ships Mail + custom Anon/Auth); a **populated**
+list restricts to the declared tools (`"mail"`/`"anon"`/`"auth"`). A base MCS-OH agent with no wired tool
+returns only its **greeting** — that is a valid `hello` PASS, but for a tool category a greeting-only
+reply is a **FAIL** (the tool wasn't invoked), not a false pass. `N/A` is only for MCS-NH (auto-skipped)
+or a category a populated `tools` allow-list excludes.
 
 ## Notes / guardrails
 - **Never** include the trailing `(condition)` in the message sent to an agent.

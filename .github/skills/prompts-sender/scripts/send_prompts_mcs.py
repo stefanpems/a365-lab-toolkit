@@ -33,9 +33,11 @@ MANIFEST (JSON) — the MCS analogue of config.js
         "directConnectUrl": null, "tools": [] }
     ]
   }
-  `tools` (optional) declares which BYO tools the agent has wired ("mail" / "anon" / "auth"); a prompt
-  category that needs a tool the agent doesn't declare is skipped (N/A), like the base engine's S2S guard.
-  Only the STANDARD harness (MCS-OH) is supported; NH agents are auto-skipped.
+  `tools` (optional) is an ALLOW-LIST of BYO tools the agent has wired ("mail" / "anon" / "auth").
+  EMPTY (the discover default) means unrestricted: every requested category is sent and its real result
+  recorded (the Lab Builder MCS-OH typology ships those tools, and this API can't reliably detect them).
+  A NON-empty list restricts sending to the declared tools. Only the STANDARD harness (MCS-OH) is
+  supported; NH agents are auto-skipped.
 
 USAGE
   Build a manifest from a LIVE Copilot Studio env (needs `az login` into the target tenant):
@@ -105,11 +107,18 @@ def _slug(name: str) -> str:
 
 
 def category_supported_mcs(agent: dict, category: str) -> bool:
-    """`hello` is always coherent; a tool category needs the tool declared in the agent's `tools` list."""
+    """`hello` is always coherent. For a tool category, the agent's `tools` list is an ALLOW-LIST:
+    an EMPTY list means unrestricted (the Lab Builder MCS-OH typology ships Mail + custom Anon/Auth,
+    and this API can't reliably detect wired tools), so all requested categories are sent and their
+    real result is recorded; a NON-empty list restricts to the declared tools (`"mail"/"anon"/"auth"`).
+    """
     key = TOOL_CATEGORY_KEY.get(category)
     if key is None:
         return True
-    return key in [str(t).lower() for t in (agent.get("tools") or [])]
+    tools = [str(t).lower() for t in (agent.get("tools") or [])]
+    if not tools:
+        return True
+    return key in tools
 
 
 # ----------------------------- manifest -----------------------------
@@ -263,8 +272,14 @@ async def _ask_once(agent: dict, token: str, message: str) -> dict:
         if t:
             answer.append(t)
 
-    reply = "\n".join(answer).strip() or "\n".join(greeting).strip()
-    return {"status": 200 if reply else 502, "reply": reply or None, "raw": ""}
+    reply_answer = "\n".join(answer).strip()
+    reply_greeting = "\n".join(greeting).strip()
+    reply = reply_answer or reply_greeting
+    # greeting_only = the agent produced NO real answer and we fell back to the start-conversation
+    # greeting. That satisfies a `hello` smoke test but NOT a tool/mail category (the tool never ran).
+    greeting_only = (not reply_answer) and bool(reply_greeting)
+    return {"status": 200 if reply else 502, "reply": reply or None, "raw": "",
+            "greeting_only": greeting_only}
 
 
 def send_to_mcs(agent: dict, token: str, message: str) -> dict:
@@ -352,6 +367,11 @@ def run_send(args):
                      "prompt": item["prompt"], "condition": item["condition"],
                      "status": out["status"], "reply": out["reply"], "skipped": False}
             entry["basic_pass"] = basic_success(entry)
+            # A bare greeting (empty answer stream) does NOT satisfy a tool/mail category: the agent has
+            # no such tool wired (or didn't invoke it), so record it as a failure rather than a false PASS.
+            if item["type"] != "hello" and out.get("greeting_only"):
+                entry["basic_pass"] = False
+                entry["note"] = "greeting-only reply (tool not invoked / not wired)"
             results.append(entry)
             mark = "PASS" if entry["basic_pass"] else "FAIL"
             print(f"[{mark}] {agent_id} <{item['type']}> :: {item['prompt'][:60]} => "
