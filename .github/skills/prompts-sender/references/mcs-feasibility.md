@@ -42,6 +42,14 @@ channel needs a one-time interactive Connect** (the Teams consent does not carry
   name, and records the tool category as **N/A (consent required, `<connection>`)** — never a false FAIL
   (the agent works) nor a false PASS. `hello` still PASSes on the greeting. To get real PASS/FAIL for MCS
   tool prompts, complete the Connect once on an interactive channel for the Direct-to-Engine surface.
+- **Interactive Connect does NOT propagate to Direct-to-Engine (validated 2026-09-18).** The connector
+  consent is **per-channel**: with the tools fully consented and working in **Teams (web)** for the same
+  user (`admin@diax88497452...`), the `pva-published-engine-direct` channel used by the sender **still**
+  returns the consent card. So an interactive popup can't fix the head-less sender: (1) the Direct-to-Engine
+  channel can't complete the OAuth itself, and (2) a Connect done on another channel (Teams) isn't shared
+  with it. **N/A (consent required) is the terminal, correct state for the head-less sender.** The only way
+  to exercise MCS tools end-to-end is an interactive client on the same published channel; Teams remains
+  the practical manual-verification surface.
 
 
 ## Why the base engine can't do it as-is
