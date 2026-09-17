@@ -110,8 +110,9 @@ A6. **Evaluate + report** — read the results JSON and present a **PASS / FAIL 
 > lab prefix — NOT the whole environment.** **Never** search a web UI for MCS agents, and **never** list
 > every MCS agent in the environment: ask which **project (prefix)** to target and pass it as the name
 > filter (`--name-filter <prefix> --oh-only`), so `discover` returns only that project's MCS-OH agents
-> (e.g. `lab16` → `lab16-MCS-OH-1/2`). The non-`hello` prompts (Mail / custom Anon / Auth) only apply to
-> the agent typology **Lab Builder** created, so they must target that project's agents. If a project has
+> (e.g. `lab16` → `lab16-MCS-OH-1/2`). **Current limitation:** over Direct-to-Engine only `hello` is
+> exercisable on MCS-OH; the Mail / custom Anon / Auth prompts are **not offered** by the wizard (their
+> connector consent is per-channel and can't be completed head-less — see B4). If a project has
 > no MCS-OH agents in the environment, say so **for that project** — do NOT widen the filter to other
 > projects' agents. When the surface gate is **both**, keep the two reports separated (Web-UI agents vs
 > the project's MCS-OH agents).
@@ -135,25 +136,27 @@ B2. **Discover the PROJECT's agents (from the environment, not a web UI).** Ask 
    ids. If none are found, report that **this project** has no MCS-OH agents in the environment — do NOT
    widen the filter to list other projects' agents.
 B3. **Which agents** — multi-select from the discovered MCS-OH ids.
-B4. **How many prompts per category — ALWAYS ask all four** (like Branch A): ask the `hello`, `MCP Mail
-   access`, `Custom MCP Anon access` and `Custom MCP Auth access` counts for the selected MCS-OH agents,
-   and **send them** — the Lab Builder MCS-OH typology ships those tools, so do NOT pre-suppress them.
-   The engine sends every requested category when the agent's manifest `tools` list is **empty**
-   (unrestricted); a **populated** `tools` list restricts to the declared tools. A tool prompt that
-   returns only the agent's greeting (no tool output) is recorded as **FAIL** (the tool wasn't
-   invoked/wired), never a false PASS.
+B4. **Ask ONLY the `hello` count — and say why, visibly.** ⚠️ **State explicitly, up front:** over the
+   Direct-to-Engine API only **`hello`** prompts can currently be exercised on MCS-OH agents; **Mail /
+   custom Anon / Auth prompts are NOT available** because the connector consent is **per-channel** and
+   can't be completed head-less (validated — the Teams Connect does **not** propagate to the
+   Direct-to-Engine channel; the `Allow` submit re-prompts and an `invoke` returns `SystemError`; see
+   [references/mcs-feasibility.md](../skills/prompts-sender/references/mcs-feasibility.md)). Therefore ask
+   **only** the `hello` count and do **NOT** ask (or send) the Mail/Anon/Auth counts until we have a
+   working way to complete that channel's Connect. (The engine still guards those categories as N/A
+   "consent required" if ever passed directly — but the wizard must not solicit them.)
 B5. **Ensure sign-in** — if there is no cached account, run
    `send_prompts_mcs.py login --manifest <mcs-manifest.json>` (browser) and wait for it to complete.
 B6. **Send** — run
    `send_prompts_mcs.py send --manifest <mcs-manifest.json> --agents <ids> --hello N [--mail N --anon N
    --auth N] --out <results.json>`.
-B7. **Evaluate + report** — same **PASS / FAIL / N/A** table as Branch A. A greeting is a valid `hello`
-   PASS. For a tool category, if the reply is a **connector consent card** (`connectors/consentCard`,
-   e.g. "Work IQ Mail MCP"), the tool **is wired** but needs a one-time interactive **Connect** on the
-   Direct-to-Engine channel — record it as **N/A (consent required)** with the connection name, NOT a
-   FAIL (the agent works, e.g. from Teams). A **greeting-only** reply with no consent card is a **FAIL**
-   (tool absent / not invoked). `N/A` also covers MCS-NH agents (auto-skipped) and categories a populated
-   `tools` allow-list intentionally excludes.
+B7. **Evaluate + report** — same **PASS / FAIL / N/A** table as Branch A. In the current wizard only
+   `hello` is sent to MCS-OH, so report the `hello` PASS/FAIL per agent and state clearly that Mail/Anon/
+   Auth were **not run** (Direct-to-Engine connector-consent limitation). If a tool category is ever sent
+   directly (bypassing the wizard) and the reply is a **connector consent card** (`connectors/consentCard`),
+   the tool **is wired** but needs a per-channel interactive Connect — that is **N/A (consent required)**
+   with the connection name, NOT a FAIL (the agent works, e.g. from Teams). `N/A` also covers MCS-NH agents
+   (auto-skipped) and categories a populated `tools` allow-list intentionally excludes.
 
 ## Unattended flow (GitHub Copilot CLI + Windows Task Scheduler)
 - Read ALL inputs from the command line and do **not** ask questions. Pick the engine by what is passed:

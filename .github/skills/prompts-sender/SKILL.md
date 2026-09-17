@@ -194,19 +194,17 @@ python scripts/send_prompts_mcs.py send   --manifest generated/<prefix>/mcs-mani
   --agents <ids> --hello 1 [--mail 1 --anon 1 --auth 1] --out results-mcs.json
 ```
 
-**Coherence (MCS).** `hello` is always coherent and **all** tool categories are ALWAYS offered and sent
-by default. The manifest `tools` list is an **allow-list**: **empty** (the `discover` default) = send
-every requested category (the Lab Builder MCS-OH typology ships Mail + custom Anon/Auth); a **populated**
-list restricts to the declared tools (`"mail"`/`"anon"`/`"auth"`). Evaluating a tool category's reply:
-- **connector consent card** (`connectors/consentCard`, e.g. "Work IQ Mail MCP") → **N/A (consent
-  required)** naming the connection: the tool **is wired** but the Direct-to-Engine channel needs a
-  one-time interactive **Connect** (it works in Teams/Copilot Studio), so it can't be exercised head-less.
-  Auto-accepting is **not possible head-less** (validated — the `Allow` submit re-prompts, an `invoke`
-  returns `SystemError`; see [references/mcs-feasibility.md](references/mcs-feasibility.md)); do not retry.
-- **greeting-only** reply (no answer, no consent card) → **FAIL** (tool absent / not invoked).
-- a real tool answer → judged against the `condition`.
-`hello` is a valid PASS on the greeting even when a consent card also appears. `N/A` also covers MCS-NH
-(auto-skipped) and categories a populated `tools` allow-list excludes.
+**Coherence (MCS).** `hello` is always coherent. **The interactive wizard currently offers ONLY `hello`
+for MCS-OH agents** and must say so visibly: Mail / custom Anon / Auth prompts are **not exercisable**
+over Direct-to-Engine because the connector consent is **per-channel** and can't be completed head-less
+(validated — Teams' Connect doesn't propagate to the `pva-published-engine-direct` channel; `Allow`
+re-prompts, `invoke` → `SystemError`; see [references/mcs-feasibility.md](references/mcs-feasibility.md)).
+Do **not** ask for their counts until that Connect can be completed for the channel. The engine still
+accepts them if passed directly and classifies the reply: a **connector consent card**
+(`connectors/consentCard`, e.g. "Work IQ Mail MCP") → **N/A (consent required)** naming the connection
+(the tool is wired but not head-less-testable); a **greeting-only** reply → **FAIL**; a real answer →
+judged against the `condition`. `N/A` also covers MCS-NH (auto-skipped) and populated `tools` allow-list
+exclusions.
 
 ## Notes / guardrails
 - **Never** include the trailing `(condition)` in the message sent to an agent.
