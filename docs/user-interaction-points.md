@@ -79,7 +79,7 @@ next-commands. It is organized as a **common pre-flight** followed by **per-vari
 | Step | Where / how |
 | --- | --- |
 | Create the SWA (Free tier) | Terminal — use a supported region (e.g. `eastus2`; `westeurope` may reject new customers) |
-| Register the **SPA app** (`<prefix>-ui-spa`), set redirect URIs (`https://<swa-host>` + `http://localhost:3000`), add permissions, **admin-consent** | Terminal (`az ad` / `az rest`) — run as the target-tenant admin |
+| Register the **SPA app** (`<prefix>-ui-spa`), set redirect URIs (`spa`: `https://<swa-host>` + `http://localhost:3000`; `publicClient`: `http://localhost` for the Prompts Sender CLI sign-in), add permissions, **admin-consent** | Terminal (`az ad` / `az rest`) — run as the target-tenant admin |
 | Fill `config.js` with the real endpoints, deploy to the SWA | Terminal (`npx @azure/static-web-apps-cli deploy`) |
 | Wire ACA agents: `UI_ALLOWED_ORIGINS` (CORS) on OBO/S2S + `UI_AUDIENCE=<s2s-app-id>` on ACA-S2S | Terminal (`az containerapp update`) |
 | **First use of each tab** — one-time **incremental consent** (Mail for OBO; `ai.azure.com/.default` for Foundry tabs) | **Browser** (expected, per user) |

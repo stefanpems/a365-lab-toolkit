@@ -40,6 +40,9 @@ cd a365-lab-toolkit/ui
 
 Register a **single-page application** (SPA platform) in Microsoft Entra whose **redirect URIs**
 are the SPA origin(s) — the SWA host (created in §6) and, for local testing, `http://localhost:3000`.
+Also add a **public-client (Mobile & desktop) loopback redirect** `http://localhost` so native/CLI
+tools that sign in with MSAL (e.g. the **Prompts Sender**) can redeem the code server-side — an
+SPA-only registration rejects that with `AADSTS9002327` ("SPA client-type … only … cross-origin").
 Record its **app id** → this is `config.js` → `msal.clientId`.
 
 > **Do the app-registration steps in the TARGET tenant.** `az ad ...` / `az rest`→Graph ignore
@@ -49,18 +52,28 @@ Record its **app id** → this is `config.js` → `msal.clientId`.
 > (a parallel shell doing `az account set` can silently flip you to the wrong tenant).
 
 ```powershell
-# 1) Create the app (or patch it if it already exists) and its service principal
+# 1) Create the app (or patch it if it already exists) and its service principal.
+#    --is-fallback-public-client true ("Allow public client flows") lets native/CLI MSAL tools
+#    (the Prompts Sender loopback flow) redeem the code WITHOUT a client secret; otherwise the
+#    token endpoint returns AADSTS7000218 ("must contain 'client_assertion' or 'client_secret'").
+#    It does not affect the browser SPA usage.
 $appId = az ad app create --display-name "agentframework-ui-spa" `
-  --sign-in-audience AzureADMyOrg --query appId -o tsv
+  --sign-in-audience AzureADMyOrg --is-fallback-public-client true --query appId -o tsv
 az ad sp create --id $appId | Out-Null
 $objId = az ad app show --id $appId --query id -o tsv
 
-# 2) Set the SPA redirect URIs. Use a FILE for the body: an inline JSON string is broken by
+# 2) Set the redirect URIs. Use a FILE for the body: an inline JSON string is broken by
 #    az.cmd on Windows ("Unable to read JSON request payload").
+#    - spa.redirectUris          -> the browser SPA origins (SWA host + local test port).
+#    - publicClient.redirectUris -> http://localhost (portless) for native/CLI MSAL sign-in
+#      (the Prompts Sender loopback flow). Entra allows ANY port on http://localhost for a
+#      public client, so no fixed port is needed here. Both platforms can coexist on one app.
 $swaHost = "<swa-host>"   # e.g. victorious-bush-xxxx.azurestaticapps.net (known after §6)
 $tmp = Join-Path $env:TEMP 'spa_patch.json'
-@{ spa = @{ redirectUris = @("https://$swaHost", "http://localhost:3000") } } |
-  ConvertTo-Json -Depth 5 | Set-Content $tmp -Encoding utf8
+@{
+  spa          = @{ redirectUris = @("https://$swaHost", "http://localhost:3000") }
+  publicClient = @{ redirectUris = @("http://localhost") }
+} | ConvertTo-Json -Depth 5 | Set-Content $tmp -Encoding utf8
 az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/$objId" `
   --headers "Content-Type=application/json" --body "@$tmp"
 Remove-Item $tmp

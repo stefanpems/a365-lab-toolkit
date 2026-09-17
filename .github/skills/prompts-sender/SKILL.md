@@ -41,6 +41,25 @@ pair is **skipped** (reported `N/A`, not `FAIL`) and never sent.
 - One-time sign-in per user: `python send_prompts.py login --config <config.js>` opens a browser. Tokens
   are cached (`scripts/token_cache.json`, git-ignored) and refreshed silently afterwards. Device-code
   flow may be blocked by tenant policy — prefer the interactive browser flow.
+- **The SPA app MUST have a public-client loopback redirect.** MSAL's browser login redeems the code on a
+  `http://localhost` loopback (server-side, no `Origin`), so the `<prefix>-ui-spa` app needs
+  `http://localhost` under **`publicClient.redirectUris`** (Mobile & desktop platform). Web UIs created
+  from [docs/setup-web-ui.md](../../../docs/setup-web-ui.md) §2 already include it. If login fails with
+  **`AADSTS9002327`** ("SPA client-type … only … cross-origin"), the app is SPA-only — retrofit it
+  (preserving the existing `spa` redirects), then retry login:
+  ```powershell
+  $objId = az ad app show --id <spa-app-id> --query id -o tsv
+  $spa   = az ad app show --id <spa-app-id> --query "spa.redirectUris" -o json | ConvertFrom-Json
+  $tmp = Join-Path $env:TEMP 'spa_pub_patch.json'
+  @{ spa = @{ redirectUris = @($spa) }; publicClient = @{ redirectUris = @("http://localhost") };
+     isFallbackPublicClient = $true } |
+    ConvertTo-Json -Depth 5 | Set-Content $tmp -Encoding utf8
+  az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/$objId" `
+    --headers "Content-Type=application/json" --body "@$tmp"
+  Remove-Item $tmp
+  ```
+  > If login instead returns **`AADSTS7000218`** ("must contain 'client_assertion' or 'client_secret'"),
+  > the app is missing **Allow public client flows** — the `isFallbackPublicClient = $true` above sets it.
 - **Multi-context (future v2):** the cache holds multiple accounts; `--user <upn>` selects which account
   mints tokens. Seeding a new user still needs one interactive sign-in for that user. The engine and
   agent are already parameterised for this; v2 will iterate a set of users in one run.
