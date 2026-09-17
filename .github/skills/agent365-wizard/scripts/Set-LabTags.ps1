@@ -67,6 +67,16 @@ if (-not $plan) {
     Write-Host "No plan found at $PlanPath — falling back to convention-derived names for prefix '$Prefix'." -ForegroundColor DarkYellow
 }
 
+# STANDALONE guard. A lab always has >=1 agent (the Lab Builder refuses to proceed without one); a
+# STANDALONE instance created by the Web UI Creator / Custom MCP Creator has agents == 0. Its resources
+# must carry a365component ONLY and NEVER a365lab (that tag is the lab-ownership discriminator used by the
+# Lab Cleaner / Web UI & MCP Remover / Prompts Sender). So if the plan has no agents this is NOT a lab —
+# refuse to stamp a365lab (use Set-ComponentTags.ps1 for the a365component tag instead).
+if ($plan -and (@($plan.agents).Count -eq 0)) {
+    Write-Host "Plan '$PlanPath' has no agents -> STANDALONE instance (web UI / custom MCP). Set-LabTags stamps the lab-ownership tag a365lab, which must NEVER be applied to a standalone instance. Nothing tagged (use Set-ComponentTags.ps1 for a365component)." -ForegroundColor Yellow
+    exit 0
+}
+
 # ---------------------------------------------------------------------------
 # Context: pin the subscription and verify the tenant.
 # ---------------------------------------------------------------------------

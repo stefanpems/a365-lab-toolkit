@@ -407,17 +407,25 @@ foreach ($a in $plan.agents) {
     Write-Host "  scaffolded $($a.type) -> generated\$prefix\$($a.name)" -ForegroundColor Cyan
 }
 
-# Durable lab tag — ALWAYS. Set-LabTags stamps a365lab=<prefix> (Azure RGs) / a365lab:<prefix> (Entra apps
-# + SPs) on every LAB-OWNED resource. With CUSTOM names it is the ONLY way the Lab Cleaner finds agents
-# whose name does not contain the prefix; with DEFAULT names it is still worth applying so the tag scheme
-# is consistent (a lab-owned UI/MCP carries a365lab, so the "standalone = a365component without a365lab"
-# discriminator used by the Web UI & MCP Remover is always correct). It is a benign, idempotent metadata
-# tag (one key; no functional/cost impact) — run it after the deploys AND again on resume (it closes any
-# gap left between "resource created" and "resource tagged").
-$tagScript = (Join-Path $PSScriptRoot 'Set-LabTags.ps1')
+# Durable OWNERSHIP tag. A LAB (>=1 agent) stamps a365lab=<prefix> (Azure RGs) / a365lab:<prefix> (Entra
+# apps + SPs) on every lab-owned resource via Set-LabTags.ps1 — with CUSTOM names it is the ONLY way the
+# Lab Cleaner finds agents whose name does not contain the prefix; with DEFAULT names it keeps the tag
+# scheme consistent. A STANDALONE instance (agents == 0 — a web-UI-only plan from the Web UI Creator) must
+# NEVER carry a365lab: that tag is exactly what tells the Lab Cleaner / Web UI & MCP Remover / Prompts
+# Sender a resource is lab-owned. So for an agent-less plan we emit Set-ComponentTags.ps1 (a365component
+# only) instead, honouring the "standalone = a365component WITHOUT a365lab" contract. Both are benign,
+# idempotent metadata tags — re-run after the deploys AND on resume (closes any create/tag gap).
 $tenantArg = if ($plan.solution.tenantId) { " -TenantId $($plan.solution.tenantId)" } else { '' }
 $subArg    = if ($plan.solution.subscriptionId) { $plan.solution.subscriptionId } else { '<subscription-id>' }
-$agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # stamp the durable lab tag a365lab=<prefix> on every lab-owned resource — re-run after each deploy / on resume")
+if (@($plan.agents).Count -gt 0) {
+    $tagScript = (Join-Path $PSScriptRoot 'Set-LabTags.ps1')
+    $agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # LAB: stamp the durable lab tag a365lab=<prefix> on every lab-owned resource — re-run after each deploy / on resume")
+}
+elseif ($plan.ui -and $plan.ui.mode -eq 'create') {
+    $compScript = (Join-Path $PSScriptRoot 'Set-ComponentTags.ps1')
+    $swaName    = if ($plan.ui.name) { $plan.ui.name } else { "$prefix-ui" }
+    $agentCommands.Add("pwsh -File `"$compScript`" -SwaName $swaName -Subscription $subArg$tenantArg   # STANDALONE web UI: stamp a365component=web-ui ONLY (never a365lab, so the Lab Cleaner never deletes it)")
+}
 
 # ---------------------------------------------------------------- summary
 $allCommands = @($preCommands) + @($agentCommands)

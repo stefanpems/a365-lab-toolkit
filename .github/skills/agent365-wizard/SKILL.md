@@ -202,9 +202,10 @@ Use the ask-questions tool (checkboxes, single-select). Do NOT ask fields one at
   `generated/<prefix>/` folder**. In **default** mode MCS keep `<prefix>-MCS-<OH|NH>` (display = solution).
   ⛔ **After collecting the names, verify them a posteriori**: run
   [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) `-ValidateOnly` and, if it reports a
-  name error, **show the offending name + rule and re-ask** — do not proceed until validation passes. The
-  scaffolder ALWAYS emits a `Set-LabTags.ps1` command (durable lab tag, see step 8) — essential with custom
-  names, still applied with default names for a consistent tag scheme.
+  name error, **show the offending name + rule and re-ask** — do not proceed until validation passes. For a
+  LAB (>=1 agent) the scaffolder emits a `Set-LabTags.ps1` command (durable lab tag, see step 8) —
+  essential with custom names, still applied with default names for a consistent tag scheme. (An agent-less
+  standalone plan emits `Set-ComponentTags.ps1` instead — `a365component` only, never `a365lab`.)
 - **Preferred region** — one value; validated per service during discovery.
 - **Resource-group strategy** — single-select:
   - *Isolated (default)*: one RG per agent, `<agent-name>-rg`.
