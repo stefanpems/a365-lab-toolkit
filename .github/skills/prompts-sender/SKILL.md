@@ -201,6 +201,8 @@ list restricts to the declared tools (`"mail"`/`"anon"`/`"auth"`). Evaluating a 
 - **connector consent card** (`connectors/consentCard`, e.g. "Work IQ Mail MCP") → **N/A (consent
   required)** naming the connection: the tool **is wired** but the Direct-to-Engine channel needs a
   one-time interactive **Connect** (it works in Teams/Copilot Studio), so it can't be exercised head-less.
+  Auto-accepting is **not possible head-less** (validated — the `Allow` submit re-prompts, an `invoke`
+  returns `SystemError`; see [references/mcs-feasibility.md](references/mcs-feasibility.md)); do not retry.
 - **greeting-only** reply (no answer, no consent card) → **FAIL** (tool absent / not invoked).
 - a real tool answer → judged against the `condition`.
 `hello` is a valid PASS on the greeting even when a consent card also appears. `N/A` also covers MCS-NH

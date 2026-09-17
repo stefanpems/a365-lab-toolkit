@@ -27,6 +27,22 @@ Ran end-to-end, no CDP, against lab16 agents in `SandboxCopilotPAYGeu2`
   (appId `56d6ba55-1b64-4979-810b-d73c1ecfb08a`, public client, delegated
   `Power Platform API/CopilotStudio.Copilots.Invoke`, admin-consented) in the target tenant.
 
+## Tool prompts (Mail / custom Anon / Auth) — connector consent limit (VERIFIED 2026-09-18)
+When an MCS-OH agent HAS a tool wired (e.g. `lab16-MCS-OH-1/2` with **Work IQ Mail MCP** — confirmed
+working from Teams), a tool prompt over Direct-to-Engine does **not** return the tool answer: `ask_question`
+yields a `message` activity with `name: "connectors/consentCard"` (an Adaptive Card *"Connect to continue —
+Work IQ Mail MCP"*, `input_hint: expectingInput`). It means the tool is wired but the **Direct-to-Engine
+channel needs a one-time interactive Connect** (the Teams consent does not carry to this channel).
+- **Auto-accept is NOT possible head-less (validated).** The card's `Allow` is a nested
+  `Action.Submit` (`data.action = "Allow"`); resending that `data` as a message `value` (with/without
+  `text: "Allow"`) just **re-prompts** the same consent card, and sending it as an `invoke`
+  (`adaptiveCard/action`) returns **`SystemError`**. The Connect requires a real connector OAuth/connection
+  creation that this API does not expose. Do NOT retry auto-consent — it is a platform limitation.
+- **Engine behaviour:** `send_prompts_mcs.py` detects `connectors/consentCard`, extracts the connection
+  name, and records the tool category as **N/A (consent required, `<connection>`)** — never a false FAIL
+  (the agent works) nor a false PASS. `hello` still PASSes on the greeting. To get real PASS/FAIL for MCS
+  tool prompts, complete the Connect once on an interactive channel for the Direct-to-Engine surface.
+
 
 ## Why the base engine can't do it as-is
 The base engine ([scripts/send_prompts.py](../scripts/send_prompts.py)) posts plain HTTP to the six
