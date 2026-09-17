@@ -136,21 +136,22 @@ code. The JSON in `--out` carries each response + condition (and `skipped`/`skip
 agent's semantic evaluation and for logging. A scheduled GHCP CLI invocation passes the same choices as
 arguments (agents + per-category counts + optional `--user`).
 
-For **MCS-OH** the scheduled task uses the MCS engine with a pre-built, **environment-scoped** manifest
-(MCS agents belong to a Copilot Studio environment, not a lab — keep the manifest under
-`generated/copilot-studio/`, never under a lab `generated/<prefix>/`):
+For **MCS-OH** the scheduled task uses the MCS engine with a pre-built, **project-scoped** manifest
+(discovered from a Copilot Studio environment but narrowed to one project via `--name-filter <prefix>`,
+never the whole environment):
 ```
 python .github/skills/prompts-sender/scripts/send_prompts_mcs.py send \
-  --manifest generated/copilot-studio/mcs-manifest-<env-guid>.json \
-  --agents <mcs-oh-agent-id> --hello 1 \
+  --manifest generated/<prefix>/mcs-manifest.json \
+  --agents <prefix>-mcs-oh-1 --hello 1 \
   --out prompts-run-mcs.json
 ```
 
 ## MCS-OH (Copilot Studio) path
-MCS-OH agents are **not** in `config.js` and are **never** tied to a lab or a web UI — they belong to a
-Copilot Studio **environment**, which is why this is a **separate flow**. Never search a web UI for them,
-never tie their manifest to a lab `<prefix>`, and never report "lab `<x>` has no MCS-OH agents" (a
-meaningless statement). They are reached over the Power Platform **Direct-to-Engine**
+MCS-OH agents are **not** in `config.js` — they are discovered from a Copilot Studio **environment**,
+which is why this is a **separate flow**. Never search a web UI for them. Scope discovery **per project**
+(the Lab Builder lab prefix) via `--name-filter <prefix>` — do NOT list every agent in the environment,
+because the non-`hello` prompts (Mail / custom Anon / Auth) only apply to the agent typology Lab Builder
+created. They are reached over the Power Platform **Direct-to-Engine**
 API via the Microsoft 365 Agents SDK Copilot Studio client — a delegated user token, **no browser
 automation**. Only the **standard harness (MCS-OH)** is supported; **MCS-NH** (GitHub Copilot harness) is
 auto-skipped (the API returns a "doesn't support … GitHub Copilot harness" notice). Full design and the
@@ -173,22 +174,23 @@ live-validation record: [references/mcs-feasibility.md](references/mcs-feasibili
    az ad app permission admin-consent --id <appId>
    ```
 
-**Build the manifest (discover — no web UI)**
+**Build the manifest (discover — no web UI, scoped per project)**
 ```
 python scripts/send_prompts_mcs.py discover \
   --env-id <env-guid> --env-url https://orgXXXX.crm.dynamics.com \
   --tenant <target-tenant-id> --client-id <appId> \
-  --name-filter MCS-OH --oh-only --out generated/copilot-studio/mcs-manifest-<env-guid>.json
+  --name-filter <prefix> --oh-only --out generated/<prefix>/mcs-manifest.json
 ```
-Get `env-guid` + org URL from `pac env list`. `discover` reads the published bots (Dataverse) and writes
-one manifest agent per MCS-OH bot (`id` = slugged display name, `agentIdentifier` = bot schema name,
-`tools: []`). The manifest is **environment-scoped** — write it under `generated/copilot-studio/`.
+Get `env-guid` + org URL from `pac env list`. `--name-filter <prefix>` scopes to ONE project (substring
+match on the bot name, e.g. `lab16` → `lab16-MCS-OH-*`) — never list the whole environment. `discover`
+reads the published bots (Dataverse) and writes one manifest agent per MCS-OH bot (`id` = slugged display
+name, `agentIdentifier` = bot schema name, `tools: []`).
 
 **Sign in + send**
 ```
-python scripts/send_prompts_mcs.py login  --manifest generated/copilot-studio/mcs-manifest-<env-guid>.json
-python scripts/send_prompts_mcs.py agents --manifest generated/copilot-studio/mcs-manifest-<env-guid>.json
-python scripts/send_prompts_mcs.py send   --manifest generated/copilot-studio/mcs-manifest-<env-guid>.json \
+python scripts/send_prompts_mcs.py login  --manifest generated/<prefix>/mcs-manifest.json
+python scripts/send_prompts_mcs.py agents --manifest generated/<prefix>/mcs-manifest.json
+python scripts/send_prompts_mcs.py send   --manifest generated/<prefix>/mcs-manifest.json \
   --agents <ids> --hello 1 [--mail 1 --anon 1 --auth 1] --out results-mcs.json
 ```
 
