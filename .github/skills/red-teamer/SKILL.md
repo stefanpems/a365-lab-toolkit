@@ -28,6 +28,15 @@ against the operator's **own** deployed Lab Builder agents using **Microsoft PyR
   - `~/.pyrit/.pyrit_conf` — minimal: `memory_db_type: in_memory`.
 - PyRIT's memory DB and the results JSON are git-ignored (may contain adversarial content).
 
+### Scorer content filtering (red-teaming gotcha)
+The **scorer** model call can itself be blocked by the Azure OpenAI **content filter** when it judges
+adversarial or jailbreak content (`ScorerLLMResponseBlockedException` / HTTP 400 `content_filter`). When
+that happens the runner marks the objective **INCONCLUSIVE** with a clear reason (it never aborts the
+batch). For meaningful scoring of *successful* jailbreaks, point the scorer at an Azure OpenAI deployment
+whose content filtering is **disabled or set to annotate-only** (requires the Azure "modified content
+filter" approval), and set `OPENAI_CHAT_ENDPOINT`/`OPENAI_CHAT_MODEL` in `~/.pyrit/.env` to that
+deployment. Refusal responses (the DEFENSE HELD path) are benign and score without this.
+
 ## Attack catalogue (runner `--attack`)
 | id | PyRIT attack | turns | needs adversary LLM | scorer |
 |---|---|---|---|---|

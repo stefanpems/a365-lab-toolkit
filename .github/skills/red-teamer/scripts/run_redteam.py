@@ -92,6 +92,18 @@ def verdict_from_outcome(outcome_value: str) -> str:
     }.get(str(outcome_value).lower(), "INCONCLUSIVE")
 
 
+def response_text(last_response) -> str | None:
+    """Read the reply text from an AttackResult.last_response (a MessagePiece or Message)."""
+    if last_response is None:
+        return None
+    if hasattr(last_response, "get_value"):
+        try:
+            return last_response.get_value()
+        except Exception:
+            pass
+    return getattr(last_response, "converted_value", None) or getattr(last_response, "original_value", None)
+
+
 # ----------------------------- attack run -----------------------------------
 async def run_attack(args) -> int:
     from pyrit.setup import initialize_pyrit_async
@@ -157,7 +169,7 @@ async def run_attack(args) -> int:
             try:
                 result = await attack.execute_async(objective=objective)
                 outcome = getattr(result.outcome, "value", result.outcome)
-                reply = result.last_response.get_value() if result.last_response else None
+                reply = response_text(result.last_response)
                 score = None
                 if result.last_score is not None:
                     score = getattr(result.last_score, "score_value", str(result.last_score))
@@ -175,6 +187,15 @@ async def run_attack(args) -> int:
                     "reply": reply,
                 }
             except Exception as e:  # a single objective failing must not abort the batch
+                reason = f"{type(e).__name__}: {e}"
+                # A red-teaming gotcha: the SCORER's Azure OpenAI call can be blocked by the content
+                # filter when judging adversarial content. Make that actionable instead of opaque.
+                if "content filter" in str(e).lower() or "ScorerLLMResponseBlocked" in type(e).__name__:
+                    reason = (
+                        "Scorer blocked by Azure OpenAI content filter while judging the response. "
+                        "Use a scorer deployment with content filtering disabled/annotate-only for "
+                        "red-teaming (see red-teamer/SKILL.md)."
+                    )
                 entry = {
                     "agent": agent_id,
                     "agent_name": agents_by_id[agent_id].get("name"),
@@ -183,7 +204,7 @@ async def run_attack(args) -> int:
                     "converters": args.converters,
                     "objective": objective,
                     "outcome": "error",
-                    "outcome_reason": f"{type(e).__name__}: {e}",
+                    "outcome_reason": reason,
                     "verdict": "INCONCLUSIVE",
                     "score": None,
                     "reply": None,
