@@ -59,11 +59,14 @@ user's language.
    — per the Lab Builder / web-ui skill; the rest is granted incrementally as agents are attached.
 
 ## Building the plan
-Write a minimal, secret-free, gitignored `a365-deployment-plan.json` that the EXISTING scaffolder accepts:
+Write a minimal, secret-free, gitignored **per-instance** plan at
+`generated/<name>/a365-deployment-plan.json` (create the folder first, never the repo root — parallel-safe)
+that the EXISTING scaffolder accepts:
 `solution` = `{ prefix: "<name>", tenantId, subscriptionId, region }`; `agents` = `[]` (none);
 `ui` = `{ mode: "create", name: "<name>-ui", hosting: "static-web-app", swaRegion: "<region>",
 expose: [], permissions: {...} }`. Then scaffold with the router
-[scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1) — in create mode it
+[scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1) **with
+`-PlanPath generated/<name>/a365-deployment-plan.json`** — in create mode it
 writes `generated/<name>-ui/config.js` with **zero tabs** and prints the SWA next-commands.
 
 ## Deploy ordering

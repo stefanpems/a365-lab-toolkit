@@ -66,7 +66,8 @@ provisioning scripts require (`AZURE_TENANT_ID` + `AZURE_SUBSCRIPTION_ID`). Do n
 `az` context alone: run `az account show`, PRESENT the detected tenant id+name and subscription id+name,
 and have the user confirm those values or enter the correct ones. Then pin them (`az account set
 --subscription <id>`) and assert the tenant (`az account show --query tenantId` == the entered id);
-abort on mismatch. These values are written ONLY to the gitignored `a365-deployment-plan.json`. This
+abort on mismatch. These values are written ONLY to the gitignored per-lab plan
+`generated/<prefix>/a365-deployment-plan.json`. This
 guards the shared, concurrently-flipping `az`/Graph context (see the parallel-session note in
 [references/naming-and-validation.md](./references/naming-and-validation.md)).
 
@@ -279,16 +280,18 @@ review screen with every derived name and resource, all editable. Enforce naming
 blueprint/`name.short` **≤ 30 characters** hard rule.
 
 ### 6. Write the plan
-Emit `a365-deployment-plan.json` at the repo root from
+Create `generated/<prefix>/` and emit the plan **there** as
+`generated/<prefix>/a365-deployment-plan.json` from
 [assets/deployment-plan.template.json](./assets/deployment-plan.template.json). It is **secret-free**
 (resource references only) and gitignored. Schema:
-[references/deployment-plan-schema.md](./references/deployment-plan-schema.md). The scaffolder also
-**archives the plan per-run** to `generated/<prefix>/a365-deployment-plan.json`, so overwriting the root
-plan on the next run never loses earlier plans (each unique lab name keeps its own copy).
+[references/deployment-plan-schema.md](./references/deployment-plan-schema.md). The plan is **per-lab** so
+parallel runs never share one working plan (the repo-root `a365-deployment-plan.json` is retired). The
+same per-lab file is the resume input read by the scaffolder, Lab Cleaner and Lab Reporter.
 Then ask: **Save plan** / **Generate scaffolding** / **Cancel**.
 
 ### 7. Scaffold (only on confirmation)
-Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) — a thin **router** that
+Run [scripts/scaffold-from-plan.ps1](./scripts/scaffold-from-plan.ps1) **with
+`-PlanPath generated/<prefix>/a365-deployment-plan.json`** — a thin **router** that
 dot-sources the per-family/component modules under [scripts/modules/](./scripts/modules). It validates
 the plan (DW ≤30-char, lowercase container names, shared-RG/ACA safety, custom-MCP prefix ≤12-char +
 `integrationMode`), and writes everything under one **per-run root `generated/<prefix>/`**: copies each
@@ -336,8 +339,10 @@ writing. Print the next commands for the user to run; never auto-run destructive
   where to run them — see the agent's "After each agent goes live" section (OBO custom-auth `whoami` must
   return `authorization_token_forwarded: true`; **S2S: never ask the LLM to describe its own identity —
   it hallucinates — use an identity-agnostic prompt**).
-- **Progress log.** Append timestamped English lines to `generated/wizard-progress.log` (gitignored)
-  at every state change; tell the user to watch that file. Never end a turn with a vague "I'll resume."
+- **Progress log (per-lab).** Append timestamped English lines to
+  `generated/<prefix>/wizard-progress.log` (gitignored) at every state change; tell the user to watch
+  that file. Before the prefix exists, hold state in SESSION memory only — never a shared
+  `generated/wizard-progress.log`. Never end a turn with a vague "I'll resume."
 - **Durable lab tag (ALWAYS).** Run
   [scripts/Set-LabTags.ps1](./scripts/Set-LabTags.ps1) **after each agent's deploy AND again on resume**
   (it is idempotent): it stamps `a365lab=<prefix>` on lab-owned Azure RGs and `a365lab:<prefix>` on

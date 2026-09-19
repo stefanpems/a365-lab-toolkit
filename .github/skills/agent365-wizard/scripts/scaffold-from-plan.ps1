@@ -16,7 +16,9 @@
   helpers in _common.ps1. Modules are dot-sourced into this scope, so they share $plan / $repoRoot /
   $OutRoot and mutate the ordered $nextCommands list and the $attachByAgent accumulator.
 .PARAMETER PlanPath
-  Path to the plan JSON. Default: <repo-root>/a365-deployment-plan.json
+  Path to the plan JSON. The Lab Builder writes the plan per-lab at
+  generated/<prefix>/a365-deployment-plan.json and passes it here explicitly, so parallel labs never
+  share one working plan. Falls back to <repo-root>/a365-deployment-plan.json only for a bare manual run.
 .PARAMETER OutRoot
   Output root for generated folders. Default: <repo-root>/generated
 .PARAMETER ValidateOnly
@@ -37,6 +39,8 @@ $ErrorActionPreference = 'Stop'
 
 # Repo root = three levels up from this script (.github/skills/agent365-wizard/scripts).
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
+# The wizard passes -PlanPath generated/<prefix>/a365-deployment-plan.json (per-lab, parallel-safe). The
+# repo-root plan is only a legacy fallback for a bare manual invocation; it is never written by the wizard.
 if (-not $PlanPath) { $PlanPath = Join-Path $repoRoot 'a365-deployment-plan.json' }
 if (-not $OutRoot)  { $OutRoot  = Join-Path $repoRoot 'generated' }
 
@@ -369,8 +373,14 @@ if ($plan.customMcp -and $plan.customMcp.enabled -and "$($plan.customMcp.mode)".
     $McpBaseName = ($plan.customMcp.existing.name -replace '[^A-Za-z0-9]', '').ToLower()
 }
 New-Item -ItemType Directory -Force -Path $RunRoot | Out-Null
-# Archive the plan with the run so the per-lab plan survives the next run overwriting the root copy.
-try { Copy-Item -LiteralPath $PlanPath -Destination (Join-Path $RunRoot 'a365-deployment-plan.json') -Force -ErrorAction Stop } catch { Write-Host "  note: could not archive the plan to $RunRoot ($($_.Exception.Message))" -ForegroundColor DarkYellow }
+# Archive the plan with the run so each lab keeps its own copy (parallel-safe resume + Cleaner/Reporter
+# input). When -PlanPath already IS the per-lab plan (the wizard's normal path), the copy is a no-op.
+$archivedPlan = Join-Path $RunRoot 'a365-deployment-plan.json'
+$planSrcFull  = [System.IO.Path]::GetFullPath($PlanPath)
+$planDstFull  = [System.IO.Path]::GetFullPath($archivedPlan)
+if ($planSrcFull -ne $planDstFull) {
+    try { Copy-Item -LiteralPath $PlanPath -Destination $archivedPlan -Force -ErrorAction Stop } catch { Write-Host "  note: could not archive the plan to $RunRoot ($($_.Exception.Message))" -ForegroundColor DarkYellow }
+}
 
 # Emit next-commands in EXECUTION order: the web UI and the custom MCP FIRST (so the MCP is deployed +
 # registered before the agents and can be attached immediately as each agent is created), then the

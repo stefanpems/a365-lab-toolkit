@@ -90,14 +90,16 @@ if ($swaMatches.Count -gt 0) {
 }
 else {
     Write-Host "No Static Web App matching '$safeName' found in this subscription." -ForegroundColor Yellow
-    # Best-effort local hint from a scaffolded run's progress log (never authoritative).
+    # Best-effort local hint from a scaffolded run's per-lab progress log (never authoritative). Falls
+    # back to the legacy shared generated/wizard-progress.log for older runs.
     $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..' '..' '..' '..')).Path
-    $progress = Join-Path $repoRoot 'generated' 'wizard-progress.log'
+    $progress = Join-Path $repoRoot 'generated' $safeName 'wizard-progress.log'
+    if (-not (Test-Path -LiteralPath $progress)) { $progress = Join-Path $repoRoot 'generated' 'wizard-progress.log' }
     if (Test-Path -LiteralPath $progress) {
         $hostHint = Select-String -LiteralPath $progress -Pattern "$([regex]::Escape($safeName)).*(azurestaticapps\.net)" -AllMatches |
         ForEach-Object { $_.Matches.Value } | Select-Object -First 1
         if ($hostHint) {
-            Write-Host "  Hint from generated/wizard-progress.log: $hostHint" -ForegroundColor DarkYellow
+            Write-Host "  Hint from $progress`: $hostHint" -ForegroundColor DarkYellow
             $result.progressLogHint = $hostHint
         }
     }

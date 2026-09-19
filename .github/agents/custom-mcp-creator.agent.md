@@ -58,11 +58,14 @@ user's language.
    the extra Entra client app + Graph `User.Read` + admin consent + secret step (per the custom-mcp skill).
 
 ## Building the plan
-Write a minimal, secret-free, gitignored `a365-deployment-plan.json` the EXISTING scaffolder accepts:
+Write a minimal, secret-free, gitignored **per-instance** plan at
+`generated/<name>/a365-deployment-plan.json` (create the folder first, never the repo root — parallel-safe)
+the EXISTING scaffolder accepts:
 `solution` = `{ prefix: "<name>", tenantId, subscriptionId, region }`; `agents` = `[]`;
 `customMcp` = `{ enabled: true, servers: [<chosen>], publisher: "<pub>", attachTo: [],
 propagateToGraph: <bool> }` (empty `attachTo` — attachment is a later, per-agent step). Then scaffold with
-[scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1): its `scaffold.mcp.ps1`
+[scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1) **with
+`-PlanPath generated/<name>/a365-deployment-plan.json`**: its `scaffold.mcp.ps1`
 module writes `generated/custom-mcp-<name>/` (deploy-mcp.ps1 with the `$RG/$APP_ANON/$APP_AUTH/$SERVERS`
 constants rewritten, the register templates, preempt/print-connection-urls/cleanup helpers) and prints the
 exact **deploy → verify PRM → register → preempt → approve** next-commands.

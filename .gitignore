@@ -23,7 +23,9 @@ ui/config.js
 # Custom MCP filled registration payloads (environment-specific FQDN); *.template.json stays tracked.
 custom-mcp/register-anon.json
 custom-mcp/register-auth.json
-# Provisioning wizard: tenant-specific plan + generated scaffolding output
+# Provisioning wizard: tenant-specific plan + generated scaffolding output.
+# The canonical plan is now PER-LAB at generated/<prefix>/a365-deployment-plan.json (covered by
+# generated/). The repo-root path is retired but kept ignored as a safety net for any legacy stray copy.
 a365-deployment-plan.json
 generated/
 # Local scratch/analysis output (e.g. extracted system-instruction dumps)

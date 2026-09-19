@@ -31,8 +31,10 @@ Examples for prefix `contoso`: `contoso-MAF-ACA-OBO`, `contoso-MAF-FH-S2S`, `con
 
 > **Scaffold output lives under one per-run root: `generated/<prefix>/`.** Every folder for a run — each
 > `<agent-name>`, the `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP — is created under it (e.g.
-> `generated/contoso/contoso-MAF-ACA-OBO/`). The wizard's own `generated/wizard-progress.log`
-> and `generated/cleanup/` stay at the `generated/` root.
+> `generated/contoso/contoso-MAF-ACA-OBO/`). The run's plan (`a365-deployment-plan.json`) and its
+> progress log (`wizard-progress.log`) are **also per-lab, under `generated/<prefix>/`**, so parallel
+> runs never collide. Only cross-run outputs (`generated/cleanup/`, `generated/lab-reporter/`) stay at
+> the `generated/` root.
 
 ### Registry display name — the `" Agent"` suffix (cosmetic, not controllable)
 The a365 CLI lists ACA agents in the Registry with a trailing `" Agent"` (e.g. `a1730-MAF-ACA-OBO` is

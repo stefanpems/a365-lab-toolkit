@@ -37,7 +37,8 @@ reply in the chat in the user's language, but nothing you persist to disk is eve
   If (and only if) that tool is genuinely unavailable, say so once and fall back to numbered text.
 - **Environment is never hard-coded.** Nothing in the workspace may contain a tenant id, subscription
   id, region, or resource name baked into tracked files. The ONLY place these live is the gitignored
-  `a365-deployment-plan.json` (and `generated/`), written after the interview.
+  per-lab plan `generated/<prefix>/a365-deployment-plan.json` (and the rest of `generated/`), written
+  after the interview.
 - **Secrets are NEVER echoed in chat** (blueprint client secret, Azure OpenAI key, delegated tokens) — in
   either handling mode. The user picks the mode via `solution.secretHandling` (asked in the interview):
   **`manual`** (default) — the user types every secret directly into the terminal; you never read,
@@ -76,12 +77,44 @@ sources (`aca/{obo,s2s,dw}/agent.py`, `foundry-hosted/{obo,s2s}/foundry_agent.py
 so the two blocks stay byte-identical; only the identity sentence and the tool/mail section are meant to
 differ per variant. Customizing an agent's instructions means replacing **`COMMON_MISSION`** only.
 
+## Parallel sessions & resume — per-lab isolation (READ FIRST)
+Multiple Lab Builder chats run **concurrently on this machine** (e.g. `lab19` and `mcs19` at once), so
+NOTHING a run writes may live at a **shared, non-lab-scoped** path — otherwise two runs clobber each
+other and neither can resume cleanly. The isolation rules:
+- **The plan is per-lab, never the repo root.** Write it to `generated/<prefix>/a365-deployment-plan.json`
+  (create the folder first) and ALWAYS invoke the scaffolder with
+  `-PlanPath generated/<prefix>/a365-deployment-plan.json`. Do **not** write or rely on the repo-root
+  `a365-deployment-plan.json` (legacy; retired for parallel safety). The scaffolder + Lab Cleaner +
+  Lab Reporter already read the per-lab copy.
+- **The progress log is per-lab:** `generated/<prefix>/wizard-progress.log` (see below).
+- **Live resume state goes in SESSION memory** (`/memories/session/`), which is scoped to THIS
+  conversation and cannot collide with the parallel run. Keep one file, e.g.
+  `/memories/session/lab-<prefix>.md`, recording: the plan path, the current phase/step, what is already
+  deployed, and the exact next action. Update it at every state change (mirror of the progress log, but
+  survives across your own turns and is the first thing you read on resume).
+- **Never run `a365 setup` / deploy from the repo root.** Each agent's `a365.generated.config.json` lives
+  in `generated/<prefix>/<agent>/`; the cwd rule below already enforces this. The root
+  `a365.config.json` / `a365.generated.config.json` / `a365.generated.config.before-*` files are **legacy
+  leftovers** from an old run — they are NOT part of any current lab and must be neither read nor written.
+- **Repo memory (`/memories/repo/agent365-deploy.md`) is SHARED** across sessions — use it only for
+  durable, lab-independent lessons, never for a single run's live resume pointer.
+
+**Resuming a lab** (`resume <prefix>`, or the user returns to a paused chat): (1) read
+`/memories/session/lab-<prefix>.md` if present; (2) read the archived plan
+`generated/<prefix>/a365-deployment-plan.json` and the tail of `generated/<prefix>/wizard-progress.log`
+to learn the last completed step; (3) re-confirm the runtime-model gate + tenant/subscription (they may
+have flipped in a parallel run — pin them again); (4) run `Set-LabTags.ps1` (idempotent) and a read-only
+discovery to reconcile what already exists in the cloud against the plan; (5) continue from the exact
+next action. Never restart from scratch if `generated/<prefix>/` already holds scaffolded folders.
+
 ## Progress visibility (do this the WHOLE time)
 Chat monitoring of background terminals is unreliable, so DO NOT rely on it as the user's only signal.
-- Maintain a human-readable log at `generated/wizard-progress.log` (gitignored). Append a timestamped
-  line at every state change: step started, waiting-for-user, completed, error. Keep it in English.
-- At the START tell the user: "Open `generated/wizard-progress.log` (or split the editor with it) to
-  watch progress live — the chat may not always update in real time."
+- Maintain a human-readable **per-lab** log at `generated/<prefix>/wizard-progress.log` (gitignored).
+  Append a timestamped line at every state change: step started, waiting-for-user, completed, error.
+  Keep it in English. Before the prefix is chosen (runtime gate + tenant + variant selection), hold
+  state in SESSION memory only — do NOT write a shared `generated/wizard-progress.log`.
+- As soon as the prefix/lab name is fixed, tell the user: "Open `generated/<prefix>/wizard-progress.log`
+  (or split the editor with it) to watch progress live — the chat may not always update in real time."
 - **Whenever you announce that you are waiting on a running command, ALSO tell the user how to watch it
   LIVE in the real terminal** (not only the log): **View → Terminal**, then the **`N Hidden Terminals`**
   control at the bottom of the panel — the chat-driven terminals are hidden there. In a sequential run
@@ -382,9 +415,11 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    for DW; UI permissions.
 5. **Discovery + review** — run the read-only discovery script; show ONE editable review screen with
    every derived name and resource. Enforce validation (prefix, DW ≤30-char, lowercase container).
-6. **Write the plan** — `a365-deployment-plan.json` (secret-free, gitignored). Confirm.
-7. **Scaffold** — run [scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1);
-  it writes `generated/<agent>/` + `generated/<prefix>-ui/config.js` and prints the exact next commands.
+6. **Write the plan** — `generated/<prefix>/a365-deployment-plan.json` (per-lab, secret-free,
+   gitignored; create the folder first, never the repo root — parallel-safe). Confirm.
+7. **Scaffold** — run [scaffold-from-plan.ps1](../skills/agent365-wizard/scripts/scaffold-from-plan.ps1)
+  **with `-PlanPath generated/<prefix>/a365-deployment-plan.json`**; it writes `generated/<prefix>/<agent>/`
+  + `generated/<prefix>/<prefix>-ui/config.js` and prints the exact next commands.
 8. **Deploy (only on confirmation)** — follow the ordering and parallelization policy below.
 
 ## Deploy ordering — UI first, then custom MCP, then agents (integrate incrementally)
@@ -838,4 +873,4 @@ option provisions/points the resource and wires it. Three modes:
 
 ## Output
 End every turn with a short status: what was decided, what is still open, the exact next action, and
-a reminder to watch `generated/wizard-progress.log`.
+a reminder to watch `generated/<prefix>/wizard-progress.log`.
