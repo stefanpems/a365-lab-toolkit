@@ -25,6 +25,7 @@ import sys
 
 from pyrit.models import Message, construct_response_from_request
 from pyrit.prompt_target import PromptTarget
+from pyrit.prompt_target.common.target_capabilities import TargetCapabilities
 from pyrit.prompt_target.common.target_configuration import TargetConfiguration
 
 # Import the Prompts Sender engine as a library (never modified). It lives in a sibling skill folder.
@@ -38,6 +39,18 @@ import send_prompts as ps  # noqa: E402
 class A365LabTarget(PromptTarget):
     """A PyRIT target that sends a single-turn text prompt to one Agent 365 lab agent."""
 
+    # Multi-turn attacks (crescendo/red_teaming/tap/pair) require the target to natively advertise
+    # multi-turn + editable-history support. The lab agents are stateless, so in multi_turn mode this
+    # adapter flattens the whole normalized conversation into one request (mode: flattened-transcript);
+    # from PyRIT's perspective the capability is provided natively (no history squashing/adaptation).
+    _DEFAULT_CONFIGURATION = TargetConfiguration(
+        capabilities=TargetCapabilities(
+            supports_multi_turn=True,
+            supports_editable_history=True,
+            supports_system_prompt=True,
+        )
+    )
+
     def __init__(
         self,
         *,
@@ -45,6 +58,7 @@ class A365LabTarget(PromptTarget):
         agent_id: str,
         cache_path: str | None = None,
         user: str | None = None,
+        multi_turn: bool = False,
         custom_configuration: TargetConfiguration | None = None,
     ) -> None:
         super().__init__(custom_configuration=custom_configuration)
@@ -56,6 +70,10 @@ class A365LabTarget(PromptTarget):
         self._agent_id = agent_id
         self._cache_path = cache_path or ps.DEFAULT_CACHE
         self._user = user
+        # Multi-turn attacks (crescendo/red_teaming/tap/pair) drive a growing conversation. The lab
+        # agents are stateless per call, so in multi_turn mode we flatten the accumulated turns into
+        # a single transcript (mode: flattened-transcript) — send_prompts.py is never modified.
+        self._multi_turn = multi_turn
 
     @property
     def agent_id(self) -> str:
@@ -70,10 +88,28 @@ class A365LabTarget(PromptTarget):
         if pieces[0].converted_value_data_type != "text":
             raise ValueError("A365LabTarget only supports text prompts.")
 
+    def _compose_prompt(self, conversation: list[Message]) -> str:
+        """Single-turn: the last message text. Multi-turn: flatten the prior turns into a transcript so
+        a stateless lab agent still 'sees' the accumulated conversation context."""
+        if not self._multi_turn or len(conversation) <= 1:
+            return conversation[-1].get_value()
+        labels = {"user": "User", "assistant": "Assistant", "system": "System"}
+        lines = []
+        for msg in conversation[:-1]:
+            role = getattr(msg.message_pieces[0], "role", "user")
+            lines.append(f"{labels.get(role, str(role).capitalize())}: {msg.get_value()}")
+        current = conversation[-1].get_value()
+        return (
+            "Continue this conversation. Earlier turns are provided for context only:\n"
+            + "\n".join(lines)
+            + "\n\nUser: "
+            + current
+        )
+
     async def _send_prompt_to_target_async(self, *, normalized_conversation: list[Message]) -> list[Message]:
         message = normalized_conversation[-1]
         request = message.message_pieces[0]
-        prompt_text = message.get_value()
+        prompt_text = self._compose_prompt(normalized_conversation)
 
         # send_prompts.send_to_agent is synchronous (requests + MSAL); run it off the event loop.
         loop = asyncio.get_running_loop()

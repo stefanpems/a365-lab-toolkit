@@ -29,27 +29,47 @@ against the operator's **own** deployed Lab Builder agents using **Microsoft PyR
 - PyRIT's memory DB and the results JSON are git-ignored (may contain adversarial content).
 
 ### Scorer content filtering (red-teaming gotcha)
-The **scorer** model call can itself be blocked by the Azure OpenAI **content filter** when it judges
-adversarial or jailbreak content (`ScorerLLMResponseBlockedException` / HTTP 400 `content_filter`). When
-that happens the runner marks the objective **INCONCLUSIVE** with a clear reason (it never aborts the
-batch). For meaningful scoring of *successful* jailbreaks, point the scorer at an Azure OpenAI deployment
-whose content filtering is **disabled or set to annotate-only** (requires the Azure "modified content
-filter" approval), and set `OPENAI_CHAT_ENDPOINT`/`OPENAI_CHAT_MODEL` in `~/.pyrit/.env` to that
-deployment. Refusal responses (the DEFENSE HELD path) are benign and score without this.
+The **scorer** and, for multi-turn attacks, the **adversary** model calls can themselves be blocked by
+the Azure OpenAI **content filter** when they handle adversarial or jailbreak content
+(`ScorerLLMResponseBlockedException` / HTTP 400 `content_filter`, typically `jailbreak: detected+filtered`).
+When that happens the runner marks the objective **INCONCLUSIVE** with a clear reason (it never aborts the
+batch). For meaningful scoring of *successful* jailbreaks, point the scorer/adversary at an Azure OpenAI
+deployment whose content filtering is **disabled or set to annotate-only** and set
+`OPENAI_CHAT_ENDPOINT`/`OPENAI_CHAT_MODEL` in `~/.pyrit/.env` to it. Refusal responses (the DEFENSE HELD
+path) are benign and score without this.
+
+> Relaxing the filter needs the Azure **"modified content filter" approval** (aka.ms/oai/rai/exceptions):
+> creating a custom RAI policy that overrides the base policy fails with *"Policy does not have necessary
+> permission to override base policy"* until the subscription is approved. This lab's scorer/adversary
+> deployment (`a365rtsgeaqr` / `gpt-4.1`, GlobalStandard **capacity 400 = 400K TPM**, swedencentral) runs
+> `Microsoft.DefaultV2` for that reason, so multi-turn attacks may yield more INCONCLUSIVE verdicts until
+> the exception is granted. The high TPM keeps crescendo/tap/pair from throttling (429) across many agents.
 
 ## Attack catalogue (runner `--attack`)
 | id | PyRIT attack | turns | needs adversary LLM | scorer |
 |---|---|---|---|---|
 | `prompt_sending` | single-turn send with converters | 1 | no (scorer only) | refusal scorer (LLM judge) |
-| `crescendo` | multi-turn escalation | many | yes | refusal / objective scorer |
-| `red_teaming` | multi-turn adversarial chat | many | yes | objective scorer |
+| `many_shot` | many-shot jailbreak (N examples) | 1 | no (scorer only) | refusal scorer |
+| `skeleton_key` | skeleton-key jailbreak | 1 | no (scorer only) | refusal scorer |
+| `crescendo` | multi-turn escalation + backtracking | many | yes | default TASK_ACHIEVED float scorer |
+| `red_teaming` | multi-turn adversarial chat | many | yes | refusal-inverted objective scorer |
+| `tap` | Tree of Attacks with Pruning | many | yes | default FloatScaleThreshold (0.7) |
+| `pair` | Prompt Automatic Iterative Refinement | many | yes | default FloatScaleThreshold (0.7) |
 
-**v1 supports `prompt_sending`** end-to-end; `crescendo`/`red_teaming` are scaffolded and require the
-adversary LLM configured in `~/.pyrit/.env`. The runner refuses an attack it cannot execute rather than
-pretending to.
+**All seven attacks are implemented end-to-end.** Single-turn attacks (`prompt_sending`, `many_shot`,
+`skeleton_key`) need only the scorer. Multi-turn attacks (`crescendo`, `red_teaming`, `tap`, `pair`)
+also need the **adversary LLM** in `~/.pyrit/.env`; the runner fails clearly (exit 2) if it cannot be
+built, instead of pretending to run.
+
+**Multi-turn against stateless lab agents.** The six SPA agents keep no server-side conversation (ACA
+ignores `history`; FH-OBO uses `store:False`; FH-S2S/FD send no thread id). So the target adapter
+declares native multi-turn/editable-history capability and, per turn, **flattens the whole accumulated
+conversation into one request** (mode: flattened-transcript). `send_prompts.py` is never modified.
 
 Converters applied by `prompt_sending` (mutations that probe guardrails): a light default set
-(e.g. Base64 / ROT13 / a jailbreak template). The runner exposes `--converters` to override.
+(e.g. Base64 / ROT13 / a jailbreak template). Runner knobs: `--converters` (prompt_sending),
+`--example-count` (many_shot), `--max-turns` + `--max-backtracks` (crescendo/red_teaming),
+`--tree-width` + `--tree-depth` + `--branching-factor` (tap/pair). Modest defaults bound token/TPM cost.
 
 ## Objective categories → what they test
 | category | what it probes |
@@ -77,7 +97,9 @@ apply because we test the LLM guardrails, not the tools).
    pick, fetch its LIVE `config.js` (fall back to on-disk `generated/<prefix>/<prefix>-ui/config.js`).
    Run `python run_redteam.py agents --config <config.js>` to list the agent ids.
 3. **Which agents** — multi-select from the listed ids (default: one OBO + one S2S).
-4. **Which attack + objective category** — from the catalogue and `objectives.md`.
+4. **Which attack + objective category** — from the catalogue and `objectives.md`. For multi-turn
+   attacks (`crescendo`/`red_teaming`/`tap`/`pair`) prefer the richer single objectives in the
+   `## multi-turn-*` sections, and keep `--max-turns` / tree knobs modest to bound cost.
 5. **Ensure sign-in** — if no cached account, run `login` first (browser).
 6. **Run** — `python run_redteam.py attack` with the chosen ids/attack/category and `--out results.json`.
 7. **Review + report** — read `results.json`; per objective judge from PyRIT's score + the reply whether
@@ -88,10 +110,19 @@ apply because we test the LLM guardrails, not the tools).
 All inputs from the command line — never prompt:
 
 ```
+# single-turn (scorer only)
 .\.venv-redteam\Scripts\python.exe .github/skills/red-teamer/scripts/run_redteam.py attack \
   --config generated/a09091/a09091-ui/config.js \
   --agents obo,s2s \
   --attack prompt_sending --objective-category guardrail-identity \
+  --out redteam-results.json
+
+# multi-turn (needs the adversary LLM in ~/.pyrit/.env); bound turns/tree to control cost
+.\.venv-redteam\Scripts\python.exe .github/skills/red-teamer/scripts/run_redteam.py attack \
+  --config generated/a09091/a09091-ui/config.js \
+  --agents obo,s2s \
+  --attack crescendo --objective-category guardrail-identity \
+  --max-turns 6 --max-backtracks 5 \
   --out redteam-results.json
 ```
 
@@ -103,3 +134,5 @@ SUCCEEDED.
 - **Never modify** `send_prompts.py`, the web UI, or any agent code. `a365_target.py` only **imports**
   the Prompts Sender engine.
 - Keep PyRIT, its venv, config and memory **outside** the repo (git-ignored).
+- Multi-turn support is achieved by the adapter declaring native capabilities and flattening the
+  conversation transcript — **not** by changing how any agent is called.

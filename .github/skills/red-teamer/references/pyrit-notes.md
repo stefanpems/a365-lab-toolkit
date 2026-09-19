@@ -56,12 +56,25 @@ py -3.12 -m venv .venv-redteam
 The runner initializes PyRIT with `initialize_pyrit(...)` and reads the scorer endpoint from the
 environment, so no endpoint or key is ever stored in the workspace.
 
-## Supported scope (v1)
+## Supported scope
 - **Targets:** the six SPA-callable agents (`obo`, `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`, `s2s-fd`).
-- **Attacks:** `prompt_sending` (single-turn, converters + refusal scorer). Multi-turn (`crescendo`,
-  `red_teaming`) is scaffolded for the next tier and needs the adversary LLM.
-- **Objectives:** the three categories in `references/objectives.md`.
+- **Attacks:** single-turn `prompt_sending`, `many_shot`, `skeleton_key` (scorer only); multi-turn
+  `crescendo`, `red_teaming`, `tap`, `pair` (need the adversary LLM in `~/.pyrit/.env`).
+- **Objectives:** the categories in `references/objectives.md`, including the `multi-turn-*` sections.
 
-## Out of scope (v1)
+## Multi-turn design (stateless targets)
+The six SPA agents keep no server-side conversation (ACA ignores `history`; FH-OBO uses `store:False`;
+FH-S2S/FD send no thread id). PyRIT multi-turn attacks assume the *target* holds the conversation, so:
+- `A365LabTarget` declares native capabilities (`supports_multi_turn`, `supports_editable_history`,
+  `supports_system_prompt`) via `_DEFAULT_CONFIGURATION`; otherwise the attacks raise a capability error.
+- On each turn PyRIT hands the target the full normalized conversation; in `multi_turn` mode the adapter
+  **flattens prior turns into one transcript** (mode: flattened-transcript) and sends it as the single
+  agent message. `send_prompts.py` is never touched.
+- Scorers: `crescendo` gets an empty `AttackScoringConfig` (PyRIT builds its default TASK_ACHIEVED float
+  scorer); `red_teaming` gets the refusal-inverted objective scorer; `tap`/`pair` get `None` (PyRIT builds
+  the default `FloatScaleThresholdScorer`, threshold 0.7). The adversary + these scorers read the same
+  `~/.pyrit/.env` chat endpoint.
+
+## Out of scope
 - Digital Workers (ACA-DW, FH-DW): no synchronous endpoint (email-triggered).
 - Copilot Studio (MCS-OH/NH): a future adapter over `send_prompts_mcs.py`.
