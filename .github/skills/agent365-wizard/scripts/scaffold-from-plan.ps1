@@ -339,6 +339,24 @@ if ($errors.Count -gt 0) {
 Write-Host "Plan validation OK ($($plan.agents.Count) agent(s), UI mode: $($plan.ui.mode))." -ForegroundColor Green
 if ($ValidateOnly) { exit 0 }
 
+# Normalize per-agent resourceGroup for the CODE families (ACA/FH/FD). The ACA/FH modules read
+# $a.resourceGroup DIRECTLY — the ACA module rewrites the deploy script's $RG constant and emits the
+# App Insights `az containerapp update -g <rg>` from it, and the FH module passes it to `azd env set
+# AZURE_RESOURCE_GROUP` — so an OMITTED value silently produces a broken `-g ""` / blank $RG and aborts
+# the deploy. Derive it deterministically from the naming convention (naming-and-validation.md) when the
+# plan does not carry it: isolated => "<agent-name>-rg", shared => solution.sharedResourceGroup (or
+# "<prefix>-rg"). MCS agents have no resourceGroup. A value already present is left untouched.
+foreach ($a in $plan.agents) {
+    if ($a.type -like 'MCS-*') { continue }
+    if ($a.PSObject.Properties['resourceGroup'] -and $a.resourceGroup) { continue }
+    $rgName = if ($plan.solution.resourceGroupStrategy -eq 'shared') {
+        if ($plan.solution.sharedResourceGroup) { $plan.solution.sharedResourceGroup } else { "$prefix-rg" }
+    }
+    else { "$($a.name)-rg" }
+    if ($a.PSObject.Properties['resourceGroup']) { $a.resourceGroup = $rgName }
+    else { $a | Add-Member -NotePropertyName resourceGroup -NotePropertyValue $rgName }
+}
+
 # ---------------------------------------------------------------- scaffolding
 # All generated folders for THIS run live under one per-run root: generated/<prefix>/.
 $RunRoot     = Join-Path $OutRoot $prefix
