@@ -58,6 +58,13 @@ _test/
 **/.pytest_cache/
 *.egg-info/
 
+# --- Red Teamer (PyRIT) -----------------------------------------------------
+# Dedicated PyRIT venv (PyRIT is installed here, never vendored into the repo).
+.venv-redteam/
+# PyRIT memory / run outputs may contain adversarial content generated for testing.
+**/redteam-results*.json
+**/pyrit_memory*.db*
+
 # --- Node / SPA -------------------------------------------------------------
 **/node_modules/
 

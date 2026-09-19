@@ -1,0 +1,8 @@
+# Red Teamer engine dependencies.
+#
+# PyRIT is the external red-teaming framework — it is NEVER vendored into this repo; it is
+# installed into a dedicated virtual environment (Python 3.12/3.13 recommended). The adapter
+# (a365_target.py) reuses the Prompts Sender engine, hence msal + requests are also required.
+pyrit==1.1.0
+msal>=1.28
+requests>=2.31
