@@ -58,8 +58,13 @@ environment, so no endpoint or key is ever stored in the workspace.
 
 ## Supported scope
 - **Targets:** the six SPA-callable agents (`obo`, `s2s`, `obo-fh`, `s2s-fh`, `obo-fd`, `s2s-fd`).
-- **Attacks:** single-turn `prompt_sending`, `many_shot`, `skeleton_key` (scorer only); multi-turn
-  `crescendo`, `red_teaming`, `tap`, `pair` (need the adversary LLM in `~/.pyrit/.env`).
+- **Attacks (10):** single-turn / scorer-only `prompt_sending`, `many_shot`, `skeleton_key`,
+  `chunked_request`, `multi_prompt_sending`; compound `sequential` (first success over `--sequence`
+  children); multi-turn `crescendo`, `red_teaming`, `tap`, `pair` (need the adversary LLM in `~/.pyrit/.env`).
+- **Converters:** deterministic local transforms via `--converters` (base64, rot13, leetspeak, morse,
+  binary, unicode_confusable, flip, charswap, zerowidth, randomcase, nato, emoji).
+- **Scoring:** `--score-mode llm` (refusal-inverted LLM judge) or `deterministic` (regex/keyword detectors
+  of tool/endpoint disclosure, credential leak, markdown injection — no LLM call, so never content-filtered).
 - **Objectives:** the categories in `references/objectives.md`, including the `multi-turn-*` sections.
 
 ## Multi-turn design (stateless targets)
