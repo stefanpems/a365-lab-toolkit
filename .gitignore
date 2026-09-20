@@ -64,6 +64,8 @@ _test/
 # PyRIT memory / run outputs may contain adversarial content generated for testing.
 **/redteam-results*.json
 **/pyrit_memory*.db*
+# Manual (MCS) mode intermediates: adversarial prompt plans and operator-pasted agent replies.
+**/redteam-mcs-*.json
 
 # --- Node / SPA -------------------------------------------------------------
 **/node_modules/
