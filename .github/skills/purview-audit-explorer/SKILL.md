@@ -38,26 +38,36 @@ contexts, from{user|application}, body{content,contentType}, attachments, links,
 `AISystemPlugin`, and **`AccessedResources`** (emails/files/links the agent read — great for action
 auditing). The audit query API is **async**: create → poll `status` until `succeeded` → GET records.
 
-## Auth model — device sign-in is BLOCKED in this workspace
-Do **not** use `Connect-MgGraph -UseDeviceAuthentication`. The Azure CLI token also lacks the two target
-scopes. Instead the scripts **bootstrap a dedicated app registration** and mint **app-only** tokens:
+## Auth model — app-only is required (verified 2026-09-20)
+The transcript endpoint `getAllEnterpriseInteractions` is **not supported in a delegated context** (returns
+HTTP 412 `"Requested API is not supported in delegated context"`), and `AiEnterpriseInteraction.Read.All`
+exists **only as an application permission** (there is a delegated `AiEnterpriseInteraction.Read`, but the
+endpoint rejects delegated). So a plain `Connect-MgGraph` sign-in **cannot** read transcripts — an
+**app-only** token is mandatory. The design therefore separates a one-time privileged **Setup** from a
+deterministic, read-only **runtime**:
 
-1. Reuse the operator's already-signed-in `az` **admin** session (holds `Application.ReadWrite.All` +
-   `AppRoleAssignment.ReadWrite.All`). Because `az ad …` can hit a CAE loop, the scripts call Graph via
-   **direct REST** with `az account get-access-token`.
-2. Create/reuse app `a365-purview-audit-explorer` with the two **application** permissions, create its
-   service principal, and **self-consent** (appRoleAssignedTo).
-3. Mint a client secret and cache the credential **outside the repo** at
-   `$HOME/.a365-purview-audit-explorer/cred.json` (never committed). Subsequent runs reuse it.
-4. If `az` returns `InteractionRequired` / `TokenCreatedWithOutdatedPolicies`, run
-   `az login --scope https://graph.microsoft.com/.default` (interactive **browser**) and retry.
+**One-time Setup** (`Setup-PurviewAudit.ps1`, idempotent, needs a Global/Application admin):
+```pwsh
+pwsh -File .github/skills/purview-audit-explorer/scripts/Setup-PurviewAudit.ps1              # Graph PowerShell (default, cross-platform)
+pwsh -File .github/skills/purview-audit-explorer/scripts/Setup-PurviewAudit.ps1 -Method Az   # reuse an existing `az login` admin session
+```
+It creates/reuses app `a365-purview-audit-explorer` with three **read-only application** permissions —
+`AiEnterpriseInteraction.Read.All`, `AuditLogsQuery.Read.All`, `User.Read.All` — grants admin consent,
+mints a client secret, and caches the credential **outside the repo** at
+`$HOME/.a365-purview-audit-explorer/cred.json` (never committed). `User.Read.All` lets the runtime resolve
+UPN↔id without any Azure CLI dependency.
 
-All of this is encapsulated in `scripts/_common.ps1` (`Initialize-PurviewApp`).
+**Runtime** (`Get-PurviewToken`): reads only the cached credential and mints an app-only token. No
+interactive sign-in, no Azure CLI, **no side effects** — identical behaviour on every run. If the
+credential is missing/stale it instructs the user to run Setup once.
 
-## Scripts (all read-only, PowerShell 7)
-Run from the repo root.
+## Scripts (PowerShell 7)
+Run from the repo root. **Run Setup once first**, then the read-only tools need no sign-in.
 
 ```pwsh
+# 0) ONE-TIME setup (privileged admin; idempotent)
+pwsh -File .github/skills/purview-audit-explorer/scripts/Setup-PurviewAudit.ps1
+
 # 1) Discover which users/agents interacted (async audit query; tenant-wide)
 pwsh -File .github/skills/purview-audit-explorer/scripts/Find-InteractionUsers.ps1 -SinceDays 7
 
@@ -70,9 +80,10 @@ pwsh -File .github/skills/purview-audit-explorer/scripts/Show-Conversation.ps1 `
      -UserUpn admin@<tenant>.onmicrosoft.com -SessionId <full-session-id> -SinceHours 168
 ```
 
-- `_common.ps1` — dot-sourced helpers: `Initialize-PurviewApp` (bootstrap/reuse app + app-only token),
-  `Resolve-UserId`, `Get-EnterpriseInteractions` (page + client-side time/appClass filter),
-  `Format-AgentName`, `Invoke-Graph`, `Get-ODataNext`.
+- `Setup-PurviewAudit.ps1` — one-time privileged setup (`-Method GraphPowerShell` default, or `-Method Az`).
+- `_common.ps1` — dot-sourced helpers: `Get-PurviewToken` (runtime, cache-only app-only token),
+  `Register-PurviewApp` (setup), `Resolve-UserId`, `Get-EnterpriseInteractions` (page + client-side
+  time/appClass filter), `Format-AgentName`, `Invoke-Graph`, `Get-ODataNext`.
 - `List-AgentConversations.ps1` — one row per `appClass`+`sessionId`; `-AsJson` emits clean JSON (suppresses
   host diagnostics so stdout is parseable).
 - `Show-Conversation.ps1` — ordered transcript, full millisecond timestamps, `(no text captured)` for empty

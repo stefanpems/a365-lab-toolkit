@@ -1,39 +1,41 @@
 #Requires -Version 7
 <#
 .SYNOPSIS
-  Shared read-only helpers for the Purview Audit Explorer.
+  Shared helpers for the Purview Audit Explorer.
   Dot-source this file: . "$PSScriptRoot/_common.ps1"
 
-  Auth model (device sign-in is blocked in some workspaces, so this avoids it entirely):
-    * A dedicated Entra app registration 'a365-purview-audit-explorer' is created/reused with the two
-      READ-ONLY Microsoft Graph application permissions AiEnterpriseInteraction.Read.All and
-      AuditLogsQuery.Read.All, self-consented using the operator's already-signed-in `az` admin session
-      (which holds Application.ReadWrite.All + AppRoleAssignment.ReadWrite.All).
-    * The app's client secret is cached OUTSIDE the repository, under $HOME/.a365-purview-audit-explorer/,
-      never committed. App-only tokens are then minted via client-credentials.
-    * The `az` session token is used ONLY to resolve user ids (it lacks the two target scopes by design).
+  DESIGN (clean / repeatable / deterministic):
+   * ONE-TIME SETUP (privileged, interactive admin) is done by Setup-PurviewAudit.ps1, which calls
+     Register-PurviewApp to create/reuse a dedicated app registration with the READ-ONLY application
+     permissions and grant admin consent. Verified fact: the transcript endpoint
+     getAllEnterpriseInteractions is NOT supported in a delegated context (HTTP 412), so an app-only
+     (application-permission) token is MANDATORY - there is no delegated alternative.
+   * RUNTIME (read-only) uses Get-PurviewToken, which ONLY reads the cached credential and mints an
+     app-only token. It has NO side effects, needs NO interactive sign-in and NO Azure CLI, so it behaves
+     identically on every run. If the credential is missing it tells the user to run Setup once.
+   * The client secret is cached OUTSIDE the repository at $HOME/.a365-purview-audit-explorer/cred.json
+     and is never committed.
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:GraphAppId   = '00000003-0000-0000-c000-000000000000'
-$script:AppName      = 'a365-purview-audit-explorer'
-$script:WantRoles    = 'AiEnterpriseInteraction.Read.All', 'AuditLogsQuery.Read.All'
-$script:CredDir      = Join-Path $HOME '.a365-purview-audit-explorer'
-$script:CredPath     = Join-Path $script:CredDir 'cred.json'
+$script:GraphAppId = '00000003-0000-0000-c000-000000000000'
+$script:AppName    = 'a365-purview-audit-explorer'
+# Read-only application permissions the tool needs:
+#  - AiEnterpriseInteraction.Read.All : read the agent<->user transcripts (app-only; no delegated option)
+#  - AuditLogsQuery.Read.All          : tenant-wide discovery + action auditing (CopilotInteraction)
+#  - User.Read.All                    : resolve UPN<->id at runtime without any Azure CLI dependency
+$script:WantRoles  = 'AiEnterpriseInteraction.Read.All', 'AuditLogsQuery.Read.All', 'User.Read.All'
+$script:CredDir    = Join-Path $HOME '.a365-purview-audit-explorer'
+$script:CredPath   = Join-Path $script:CredDir 'cred.json'
 
-function Get-AzGraphToken {
-    # Reuse the operator's existing az session (no interactive sign-in).
-    $t = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
-    if (-not $t) {
-        throw "No Azure CLI Graph token. Run: az login --scope https://graph.microsoft.com/.default"
-    }
-    return $t
-}
-
+# ---------------------------------------------------------------------------------------------------
+# Graph request helpers
+# ---------------------------------------------------------------------------------------------------
 function Get-ODataNext {
     param($Response)
     if ($Response.PSObject.Properties.Name -contains '@odata.nextLink') { return $Response.'@odata.nextLink' }
+    if (($Response -is [System.Collections.IDictionary]) -and $Response.Contains('@odata.nextLink')) { return $Response['@odata.nextLink'] }
     return $null
 }
 
@@ -52,6 +54,37 @@ function Invoke-Graph {
     return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $h
 }
 
+# ---------------------------------------------------------------------------------------------------
+# Privileged token sources - used by SETUP only
+# ---------------------------------------------------------------------------------------------------
+function Get-AzGraphToken {
+    $t = az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>$null
+    if (-not $t) { throw "No Azure CLI Graph token. Run: az login --scope https://graph.microsoft.com/.default" }
+    return $t
+}
+
+# Dispatcher so Register-PurviewApp works with either a Graph PowerShell context or an az token.
+$script:PrivMode = 'Az'      # 'Mg' | 'Az'
+$script:PrivToken = $null
+
+function Set-PrivilegedAuth {
+    param([ValidateSet('Mg', 'Az')] [string] $Mode, [string] $Token)
+    $script:PrivMode = $Mode
+    $script:PrivToken = $Token
+}
+
+function Invoke-GraphPriv {
+    param([string] $Method = 'GET', [Parameter(Mandatory)] [string] $Uri, $Body)
+    if ($script:PrivMode -eq 'Mg') {
+        if ($Body) { return Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body ($Body | ConvertTo-Json -Depth 10) -ContentType 'application/json' }
+        return Invoke-MgGraphRequest -Method $Method -Uri $Uri
+    }
+    return Invoke-Graph -Token $script:PrivToken -Method $Method -Uri $Uri -Body $Body
+}
+
+# ---------------------------------------------------------------------------------------------------
+# App-only token - RUNTIME
+# ---------------------------------------------------------------------------------------------------
 function Get-AppOnlyToken {
     param([Parameter(Mandatory)] $Cred)
     $body = @{
@@ -63,30 +96,37 @@ function Get-AppOnlyToken {
     (Invoke-RestMethod -Method POST -Uri "https://login.microsoftonline.com/$($Cred.tenantId)/oauth2/v2.0/token" -Body $body).access_token
 }
 
-function Initialize-PurviewApp {
+function Get-PurviewToken {
     <#
-      Ensure the dedicated app registration exists & is consented; return a fresh app-only token.
-      Reuses the cached secret when it still works; only bootstraps when needed.
+      RUNTIME entry point. Deterministic and read-only: reads the cached credential and returns an
+      app-only Graph token. Never creates or changes anything. Throws a clear instruction if setup
+      has not been run.
     #>
-    [CmdletBinding()]
-    param([switch] $ForceBootstrap)
-
-    # 1. Try the cached credential first.
-    if (-not $ForceBootstrap -and (Test-Path $script:CredPath)) {
-        try {
-            $cred = Get-Content $script:CredPath -Raw | ConvertFrom-Json
-            $tok = Get-AppOnlyToken -Cred $cred
-            if ($tok) { return [pscustomobject]@{ Token = $tok; Cred = $cred } }
-        }
-        catch { Write-Verbose "Cached credential unusable; bootstrapping. $($_.Exception.Message)" }
+    [CmdletBinding()] param()
+    if (-not (Test-Path $script:CredPath)) {
+        throw "Not set up yet. Run the one-time setup once:`n" +
+        "  pwsh -File `"$PSScriptRoot/Setup-PurviewAudit.ps1`"`n" +
+        "(It creates the read-only app registration '$($script:AppName)' and caches its credential at $($script:CredPath).)"
     }
+    $cred = Get-Content $script:CredPath -Raw | ConvertFrom-Json
+    try {
+        $tok = Get-AppOnlyToken -Cred $cred
+    }
+    catch {
+        throw "Cached credential at $($script:CredPath) no longer works ($($_.Exception.Message)). Re-run Setup-PurviewAudit.ps1 to refresh it."
+    }
+    if (-not $tok) { throw "Could not mint an app-only token. Re-run Setup-PurviewAudit.ps1." }
+    return [pscustomobject]@{ Token = $tok; Cred = $cred }
+}
 
-    # 2. Bootstrap using the az admin session (direct REST to avoid the `az ad` CAE loop).
-    $az = Get-AzGraphToken
-    $tenantId = az account show --query tenantId -o tsv
-    $base = 'https://graph.microsoft.com/v1.0'
+# ---------------------------------------------------------------------------------------------------
+# Registration - SETUP (idempotent). Requires Set-PrivilegedAuth to have been called first.
+# ---------------------------------------------------------------------------------------------------
+function Register-PurviewApp {
+    [CmdletBinding()] param()
+    $v1 = 'https://graph.microsoft.com/v1.0'
 
-    $graphSp = Invoke-Graph -Token $az -Uri "$base/servicePrincipals(appId='$($script:GraphAppId)')"
+    $graphSp = Invoke-GraphPriv -Uri "$v1/servicePrincipals(appId='$($script:GraphAppId)')"
     $roleIds = @()
     foreach ($rv in $script:WantRoles) {
         $r = $graphSp.appRoles | Where-Object { $_.value -eq $rv -and $_.isEnabled }
@@ -95,61 +135,70 @@ function Initialize-PurviewApp {
     }
 
     $flt = [uri]::EscapeDataString("displayName eq '$($script:AppName)'")
-    $ex = Invoke-Graph -Token $az -Uri "$base/applications?`$filter=$flt"
-    if ($ex.value.Count -gt 0) {
-        $app = $ex.value[0]
+    $ex = Invoke-GraphPriv -Uri "$v1/applications?`$filter=$flt"
+    if (@($ex.value).Count -gt 0) {
+        $app = @($ex.value)[0]
+        Write-Host "Reusing app registration '$($script:AppName)' (appId=$($app.appId))." -ForegroundColor DarkGray
+        # Ensure all required permissions are declared on the app.
+        Invoke-GraphPriv -Method PATCH -Uri "$v1/applications/$($app.id)" -Body @{
+            requiredResourceAccess = @(@{ resourceAppId = $script:GraphAppId; resourceAccess = @($roleIds | ForEach-Object { @{ id = $_; type = 'Role' } }) })
+        } | Out-Null
     }
     else {
-        $app = Invoke-Graph -Token $az -Method POST -Uri "$base/applications" -Body @{
+        $app = Invoke-GraphPriv -Method POST -Uri "$v1/applications" -Body @{
             displayName            = $script:AppName
             signInAudience         = 'AzureADMyOrg'
             requiredResourceAccess = @(@{ resourceAppId = $script:GraphAppId; resourceAccess = @($roleIds | ForEach-Object { @{ id = $_; type = 'Role' } }) })
         }
+        Write-Host "Created app registration '$($script:AppName)' (appId=$($app.appId))." -ForegroundColor Green
     }
 
     $spFlt = [uri]::EscapeDataString("appId eq '$($app.appId)'")
-    $spEx = Invoke-Graph -Token $az -Uri "$base/servicePrincipals?`$filter=$spFlt"
-    if ($spEx.value.Count -gt 0) {
-        $sp = $spEx.value[0]
+    $spEx = Invoke-GraphPriv -Uri "$v1/servicePrincipals?`$filter=$spFlt"
+    if (@($spEx.value).Count -gt 0) {
+        $sp = @($spEx.value)[0]
     }
     else {
-        $sp = Invoke-Graph -Token $az -Method POST -Uri "$base/servicePrincipals" -Body @{ appId = $app.appId }
+        $sp = Invoke-GraphPriv -Method POST -Uri "$v1/servicePrincipals" -Body @{ appId = $app.appId }
         Start-Sleep -Milliseconds 1500
     }
 
-    $assigned = Invoke-Graph -Token $az -Uri "$base/servicePrincipals/$($sp.id)/appRoleAssignments"
+    $assigned = Invoke-GraphPriv -Uri "$v1/servicePrincipals/$($sp.id)/appRoleAssignments"
     foreach ($rid in $roleIds) {
-        if ($assigned.value | Where-Object { $_.appRoleId -eq $rid -and $_.resourceId -eq $graphSp.id }) { continue }
-        Invoke-Graph -Token $az -Method POST -Uri "$base/servicePrincipals/$($sp.id)/appRoleAssignedTo" -Body @{
+        if (@($assigned.value) | Where-Object { $_.appRoleId -eq $rid -and $_.resourceId -eq $graphSp.id }) {
+            Write-Host "  admin consent already granted: $rid" -ForegroundColor DarkGray
+            continue
+        }
+        Invoke-GraphPriv -Method POST -Uri "$v1/servicePrincipals/$($sp.id)/appRoleAssignedTo" -Body @{
             principalId = $sp.id; resourceId = $graphSp.id; appRoleId = $rid
         } | Out-Null
+        Write-Host "  admin consent granted:        $rid" -ForegroundColor Green
     }
 
-    $pw = Invoke-Graph -Token $az -Method POST -Uri "$base/applications/$($app.id)/addPassword" -Body @{
+    $pw = Invoke-GraphPriv -Method POST -Uri "$v1/applications/$($app.id)/addPassword" -Body @{
         passwordCredential = @{ displayName = "purview-audit-explorer-$(Get-Date -Format yyyyMMddHHmmss)" }
     }
 
+    $org = Invoke-GraphPriv -Uri "$v1/organization?`$select=id"
+    $tenantId = @($org.value)[0].id
     $cred = [ordered]@{ tenantId = $tenantId; appId = $app.appId; clientSecret = $pw.secretText; spId = $sp.id }
     if (-not (Test-Path $script:CredDir)) { New-Item -ItemType Directory -Path $script:CredDir -Force | Out-Null }
     ($cred | ConvertTo-Json) | Set-Content -Path $script:CredPath -Encoding utf8
 
-    # New app-role assignments can take a few seconds to reflect in a fresh token.
-    for ($i = 0; $i -lt 8; $i++) {
-        try {
-            $tok = Get-AppOnlyToken -Cred ([pscustomobject]$cred)
-            if ($tok) { return [pscustomobject]@{ Token = $tok; Cred = ([pscustomobject]$cred) } }
-        }
-        catch { }
+    # New app-role assignments take a few seconds to reflect in a fresh app-only token.
+    for ($i = 0; $i -lt 10; $i++) {
+        try { if (Get-AppOnlyToken -Cred ([pscustomobject]$cred)) { return [pscustomobject]$cred } } catch { }
         Start-Sleep -Seconds 4
     }
-    throw "Could not mint an app-only token after bootstrap."
+    throw "App and consent created, but an app-only token was not usable yet. Wait a minute and re-run a runtime script."
 }
 
+# ---------------------------------------------------------------------------------------------------
+# Data helpers - RUNTIME (all use the app-only token)
+# ---------------------------------------------------------------------------------------------------
 function Resolve-UserId {
-    param([Parameter(Mandatory)] [string] $Upn)
-    $az = Get-AzGraphToken
-    $u = Invoke-Graph -Token $az -Uri "https://graph.microsoft.com/v1.0/users/$Upn`?`$select=id,displayName,userPrincipalName"
-    return $u
+    param([Parameter(Mandatory)] [string] $Token, [Parameter(Mandatory)] [string] $Upn)
+    Invoke-Graph -Token $Token -Uri "https://graph.microsoft.com/v1.0/users/$Upn`?`$select=id,displayName,userPrincipalName"
 }
 
 function Get-EnterpriseInteractions {

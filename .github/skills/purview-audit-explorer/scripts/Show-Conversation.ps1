@@ -15,8 +15,8 @@ param(
 . "$PSScriptRoot/_common.ps1"
 
 $since = (Get-Date).ToUniversalTime().AddHours(-$SinceHours)
-$auth = Initialize-PurviewApp
-$u = Resolve-UserId -Upn $UserUpn
+$auth = Get-PurviewToken
+$u = Resolve-UserId -Token $auth.Token -Upn $UserUpn
 
 $items = Get-EnterpriseInteractions -Token $auth.Token -UserId $u.id -Since $since |
     Where-Object { $_.sessionId -eq $SessionId } | Sort-Object createdDateTime

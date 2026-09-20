@@ -17,8 +17,8 @@ param(
 . "$PSScriptRoot/_common.ps1"
 
 $since = (Get-Date).ToUniversalTime().AddHours(-$SinceHours)
-$auth = Initialize-PurviewApp
-$u = Resolve-UserId -Upn $UserUpn
+$auth = Get-PurviewToken
+$u = Resolve-UserId -Token $auth.Token -Upn $UserUpn
 if (-not $AsJson) {
     Write-Host "User: $($u.userPrincipalName)  ($($u.displayName))  since $($since.ToString('u'))" -ForegroundColor Cyan
 }

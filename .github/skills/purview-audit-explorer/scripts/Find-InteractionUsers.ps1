@@ -14,7 +14,7 @@ param(
 )
 . "$PSScriptRoot/_common.ps1"
 
-$auth = Initialize-PurviewApp
+$auth = Get-PurviewToken
 $tok = $auth.Token
 $start = (Get-Date).ToUniversalTime().AddDays(-$SinceDays).ToString('yyyy-MM-ddTHH:mm:ssZ')
 $end = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')

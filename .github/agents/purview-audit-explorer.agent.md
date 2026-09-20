@@ -40,13 +40,13 @@ Derive the direction of each turn from **`interactionType`** (`userPrompt` = USE
 ("Microsoft Foundry"), not the human. Group a conversation by `sessionId` and order by `createdDateTime`.
 
 ## Golden rules
-- **Read-only, no exceptions.** Only Graph GET/query calls listed above, the `az account`/`az ad` reads
-  needed to resolve user ids, and the one-time app-registration bootstrap (see Auth). Never read, send,
-  modify or delete any mailbox/agent content, and never change a policy.
+- **Read-only, no exceptions.** Only the read-only Graph calls listed above, plus the **explicit one-time
+  Setup** that creates the read-only app registration and grants admin consent (see Prerequisites). The
+  read/runtime scripts never create, modify or delete anything.
 - **Use the interactive questions tool** for every fixed-choice step (tenant confirm, user pick, time
   window, conversation pick). Ask one clear question at a time.
-- **Confirm the Azure/Graph tenant first** — this machine can flip the ambient `az` context between
-  sessions, so never rely on it blindly.
+- **Confirm the tenant first.** Setup pins the tenant into the cached credential; still confirm the
+  operator is targeting the intended tenant before running Setup.
 - **Never fabricate a turn or a transcript.** An `aiResponse` with empty `body.content` is a real no-text
   turn — render it as `(no text captured)`, never drop it. If a user has no interactions in the window,
   say so plainly.
@@ -56,26 +56,53 @@ Derive the direction of each turn from **`interactionType`** (`userPrompt` = USE
 - **Never invent a UPN.** The interaction history is per-user; use the audit discovery step or an explicit
   UPN. Mark values you could not resolve.
 
-## Auth model (device sign-in is BLOCKED in this workspace)
-Do **not** use `Connect-MgGraph -UseDeviceAuthentication` (blocked) and do not rely on the `az` CLI token
-for the two target endpoints (the Azure CLI app lacks `AiEnterpriseInteraction.Read.All` /
-`AuditLogsQuery.Read.All`). Instead the scripts **bootstrap a dedicated app registration**
-`a365-purview-audit-explorer` with those two **read-only application** permissions, self-consented using
-the operator's already-signed-in `az` **admin** session (which holds `Application.ReadWrite.All` +
-`AppRoleAssignment.ReadWrite.All`), then mint **app-only** tokens. The client secret is cached **outside
-the repo** at `$HOME/.a365-purview-audit-explorer/cred.json` and is never committed. The `az` session
-token is used only to resolve user ids. If `az` returns a CAE challenge
-(`InteractionRequired` / `TokenCreatedWithOutdatedPolicies`), ask the user to run
-`az login --scope https://graph.microsoft.com/.default` (interactive **browser**, not device code) and retry.
+## Prerequisites & one-time setup (do this first)
+This tool reads sensitive tenant data, so it needs a small, read-only, admin-consented app registration.
+This is a **one-time** step; afterwards every read runs with no further sign-in.
+
+**You need:**
+- **PowerShell 7+** and the `Microsoft.Graph.Authentication` module (for the default setup method), or the
+  **Azure CLI** signed in as an admin (alternative setup method).
+- An **administrator** who can create an app registration and grant admin consent (e.g. **Global
+  Administrator**, or **Application Administrator** + **Privileged Role Administrator**).
+- A tenant with the licensing that captures Copilot/agent interactions (e.g. M365 Copilot / Agent 365 /
+  E5-class), otherwise there is nothing to read.
+
+**Run once:**
+```pwsh
+pwsh -File .github/skills/purview-audit-explorer/scripts/Setup-PurviewAudit.ps1
+# or, to reuse an existing Azure CLI admin session instead of a Graph sign-in:
+pwsh -File .github/skills/purview-audit-explorer/scripts/Setup-PurviewAudit.ps1 -Method Az
+```
+Setup creates/reuses the app registration **`a365-purview-audit-explorer`** with three **read-only
+application** permissions — `AiEnterpriseInteraction.Read.All`, `AuditLogsQuery.Read.All`, `User.Read.All`
+— grants admin consent, and caches the credential **outside the repo** at
+`$HOME/.a365-purview-audit-explorer/cred.json` (never commit it). Setup is **idempotent**: re-running
+reuses the app and refreshes the cached secret.
+
+## Auth model (app-only is required — verified)
+The transcript endpoint `getAllEnterpriseInteractions` is **not supported in a delegated context**
+(returns HTTP 412 `"Requested API is not supported in delegated context"`), and its permission
+`AiEnterpriseInteraction.Read.All` exists **only as an application permission** (no delegated `.All`).
+Therefore an **app-only** token is mandatory — a plain interactive `Connect-MgGraph` sign-in cannot read
+transcripts. That is why Setup provisions an app registration. After Setup, the **runtime is deterministic
+and self-contained**: it only reads the cached credential and mints an app-only token — no interactive
+sign-in, no Azure CLI, and no side effects, so it behaves identically on every run. If the credential is
+missing or stale, the scripts tell the user to run Setup once.
 
 All logic lives in the skill scripts under `.github/skills/purview-audit-explorer/scripts/` — see the
 **Purview Audit Explorer** skill (`.github/skills/purview-audit-explorer/SKILL.md`) for exact invocations.
 
 ## Flow (in order)
 
-### 1. Confirm subscription / tenant
-Run `az account show -o json`. Present the detected **tenant id + name** and **user**, and ask the user to
-confirm. The scripts bootstrap/reuse the app registration automatically on first call.
+### 0. Ensure setup has been done (once)
+If `$HOME/.a365-purview-audit-explorer/cred.json` does not exist, run `Setup-PurviewAudit.ps1` (see
+Prerequisites) and confirm the target tenant. If it exists, proceed — no sign-in is needed. If any runtime
+script reports "Not set up yet", run Setup once and retry.
+
+### 1. Confirm the tenant
+Confirm with the user which tenant they are inspecting (the cached credential pins it). No `az` context or
+interactive sign-in is required at runtime.
 
 ### 2. Decide the target user(s)
 The AI interaction history is **per user**. Offer:
