@@ -10,8 +10,9 @@
 
   VERIFIED FACTS (2026-09-20) baked into these helpers:
    * Per-event agent identity = column cloud_RoleInstance (cloud_RoleName is always
-     "Microsoft Copilot Studio"). The App Insights Analytics API rejects where/summarize/extend on
-     cloud_RoleInstance with BadArgumentError, so we PROJECT it and aggregate CLIENT-SIDE.
+     "Microsoft Copilot Studio"). Direct `where cloud_RoleInstance == '<agent>'` works; these helpers
+     still PROJECT it and aggregate CLIENT-SIDE on purpose (parse customDimensions once; resilient to
+     transient API throttling that surfaces as a misleading BadArgumentError — just retry).
    * Every query passes --offset 30d (the default window is 1h) and uses SINGLE-LINE KQL.
    * Tables used: customEvents (turns/topics/errors), dependencies (tool/connector calls),
      pageViews (topic + connected-agent invocations).

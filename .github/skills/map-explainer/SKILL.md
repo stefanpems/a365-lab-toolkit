@@ -24,14 +24,17 @@ The Map for an MCS agent is backed by the lab's Application Insights. Only three
 - Per-event agent = **`cloud_RoleInstance`** (e.g. `lab16-MCS-OH-1`). `cloud_RoleName` is always
   "Microsoft Copilot Studio". One App Insights resource typically serves **several** agents, so you must
   attribute every row to an agent via `cloud_RoleInstance`.
-- **API quirk:** `where` / `summarize by` / `extend` on `cloud_RoleInstance` returns
-  `BadArgumentError`. Only `project cloud_RoleInstance` works. The scripts therefore **project** it and
-  aggregate **client-side** in PowerShell.
+- Direct `where cloud_RoleInstance == '<agent>'` and `summarize by cloud_RoleInstance` **work** (Portal
+  *Logs* and CLI). The scripts still **project** it and aggregate **client-side** on purpose — to parse
+  `customDimensions` once and to survive transient API throttling, which surfaces as a misleading
+  `BadArgumentError` (just retry the same query). Use direct KQL for the manual "How-to" path.
 
 ### Query hygiene
 - Always pass **`--offset 30d`** (the CLI default window is 1h).
-- KQL must be a **single line**; multi-line/heredoc KQL gets mangled into `BadArgumentError` or a raw dump.
+- KQL must be a **single line** for the CLI; multi-line/heredoc KQL gets mangled into `BadArgumentError`
+  or a raw dump. In the Portal *Logs* blade multi-line KQL is fine.
 - Use single-quote KQL literals (`'x'`), never the bracketed double-quote form.
+- A repeated `BadArgumentError` on a query that should work is almost always **throttling** — retry.
 
 ### Map node → source mapping
 | Map edge / node | Source | Aggregation | Notes |
@@ -87,6 +90,66 @@ pwsh -File scripts/Show-MapConnectionDetails.ps1 -App lab16-appinsights -Rg lab1
 | **USER** (sessions) | start→end (UTC) + duration; channel (Teams / Studio / published-test); #user & #bot turns; **first ask**; **last outcome**; any `OnErrorLog`. `-Full` = full transcript. | *When*, *what asked*, *what happened*, errors. |
 | **TOOL** (calls / exceptions) | timestamp; **OK/FAIL + HTTP resultCode**; duration(ms); **triggering prompt**; **resulting reply**; failures → nearest `OnErrorLog` (cause). | *Why* called, **outcome**, **error cause**. |
 | **CONNECTED AGENT** | timestamp; **user prompt** that triggered the hand-off; **caller's reply**; **callee's** received message + reply. | The agent-to-agent exchange and result. |
+
+## Two modes per connection: Results vs How-to
+When drilling into a connection the wizard offers a choice:
+- **Results** — run `Show-MapConnectionDetails.ps1` and show the items (default automated path).
+- **How-to** — output the manual **Portal procedure + KQL** so the user reproduces it themselves.
+
+### Manual "Where" preamble (every connection)
+1. Azure Portal → Application Insights resource **`<App>`**.
+2. **Monitoring → Logs** (KQL editor).
+3. Time range → **Last 30 days** (or match the Map window).
+4. Paste a query → **Run**. (Same KQL runs via `az monitor app-insights query --app <App> -g <Rg>
+   --offset 30d --analytics-query "<single line>"`.)
+
+Repeat the caveats: App Insights can be **lower** than the Map (pre-wiring history) and **higher** for very
+recent activity; tool-call counts line up closely.
+
+### Manual KQL library (verified 2026-09-20)
+**USER — sessions of one user**
+```kql
+customEvents
+| where timestamp > ago(30d) and cloud_RoleInstance == '<agent>'
+| where tostring(customDimensions.fromName) == '<Display Name>' or user_Id contains '<user AAD object id>'
+| summarize Sessions = dcount(session_Id),
+            UserTurns = countif(name == 'BotMessageReceived' and tostring(customDimensions.type) == 'message'),
+            FirstSeen = min(timestamp), LastSeen = max(timestamp)
+```
+Use `contains` (not `has`) for the object id — Studio/published `user_Id` = `<channel><objectId>` with no
+word boundary, so `has` misses it. Per-session list: same filter, `summarize … by session_Id`. Read one
+session: `customEvents | where session_Id == '<id>' and name in ('BotMessageReceived','BotMessageSend')`.
+
+**TOOL (connector level) — calls & exceptions**
+```kql
+dependencies
+| where timestamp > ago(30d) and cloud_RoleInstance == '<agent>' and target == '<target>'
+| summarize Calls = count(), Exceptions = countif(success == false), Last = max(timestamp)
+```
+Targets: `shared_a365outlookmailmcp/mcp_MailTools` (Mail), `…zzrigelanon…/InvokeServer` (Custom MCP Anon),
+`…zzrigelauth…/InvokeServer` (Custom MCP Auth). Per-call list / failures-only: drop the summarize and
+`project timestamp, success, resultCode, duration, conversationId=tostring(customDimensions.conversationId)`
+(add `and success == false` for exceptions). See the prompt/answer via the transcript query keyed by
+`conversationId`.
+
+**TOOL (fine MCP sub-tool: `server_time`, `propagate_to_graph`, `DataverseSearch`)**
+Not countable from App Insights — `dependencies.data` is empty; the Map's number comes from the Copilot
+Studio / Agent 365 backend. Point the user to the Map node / Copilot Studio analytics. Best-effort context:
+```kql
+customEvents
+| where timestamp > ago(30d) and cloud_RoleInstance == '<agent>' and name in ('BotMessageReceived','BotMessageSend')
+| where tostring(customDimensions.text) contains '<sub-tool name>'
+| project timestamp, name, conversationId = tostring(customDimensions.conversationId), text = tostring(customDimensions.text)
+| order by timestamp asc
+```
+
+**CONNECTED AGENT — hand-offs**
+```kql
+pageViews
+| where timestamp > ago(30d) and cloud_RoleInstance == '<agent>' and name contains 'InvokeConnectedAgentTaskAction.<callee>'
+| summarize Invocations = count(), Last = max(timestamp)
+```
+The callee's own turns are in the SAME resource under `cloud_RoleInstance == '<callee>'`.
 
 ## Prerequisites
 - Azure CLI with the Application Insights extension. If a query fails with a missing-command error:
