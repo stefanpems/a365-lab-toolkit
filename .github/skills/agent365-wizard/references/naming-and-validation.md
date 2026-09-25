@@ -28,9 +28,11 @@ Examples for prefix `contoso`: `contoso-MAF-ACA-OBO`, `contoso-MAF-FH-S2S`, `con
 | Resource group (shared)   | `<prefix>-rg` | `contoso-rg` |
 | SPA app registration | `<prefix>-ui-spa` | `contoso-ui-spa` |
 | Static Web App | `<prefix>-ui` | `contoso-ui` |
+| Web-fetch MCP (only when the plan has FD agents) | RG `<prefix>-webfetch-rg`, env `<prefix>-webfetch-cae`, app `<prefix>-webfetch-ca` | `contoso-webfetch-ca` |
 
 > **Scaffold output lives under one per-run root: `generated/<prefix>/`.** Every folder for a run — each
-> `<agent-name>`, the `<prefix>-ui` web UI and the `<prefix>-mcp` custom MCP — is created under it (e.g.
+> `<agent-name>`, the `<prefix>-ui` web UI, the `<prefix>-mcp` custom MCP and (FD labs) the
+> `<prefix>-webfetch` web-fetch MCP with its verified URL file `web-fetch-mcp-url.txt` — is created under it (e.g.
 > `generated/contoso/contoso-MAF-ACA-OBO/`). The run's plan (`a365-deployment-plan.json`) and its
 > progress log (`wizard-progress.log`) are **also per-lab, under `generated/<prefix>/`**, so parallel
 > runs never collide. Only cross-run outputs (`generated/cleanup/`, `generated/lab-reporter/`) stay at

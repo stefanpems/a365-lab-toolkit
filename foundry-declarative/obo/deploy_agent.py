@@ -85,6 +85,18 @@ def main() -> None:
             schema={"type": "string"},
         )
 
+    # Web access: the lab's web-fetch MCP server's 'fetch_url' (anonymous), attached directly (no token).
+    if cfg.WEB_FETCH_MCP_URL:
+        tools.append(
+            MCPTool(
+                server_label="web_fetch",
+                server_url=cfg.WEB_FETCH_MCP_URL,
+                server_description="Checks whether a public web page is reachable (HTTP status) and reads its text.",
+                require_approval="never",
+                allowed_tools=["fetch_url"],
+            )
+        )
+
     definition = PromptAgentDefinition(
         model=cfg.MODEL,
         instructions=cfg.AGENT_PROMPT,

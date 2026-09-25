@@ -17,6 +17,13 @@ FD-DW is intentionally **not** supported (prompt agents cannot be published as a
 Workers). See [references/variant-matrix.md](./references/variant-matrix.md) for per-variant inputs,
 tooling, hosting and endpoint types.
 
+**Web access is built in (always on, no question, no plan field).** Every code agent — ACA-OBO/S2S/DW,
+FH-OBO/S2S/DW, FD-OBO/S2S (not MCS) — can check whether a public URL is reachable (HTTP status) and read
+the page (`fetch_url`, SSRF-hardened). ACA/FH carry it in-process (`web_fetch.py` in each sample); FD
+prompt agents get it from the per-lab **web-fetch MCP** the scaffolder emits when FD agents are planned.
+Details: [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md). Test prompt: Baseline row of
+[references/test-prompts.md](./references/test-prompts.md).
+
 ## When to use
 - "Create / provision / deploy an agent", "new Agent 365 agent", "add the web UI", "wizard".
 - Planning a multi-variant rollout in one tenant/subscription.
@@ -301,8 +308,11 @@ agent's `ToolingManifest.json` **authoritative = its `agents[].tools`** (so `a36
 the selected servers' permissions — no Mail on an agent that didn't select it), generates
 `generated/<prefix>/<prefix>-ui/config.js` when a UI is requested, and scaffolds
 `generated/<prefix>/<prefix>-mcp/` with filled `register-anon.json` / `register-auth.json` (names derived
-from the prefix) when `customMcp.enabled`. It prints the next commands in **execution order**: web UI →
-custom MCP (deploy → register → approval-mode note) → agents, each with its custom-MCP attach
+from the prefix) when `customMcp.enabled`. When the plan has FD agents it also scaffolds
+`generated/<prefix>/<prefix>-webfetch/` (the [web-fetch MCP](../../../web-fetch-mcp/README.md) that gives
+the FD prompt agents web access — see **Web access** below). It prints the next commands in **execution
+order**: web UI → custom MCP (deploy → register → approval-mode note) → web-fetch MCP (FD only) →
+agents, each with its custom-MCP attach
 (`a365 develop add-mcp-servers` + `a365 setup permissions mcp`) folded in right after its deploy. It
 performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to check a plan without
 writing. Print the next commands for the user to run; never auto-run destructive deploys.
@@ -335,7 +345,8 @@ writing. Print the next commands for the user to run; never auto-run destructive
   (Violated once with FH-S2S — must not recur.) Skip ONLY when no test surface exists: OBO/S2S only if a
   UI is present for that agent (UI mode `create`/`attach` + exposed as a tab); DW always (Teams). On
   **Test now**, print the exact per-MCP test prompts for THIS agent (from its `tools` +
-  `customMcp.attachTo`, using the library [references/test-prompts.md](./references/test-prompts.md)) and
+  `customMcp.attachTo`, using the library [references/test-prompts.md](./references/test-prompts.md) —
+  always including the Baseline **web-access** prompt for every code agent) and
   where to run them — see the agent's "After each agent goes live" section (OBO custom-auth `whoami` must
   return `authorization_token_forwarded: true`; **S2S: never ask the LLM to describe its own identity —
   it hallucinates — use an identity-agnostic prompt**).

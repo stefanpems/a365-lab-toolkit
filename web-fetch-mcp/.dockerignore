@@ -1,0 +1,8 @@
+.venv
+__pycache__
+*.pyc
+.env
+.env.*
+README.md
+deploy-web-fetch.ps1
+smoke-test.py

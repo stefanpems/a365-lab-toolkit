@@ -38,6 +38,7 @@ a365-lab-toolkit/
 ├─ docs/                     # Documentation: intro + one setup guide per agent type + web UI
 ├─ ui/                       # MSAL web SPA (Azure Static Web Apps) for the OBO/S2S agents
 ├─ custom-mcp/               # Optional sample custom MCP server (anonymous + authenticated) for tool tests
+├─ web-fetch-mcp/            # Web access (fetch_url) for the FD prompt agents; web_fetch.py = the shared tool
 ├─ aca/                      # Azure Container Apps (A365-SDK-hosted) agents
 │  ├─ obo/                   # MAF-ACA-OBO  — acts on behalf of the signed-in user
 │  ├─ s2s/                   # MAF-ACA-S2S  — acts as its own application identity
@@ -62,6 +63,16 @@ a365-lab-toolkit/
 | MAF-FD-OBO  | [foundry-declarative/obo](foundry-declarative/obo) | [docs/setup-MAF-FD-OBO.md](docs/setup-MAF-FD-OBO.md) |
 | MAF-FD-S2S  | [foundry-declarative/s2s](foundry-declarative/s2s) | [docs/setup-MAF-FD-S2S.md](docs/setup-MAF-FD-S2S.md) |
 | Web SPA UI  | [ui](ui) | [docs/setup-web-ui.md](docs/setup-web-ui.md) |
+
+### Built in: web access on every code agent
+Every agent type except the two Copilot Studio ones (ACA-OBO/S2S/DW, FH-OBO/S2S/DW, FD-OBO/S2S) can
+**check whether a public URL is reachable (HTTP status) and read the page content**. For example:
+*"Can you read the content of https://example.com/ or at least tell me whether it is reachable
+(HTTP 200)?"*. The tool is `fetch_url`: SSRF-hardened (public addresses only), with bounded size and
+time, and page content treated as untrusted data. ACA/FH agents carry it in-process ([web_fetch.py](web-fetch-mcp/web_fetch.py),
+copied in each sample). FD prompt agents reach it through a small per-lab MCP server that the Lab Builder
+deploys automatically. It is always on: nothing to choose in the wizard. See
+[web-fetch-mcp/README.md](web-fetch-mcp/README.md).
 
 ### Optional: custom MCP tool sample
 [custom-mcp/](custom-mcp/README.md) is an optional **bring-your-own MCP server** sample you can attach

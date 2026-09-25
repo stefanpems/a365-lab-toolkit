@@ -165,6 +165,9 @@ workiq-mcp-integration.md apply unchanged to any framework. Only **MAF** source 
 - Fixed first-party scopes: Mail `ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/McpServers.Mail.All`,
   Foundry `https://ai.azure.com/.default`.
 - Localhost redirect URI `http://localhost:3000`, API versions, agent descriptions.
+- **Web access (`fetch_url`)** → always on for the 8 code variants (never asked, no plan field); the
+  FD web-fetch MCP names (`<prefix>-webfetch-rg` / `-cae` / `-ca`) are derived from the prefix. See
+  [web-fetch-mcp/README.md](../../../../web-fetch-mcp/README.md).
 
 ## Credentials (never in chat, never in the plan)
 | Secret | How the scripts get it |

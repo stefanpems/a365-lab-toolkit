@@ -40,6 +40,7 @@ from microsoft_agents.hosting.core import Authorization, TurnContext
 
 from .agent_interface import AgentInterface
 from .token_cache import get_cached_agentic_token
+from .web_fetch import WEB_ACCESS_PROMPT, fetch_url
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,7 @@ MAIL_PROMPT = (
     "mailbox. Report success ONLY after the tool confirms it, and state clearly that the email "
     "was sent from the agent's own mailbox. The signed-in user's name may be given to you as "
     "context to address them politely, but you never send email on their behalf."
+    + "\n\n" + WEB_ACCESS_PROMPT
     + "\n\n" + COMMON_SECURITY
 )
 
@@ -110,6 +112,7 @@ NO_MAIL_PROMPT = (
     "tell them clearly that you cannot send emails at the moment — do NOT claim to have sent one, "
     "do NOT invent a sender, recipient, or result. The signed-in user's name may be provided as "
     "context only so you can address them politely."
+    + "\n\n" + WEB_ACCESS_PROMPT
     + "\n\n" + COMMON_SECURITY
 )
 
@@ -219,7 +222,7 @@ class FoundryDigitalWorkerAgent(AgentInterface):
         self._agent = Agent(
             client=self._client,
             instructions=NO_MAIL_PROMPT,
-            tools=[],
+            tools=[fetch_url],
         )
         logger.info(
             "✅ DW autopilot agent initialized (mail_enabled=%s, model=%s)",
@@ -313,7 +316,7 @@ class FoundryDigitalWorkerAgent(AgentInterface):
             self._agent = Agent(
                 client=self._client,
                 instructions=MAIL_PROMPT if has_mail else NO_MAIL_PROMPT,
-                tools=list(self._mcp_tools),
+                tools=[*self._mcp_tools, fetch_url],
             )
             logger.info(
                 "✅ Rebuilt agent with %d MCP tool(s): %s",

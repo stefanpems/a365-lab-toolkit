@@ -62,6 +62,9 @@ from microsoft_agents_a365.tooling.extensions.agentframework.services.mcp_tool_r
 )
 from token_cache import get_cached_agentic_token
 
+# Web access (in-process function tool: URL reachability + page content)
+from web_fetch import WEB_ACCESS_PROMPT, fetch_url
+
 # </DependencyImports>
 
 
@@ -99,6 +102,7 @@ class AgentFrameworkAgent(AgentInterface):
         "can do, describe this briefly and truthfully."
         + "\n\nThe user's name is {user_name}. Use their name naturally where appropriate — for "
         "example when greeting them or making responses feel personal. Do not overuse it."
+        + "\n\n" + WEB_ACCESS_PROMPT
         + "\n\n" + COMMON_SECURITY
     )
 
@@ -208,7 +212,7 @@ class AgentFrameworkAgent(AgentInterface):
             self.agent = Agent(
                 client=self.chat_client,
                 instructions=self.AGENT_PROMPT,
-                tools=[],
+                tools=[fetch_url],
             )
             logger.info("✅ AgentFramework agent created")
         except Exception as e:
@@ -285,7 +289,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[],
+                    initial_tools=[fetch_url],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     turn_context=context,
@@ -294,7 +298,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[],
+                    initial_tools=[fetch_url],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     auth_token=self.auth_options.bearer_token,
@@ -438,6 +442,7 @@ class AgentFrameworkAgent(AgentInterface):
             "for a different server: each server has its OWN distinct connection URL (the anon and auth "
             "connectors are different), so echoing a previous server's URL sends the user to the wrong "
             "connection. Ask them to create the one-time connection for THAT server, then retry."
+            + "\n\n" + WEB_ACCESS_PROMPT
             + "\n\n" + COMMON_SECURITY
         )
 
@@ -490,7 +495,7 @@ class AgentFrameworkAgent(AgentInterface):
                             await t.load_tools()
                     except Exception as e:
                         logger.warning("Activation of MCP server '%s' failed: %s", getattr(t, "name", "?"), e)
-                agent = Agent(client=self.chat_client, tools=connected, instructions=instructions)
+                agent = Agent(client=self.chat_client, tools=[*connected, fetch_url], instructions=instructions)
                 result = await agent.run(message)
                 return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:

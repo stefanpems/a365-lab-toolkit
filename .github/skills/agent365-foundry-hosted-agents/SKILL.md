@@ -141,3 +141,9 @@ FH samples currently wire **only Mail** in code. Attaching a non-Mail Work IQ MC
 generalization documented in
 [workiq-mcp-integration.md](../agent365-wizard/references/workiq-mcp-integration.md) — reuse the
 per-request/per-turn token lessons there; do not re-derive them.
+
+**Web access (always on, OBO/S2S/DW).** Every FH sample registers the in-process `fetch_url` function
+tool from `web_fetch.py` (FH-DW: `src/hello_world_a365_agent/web_fetch.py`, relative import): URL
+reachability + page text, SSRF-hardened, no token. It's added to every `Agent(...)`, with the shared
+`WEB_ACCESS_PROMPT`. It ships with the sample (`.agentignore` / the DW Dockerfile include it), so there's
+nothing to scaffold. See [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md).

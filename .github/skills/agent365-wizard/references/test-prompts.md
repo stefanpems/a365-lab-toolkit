@@ -20,6 +20,7 @@ auth resource app id; `<me>` = the signed-in user's email address.
 | --- | --- | --- |
 | `Hello — reply with one short sentence confirming you are online.` | The agent replies at all (connectivity + model wired) | ALL |
 | `List, by name, the tools you currently have access to.` | It names the attached servers/tools. ⚠️ An LLM can miscount its own tools — always confirm a specific tool with its tool-specific prompt below, not with this answer alone | ALL (most useful when ≥1 MCP is attached) |
+| `Can you read the content of https://example.com/ or at least tell me whether it is reachable (HTTP 200)?` | **Web access** (`fetch_url`, always on): it reports **HTTP 200 — reachable** AND the real page content (title *Example Domain*, "…for use in documentation examples…"). A refusal ("I can't browse") or invented content = the tool was NOT called. For FD agents it works only if `deploy-web-fetch.ps1` passed (FD `.env` has `WEB_FETCH_MCP_URL`) | ALL 8 code types: ACA-/FH-OBO/S2S/DW, FD-OBO/S2S (OBO, S2S **and** DW — no token/connection needed). NOT MCS |
 
 ## 2. Mail (`mcp_MailTools`) — delegated; OBO / DW only (S2S is app-only, no delegated Mail)
 | Prompt | What proves it worked | Applies to |
@@ -57,6 +58,8 @@ auth resource app id; `<me>` = the signed-in user's email address.
   YOUR `upn`). If it returns `false`, that is a **bug** (the connector must be EntraOAuth AND the server
   must read headers with `get_http_headers(include_all=True)`), not a preview limitation.
 - **S2S** — app-only identity; the custom MCP and delegated Work IQ tools are **not attached** (by design).
+  It DOES have web access (`fetch_url`, the Baseline web prompt) — a tool-backed check that needs no user
+  context.
   ⛔ **Do NOT ask an S2S agent to describe its own identity** — an LLM does not know its runtime token and
   will confidently MISREPORT it (observed: an S2S agent claimed it was *"acting on behalf of the signed-in
   user"*, which is the OBO model). Use the identity-agnostic prompt only to confirm it responds; explain

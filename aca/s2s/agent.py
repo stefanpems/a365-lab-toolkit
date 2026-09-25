@@ -62,6 +62,9 @@ from microsoft_agents_a365.tooling.extensions.agentframework.services.mcp_tool_r
 )
 from token_cache import get_cached_agentic_token
 
+# Web access (in-process function tool: URL reachability + page content)
+from web_fetch import WEB_ACCESS_PROMPT, fetch_url
+
 # </DependencyImports>
 
 
@@ -99,6 +102,7 @@ class AgentFrameworkAgent(AgentInterface):
         "can do, describe this briefly and truthfully."
         + "\n\nThe user's name is {user_name}. Use their name naturally where appropriate — for "
         "example when greeting them or making responses feel personal. Do not overuse it."
+        + "\n\n" + WEB_ACCESS_PROMPT
         + "\n\n" + COMMON_SECURITY
     )
 
@@ -208,7 +212,7 @@ class AgentFrameworkAgent(AgentInterface):
             self.agent = Agent(
                 client=self.chat_client,
                 instructions=self.AGENT_PROMPT,
-                tools=[],
+                tools=[fetch_url],
             )
             logger.info("✅ AgentFramework agent created")
         except Exception as e:
@@ -292,7 +296,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = Agent(
                     client=self.chat_client,
                     instructions=agent_instructions,
-                    tools=[],
+                    tools=[fetch_url],
                 )
                 return
 
@@ -300,7 +304,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[],
+                    initial_tools=[fetch_url],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     turn_context=context,
@@ -309,7 +313,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[],
+                    initial_tools=[fetch_url],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     auth_token=self.auth_options.bearer_token,
@@ -407,7 +411,8 @@ class AgentFrameworkAgent(AgentInterface):
 
         The caller's identity comes from the validated Entra user token claims, so
         identity questions ('what's my name from my authentication') are answered from
-        authenticated data. No MCP tools are used here.
+        authenticated data. The only tool wired here is the in-process 'fetch_url' web-access
+        function (no MCP tools).
 
         NOTE (custom MCP tools): this SPA tab deliberately wires NO MCP tools. Custom
         (ext_*) servers attached via 'a365 develop add-mcp-servers' are reachable only
@@ -435,10 +440,11 @@ class AgentFrameworkAgent(AgentInterface):
             "so it is safe and expected to share it back with them. When the user asks about "
             "their own name, identity, or 'who am I / what is my name from my authentication', "
             "answer directly and confidently using the Display name above."
+            + "\n\n" + WEB_ACCESS_PROMPT
             + "\n\n" + COMMON_SECURITY
         )
         try:
-            agent = Agent(client=self.chat_client, instructions=instructions, tools=[])
+            agent = Agent(client=self.chat_client, instructions=instructions, tools=[fetch_url])
             result = await agent.run(message)
             return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:

@@ -29,6 +29,10 @@ function Invoke-ScaffoldFdAgent {
     if ($fp) { Set-EnvValue -Path $envPath -Key 'FOUNDRY_PROJECT_ENDPOINT' -Value $fp }
     Set-EnvValue -Path $envPath -Key 'FOUNDRY_MODEL_NAME' -Value $ft.deployment
     Set-EnvValue -Path $envPath -Key 'AGENT_NAME' -Value $a.name
+    # Web access (fetch_url, always on): deploy_agent.py attaches the lab's web-fetch MCP server when
+    # WEB_FETCH_MCP_URL is set. deploy-web-fetch.ps1 (Phase 1) writes it after its MCP smoke test; here
+    # we only reuse a URL persisted by a previous run that still answers /health (empty = no web access).
+    Set-EnvValue -Path $envPath -Key 'WEB_FETCH_MCP_URL' -Value (Get-WebFetchUrlForFd)
     if ($a.type -eq 'FD-OBO') {
         Set-EnvValue -Path $envPath -Key 'AZURE_TENANT_ID' -Value $plan.solution.tenantId
         Set-EnvValue -Path $envPath -Key 'CLIENT_APP_ID' -Value '<YOUR_AGENT365_CLI_PUBLIC_CLIENT_APP_ID>'

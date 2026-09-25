@@ -32,6 +32,8 @@ from agent_framework import Agent, MCPStreamableHTTPTool
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 
+from web_fetch import WEB_ACCESS_PROMPT, fetch_url
+
 # Agent 365 Mail MCP (from ToolingManifest.json)
 MAIL_MCP_URL = "https://agent365.svc.cloud.microsoft/agents/servers/mcp_MailTools"
 MAIL_MCP_RESOURCE = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"  # Agent 365 Tools
@@ -67,6 +69,7 @@ MAIL_PROMPT = (
     "user's mailbox. Report success ONLY after the tool confirms it, and state clearly that the "
     "email was sent from the agent's own mailbox. The signed-in user's name may be given to you "
     "as context to address them politely, but you never send email on their behalf."
+    + "\n\n" + WEB_ACCESS_PROMPT
     + "\n\n" + COMMON_SECURITY
 )
 
@@ -79,6 +82,7 @@ NO_MAIL_PROMPT = (
     "tell them clearly that you cannot send emails at the moment — do NOT claim to have sent one, "
     "do NOT invent a sender, recipient, or result. The signed-in user's name may be provided as "
     "context only so you can address them politely."
+    + "\n\n" + WEB_ACCESS_PROMPT
     + "\n\n" + COMMON_SECURITY
 )
 
@@ -119,7 +123,7 @@ def build_agent() -> Agent:
         credential=credential,
     )
 
-    tools = []
+    tools = [fetch_url]
     mail_enabled = os.environ.get("S2S_ENABLE_MAIL", "false").lower() == "true"
     if mail_enabled:
         http_client = httpx.AsyncClient(auth=_AgentTokenAuth(credential, MAIL_MCP_SCOPE), timeout=90)

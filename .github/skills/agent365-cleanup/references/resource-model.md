@@ -69,6 +69,12 @@ rather than lab-owned. These carry a **component tag** but **no** `a365lab`:
 > connectors — the same leftovers [custom-mcp/cleanup-registration.ps1](../../../../custom-mcp/cleanup-registration.ps1)
 > targets. This cleanup covers them too, plus the Azure container resources.
 
+> **Web-fetch MCP (labs with FD agents).** The web access server of the FD prompt agents lives in its own
+> `<prefix>-webfetch-rg` (ACR + `<prefix>-webfetch-cae` + `<prefix>-webfetch-ca`), tagged
+> `a365lab=<prefix>` + `a365component=web-fetch`. It has no Entra / Power Platform footprint. The durable
+> tag scan classifies it under **Agents** (`delete-rg`), so it is removed together with the lab's agents —
+> no dedicated category. See [web-fetch-mcp/README.md](../../../../web-fetch-mcp/README.md).
+
 ## 3. Agents
 
 Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; identity ∈ OBO/S2S/DW).

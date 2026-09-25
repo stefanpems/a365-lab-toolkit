@@ -224,6 +224,12 @@ if ($plan -and $plan.customMcp -and $plan.customMcp.enabled -and ($plan.customMc
     Set-AppTagByPrefix -NamePrefix "ext_$Prefix"
 }
 
+# Web-fetch MCP (web access for the FD agents): <prefix>-webfetch-rg, created by deploy-web-fetch.ps1 only
+# when the lab has FD agents (the script already stamps a365lab itself; this keeps a re-tag idempotent).
+if ($plan -and @($plan.agents | Where-Object { $_.type -in @('FD-OBO', 'FD-S2S') }).Count -gt 0) {
+    Set-RgTag -Rg "$Prefix-webfetch-rg"
+}
+
 # ---------------------------------------------------------------------------
 # Report.
 # ---------------------------------------------------------------------------

@@ -62,6 +62,9 @@ from microsoft_agents_a365.tooling.extensions.agentframework.services.mcp_tool_r
 )
 from token_cache import get_cached_agentic_token
 
+# Web access (in-process function tool: URL reachability + page content)
+from web_fetch import WEB_ACCESS_PROMPT, fetch_url
+
 # </DependencyImports>
 
 
@@ -114,6 +117,7 @@ class AgentFrameworkAgent(AgentInterface):
         'actually send it. Do NOT refuse, and do NOT silently downgrade a "send" request to only '
         "creating a draft. Only create a draft (and say so) if there is genuinely no send tool.\n"
         "- After performing a tool action, briefly confirm what you did and the outcome."
+        + "\n\n" + WEB_ACCESS_PROMPT
         + "\n\n" + COMMON_SECURITY
     )
 
@@ -229,7 +233,7 @@ class AgentFrameworkAgent(AgentInterface):
             self.agent = Agent(
                 client=self.chat_client,
                 instructions=self.AGENT_PROMPT,
-                tools=[],
+                tools=[fetch_url],
             )
             logger.info("✅ AgentFramework agent created")
         except Exception as e:
@@ -308,7 +312,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[],
+                    initial_tools=[fetch_url],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     turn_context=context,
@@ -317,7 +321,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[],
+                    initial_tools=[fetch_url],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     auth_token=self.auth_options.bearer_token,
@@ -461,8 +465,8 @@ class AgentFrameworkAgent(AgentInterface):
         turn_timeout = float(os.getenv("TURN_TIMEOUT_SECONDS", "30"))
 
         async def _run_toolless() -> str:
-            """Run the LLM with no tools — never hangs on a broken MCP tool."""
-            toolless = Agent(client=self.chat_client, instructions=personalized_prompt, tools=[])
+            """Run the LLM without MCP tools (only the in-process fetch_url) — never hangs on a broken MCP tool."""
+            toolless = Agent(client=self.chat_client, instructions=personalized_prompt, tools=[fetch_url])
             result = await asyncio.wait_for(toolless.run(message), timeout=turn_timeout)
             return self._extract_result(result) or "I couldn't process your request at this time."
 

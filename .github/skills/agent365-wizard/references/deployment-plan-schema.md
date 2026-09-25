@@ -178,6 +178,10 @@ gitignored.
   block that invites the user to first check whether the env is Managed / already globally instrumented,
   then pick global / local / none (cross-tenant-safe). **FD** agents
   have no observability wiring. `mode: none` (or omitting the block) preserves all existing labs.
+- **Web access has NO plan field — it is always on** for the 8 code variants (not MCS): ACA/FH carry
+  `fetch_url` in-process; when the plan has FD agents the scaffolder also emits the per-lab web-fetch MCP
+  (`<prefix>-webfetch-rg`, derived from `solution.prefix` + `solution.region`) and the FD `.env` key
+  `WEB_FETCH_MCP_URL` (filled by `deploy-web-fetch.ps1`). Existing plans need no change.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics

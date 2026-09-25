@@ -60,6 +60,7 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 . (Join-Path $moduleDir 'scaffold.ui.ps1')
 . (Join-Path $moduleDir 'scaffold.mcp.ps1')
 . (Join-Path $moduleDir 'scaffold.tools.ps1')
+. (Join-Path $moduleDir 'scaffold.webfetch.ps1')
 
 # ---------------------------------------------------------------- validation
 $errors = New-Object System.Collections.Generic.List[string]
@@ -392,10 +393,14 @@ $agentCommands = New-Object System.Collections.Generic.List[string]  # per-agent
 # agent-name -> custom ext_ servers to attach (OBO only), populated by the custom-MCP module.
 $attachByAgent = @{}
 
-# Phase 1 — web UI, then custom MCP (deploy + register + approval-mode note).
+# Phase 1 — web UI, then custom MCP (deploy + register + approval-mode note), then the web-fetch MCP
+# (web access for the FD agents; emitted only when the plan has FD agents — ACA/FH carry fetch_url
+# in-process). All of these must exist BEFORE the agents that use them are deployed.
 $nextCommands = $preCommands
 if ($plan.ui.mode -in @('create', 'attach')) { Invoke-ScaffoldUi }
 if ($plan.customMcp -and $plan.customMcp.enabled) { Invoke-ScaffoldCustomMcp }
+Test-WebFetchCopies
+Invoke-ScaffoldWebFetch
 
 # Phase 2 — agents, each integrated immediately after its own setup/deploy.
 $nextCommands = $agentCommands

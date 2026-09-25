@@ -145,8 +145,11 @@ relays Teams traffic through an **Azure Bot Service**. It is published to Micros
 | Registered in A365 (Registry) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Observable in A365 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Work IQ (Tool GW) Mail MCP | ✅ (OBO token) | ⚠️ needs app-role | ✅ (OBO/own) | ✅ (OBO token) | ⚠️ needs app-role | ✅ (OBO/own) |
+| **Web access** (`fetch_url`: URL reachability + page text)² | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ¹ A DW can also perform OBO actions for a requesting user in addition to acting as itself.
+² Always on, no token needed. For these six it's an in-process tool. MAF-FD-OBO / MAF-FD-S2S get the same
+tool from the per-lab web-fetch MCP; see §6.4.
 
 ---
 
@@ -360,6 +363,19 @@ second token itself.
 
 References: [Tooling servers overview](https://learn.microsoft.com/microsoft-agent-365/tooling-servers-overview),
 [Grant Agent 365 permissions](https://learn.microsoft.com/azure/foundry/agents/how-to/grant-agent-365-permissions).
+
+### 6.4 Web access (built in, independent of the Tool Gateway)
+Every code agent (ACA/FH/FD × OBO/S2S/DW — not the Copilot Studio agents) has a `fetch_url` tool. It
+checks whether a **public** URL is reachable (HTTP status) and returns the page's readable text. Example
+prompt: *"Can you read the content of https://example.com/ or at least tell me whether it is reachable
+(HTTP 200)?"*. The tool uses no Agent 365 gateway, token or connection, so it behaves the same for OBO,
+S2S and DW. It is SSRF-hardened: every redirect hop must resolve to public IPs, so the Azure metadata
+endpoint and private ranges are refused. Download size, time and returned text are bounded, and the
+page content is treated as untrusted data.
+- **ACA / FH**: an in-process Agent Framework function tool (`web_fetch.py`, shipped in each sample).
+- **FD**: prompt agents run no code, so the Lab Builder deploys one small anonymous MCP server per lab
+  ([web-fetch-mcp/](../web-fetch-mcp/README.md)) and attaches it directly to each FD agent as an
+  `MCPTool` restricted to `fetch_url`.
 
 ---
 

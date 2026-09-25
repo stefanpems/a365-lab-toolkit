@@ -54,6 +54,15 @@ python deploy_agent.py
 - `structured_inputs={"mail_token": StructuredInputDefinition(required=False, default_value="", …)}`
   — the delegated Mail token is supplied **per request**. (Optional inputs **must** carry a
   `default_value`, else the API rejects with *"Must be specified for optional inputs"*.)
+- **Web access** (only when `WEB_FETCH_MCP_URL` is set in `.env`):
+  `MCPTool(server_label="web_fetch", server_url=WEB_FETCH_MCP_URL, allowed_tools=["fetch_url"],
+  require_approval="never")`. It has **no Authorization header and no structured input**, so the SPA
+  sends nothing extra. `fetch_url` checks whether a public URL is reachable (HTTP status) and reads the
+  page. The Lab Builder deploys the per-lab [web-fetch MCP](../web-fetch-mcp/README.md) and writes the
+  URL only after its smoke test passes. If the value is empty, no web access is attached.
+  ⚠️ Foundry enumerates **every** MCP tool on every turn, so a tool whose server is unreachable fails the
+  whole response. If you remove the web-fetch server, clear the variable and redeploy.
+  Test: `Can you read the content of https://example.com/ or at least tell me whether it is reachable (HTTP 200)?`
 
 ## 3. Test end-to-end (OBO mail)
 

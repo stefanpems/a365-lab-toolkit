@@ -87,3 +87,9 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
 The ACA turn path is **manifest-driven**, so attaching any Work IQ MCP works generically. Token/refresh
 lessons (token-TTL rebuild, `x-ms-agentid` stamping, benign teardown-DELETE, S2S degrade-to-LLM) are in
 [workiq-mcp-integration.md](../agent365-wizard/references/workiq-mcp-integration.md) — reuse, don't re-derive.
+
+**Web access (always on, OBO/S2S/DW).** Every ACA sample registers the in-process `fetch_url` function
+tool from `web_fetch.py`: URL reachability + page text, SSRF-hardened, no token. It's added to every
+`Agent(...)` (`_create_agent`, `add_tool_servers_to_agent(initial_tools=[fetch_url])`, the SPA `/chat`
+handlers, the S2S LLM-only and DW tool-less fallbacks), with the shared `WEB_ACCESS_PROMPT`. Nothing to
+scaffold or deploy: the file ships with the sample. See [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md).

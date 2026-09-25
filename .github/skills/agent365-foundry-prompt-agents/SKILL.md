@@ -31,6 +31,13 @@ per-variant guides — do not duplicate or renumber them:**
 FD prompt agents attach tools via `agent_config.py` (M365 app-manifest connectors), **not** via
 `add-mcp-servers` / `ToolingManifest.json`. For a custom BYO MCP server, **FD-OBO** declares each server
 in `deploy_agent.py` from `CUSTOM_MCP_SERVERS_JSON` (the SPA passes the per-server token as a structured
-input). **FD-S2S** ships with no tools and can't use custom MCP (own identity can't own the Power
+input). **FD-S2S** has no Mail/user-data tools and can't use custom MCP (own identity can't own the Power
 Platform connection). The Mail token lessons are in
 [workiq-mcp-integration.md](../agent365-wizard/references/workiq-mcp-integration.md).
+
+**Web access (always on, FD-OBO and FD-S2S).** `deploy_agent.py` attaches the lab's web-fetch MCP
+(`MCPTool` `web_fetch`, `allowed_tools=["fetch_url"]`, no auth header, no structured input) whenever
+`WEB_FETCH_MCP_URL` is set in `.env`. The scaffolder ([scaffold.webfetch.ps1](../agent365-wizard/scripts/modules/scaffold.webfetch.ps1))
+emits `deploy-web-fetch.ps1` **before** the FD deploys. That script fills the URL only after an MCP
+smoke test and clears it on failure, so an FD agent is never deployed with an unreachable tool (Foundry
+enumerates every MCP tool on every turn). See [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md).

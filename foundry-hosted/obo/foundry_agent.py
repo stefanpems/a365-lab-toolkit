@@ -32,6 +32,8 @@ from agent_framework import Agent, MCPStreamableHTTPTool
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 
+from web_fetch import WEB_ACCESS_PROMPT, fetch_url
+
 logger = logging.getLogger("obo-foundry-agent")
 
 # Agent 365 Mail MCP (from ToolingManifest.json)
@@ -94,6 +96,7 @@ AGENT_PROMPT = (
     "anon and auth connectors are different), so echoing a previous server's URL sends the user "
     "to the wrong connection. Ask the user to create the one-time connection for THAT server, "
     "then retry."
+    + "\n\n" + WEB_ACCESS_PROMPT
     + "\n\n" + COMMON_SECURITY
 )
 
@@ -219,7 +222,7 @@ async def run_obo_turn(message: str, tokens, instructions: str | None = None) ->
             agent = Agent(
                 client=client,
                 instructions=effective_instructions,
-                tools=connected,
+                tools=[*connected, fetch_url],
                 # Foundry hosting persists conversation history; avoid duplicating it.
                 default_options={"store": False},
             )

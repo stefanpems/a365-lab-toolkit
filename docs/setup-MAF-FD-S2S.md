@@ -19,7 +19,7 @@ python -m venv .venv ; .\.venv\Scripts\Activate.ps1 ; pip install -r requirement
 copy .env.template .env
 ```
 
-Files: `agent_config.py` (no tools, own-identity instructions), `deploy_agent.py`,
+Files: `agent_config.py` (own-identity instructions; only the optional web-access tool), `deploy_agent.py`,
 `invoke_agent.py`, `requirements.txt`, `.env.template`, `.gitignore`.
 
 ## 2. Deploy the prompt agent
@@ -29,17 +29,23 @@ python deploy_agent.py
 # -> Deployed prompt agent: name=agentframeworkFD-S2S-agent version=1
 ```
 
-`deploy_agent.py` creates the version with `PromptAgentDefinition(model, instructions)` and
-**no tools** (own identity, no user data / no mailbox).
+`deploy_agent.py` creates the version with `PromptAgentDefinition(model, instructions, tools)`. It has
+**no Mail / user-data tools** (own identity, no mailbox). Its only tool is **web access**, and only when
+`WEB_FETCH_MCP_URL` is set in `.env`: an `MCPTool(server_label="web_fetch", server_url=WEB_FETCH_MCP_URL,
+allowed_tools=["fetch_url"], require_approval="never")` with **no Authorization header**. It lets the agent
+check whether a public URL is reachable (HTTP status) and read the page. The Lab Builder deploys the
+per-lab [web-fetch MCP](../web-fetch-mcp/README.md) and fills the URL, but only after that server's
+smoke test passes. If the value is empty, the agent is deployed without web access.
 
 ## 3. Test
 
 ```powershell
 python invoke_agent.py --message "Hello! In one sentence, who are you and what can you do?"
+python invoke_agent.py --message "Can you read the content of https://example.com/ or at least tell me whether it is reachable (HTTP 200)?"
 ```
 
-No token beyond your `az login` is needed (no MCP tool → no per-request Mail token). The invoke
-is a project-level Responses call with `agent_reference`.
+No token beyond your `az login` is needed (the web-fetch MCP is anonymous; no per-request Mail token).
+The invoke is a project-level Responses call with `agent_reference`.
 
 ## 4. Web SPA integration
 
