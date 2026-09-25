@@ -416,7 +416,11 @@ class GenericAgentHost:
             if self.agent_instance is None:
                 await self.initialize_agent()
             logger.info(f"\U0001f4ac /chat from authenticated user '{display_name}'")
-            reply = await self.agent_instance.run_llm_chat(message, display_name, username)
+            # Short conversation memory: the SPA sends the last exchanges; re-validated + capped here.
+            from conversation_memory import sanitize_history
+
+            history = sanitize_history(body.get("history"))
+            reply = await self.agent_instance.run_llm_chat(message, display_name, username, history=history)
             return json_response({"reply": reply})
 
         middlewares = []

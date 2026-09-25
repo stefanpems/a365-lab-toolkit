@@ -24,6 +24,14 @@ prompt agents get it from the per-lab **web-fetch MCP** the scaffolder emits whe
 Details: [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md). Test prompt: Baseline row of
 [references/test-prompts.md](./references/test-prompts.md).
 
+**Short conversation memory is built in too (always on, no question, no plan field, no infra).** Every
+code agent remembers the last 3 user/assistant exchanges of the conversation, so follow-ups like "and
+the most populous one?" work. How: the web UI sends each tab's last 3 exchanges with every request, which
+the ACA/FH-OBO agents validate + re-cap (`conversation_memory.py`, shipped in the samples) and FH-S2S/FD
+receive as a Responses message list (native, no agent code). The DW agents (Teams) keep an in-process
+per-chat window. `MEMORY_TURNS` (env, default 3, 0 = off) sizes it. Test: the Baseline 3-prompt
+memory row of [references/test-prompts.md](./references/test-prompts.md).
+
 ## When to use
 - "Create / provision / deploy an agent", "new Agent 365 agent", "add the web UI", "wizard".
 - Planning a multi-variant rollout in one tenant/subscription.
@@ -346,7 +354,7 @@ writing. Print the next commands for the user to run; never auto-run destructive
   UI is present for that agent (UI mode `create`/`attach` + exposed as a tab); DW always (Teams). On
   **Test now**, print the exact per-MCP test prompts for THIS agent (from its `tools` +
   `customMcp.attachTo`, using the library [references/test-prompts.md](./references/test-prompts.md) —
-  always including the Baseline **web-access** prompt for every code agent) and
+  always including the Baseline **web-access** prompt and the 3-prompt **memory** sequence for every code agent) and
   where to run them — see the agent's "After each agent goes live" section (OBO custom-auth `whoami` must
   return `authorization_token_forwarded: true`; **S2S: never ask the LLM to describe its own identity —
   it hallucinates — use an identity-agnostic prompt**).

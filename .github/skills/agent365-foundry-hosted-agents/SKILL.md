@@ -147,3 +147,13 @@ tool from `web_fetch.py` (FH-DW: `src/hello_world_a365_agent/web_fetch.py`, rela
 reachability + page text, SSRF-hardened, no token. It's added to every `Agent(...)`, with the shared
 `WEB_ACCESS_PROMPT`. It ships with the sample (`.agentignore` / the DW Dockerfile include it), so there's
 nothing to scaffold. See [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md).
+
+**Conversation memory (always on, last 3 exchanges).**
+- **FH-OBO**: `main.py` passes the SPA's `history` through `sanitize_history`, and `run_obo_turn(...,
+  history=)` runs `agent.run(to_messages(history, message))`.
+- **FH-S2S**: no code involved. The SPA sends a Responses `input` message list, which `ResponsesHostServer`
+  converts to messages natively.
+- **FH-DW**: an in-process `ConversationMemory` keyed by Teams conversation + caller. It resets on restart.
+
+The module is `conversation_memory.py`, in `obo/` and `dw/src/hello_world_a365_agent/`, byte-identical to
+`aca/obo/`.

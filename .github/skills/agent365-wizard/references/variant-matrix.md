@@ -168,6 +168,8 @@ workiq-mcp-integration.md apply unchanged to any framework. Only **MAF** source 
 - **Web access (`fetch_url`)** → always on for the 8 code variants (never asked, no plan field); the
   FD web-fetch MCP names (`<prefix>-webfetch-rg` / `-cae` / `-ca`) are derived from the prefix. See
   [web-fetch-mcp/README.md](../../../../web-fetch-mcp/README.md).
+- **Conversation memory (last 3 exchanges)** → always on for the 8 code variants (never asked, no plan
+  field, no infra); `MEMORY_TURNS` env override only.
 
 ## Credentials (never in chat, never in the plan)
 | Secret | How the scripts get it |

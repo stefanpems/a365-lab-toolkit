@@ -65,6 +65,9 @@ from token_cache import get_cached_agentic_token
 # Web access (in-process function tool: URL reachability + page content)
 from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 
+# Short conversation memory (last N exchanges)
+from conversation_memory import to_messages
+
 # </DependencyImports>
 
 
@@ -406,7 +409,7 @@ class AgentFrameworkAgent(AgentInterface):
 
     # </MessageProcessing>
 
-    async def run_llm_chat(self, message: str, display_name: str, username: str = "") -> str:
+    async def run_llm_chat(self, message: str, display_name: str, username: str = "", history: list | None = None) -> str:
         """LLM-only turn for the SPA /chat endpoint (no Bot Framework TurnContext).
 
         The caller's identity comes from the validated Entra user token claims, so
@@ -445,7 +448,8 @@ class AgentFrameworkAgent(AgentInterface):
         )
         try:
             agent = Agent(client=self.chat_client, instructions=instructions, tools=[fetch_url])
-            result = await agent.run(message)
+            # Short conversation memory: prior exchanges (from the SPA) + this message.
+            result = await agent.run(to_messages(history or [], message))
             return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:
             logger.error(f"Error in run_llm_chat: {e}")

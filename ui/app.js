@@ -40,6 +40,25 @@
   const histories = {};
   agents.forEach(a => (histories[a.id] = []));
 
+  // Short conversation memory: every request carries the last MEMORY_TURNS exchanges (user +
+  // assistant) of THIS tab, so the agent can resolve follow-ups ("and its most populous district?")
+  // with no server-side store. The agents re-validate and re-cap it (roles user/assistant only).
+  const MEMORY_TURNS = 3;
+  const MEMORY_MAX_CHARS = 4000;
+  function recentHistory(agentId) {
+    // All messages BEFORE the one being sent (sendMessage pushes it first).
+    const prior = histories[agentId].slice(0, -1).slice(-2 * MEMORY_TURNS)
+      .map(h => ({ role: h.role, content: String(h.content).slice(0, MEMORY_MAX_CHARS) }));
+    while (prior.length && prior[0].role !== "user") prior.shift();
+    return prior;
+  }
+  // Responses-API input: prior exchanges as message items + the (possibly enriched) new message.
+  function responsesInput(history, text) {
+    if (!history || !history.length) return text;
+    return history.map(h => ({ type: "message", role: h.role, content: h.content }))
+      .concat([{ type: "message", role: "user", content: text }]);
+  }
+
   const el = {
     loginView: document.getElementById("login-view"),
     appView: document.getElementById("app-view"),
@@ -230,13 +249,14 @@
     const thinking = appendMessage(messagesEl, "thinking", "The agent is thinking…");
 
     try {
+      const history = recentHistory(agent.id);
       const reply = agent.kind === "foundry-invocations"
-        ? await callFoundryInvocations(agent, message)
+        ? await callFoundryInvocations(agent, message, history)
         : agent.kind === "foundry-responses"
-        ? await callFoundryResponses(agent, message)
+        ? await callFoundryResponses(agent, message, history)
         : agent.kind === "foundry-prompt"
-        ? await callFoundryPrompt(agent, message)
-        : await callAcaChat(agent, message, histories[agent.id].slice(0, -1));
+        ? await callFoundryPrompt(agent, message, history)
+        : await callAcaChat(agent, message, history);
 
       thinking.remove();
       if (reply === null) return; // token interaction (redirect) in progress
@@ -245,6 +265,9 @@
       histories[agent.id].push({ role: "assistant", content: reply });
     } catch (e) {
       thinking.remove();
+      // Keep the remembered window consistent: drop the unanswered user message.
+      const h = histories[agent.id];
+      if (h.length && h[h.length - 1].role === "user") h.pop();
       appendMessage(messagesEl, "error", e.message || String(e));
     } finally {
       sendBtn.disabled = false;
@@ -289,12 +312,13 @@
   // Foundry Hosted Agent (Invocations protocol): two tokens.
   //  - endpointScope token -> Authorization header (authenticates to the Foundry gateway)
   //  - mailScope token (OBO only) -> body.mail_token (delegated Mail token for the Mail MCP)
-  // Body: { message, mail_token? }  ->  Response: { response }.
-  async function callFoundryInvocations(agent, message) {
+  // Body: { message, history?, mail_token? }  ->  Response: { response }.
+  async function callFoundryInvocations(agent, message, history) {
     const endpointToken = await acquireToken(agent.endpointScope);
     if (!endpointToken) return null; // redirect in progress
 
     const body = { message };
+    if (history && history.length) body.history = history;
     if (agent.mailScope) {
       const mailToken = await acquireToken(agent.mailScope);
       if (!mailToken) return null; // redirect in progress
@@ -342,7 +366,7 @@
   //  - endpointScope token -> Authorization header (authenticates to the Foundry gateway)
   //  - no user/mail token (the agent acts with its own identity)
   // Body: { input, stream:false }  ->  Response: { status, output[].content[].text }.
-  async function callFoundryResponses(agent, message) {
+  async function callFoundryResponses(agent, message, history) {
     const endpointToken = await acquireToken(agent.endpointScope);
     if (!endpointToken) return null; // redirect in progress
 
@@ -362,7 +386,7 @@
     const doPost = () => fetch(agent.endpoint, {
       method: "POST",
       headers: { "Authorization": "Bearer " + endpointToken, "Content-Type": "application/json" },
-      body: JSON.stringify({ input: input, stream: false })
+      body: JSON.stringify({ input: responsesInput(history, input), stream: false })
     });
     let res = await doPost();
     if (res.status >= 500) {
@@ -386,7 +410,7 @@
   //  - mailScope token (OBO) -> body.structured_inputs.mail_token, which fills the Mail MCP
   //    Authorization header server-side, so mail is sent from the signed-in user's mailbox.
   // Body: { input, agent_reference, structured_inputs? }  ->  Response: OpenAI Responses shape.
-  async function callFoundryPrompt(agent, message) {
+  async function callFoundryPrompt(agent, message, history) {
     const endpointToken = await acquireToken(agent.endpointScope);
     if (!endpointToken) return null; // redirect in progress
 
@@ -405,7 +429,7 @@
       : message;
 
     const body = {
-      input: input,
+      input: responsesInput(history, input),
       agent_reference: { name: agent.agentName, type: "agent_reference" }
     };
     const structuredInputs = {};

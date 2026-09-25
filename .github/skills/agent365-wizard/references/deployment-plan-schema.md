@@ -182,6 +182,8 @@ gitignored.
   `fetch_url` in-process; when the plan has FD agents the scaffolder also emits the per-lab web-fetch MCP
   (`<prefix>-webfetch-rg`, derived from `solution.prefix` + `solution.region`) and the FD `.env` key
   `WEB_FETCH_MCP_URL` (filled by `deploy-web-fetch.ps1`). Existing plans need no change.
+- **Conversation memory has NO plan field either — always on** for the 8 code variants: the samples and
+  `ui/app.js` carry it (last 3 exchanges; `MEMORY_TURNS` env to resize/disable). Nothing is emitted.
 - `customMcp.enabled` is optional and defaults to `false`. When `true`, the server names derive from
   `solution.prefix` (NOT a separate field): the registrations are `ext_<prefix>Anon` / `ext_<prefix>Auth`
   and must stay ≤ 20 chars, so the prefix must be ≤ 12 alphanumerics (lowercased, non-alphanumerics

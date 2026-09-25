@@ -461,8 +461,12 @@ class GenericAgentHost:
                     if aud and tok:
                         tokens[aud] = tok
             logger.info(f"\U0001f4ac /chat (OBO) from '{display_name}' with {len(tokens)} MCP token(s)")
+            # Short conversation memory: the SPA sends the last exchanges; re-validated + capped here.
+            from conversation_memory import sanitize_history
+
+            history = sanitize_history(body.get("history"))
             reply = await self.agent_instance.run_obo_mail_chat(
-                message, tokens, display_name, username
+                message, tokens, display_name, username, history=history
             )
             return json_response({"reply": reply})
 

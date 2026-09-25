@@ -65,6 +65,9 @@ from token_cache import get_cached_agentic_token
 # Web access (in-process function tool: URL reachability + page content)
 from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 
+# Short conversation memory (last N exchanges)
+from conversation_memory import to_messages
+
 # </DependencyImports>
 
 
@@ -391,7 +394,7 @@ class AgentFrameworkAgent(AgentInterface):
 
     # </MessageProcessing>
 
-    async def run_obo_mail_chat(self, message: str, tokens, display_name: str = "", username: str = "") -> str:
+    async def run_obo_mail_chat(self, message: str, tokens, display_name: str = "", username: str = "", history: list | None = None) -> str:
         """OBO turn for the SPA /chat endpoint — wires EVERY attached MCP server from
         ToolingManifest.json, each with the signed-in user's delegated token for that
         server's audience, all through the Agent 365 gateway.
@@ -496,7 +499,8 @@ class AgentFrameworkAgent(AgentInterface):
                     except Exception as e:
                         logger.warning("Activation of MCP server '%s' failed: %s", getattr(t, "name", "?"), e)
                 agent = Agent(client=self.chat_client, tools=[*connected, fetch_url], instructions=instructions)
-                result = await agent.run(message)
+                # Short conversation memory: prior exchanges (from the SPA) + this message.
+                result = await agent.run(to_messages(history or [], message))
                 return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:
             logger.error(f"Error in run_obo_mail_chat: {e}")

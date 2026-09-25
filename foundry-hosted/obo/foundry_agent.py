@@ -33,6 +33,7 @@ from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 
 from web_fetch import WEB_ACCESS_PROMPT, fetch_url
+from conversation_memory import to_messages
 
 logger = logging.getLogger("obo-foundry-agent")
 
@@ -131,7 +132,7 @@ def _identity_from_jwt(token: str) -> dict:
         return {}
 
 
-async def run_obo_turn(message: str, tokens, instructions: str | None = None) -> str:
+async def run_obo_turn(message: str, tokens, instructions: str | None = None, history: list | None = None) -> str:
     """Run one OBO turn, wiring every attached MCP server from ToolingManifest.json.
 
     ``tokens`` maps each server's token AUDIENCE (from the manifest) to a delegated user
@@ -226,7 +227,8 @@ async def run_obo_turn(message: str, tokens, instructions: str | None = None) ->
                 # Foundry hosting persists conversation history; avoid duplicating it.
                 default_options={"store": False},
             )
-            result = await agent.run(message)
+            # Short conversation memory: prior exchanges (from the SPA) + this message.
+            result = await agent.run(to_messages(history or [], message))
             return result.text or "I couldn't process your request at this time."
     finally:
         for hc in http_clients:

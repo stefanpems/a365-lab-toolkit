@@ -93,3 +93,11 @@ tool from `web_fetch.py`: URL reachability + page text, SSRF-hardened, no token.
 `Agent(...)` (`_create_agent`, `add_tool_servers_to_agent(initial_tools=[fetch_url])`, the SPA `/chat`
 handlers, the S2S LLM-only and DW tool-less fallbacks), with the shared `WEB_ACCESS_PROMPT`. Nothing to
 scaffold or deploy: the file ships with the sample. See [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md).
+
+**Conversation memory (always on, last 3 exchanges).** OBO/S2S: `/chat` reads the SPA's `history`,
+re-validates it with `sanitize_history` (user/assistant only, truncated, re-capped) and runs
+`agent.run(to_messages(history, message))`. DW (Teams, no client history): a module-level
+`ConversationMemory` keyed by `conversation.id|caller`, used on BOTH the normal and the tool-less path,
+updated only after a successful turn. It's in-process, so keep the DW container single-replica
+(`deploy-aca-DW.ps1` creates it with min = max = 1). The module is `conversation_memory.py`, byte-identical in
+`aca/{obo,s2s,dw}` (the scaffolder warns on drift).

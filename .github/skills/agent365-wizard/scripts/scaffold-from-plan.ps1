@@ -61,6 +61,7 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 . (Join-Path $moduleDir 'scaffold.mcp.ps1')
 . (Join-Path $moduleDir 'scaffold.tools.ps1')
 . (Join-Path $moduleDir 'scaffold.webfetch.ps1')
+. (Join-Path $moduleDir 'scaffold.memory.ps1')
 
 # ---------------------------------------------------------------- validation
 $errors = New-Object System.Collections.Generic.List[string]
@@ -400,6 +401,7 @@ $nextCommands = $preCommands
 if ($plan.ui.mode -in @('create', 'attach')) { Invoke-ScaffoldUi }
 if ($plan.customMcp -and $plan.customMcp.enabled) { Invoke-ScaffoldCustomMcp }
 Test-WebFetchCopies
+Test-ConversationMemoryCopies
 Invoke-ScaffoldWebFetch
 
 # Phase 2 — agents, each integrated immediately after its own setup/deploy.

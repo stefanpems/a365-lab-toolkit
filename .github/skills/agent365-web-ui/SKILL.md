@@ -19,6 +19,11 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
 - **Sidebar visibility**: every scaffolded tab carries `enabled: false` so its left-sidebar link is
   **hidden until the agent is live**. `app.js` renders a tab only when `enabled !== false`; the
   incremental integration step flips it to `true` to unhide it (see Flow §2).
+- **Conversation memory (always on).** `app.js` sends each tab's last 3 exchanges with every request.
+  ACA and FH-OBO get them as `history`; FH-S2S and FD as a Responses `input` message list. See
+  [docs/setup-web-ui.md](../../../docs/setup-web-ui.md) §0. It's backward-compatible: an older agent just
+  ignores `history`. A redeployed shared web UI therefore needs no per-agent change. Bump `app.js?v=` in
+  `index.html` whenever `app.js` changes.
 
 ## Flow
 1. **Scaffold** the config via the wizard router (no cloud writes):

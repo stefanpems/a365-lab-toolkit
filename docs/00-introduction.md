@@ -146,10 +146,12 @@ relays Teams traffic through an **Azure Bot Service**. It is published to Micros
 | Observable in A365 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Work IQ (Tool GW) Mail MCP | ✅ (OBO token) | ⚠️ needs app-role | ✅ (OBO/own) | ✅ (OBO token) | ⚠️ needs app-role | ✅ (OBO/own) |
 | **Web access** (`fetch_url`: URL reachability + page text)² | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Short conversation memory** (last 3 exchanges)³ | ✅ (web UI) | ✅ (web UI) | ✅ (Teams, in-process) | ✅ (web UI) | ✅ (web UI) | ✅ (Teams, in-process) |
 
 ¹ A DW can also perform OBO actions for a requesting user in addition to acting as itself.
 ² Always on, no token needed. For these six it's an in-process tool. MAF-FD-OBO / MAF-FD-S2S get the same
 tool from the per-lab web-fetch MCP; see §6.4.
+³ Always on, no infrastructure. MAF-FD-OBO / MAF-FD-S2S have it too, carried by the web UI; see §6.5.
 
 ---
 
@@ -376,6 +378,24 @@ page content is treated as untrusted data.
 - **FD**: prompt agents run no code, so the Lab Builder deploys one small anonymous MCP server per lab
   ([web-fetch-mcp/](../web-fetch-mcp/README.md)) and attaches it directly to each FD agent as an
   `MCPTool` restricted to `fetch_url`.
+
+### 6.5 Short conversation memory (built in, no infrastructure)
+Every code agent (not the Copilot Studio agents) remembers the **last 3 user/assistant exchanges** of the
+conversation, so follow-ups resolve: *"What is the capital of France?"* → *"How many districts does it
+have?"* → *"Which one is the most populous?"*. No database or cache is involved:
+- **Web UI agents (OBO / S2S)**: the browser tab keeps the conversation and sends the last 3 exchanges
+  with every request.
+  - **ACA and FH-OBO** receive it as `history`, which `conversation_memory.py` re-validates: only
+    user/assistant roles, each message truncated, the window re-capped. It's then prepended to the turn.
+  - **FH-S2S and FD** receive it as a Responses message list, handled natively.
+
+  Stateless on the server, so it works with any number of replicas. Reloading the page starts over.
+- **Digital Workers (Teams)**: Teams sends no history, so the agent keeps an **in-process** window per
+  Teams chat and user: bounded, and idle entries expire after 1 hour. It is lost when the container
+  restarts and assumes a single replica (the ACA-DW deploy uses min = max = 1). A durable store (Table /
+  Cosmos DB) is the upgrade path if persistence is needed.
+
+`MEMORY_TURNS` (environment variable, default 3; 0 disables it) sizes the window.
 
 ---
 

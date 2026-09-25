@@ -41,3 +41,7 @@ Platform connection). The Mail token lessons are in
 emits `deploy-web-fetch.ps1` **before** the FD deploys. That script fills the URL only after an MCP
 smoke test and clears it on failure, so an FD agent is never deployed with an unreachable tool (Foundry
 enumerates every MCP tool on every turn). See [web-fetch-mcp/README.md](../../../web-fetch-mcp/README.md).
+
+**Conversation memory (always on, last 3 exchanges; no agent code).** The web UI sends the project
+Responses call an `input` **message list**: the prior user/assistant exchanges, then the new user
+message. The API handles it natively, so `agent_config.py` / `deploy_agent.py` are unchanged.

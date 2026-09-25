@@ -25,9 +25,22 @@ Per-agent call paths in `app.js`:
 - `kind: "aca"` → `POST <apiBase>/chat` with one bearer token (`scope`), body `{ message, history }`.
 - `kind: "foundry-invocations"` (OBO FH) → `POST <endpoint>` with **two** tokens: `endpointScope`
   in the `Authorization` header + `mailScope` token in body `mail_token`; per-user rotated
-  `agent_session_id`.
+  `agent_session_id`; body `{ message, history?, mail_token? }`.
 - `kind: "foundry-responses"` (S2S FH) → `POST <endpoint>` with the `endpointScope` token only;
   body `{ input, stream:false }`.
+- `kind: "foundry-prompt"` (FD) → project Responses `POST <endpoint>` with `agent_reference`, `input` and
+  optional `structured_inputs`.
+
+**Short conversation memory (always on).** Each tab keeps its conversation in the browser, and every
+request carries the **last 3 exchanges** (`MEMORY_TURNS` in `app.js`, each message truncated to 4,000
+chars) so follow-ups resolve. There is no server-side store:
+- **ACA and FH-OBO**: the window goes in `history` (`[{role, content}]`, user/assistant only); the agent
+  re-validates and re-caps it.
+- **FH-S2S and FD**: `input` becomes a Responses **message list**: the prior exchanges, then the new user
+  message. The platform handles it natively.
+
+A failed turn is dropped from the window. Reloading the page starts a fresh conversation.
+`index.html` loads `app.js?v=<n>`; bump it whenever `app.js` changes so browsers don't keep a cached copy.
 
 ## 1. Get the sources
 

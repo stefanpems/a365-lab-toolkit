@@ -65,6 +65,12 @@ from token_cache import get_cached_agentic_token
 # Web access (in-process function tool: URL reachability + page content)
 from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 
+# Short conversation memory: Teams sends no history, so keep an in-process per-conversation window
+# (last N exchanges; single-replica container). See conversation_memory.py.
+from conversation_memory import ConversationMemory, to_messages
+
+_MEMORY = ConversationMemory()
+
 # </DependencyImports>
 
 
@@ -463,11 +469,14 @@ class AgentFrameworkAgent(AgentInterface):
         turn_start = mcp_diag.now()
         # How long to wait for a turn before assuming a tool call has hung.
         turn_timeout = float(os.getenv("TURN_TIMEOUT_SECONDS", "30"))
+        # Short conversation memory: prior exchanges of THIS conversation + this message.
+        mem_key = ConversationMemory.key_for(context)
+        turn_input = to_messages(_MEMORY.get(mem_key), message)
 
         async def _run_toolless() -> str:
             """Run the LLM without MCP tools (only the in-process fetch_url) — never hangs on a broken MCP tool."""
             toolless = Agent(client=self.chat_client, instructions=personalized_prompt, tools=[fetch_url])
-            result = await asyncio.wait_for(toolless.run(message), timeout=turn_timeout)
+            result = await asyncio.wait_for(toolless.run(turn_input), timeout=turn_timeout)
             return self._extract_result(result) or "I couldn't process your request at this time."
 
         try:
@@ -483,7 +492,7 @@ class AgentFrameworkAgent(AgentInterface):
                     answer = await _run_toolless()
                 else:
                     try:
-                        result = await asyncio.wait_for(self.agent.run(message), timeout=turn_timeout)
+                        result = await asyncio.wait_for(self.agent.run(turn_input), timeout=turn_timeout)
                         self._log_tool_results(result)
                         answer = self._extract_result(result) or "I couldn't process your request at this time."
                     except asyncio.TimeoutError:
@@ -492,6 +501,7 @@ class AgentFrameworkAgent(AgentInterface):
                         self._tools_broken = True
                         answer = await _run_toolless()
 
+            _MEMORY.add_exchange(mem_key, message, answer)
             # Always surface tool errors: what failed, the error type/target,
             # the detail from the response body, and which log to investigate.
             tool_errors = mcp_diag.errors_since(turn_start)

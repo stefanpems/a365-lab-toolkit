@@ -74,6 +74,12 @@ copied in each sample). FD prompt agents reach it through a small per-lab MCP se
 deploys automatically. It is always on: nothing to choose in the wizard. See
 [web-fetch-mcp/README.md](web-fetch-mcp/README.md).
 
+### Built in: short conversation memory on every code agent
+The same 8 agent types also remember the **last 3 exchanges** of the conversation, so follow-ups like
+*"…and the most populous one?"* work. It needs no infrastructure: the web UI sends each tab's recent
+exchanges with every request, and the Teams Digital Workers keep a small in-process window per chat.
+It is always on; see [docs/00-introduction.md](docs/00-introduction.md) §6.5.
+
 ### Optional: custom MCP tool sample
 [custom-mcp/](custom-mcp/README.md) is an optional **bring-your-own MCP server** sample you can attach
 to the **OBO** agents (ACA-OBO / FH-OBO / FD-OBO) to test Agent 365 tool behavior. One container hosts two MCP servers, split

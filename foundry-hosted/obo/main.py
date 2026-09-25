@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from conversation_memory import sanitize_history
 from foundry_agent import MAIL_MCP_RESOURCE, run_obo_turn
 
 load_dotenv()
@@ -130,7 +131,9 @@ async def handle_invoke(request: Request):
         )
 
     try:
-        reply = await run_obo_turn(user_message, tokens)
+        # Short conversation memory: the SPA sends the last exchanges; re-validated + capped here.
+        history = sanitize_history(data.get("history"))
+        reply = await run_obo_turn(user_message, tokens, history=history)
         return JSONResponse({"response": reply})
     except Exception as e:  # noqa: BLE001 - surface a clean error to the caller
         logger.error("OBO turn failed: %s", e)
