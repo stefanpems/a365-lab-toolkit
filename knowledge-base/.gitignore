@@ -1,0 +1,8 @@
+# Standalone knowledge-base toolkit — never commit state, secrets, or generated artifacts.
+kb.state.json
+register-kb.json
+*.secret.txt
+ingest/.venv/
+ingest/__pycache__/
+kb-mcp/__pycache__/
+*.downloaded/

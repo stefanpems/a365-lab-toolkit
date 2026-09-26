@@ -1,0 +1,15 @@
+{
+  "$comment": "Registration payload for the knowledge-base MCP shim (NoAuth). Rendered by deploy-kb-mcp.ps1 into register-kb.json. Register with: a365 develop-mcp register-external-mcp-server -f register-kb.json",
+  "serverName": "<SERVER_NAME>",
+  "serverUrl": "<MCP_URL>",
+  "authType": "NoAuth",
+  "description": "Shared indexed copy of SharePoint docs; search customer/support content.",
+  "publisherName": "<PUBLISHER>",
+  "tools": [
+    { "name": "search_customer_docs", "description": "Search the shared knowledge base and return the most relevant passages with title and source URL." },
+    { "name": "list_knowledge_titles", "description": "List the titles of the documents currently in the shared knowledge base." }
+  ],
+  "remoteScopes": null,
+  "externalOAuth": null,
+  "apiKey": null
+}
