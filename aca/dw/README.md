@@ -85,11 +85,13 @@ Agent365 agents can send multiple discrete messages in response to a single user
 
 > **Important**: Streaming responses are not supported for agentic identities in Teams. The SDK detects agentic identity and buffers the stream into a single message. Use `send_activity` directly to send immediate, discrete messages to the user.
 
-The sample demonstrates this in `on_message` ([host_agent_server.py](host_agent_server.py)):
+The sample demonstrates this in `on_message` ([host_agent_server.py](host_agent_server.py)). By default the user sees only the typing indicator ("...") until the answer arrives; set the `ACK_MESSAGE` environment variable (e.g. `Got it — working on it…`) to also send an immediate text acknowledgment first:
 
 ```python
-# Message 1: immediate ack — reaches the user right away
-await context.send_activity("Got it — working on it…")
+# Optional text ack (ACK_MESSAGE env; empty/unset by default = typing indicator only)
+ack_text = os.getenv("ACK_MESSAGE", "").strip()
+if ack_text:
+    await context.send_activity(ack_text)
 
 # Send typing indicator immediately (awaited so it arrives before the LLM call starts).
 await context.send_activity(Activity(type="typing"))
@@ -106,7 +108,7 @@ async def _typing_loop():
 typing_task = asyncio.create_task(_typing_loop())
 try:
     response = await agent.process_user_message(...)
-    # Message 2: the LLM response
+    # The LLM response
     await context.send_activity(response)
 finally:
     typing_task.cancel()

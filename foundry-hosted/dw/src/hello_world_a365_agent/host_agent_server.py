@@ -366,11 +366,12 @@ class GenericAgentHost:
                         )
                         return
 
-                    # Multi-message pattern: immediate ack, typing indicator loop,
-                    # then the final LLM response. Mirrors the C# StreamingResponse
-                    # flow (QueueInformativeUpdateAsync + QueueTextChunk).
-                    if not is_wpx_comment_activity(context.activity):
-                        await context.send_activity("Working on your request...")
+                    # Typing indicator loop ("..."), then the final LLM response. Set
+                    # ACK_MESSAGE (env) to also send a text acknowledgment first (e.g.
+                    # "Working on your request..."); empty/unset = typing only.
+                    ack_text = os.getenv("ACK_MESSAGE", "").strip()
+                    if ack_text and not is_wpx_comment_activity(context.activity):
+                        await context.send_activity(ack_text)
                     await context.send_activity(Activity(type="typing"))
 
                     async def _typing_loop() -> None:

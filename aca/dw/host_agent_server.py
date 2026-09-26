@@ -134,7 +134,7 @@ class GenericAgentHost:
         # De-duplicate redelivered activities. When a turn takes too long (e.g. a
         # slow/failing tool call), the channel re-delivers the SAME activity every
         # few seconds, which would otherwise re-run the handler and spam the user
-        # (e.g. repeated "Got it — working on it…"). We track recently seen
+        # (e.g. repeated replies or acknowledgements). We track recently seen
         # activity ids and skip re-processing duplicates.
         self._recent_activity_ids: "collections.OrderedDict[str, float]" = collections.OrderedDict()
         self._recent_activity_ttl = 300.0  # seconds
@@ -276,7 +276,9 @@ class GenericAgentHost:
 
                     logger.info(f"📨 {user_message}")
 
-                    # Multiple messages pattern: send an immediate acknowledgment before the LLM work begins.
+                    # Immediate feedback before the LLM work begins: by default only the typing indicator
+                    # ("...") until the real answer arrives. Set ACK_MESSAGE (env) to also send a text
+                    # acknowledgment first (e.g. "Got it — working on it…"); empty/unset = typing only.
                     # Each send_activity call produces a discrete Teams message.
                     # NOTE: For Teams agentic identities, streaming is buffered into a single message by the SDK;
                     #       use send_activity for any messages that must arrive immediately.
@@ -292,7 +294,9 @@ class GenericAgentHost:
                                 getattr(activity, "type", activity), _e,
                             )
 
-                    await _safe_send("Got it — working on it…")
+                    ack_text = os.getenv("ACK_MESSAGE", "").strip()
+                    if ack_text:
+                        await _safe_send(ack_text)
                     await _safe_send(Activity(type="typing"))
 
                     # Typing indicator loop — refreshes the "..." animation every ~4s for long-running operations.
