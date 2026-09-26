@@ -30,6 +30,9 @@ a365-deployment-plan.json
 generated/
 # Local scratch/analysis output (e.g. extracted system-instruction dumps)
 tmp/
+# Repo-root VS Code workspace settings (per-user, e.g. chat terminal auto-approve rules).
+# Sample-level .vscode/ folders (e.g. aca/dw/.vscode) stay tracked.
+/.vscode/
 # Backups / historical copies of config that may hold secrets
 **/*.OLD.json
 **/*bak*.json
