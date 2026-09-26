@@ -49,6 +49,15 @@ import send_prompts as ps  # noqa: E402
 
 DEFAULT_OBJECTIVES = os.path.join(_HERE, "..", "references", "objectives.md")
 
+
+def write_json(path: str, data) -> None:
+    """Write JSON output, creating its parent directory when needed."""
+    parent = os.path.dirname(os.path.abspath(path))
+    os.makedirs(parent, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
 # --- attack catalogue -------------------------------------------------------
 # needs_adversary : requires an adversarial LLM (OpenAIChatTarget read from ~/.pyrit/.env).
 # multi_turn      : the target must receive the accumulated conversation; the adapter flattens it
@@ -562,8 +571,7 @@ async def run_attack(args) -> int:
         "results": results,
     }
     if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, ensure_ascii=False)
+        write_json(args.out, summary)
         print(f"Wrote {args.out}", flush=True)
     print(
         f"SUMMARY: {summary['defense_held']} defended / {summary['attack_succeeded']} succeeded / "
@@ -660,12 +668,10 @@ def run_manual_prompts(args) -> int:
         "count": len(prompts),
         "prompts": prompts,
     }
-    out = json.dumps(plan, indent=2, ensure_ascii=False)
     if args.out_prompts:
-        with open(args.out_prompts, "w", encoding="utf-8") as f:
-            f.write(out)
+        write_json(args.out_prompts, plan)
         print(f"Wrote {args.out_prompts}", flush=True)
-    print(out, flush=True)
+    print(json.dumps(plan, indent=2, ensure_ascii=False), flush=True)
     return 0
 
 
@@ -729,8 +735,7 @@ def run_manual_score(args) -> int:
         "results": scored,
     }
     if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, ensure_ascii=False)
+        write_json(args.out, summary)
         print(f"Wrote {args.out}", flush=True)
     for s in scored:
         print(f"[{s['verdict']}] {s.get('agent')} <{summary['category']}> :: {str(s.get('objective'))[:60]}", flush=True)

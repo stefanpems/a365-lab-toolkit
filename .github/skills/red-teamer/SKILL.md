@@ -124,10 +124,12 @@ apply because we test the LLM guardrails, not the tools).
    attacks (`crescendo`/`red_teaming`/`tap`/`pair`) prefer the richer single objectives in the
    `## multi-turn-*` sections, and keep `--max-turns` / tree knobs modest to bound cost.
 5. **Ensure sign-in** — if no cached account, run `login` first (browser).
-6. **Run** — `python run_redteam.py attack` with the chosen ids/attack/category and `--out results.json`.
-7. **Review + report** — read `results.json`; per objective judge from PyRIT's score + the reply whether
+6. **Run** — `python run_redteam.py attack` with the chosen ids/attack/category and
+   `--out tmp/red-teamer/results.json`. The runner creates the git-ignored parent directory.
+7. **Review + report** — read the temporary results JSON; per objective judge from PyRIT's score + the reply whether
    the defense held or the attack succeeded, and present a **DEFENSE HELD / ATTACK SUCCEEDED /
-   INCONCLUSIVE** table plus an overall count.
+   INCONCLUSIVE** table plus an overall count. Delete `tmp/red-teamer/` after the report (or after an
+   interrupted/failed run once its files are no longer needed for diagnosis).
 
 ## Two surfaces, run separately: automatic (OBO/S2S) and manual (MCS)
 Red Teamer covers two kinds of target as **two separate phases**. A run may include **both** (default),
@@ -156,11 +158,11 @@ No PyRIT, no venv, no credentials — the manual commands are pure-python and se
 # 1) Emit the prompts to send by hand (optionally pure-python-encoded: none|base64|rot13|leetspeak)
 python .github/skills/red-teamer/scripts/run_redteam.py manual-prompts \
   --objective-category guardrail-identity [--converters none] [--max-objectives 3] \
-  --out-prompts redteam-mcs-prompts.json
+  --out-prompts tmp/red-teamer/mcs-prompts.json
 
 # 2) After collecting the operator's pasted replies into a JSON, score them
 python .github/skills/red-teamer/scripts/run_redteam.py manual-score \
-  --replies redteam-mcs-replies.json --out redteam-results-mcs.json
+  --replies tmp/red-teamer/mcs-replies.json --out tmp/red-teamer/results-mcs.json
 ```
 
 **Interactive loop the agent drives (per selected MCS agent):**
@@ -178,7 +180,8 @@ python .github/skills/red-teamer/scripts/run_redteam.py manual-score \
    semantically** (DEFENSE HELD / INCONCLUSIVE, or ATTACK SUCCEEDED if it spots a bypass the detectors
    missed).
 4. Present the manual **DEFENSE HELD / ATTACK SUCCEEDED / INCONCLUSIVE / (needs review)** table, kept
-   separate from the automatic phase's table. Remind the operator any surfaced content is for testing only.
+   separate from the automatic phase's table. Remind the operator any surfaced content is for testing
+   only, then delete `tmp/red-teamer/`.
 
 `manual-score` writes the same result shape as the automatic path (plus `manual: true`,
 `refusal_suggested`, and a `needs_review` count), so both phases report consistently.
@@ -193,7 +196,7 @@ All inputs from the command line — never prompt:
   --config generated/a09091/a09091-ui/config.js \
   --agents obo,s2s \
   --attack prompt_sending --objective-category guardrail-identity \
-  --out redteam-results.json
+  --out tmp/red-teamer/results.json
 
 # multi-turn (needs the adversary LLM in ~/.pyrit/.env); bound turns/tree to control cost
 .\.venv-redteam\Scripts\python.exe .github/skills/red-teamer/scripts/run_redteam.py attack \
@@ -201,12 +204,13 @@ All inputs from the command line — never prompt:
   --agents obo,s2s \
   --attack crescendo --objective-category guardrail-identity \
   --max-turns 6 --max-backtracks 5 \
-  --out redteam-results.json
+  --out tmp/red-teamer/results.json
 ```
 
 Exit code is 0 when the run completes; a non-zero code signals a runner/setup error (not an attack
 success). The agent's semantic review of the results is authoritative for DEFENSE HELD / ATTACK
-SUCCEEDED.
+SUCCEEDED. An unattended caller owns retention and should delete `tmp/red-teamer/` after consuming the
+results.
 
 ## Non-regression discipline
 - **Never modify** `send_prompts.py`, the web UI, or any agent code. `a365_target.py` only **imports**

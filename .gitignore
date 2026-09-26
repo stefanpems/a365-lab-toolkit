@@ -63,6 +63,7 @@ _test/
 .venv-redteam/
 # PyRIT memory / run outputs may contain adversarial content generated for testing.
 **/redteam-results*.json
+**/redteam-camp-*.json
 **/pyrit_memory*.db*
 # Manual (MCS) mode intermediates: adversarial prompt plans and operator-pasted agent replies.
 **/redteam-mcs-*.json
