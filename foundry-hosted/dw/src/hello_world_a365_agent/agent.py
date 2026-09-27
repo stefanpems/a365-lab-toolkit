@@ -42,6 +42,7 @@ from .agent_interface import AgentInterface
 from .token_cache import get_cached_agentic_token
 from .web_fetch import WEB_ACCESS_PROMPT, fetch_url
 from .conversation_memory import ConversationMemory, to_messages
+from .agent_identity import agent_display_name, with_identity
 
 # Short conversation memory: Teams sends no history, so keep an in-process per-conversation window
 # (last N exchanges). See conversation_memory.py.
@@ -370,7 +371,7 @@ class FoundryDigitalWorkerAgent(AgentInterface):
         assert self._agent is not None
         # Short conversation memory: prior exchanges of THIS conversation (in-process) + this message.
         mem_key = ConversationMemory.key_for(context) if context is not None else None
-        result = await self._agent.run(to_messages(_MEMORY.get(mem_key), prompt))
+        result = await self._agent.run(with_identity(to_messages(_MEMORY.get(mem_key), prompt), agent_display_name(context)))
         answer = getattr(result, "text", None) or str(result)
         _MEMORY.add_exchange(mem_key, message, answer)
         return answer

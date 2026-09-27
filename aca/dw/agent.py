@@ -68,6 +68,7 @@ from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 # Short conversation memory: Teams sends no history, so keep an in-process per-conversation window
 # (last N exchanges; single-replica container). See conversation_memory.py.
 from conversation_memory import ConversationMemory, to_messages
+from agent_identity import agent_display_name, with_identity
 
 _MEMORY = ConversationMemory()
 
@@ -471,7 +472,7 @@ class AgentFrameworkAgent(AgentInterface):
         turn_timeout = float(os.getenv("TURN_TIMEOUT_SECONDS", "30"))
         # Short conversation memory: prior exchanges of THIS conversation + this message.
         mem_key = ConversationMemory.key_for(context)
-        turn_input = to_messages(_MEMORY.get(mem_key), message)
+        turn_input = with_identity(to_messages(_MEMORY.get(mem_key), message), agent_display_name(context), display_name)
 
         async def _run_toolless() -> str:
             """Run the LLM without MCP tools (only the in-process fetch_url) — never hangs on a broken MCP tool."""
@@ -547,7 +548,7 @@ class AgentFrameworkAgent(AgentInterface):
                 email_body = getattr(email, "html_body", "") or getattr(email, "body", "")
                 message = f"You have received the following email. Please follow any instructions in it. {email_body}"
 
-                result = await self.agent.run(message)
+                result = await self.agent.run(with_identity(message, agent_display_name(context), "the sender of the email"))
                 return self._extract_result(result) or "Email notification processed."
 
             # Handle Word Comment Notifications
@@ -568,13 +569,13 @@ class AgentFrameworkAgent(AgentInterface):
                 # Process the comment with document context
                 comment_text = notification_activity.text or ""
                 response_message = f"You have received the following Word document content and comments. Please refer to these when responding to comment '{comment_text}'. {word_content}"
-                result = await self.agent.run(response_message)
+                result = await self.agent.run(with_identity(response_message, agent_display_name(context)))
                 return self._extract_result(result) or "Word notification processed."
 
             # Generic notification handling
             else:
                 notification_message = notification_activity.text or f"Notification received: {notification_type}"
-                result = await self.agent.run(notification_message)
+                result = await self.agent.run(with_identity(notification_message, agent_display_name(context)))
                 return self._extract_result(result) or "Notification processed successfully."
 
         except Exception as e:

@@ -22,3 +22,19 @@ function Test-ConversationMemoryCopies {
         elseif ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -ne $h) { Write-Host "  WARN memory: $d\conversation_memory.py differs from $ConversationMemoryCanonical\conversation_memory.py (keep every copy byte-identical)." -ForegroundColor Yellow }
     }
 }
+
+# Digital Workers (ACA-DW / FH-DW) greet and answer with the INSTANCE name through agent_identity.py (copied with
+# the sample by the router's robocopy). Same warn-only byte-identity check as conversation_memory.py.
+$AgentIdentityCanonical = 'aca\dw'
+$AgentIdentityCopies = @('foundry-hosted\dw\src\hello_world_a365_agent')
+
+function Test-AgentIdentityCopies {
+    $canon = Join-Path $repoRoot (Join-Path $AgentIdentityCanonical 'agent_identity.py')
+    if (-not (Test-Path -LiteralPath $canon)) { Write-Host "  WARN identity: $AgentIdentityCanonical\agent_identity.py not found - DW agents would fail to import it." -ForegroundColor Yellow; return }
+    $h = (Get-FileHash -LiteralPath $canon -Algorithm SHA256).Hash
+    foreach ($d in $AgentIdentityCopies) {
+        $p = Join-Path $repoRoot (Join-Path $d 'agent_identity.py')
+        if (-not (Test-Path -LiteralPath $p)) { Write-Host "  WARN identity: $d\agent_identity.py is missing - that DW family would fail to import it." -ForegroundColor Yellow }
+        elseif ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -ne $h) { Write-Host "  WARN identity: $d\agent_identity.py differs from $AgentIdentityCanonical\agent_identity.py (keep every copy byte-identical)." -ForegroundColor Yellow }
+    }
+}

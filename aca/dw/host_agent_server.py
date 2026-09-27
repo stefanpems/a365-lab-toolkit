@@ -26,6 +26,7 @@ from aiohttp.web import Application, Request, Response, json_response, run_app
 from aiohttp.web_middlewares import middleware as web_middleware
 from dotenv import load_dotenv
 from agent_interface import AgentInterface, check_agent_inheritance
+from agent_identity import agent_display_name, goodbye_text, hired_text, welcome_text
 from microsoft_agents.activity import load_configuration_from_env, Activity, ActivityTypes
 from microsoft_agents.authentication.msal import MsalConnectionManager
 from microsoft_agents.hosting.aiohttp import (
@@ -228,10 +229,8 @@ class GenericAgentHost:
         handler_config = {"auth_handlers": [self.auth_handler_name]} if self.auth_handler_name else {}
 
         async def help_handler(context: TurnContext, _: TurnState):
-            await context.send_activity(
-                f"👋 **Hi there!** I'm **{self.agent_class.__name__}**, your AI assistant.\n\n"
-                "How can I help you today?"
-            )
+            # Greet with the INSTANCE name (the agent user that received the activity), not the class name.
+            await context.send_activity(welcome_text(agent_display_name(context)))
 
         self.agent_app.conversation_update("membersAdded", **handler_config)(help_handler)
         self.agent_app.message("/help", **handler_config)(help_handler)
@@ -248,9 +247,9 @@ class GenericAgentHost:
                 getattr(from_prop, "id", "(unknown)") if from_prop else "(unknown)",
             )
             if action == "add":
-                await context.send_activity("Thank you for hiring me! Looking forward to assisting you in your professional journey!")
+                await context.send_activity(hired_text(agent_display_name(context)))
             elif action == "remove":
-                await context.send_activity("Thank you for your time, I enjoyed working with you.")
+                await context.send_activity(goodbye_text())
 
         @self.agent_app.activity("message", **handler_config)
         async def on_message(context: TurnContext, _: TurnState):

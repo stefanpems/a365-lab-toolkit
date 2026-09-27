@@ -63,7 +63,10 @@ into the LLM system instructions for personalized responses.
 
 ## Handling Agent Install and Uninstall
 
-When a user installs (hires) or uninstalls (removes) the agent, the A365 platform sends an `InstallationUpdate` activity — also referred to as the `agentInstanceCreated` event. The sample handles this in `on_installation_update` in `host_agent_server.py`:
+When a user installs (hires) or uninstalls (removes) the agent, the A365 platform sends an `InstallationUpdate` activity — also referred to as the `agentInstanceCreated` event. The sample handles this in `on_installation_update` in `host_agent_server.py`. Greetings use the **instance
+name** — the display name of the agent user that received the activity (`activity.recipient.name`), so one
+container greets correctly for every instance hired from the same template — via `agent_identity.py`
+(English texts, `AGENT_DISPLAY_NAME` env as fallback):
 
 | Action | Description |
 |---|---|
@@ -72,10 +75,13 @@ When a user installs (hires) or uninstalls (removes) the agent, the A365 platfor
 
 ```python
 if action == "add":
-    await context.send_activity("Thank you for hiring me! Looking forward to assisting you in your professional journey!")
+    await context.send_activity(hired_text(agent_display_name(context)))   # "Thank you for hiring me! I'm **<instance>**. ..."
 elif action == "remove":
-    await context.send_activity("Thank you for your time, I enjoyed working with you.")
+    await context.send_activity(goodbye_text())
 ```
+
+`agent_identity.with_identity()` also prepends a per-turn system note with the instance name and the caller,
+so the agent introduces itself with its instance name (its instructions are shared by every instance).
 
 To test with Agents Playground, use **Mock an Activity → Install application** to send a simulated `installationUpdate` activity.
 
