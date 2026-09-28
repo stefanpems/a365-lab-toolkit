@@ -40,13 +40,7 @@ from microsoft_agents_a365.notifications.agent_notification import (
 from microsoft_agents_a365.notifications import EmailResponse
 
 from microsoft.opentelemetry import use_microsoft_opentelemetry
-from microsoft_agents_a365.observability.core.middleware.baggage_builder import (
-    BaggageBuilder,
-)
-from microsoft_agents_a365.runtime.environment_utils import (
-    get_observability_authentication_scope,
-)
-from token_cache import cache_agentic_token, get_cached_agentic_token
+import a365_observability as a365obs
 
 # --- Configuration ---
 ms_agents_logger = logging.getLogger("microsoft_agents")
@@ -55,6 +49,7 @@ ms_agents_logger.setLevel(logging.INFO)
 
 observability_logger = logging.getLogger("microsoft_agents_a365.observability")
 observability_logger.setLevel(logging.ERROR)
+a365obs.configure_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -141,18 +136,19 @@ def create_and_run_host(
     # tracing, metrics, and logging pipelines including A365 telemetry export.
     # See: https://github.com/microsoft/opentelemetry-distro-python
     # Export telemetry to ALL supported destinations:
-    #  - Agent 365 Observability: a365_enable_observability_exporter=True
+    #  - Agent 365 Observability: a365_enable_observability_exporter=True, authenticated as the
+    #    agent identity with an app-only (S2S) token on the S2S route - the SPA /chat turns have no
+    #    TurnContext to exchange an agentic token from (see a365_observability.py).
     #  - Azure Monitor / Application Insights: enabled when a connection string is
     #    provided via APPLICATIONINSIGHTS_CONNECTION_STRING (auto-read by the exporter).
     use_microsoft_opentelemetry(
         enable_a365=True,
         a365_enable_observability_exporter=True,
+        a365_use_s2s_endpoint=True,
         enable_azure_monitor=bool(os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")),
-        a365_token_resolver=lambda agent_id, tenant_id: get_cached_agentic_token(
-            tenant_id, agent_id
-        )
-        or "",
+        a365_token_resolver=a365obs.resolve_token,
     )
+    a365obs.log_configuration()
 
     host = GenericAgentHost(agent_class, *agent_args, **agent_kwargs)
     auth_config = host.create_auth_configuration()
@@ -203,33 +199,29 @@ class GenericAgentHost:
     async def _setup_observability_token(
         self, context: TurnContext, tenant_id: str, agent_id: str
     ):
-        # Only attempt token exchange when auth handler is configured
-        if not self.auth_handler_name:
-            logger.debug("Skipping observability token exchange (no auth handler)")
-            return
-            
-        try:
-            logger.info(
-                f"🔐 Attempting token exchange for observability... "
-                f"(tenant_id={tenant_id}, agent_id={agent_id})"
+        # One app-only (S2S) token for BOTH entry points: the exporter posts to the S2S route, so a
+        # delegated agentic token exchanged here would be rejected there.
+        if not await a365obs.prime_token(agent_id, tenant_id):
+            logger.warning(
+                f"⚠️ No Agent 365 observability token (tenant_id={tenant_id}, agent_id={agent_id})"
             )
-            exaau_token = await self.agent_app.auth.exchange_token(
-                context,
-                scopes=get_observability_authentication_scope(),
-                auth_handler_id=self.auth_handler_name,
-            )
-            cache_agentic_token(tenant_id, agent_id, exaau_token.token)
-            logger.info(
-                f"✅ Token exchange successful "
-                f"(tenant_id={tenant_id}, agent_id={agent_id})"
-            )
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to cache observability token: {e}")
+
+    def _turn_baggage(self, context: TurnContext, tenant_id: str, agent_id: str):
+        activity = context.activity
+        sender = activity.from_property
+        return a365obs.turn_baggage(
+            tenant=tenant_id,
+            agent=agent_id,
+            channel=str(activity.channel_id or "").lower(),
+            conversation=getattr(activity.conversation, "id", None),
+            user_id=getattr(sender, "aad_object_id", None),
+            user_name=getattr(sender, "name", None),
+        )
 
     async def _validate_agent_and_setup_context(self, context: TurnContext):
         logger.info("🔍 Validating agent and setting up context...")
-        tenant_id = context.activity.recipient.tenant_id
-        agent_id = context.activity.recipient.agentic_app_id
+        tenant_id = context.activity.recipient.tenant_id or a365obs.tenant_id()
+        agent_id = context.activity.recipient.agentic_app_id or a365obs.agent_id()
         logger.info(f"🔍 tenant_id={tenant_id}, agent_id={agent_id}")
 
         if not self.agent_instance:
@@ -279,7 +271,7 @@ class GenericAgentHost:
                     return
                 tenant_id, agent_id = result
 
-                with BaggageBuilder().tenant_id(tenant_id).agent_id(agent_id).build():
+                with self._turn_baggage(context, tenant_id, agent_id):
                     user_message = context.activity.text or ""
                     if not user_message.strip() or user_message.strip() == "/help":
                         return
@@ -335,7 +327,7 @@ class GenericAgentHost:
                     return
                 tenant_id, agent_id = result
 
-                with BaggageBuilder().tenant_id(tenant_id).agent_id(agent_id).build():
+                with self._turn_baggage(context, tenant_id, agent_id):
                     logger.info(f"📬 {notification_activity.notification_type}")
 
                     if not hasattr(
@@ -465,9 +457,26 @@ class GenericAgentHost:
             from conversation_memory import sanitize_history
 
             history = sanitize_history(body.get("history"))
-            reply = await self.agent_instance.run_obo_mail_chat(
-                message, tokens, display_name, username, history=history
-            )
+            # Agent 365 observability: this turn has no TurnContext, so attribute it explicitly to the
+            # agent identity (token + baggage) and to the signed-in user (user.id = Entra object id).
+            obs_tenant = claims.get("tid") or a365obs.tenant_id()
+            obs_agent = a365obs.agent_id()
+            await a365obs.prime_token(obs_agent, obs_tenant)
+            user_oid = claims.get("oid")
+            with a365obs.turn_baggage(
+                tenant=obs_tenant,
+                agent=obs_agent,
+                channel="web",
+                conversation=a365obs.conversation_id(user_oid or username or display_name, not history),
+                user_id=user_oid,
+                user_name=display_name,
+                user_email=username or None,
+                caller_ip=a365obs.client_ip(req),
+                server_host=req.host,
+            ):
+                reply = await self.agent_instance.run_obo_mail_chat(
+                    message, tokens, display_name, username, history=history
+                )
             return json_response({"reply": reply})
 
         middlewares = []

@@ -51,6 +51,12 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
   announce the browser gate once, then poll the **file**. A missing `.env`/`completed:false` does not
   block `deploy-aca-*.ps1`.
 - **`" Agent"` suffix** in the Registry (e.g. `<name> Agent`) is cosmetic CLI behavior — do not "fix" it.
+- **Agent 365 activity for ACA-OBO / ACA-S2S = `A365_AGENT_ID`.** The web UI `/chat` turns are exported
+  to Agent 365 observability as the **agent identity** (app-only S2S token + S2S route, see
+  [aca-a365-observability.md](../../../docs/aca-a365-observability.md)); the deploy scripts resolve its
+  appId (`agenticAppId` in `a365.generated.config.json`, else the identity display name in Entra) and
+  set `A365_AGENT_ID`. If the startup log warns *"A365_AGENT_ID is not set"*, the admin center shows
+  0 users / 0 sessions for that agent: `az containerapp update --set-env-vars A365_AGENT_ID=<identity appId>`.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload
   custom agent), then a user hires it in Teams. ⛔ **`a365 publish --aiteammate` is INTERACTIVE and

@@ -332,8 +332,13 @@ CONNECTIONSMAP__0__CONNECTION=SERVICE_CONNECTION
 CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=<blueprint app id>
 CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=secretref:blueprint-secret
 CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=<tenant>
-ENABLE_A365_OBSERVABILITY_EXPORTER=true
+A365_AGENT_ID=<agent identity appId>   # Agent 365 observability; resolved by deploy-aca.ps1
+OTEL_SERVICE_NAME=<app>                # Application Insights role name
 ```
+
+The Agent 365 exporter is switched on in code (`a365_enable_observability_exporter=True`); it exports
+the web UI `/chat` turns as the agent identity (`A365_AGENT_ID`) — see
+[aca-a365-observability.md](aca-a365-observability.md).
 
 Verify: `GET https://<fqdn>/api/health` → `{"status":"ok","agent_initialized":true}`.
 

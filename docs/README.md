@@ -58,3 +58,6 @@ MSAL web SPA in `ui/`. Digital Workers are used directly from Teams / Outlook / 
 
 - **[setup-web-ui.md](setup-web-ui.md)** — deploy and configure the web SPA (app registration,
   Entra consent, Azure RBAC, `config.js`, Static Web Apps deploy).
+- **[aca-a365-observability.md](aca-a365-observability.md)** — how ACA-OBO / ACA-S2S web UI turns reach
+  Agent 365 observability (admin center users and sessions), how to verify it, and how to port the fix
+  to an existing ACA agent.

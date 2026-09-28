@@ -543,6 +543,11 @@ config = {
 
 ## 🔍 Observability Implementation
 
+> **Agent 365 export (current code).** `host_agent_server.py` + `a365_observability.py` export every
+> turn - the web UI `/chat` included - as the **agent identity** (`A365_AGENT_ID`) with an app-only token on
+> the S2S route, and tag the spans with the signed-in user and a conversation id so the Microsoft 365
+> admin center shows users and sessions. See [docs/aca-a365-observability.md](../../docs/aca-a365-observability.md).
+
 ### 1. **Structured Logging**
 ```python
 self.logger.info("🚀 Starting AgentFramework Agent initialization...")
