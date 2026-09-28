@@ -57,6 +57,10 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
   appId (`agenticAppId` in `a365.generated.config.json`, else the identity display name in Entra) and
   set `A365_AGENT_ID`. If the startup log warns *"A365_AGENT_ID is not set"*, the admin center shows
   0 users / 0 sessions for that agent: `az containerapp update --set-env-vars A365_AGENT_ID=<identity appId>`.
+- **⛔ `setup-all.log` holds the blueprint client secret in CLEARTEXT** (`a365 setup all` prints it and the
+  runner tees it into the agent folder). The ACA `.dockerignore` files exclude `*.log` so it never lands in
+  a container image, and the repo `.gitignore` excludes `**/*.log`. Never copy the log into a build
+  context by other means; if an image was built with it, rotate that blueprint's secret.
 - **ACA-DW is not auto-listed** like OBO/S2S: after deploy, `a365 publish --aiteammate --agent-name
   "<name>"` regenerates `manifest/manifest.zip`; upload it in the M365 admin center (Agents → Upload
   custom agent), then a user hires it in Teams. ⛔ **`a365 publish --aiteammate` is INTERACTIVE and
