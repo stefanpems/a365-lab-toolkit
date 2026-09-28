@@ -15,6 +15,9 @@ param(
     [string]$Subscription = $env:DEPLOY_SUB,
     [string]$AoaiRg       = $env:DEPLOY_AOAI_RG,
     [string]$AoaiAcc      = $env:DEPLOY_AOAI_ACC,
+    # Agent identity appId for Agent 365 observability (A365_AGENT_ID). Optional: resolved from
+    # a365.generated.config.json (agenticAppId) or by the identity display name in Entra.
+    [string]$AgentId,
     [switch]$ReuseEnv
 )
 $ErrorActionPreference = 'Stop'
@@ -111,6 +114,22 @@ if (-not $clientId) {
     Write-Host "Resolved blueprint id $clientId; wrote minimal a365.generated.config.json." -ForegroundColor Green
 }
 $tenantId = az account show --query tenantId -o tsv @SubArg
+# Agent identity (NOT the blueprint) for Agent 365 observability: the exporter authenticates as this
+# identity and stamps its appId on every span. Without it the web UI /chat turns never reach Agent 365
+# (admin center: 0 active users / 0 sessions). Order: -AgentId > agenticAppId > Entra display-name lookup
+# validated against this blueprint.
+if (-not $AgentId -and (Test-Path a365.generated.config.json)) {
+    $AgentId = (Get-Content a365.generated.config.json | ConvertFrom-Json).agenticAppId
+}
+if (-not $AgentId) {
+    $idName = (Get-Content a365.config.json | ConvertFrom-Json).agentIdentityDisplayName
+    if ($idName) {
+        $flt = "displayName eq '$($idName.Replace("'", "''"))'"
+        $AgentId = @(az rest --method get --url "https://graph.microsoft.com/beta/servicePrincipals?`$filter=$flt&`$select=appId,agentIdentityBlueprintId" --query "value[?agentIdentityBlueprintId=='$clientId'].appId" -o tsv 2>$null) | Select-Object -First 1
+    }
+}
+if ($AgentId) { Write-Host "Agent identity (A365_AGENT_ID): $AgentId" -ForegroundColor Green }
+else { Write-Warning "Agent identity not resolved: Agent 365 observability for the web UI is OFF. Re-run with -AgentId <agent identity appId>." }
 # Cleartext secret (a365 setup blueprint --show-secret). Requested interactively if not passed.
 if (-not $ClientSecret) { $ClientSecret = Read-Host "Paste the CLEARTEXT blueprint client secret (a365 setup blueprint --show-secret)" }
 
@@ -144,7 +163,10 @@ $envVars = @(
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=$clientId"
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=secretref:blueprint-secret"
     "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=$tenantId"
+    # App Insights role name = the app (instead of 'unknown_service').
+    "OTEL_SERVICE_NAME=$APP"
 )
+if ($AgentId) { $envVars += "A365_AGENT_ID=$AgentId" }
 if ($m['SECRET_AZURE_OPENAI_API_KEY']) {
     $envVars += "AZURE_OPENAI_API_KEY=$($m['SECRET_AZURE_OPENAI_API_KEY'])"
 }

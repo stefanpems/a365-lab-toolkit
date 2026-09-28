@@ -186,8 +186,12 @@ CONNECTIONSMAP__0__CONNECTION=service_connection
 CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=<blueprint app id>
 CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=secretref:blueprint-secret
 CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID=<tenant>
-ENABLE_A365_OBSERVABILITY_EXPORTER=true
+A365_AGENT_ID=<agent identity appId>   # Agent 365 observability; resolved by deploy-aca-S2S.ps1
+OTEL_SERVICE_NAME=<app>                # Application Insights role name
 ```
+
+The Agent 365 exporter is switched on in code and exports as the agent identity (`A365_AGENT_ID`) with
+an app-only token — see [aca-a365-observability.md](aca-a365-observability.md).
 
 **No** `AUTH_HANDLER_NAME=AGENTIC` and **no** `...HANDLERS__AGENTIC__*` (those are for
 OBO/DW). At runtime the host logs *"No auth handler configured"* — correct for S2S.

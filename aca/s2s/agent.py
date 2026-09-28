@@ -68,6 +68,9 @@ from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 # Short conversation memory (last N exchanges)
 from conversation_memory import to_messages
 
+# Agent 365 observability identity (agent identity appId + name on the invoke_agent span)
+import a365_observability as a365obs
+
 # </DependencyImports>
 
 
@@ -212,10 +215,12 @@ class AgentFrameworkAgent(AgentInterface):
     def _create_agent(self):
         """Create the AgentFramework agent with initial configuration"""
         try:
-            self.agent = Agent(
-                client=self.chat_client,
-                instructions=self.AGENT_PROMPT,
-                tools=[fetch_url],
+            self.agent = a365obs.bind_agent_identity(
+                Agent(
+                    client=self.chat_client,
+                    instructions=self.AGENT_PROMPT,
+                    tools=[fetch_url],
+                )
             )
             logger.info("✅ AgentFramework agent created")
         except Exception as e:
@@ -296,10 +301,12 @@ class AgentFrameworkAgent(AgentInterface):
             # activity.from_property) so the agent can still answer identity questions.
             if not use_agentic_auth and not self.auth_options.bearer_token and not auth_handler_name:
                 logger.info("🔓 Pure S2S (no MCP auth) — LLM-only with personalized instructions")
-                self.agent = Agent(
-                    client=self.chat_client,
-                    instructions=agent_instructions,
-                    tools=[fetch_url],
+                self.agent = a365obs.bind_agent_identity(
+                    Agent(
+                        client=self.chat_client,
+                        instructions=agent_instructions,
+                        tools=[fetch_url],
+                    )
                 )
                 return
 
@@ -324,6 +331,7 @@ class AgentFrameworkAgent(AgentInterface):
                 )
 
             if self.agent:
+                a365obs.bind_agent_identity(self.agent)
                 # Namespace each MCP server's functions BEFORE they connect/list tools, so
                 # identical function names across servers do not collide at run time.
                 self._namespace_mcp_tools()
@@ -401,6 +409,7 @@ class AgentFrameworkAgent(AgentInterface):
 
         try:
             await self.setup_mcp_servers(auth, auth_handler_name, context, instructions=personalized_prompt)
+            a365obs.bind_agent_identity(self.agent, context.activity.recipient.agentic_app_id)
             result = await self.agent.run(message)
             return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:
@@ -447,7 +456,9 @@ class AgentFrameworkAgent(AgentInterface):
             + "\n\n" + COMMON_SECURITY
         )
         try:
-            agent = Agent(client=self.chat_client, instructions=instructions, tools=[fetch_url])
+            agent = a365obs.bind_agent_identity(
+                Agent(client=self.chat_client, instructions=instructions, tools=[fetch_url])
+            )
             # Short conversation memory: prior exchanges (from the SPA) + this message.
             result = await agent.run(to_messages(history or [], message))
             return self._extract_result(result) or "I couldn't process your request at this time."

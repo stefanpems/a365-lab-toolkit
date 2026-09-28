@@ -68,6 +68,9 @@ from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 # Short conversation memory (last N exchanges)
 from conversation_memory import to_messages
 
+# Agent 365 observability identity (agent identity appId + name on the invoke_agent span)
+import a365_observability as a365obs
+
 # </DependencyImports>
 
 
@@ -212,10 +215,12 @@ class AgentFrameworkAgent(AgentInterface):
     def _create_agent(self):
         """Create the AgentFramework agent with initial configuration"""
         try:
-            self.agent = Agent(
-                client=self.chat_client,
-                instructions=self.AGENT_PROMPT,
-                tools=[fetch_url],
+            self.agent = a365obs.bind_agent_identity(
+                Agent(
+                    client=self.chat_client,
+                    instructions=self.AGENT_PROMPT,
+                    tools=[fetch_url],
+                )
             )
             logger.info("✅ AgentFramework agent created")
         except Exception as e:
@@ -309,6 +314,7 @@ class AgentFrameworkAgent(AgentInterface):
                 )
 
             if self.agent:
+                a365obs.bind_agent_identity(self.agent)
                 # Namespace each MCP server's functions BEFORE they connect/list tools, so
                 # identical function names across servers do not collide at run time.
                 self._namespace_mcp_tools()
@@ -386,6 +392,7 @@ class AgentFrameworkAgent(AgentInterface):
 
         try:
             await self.setup_mcp_servers(auth, auth_handler_name, context, instructions=personalized_prompt)
+            a365obs.bind_agent_identity(self.agent, context.activity.recipient.agentic_app_id)
             result = await self.agent.run(message)
             return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:
@@ -498,7 +505,9 @@ class AgentFrameworkAgent(AgentInterface):
                             await t.load_tools()
                     except Exception as e:
                         logger.warning("Activation of MCP server '%s' failed: %s", getattr(t, "name", "?"), e)
-                agent = Agent(client=self.chat_client, tools=[*connected, fetch_url], instructions=instructions)
+                agent = a365obs.bind_agent_identity(
+                    Agent(client=self.chat_client, tools=[*connected, fetch_url], instructions=instructions)
+                )
                 # Short conversation memory: prior exchanges (from the SPA) + this message.
                 result = await agent.run(to_messages(history or [], message))
                 return self._extract_result(result) or "I couldn't process your request at this time."
