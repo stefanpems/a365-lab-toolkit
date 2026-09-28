@@ -98,8 +98,9 @@ For an agent scaffolded before this change (sources in `generated/<prefix>/<agen
 
 ## Not covered here
 
-- **FH-OBO / FH-S2S** (`foundry-hosted/`) have the same code gap (no baggage, managed-identity token,
-  no S2S route); they need a separate, live-tested change.
+- **FH-OBO / FH-S2S** (`foundry-hosted/`): the container code has the same gap (no baggage, no S2S
+  route), but it does not affect the admin center — the Foundry hosting platform reports their activity
+  (verified: lab FH-OBO/FH-S2S agents show active users and sessions). No change needed.
 - **ACA-DW**: by code inspection, its `invoke_agent` spans still carry Agent Framework's random id (the
   `chat`/`execute_tool` spans are attributed through baggage); the DW activity already shows in the
   admin center, so the DW template is intentionally left unchanged.

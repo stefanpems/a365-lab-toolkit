@@ -29,3 +29,7 @@ images/
 
 # Deployment helper script (not needed inside the container)
 deploy-aca.ps1
+
+# Local logs: setup-all.log (the tee'd 'a365 setup all' output) prints the blueprint client secret
+# in cleartext - never bake it into the image.
+*.log
