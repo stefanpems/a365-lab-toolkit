@@ -62,6 +62,7 @@ $moduleDir = Join-Path $PSScriptRoot 'modules'
 . (Join-Path $moduleDir 'scaffold.tools.ps1')
 . (Join-Path $moduleDir 'scaffold.webfetch.ps1')
 . (Join-Path $moduleDir 'scaffold.memory.ps1')
+. (Join-Path $moduleDir 'scaffold.overlay.ps1')
 
 # ---------------------------------------------------------------- validation
 $errors = New-Object System.Collections.Generic.List[string]
@@ -223,7 +224,7 @@ if ($plan.solution.foundry) {
         $sharedProv = ($plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S') } | Select-Object -First 1)
         $needsShared = $plan.agents | Where-Object { $_.type -in @('FH-OBO', 'FH-S2S', 'FD-OBO', 'FD-S2S') }
         if ($needsShared -and -not $sharedProv) {
-            $errors.Add("solution.foundry.mode 'create-shared' needs at least one FH-OBO/FH-S2S agent to provision the shared account (azd provision runs from an FH folder); FD-only labs must use 'reuse-existing' (a prompt agent has no azd project to provision from). FH-DW always keeps its own account (Bot Service + blueprint bicep).")
+            $errors.Add("solution.foundry.mode 'create-shared' needs at least one FH-OBO/FH-S2S agent to provision the shared account (azd provision runs from an FH folder); FD-only labs must use 'reuse-existing' (a prompt agent has no azd project to provision from) - create the account + project + model with scripts/New-FoundryProject.ps1 -Prefix $prefix -Subscription <sub> -Region <region>. FH-DW always keeps its own account (Bot Service + blueprint bicep).")
         }
     }
 }
@@ -318,6 +319,37 @@ foreach ($a in $plan.agents) {
     }
     if (($a.type -like 'MCS-*') -and (@($a.tools | Where-Object { $_ }).Count -gt 0)) {
         $errors.Add("$($a.name): MCS (Copilot Studio) agents do not use the 'tools' (ToolingManifest) mechanism — set their MCP integration in 'mcp' (subset of mail/anon/auth), wired via a custom Entra client app in Copilot Studio.")
+    }
+}
+
+# Iron rules (references/text-limits.json via Test-A365Names.ps1). Registered BYO server names are EXISTING
+# names, so they are checked against the PLATFORM limits (an underscore after 'ext_' or a proxy connector
+# above 64 chars breaks the gateway); values between the enforced and the platform limit are warnings.
+. (Join-Path $PSScriptRoot 'Test-A365Names.ps1')
+$nameChecks = New-Object System.Collections.Generic.List[object]
+foreach ($a in $plan.agents) {
+    foreach ($tool in @($a.tools | Where-Object { $_ -like 'ext_*' })) {
+        foreach ($v in @(Test-ExtMcpServer -Name $tool -PlatformOnly -SkipDescription)) { $nameChecks.Add([pscustomobject]@{ who = "$($a.name) tools"; v = $v }) }
+    }
+}
+if ($plan.customMcp -and $plan.customMcp.enabled -and $prefix) {
+    $pairBase = if ("$($plan.customMcp.mode)".Trim().ToLower() -eq 'attach' -and $plan.customMcp.existing -and $plan.customMcp.existing.name) { $plan.customMcp.existing.name } else { $prefix }
+    $pairBase = ($pairBase -replace '[^A-Za-z0-9]', '').ToLower()
+    foreach ($srv in @('Anon', 'Auth')) {
+        foreach ($v in @(Test-ExtMcpServer -Name "ext_$pairBase$srv" -PlatformOnly -SkipDescription)) { $nameChecks.Add([pscustomobject]@{ who = 'customMcp'; v = $v }) }
+    }
+}
+foreach ($c in $nameChecks) {
+    if ($c.v.level -eq 'error') { $errors.Add("$($c.who): $($c.v.field) $($c.v.message) (iron rules: references/naming-and-validation.md)") }
+    else { Write-Host "  warning ($($c.who)): $($c.v.field) $($c.v.message)" -ForegroundColor DarkYellow }
+}
+# Optional per-agent overlays (agents[].overlay, written by the Demo Builder) and free-text Copilot Studio
+# display names (agents[].displayName on MCS agents; 'name' stays the structural id of the folder/solution).
+foreach ($a in $plan.agents) {
+    foreach ($e in @(Test-AgentOverlay $a)) { $errors.Add($e) }
+    if ($a.type -like 'MCS-*' -and $a.PSObject.Properties['displayName'] -and $a.displayName) {
+        foreach ($v in @(Test-A365Text -Kind 'copilotStudioAgent.displayName' -Value ([string]$a.displayName) -Field "$($a.name).displayName")) { if ($v.level -eq 'error') { $errors.Add("$($v.field) $($v.message)") } }
+        if ([string]$a.displayName -match '[<>&"#]|: ') { $errors.Add("$($a.name).displayName '$($a.displayName)' must not contain < > & "" # or ': ' (the solution transform writes it into XML and YAML).") }
     }
 }
 
@@ -436,6 +468,9 @@ foreach ($a in $plan.agents) {
         'fh'  { Invoke-ScaffoldFhAgent  $a $m $dst }
         'fd'  { Invoke-ScaffoldFdAgent  $a $m $dst }
     }
+    # Optional overlay (role prompt, in-process tools, data, FD knowledge, DW manifest texts) copied over the
+    # scaffolded sample; a plan without agents[].overlay is byte-identical to before.
+    Invoke-ScaffoldOverlay $a $dst
     # Integrate this agent immediately: attach its custom BYO MCP (OBO) + any non-Mail Work IQ tool,
     # with permissions, right after its setup/deploy command (Work IQ Mail is already authoritative in
     # ToolingManifest.json via Set-ToolingManifest). Grouped with the agent that needs it.

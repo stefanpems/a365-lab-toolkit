@@ -29,6 +29,9 @@ concepts reference, not a competing entry page.
 - **[prerequisites-checklist.md](prerequisites-checklist.md)** — central, scoped readiness
   checklist for clean-tenant deployments.
 - **[00-introduction.md](00-introduction.md)** — conceptual and architectural reference.
+- **[demo-environment-prerequisites.md](demo-environment-prerequisites.md)** — license gate and prerequisites of
+  a full demo environment built by the Demo Builder from a demo pack
+  ([demo-packs/agent-governance](../demo-packs/agent-governance/README.md)).
 
 ## Setup guides (one per agent type)
 

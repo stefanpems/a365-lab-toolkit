@@ -135,7 +135,23 @@ gitignored.
   defaults to `["mcp_MailTools"]` (Work IQ Mail — the samples' current behavior); set `[]` to make Mail
   optional, or add more servers. **FD agents keep it `[]`** (prompt agents wire tools in
   `agent_config.py`, not via the manifest). Reusing a non-Mail Work IQ tool follows the same auth/token
-  lessons — see [workiq-mcp-integration.md](./workiq-mcp-integration.md).
+  lessons — see [workiq-mcp-integration.md](./workiq-mcp-integration.md). An already-registered `ext_*`
+  server listed here (OBO only) is attached with `a365 develop add-mcp-servers` exactly like the custom-MCP
+  pair, and its name is checked against the iron rules (platform limits: an underscore after `ext_` or a
+  proxy connector above 64 characters is an error). Its SPA delegated-token audience comes from
+  **`byoMcpAudiences`** (root field, `{ "ext_<name>": "<BYO resource app id>" }`, filled right after the
+  registration) or from the agent's `ToolingManifest.json`.
+- `agents[].overlay` (optional, ACA-OBO/S2S/DW and FD-OBO/S2S): folder (absolute or repo-relative) whose files
+  are copied over the scaffolded agent. The samples load `agent_overlay.py` only when present: `OVERLAY_PROMPT`
+  (placed BEFORE `COMMON_MISSION`, which stays byte-identical), `OVERLAY_TOOLS` (extra in-process tools on every
+  tool list), `OVERLAY_TEXTS` (DW greetings and per-turn identity notes, read by `agent_identity.py`),
+  `OVERLAY_FD` (FD: extra MCP servers + a File search store from `knowledge/`, applied by `deploy_agent.py`). A
+  DW overlay may add `manifest.overrides.json` (localized `name`/`description`/`developer`), validated against
+  the iron rules and applied by `scripts/Set-DwManifestTexts.ps1`. Written by the Demo Builder; FH agents do not
+  support overlays yet (validation error).
+- `agents[].displayName` (optional, MCS only): free-text Copilot Studio display name (≤ 30 characters, no
+  `< > & " #` and no `": "`), e.g. a localized `Grants Desk – Pilot`; `name` stays the structural id used for
+  the folder and the prefix-derived solution unique name.
 - `solution.foundry` (optional) makes **all FH + FD agents share ONE Foundry account + project + model
   deployment** instead of one account per agent. `create-shared` = the wizard provisions the single
   account + project (`<prefix>`) + model (`gpt-4.1`) in `<prefix>-foundry-rg` (the first FH-OBO/FH-S2S

@@ -18,6 +18,11 @@
 
 .PARAMETER Name
   The MCP base name (solution prefix), e.g. 'contoso' -> ext_contosoAnon / ext_contosoAuth.
+.PARAMETER Server
+  Instead of -Name: one or more full ext_ server names (any registered BYO server, e.g. the Demo Builder
+  servers), comma-separated or as an array. One URL per server (its '...p' proxy connector).
+.PARAMETER PassThru
+  Also return one object per URL found (server, connectorId, environmentId, url) for calling scripts.
 .PARAMETER EnvironmentId
   Optional Power Platform environment id of the hidden 'Compliant Container' that hosts the ext_
   connectors. The environment-listing APIs do NOT return that env, so if auto-discovery fails, obtain
@@ -28,16 +33,32 @@
   .\print-connection-urls.ps1 -Name a09081
 .EXAMPLE
   .\print-connection-urls.ps1 -Name a09081 -EnvironmentId ecbd2b6e-2347-ee97-b7ab-3755741cf207
+.EXAMPLE
+  .\print-connection-urls.ps1 -Server ext_RecordsTest,ext_CompaniesTest
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)] [string]$Name,
-    [string]$EnvironmentId
+    [string]$Name,
+    [string]$EnvironmentId,
+    [string[]]$Server,
+    [switch]$PassThru
 )
 $ErrorActionPreference = 'Stop'
+$Server = @($Server | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if (-not $Name -and -not $Server.Count) { throw 'Pass -Name <base> (sample pair ext_<Name>Anon/Auth) or -Server <ext_ server name(s)>.' }
 $tok = az account get-access-token --resource "https://service.powerapps.com/" --query accessToken -o tsv
 $hdr = @{ Authorization = "Bearer $tok" }
-$slug = $Name.ToLower()
+$slug = if ($Name) { $Name.ToLower() } else { $null }
+
+# Connectors to resolve: the sample pair (-Name) or explicit servers (-Server). The '...p' (proxy)
+# connector carries the user connection; with -Server the match is exact ('<name>p-5f<hash>').
+$targets = if ($Server.Count) {
+    @($Server | ForEach-Object { [pscustomobject]@{ label = $_; server = $_; like = "*ext-5f$(($_ -replace '^ext_', '').ToLower())p-5f*"; kind = 'one-time connection' } })
+} else {
+    @('Anon', 'Auth') | ForEach-Object { [pscustomobject]@{ label = $_; server = "ext_$Name$_"; like = "*ext-5f$slug$($_.ToLower())p*"; kind = $(if ($_ -eq 'Auth') { 'EntraOAuth - prompts an OAuth sign-in' } else { 'NoAuth' }) } }
+}
+$discoverLike = if ($Server.Count) { @($targets | ForEach-Object { $_.like }) } else { @("*ext-5f$slug*") }
+function Test-Hit($list) { foreach ($p in $discoverLike) { if ($list | Where-Object { $_.name -like $p }) { return $true } }; return $false }
 
 function Get-Apis([string]$envId) {
     $u = "https://api.powerapps.com/providers/Microsoft.PowerApps/apis?api-version=2016-11-01&`$filter=environment eq '$envId'"
@@ -62,7 +83,7 @@ if ($EnvironmentId) {
         $cand = (Get-Content -LiteralPath $cacheFile -Raw).Trim()
         if ($cand) {
             $a = Get-Apis $cand
-            if ($a | Where-Object { $_.name -like "*ext-5f$slug*" }) { $EnvironmentId = $cand; $apis = $a }
+            if (Test-Hit $a) { $EnvironmentId = $cand; $apis = $a }
         }
     }
     # 2) Otherwise scan environments, EXCLUDING the tenant Default: 'shared_' custom connectors are
@@ -74,33 +95,35 @@ if ($EnvironmentId) {
         foreach ($e in $envs.value) {
             if ($e.name -like 'Default-*') { continue }
             $a = Get-Apis $e.name
-            if ($a | Where-Object { $_.name -like "*ext-5f$slug*" }) { $EnvironmentId = $e.name; $apis = $a; break }
+            if (Test-Hit $a) { $EnvironmentId = $e.name; $apis = $a; break }
         }
     }
     if (-not $EnvironmentId) {
+        $first = $targets[0].server
+        $rerun = if ($Server.Count) { "-Server $($Server -join ',')" } else { "-Name $Name" }
         Write-Error @"
-Could not auto-discover the Power Platform 'Compliant Container' environment hosting the ext_$Name connectors (the environment-listing APIs do not return it, and no cached id exists for this tenant).
+Could not auto-discover the Power Platform 'Compliant Container' environment hosting the $(($targets | ForEach-Object { $_.server }) -join ' / ') connectors (the environment-listing APIs do not return it, and no cached id exists for this tenant).
 Obtain the environment id ONCE and re-run with -EnvironmentId (it is then cached per tenant and reused automatically):
-  - In an OBO agent chat (ACA/FH/FD-OBO), send exactly:  Give me the Power Platform setup URL for the ext_${Name}Anon server.
+  - In an OBO agent chat (ACA/FH/FD-OBO) that has the server attached, send exactly:  Give me the Power Platform setup URL for the $first server.
     The agent returns a URL like  https://make.powerapps.com/connectionsMcp?...&environmentName=<ENV-ID>  - copy <ENV-ID>.
-  - Then run:  .\print-connection-urls.ps1 -Name $Name -EnvironmentId <ENV-ID>
+  - Then run:  .\print-connection-urls.ps1 $rerun -EnvironmentId <ENV-ID>
 "@
         exit 1
     }
 }
 
 # Cache the resolved env id per tenant so later runs/agents resolve it without -EnvironmentId.
-if ($EnvironmentId -and $cacheFile -and ($apis | Where-Object { $_.name -like "*ext-5f$slug*" })) {
+if ($EnvironmentId -and $cacheFile -and (Test-Hit $apis)) {
     try { New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null; Set-Content -LiteralPath $cacheFile -Value $EnvironmentId } catch { }
 }
 
 Write-Host "Power Platform environment: $EnvironmentId" -ForegroundColor Cyan
-Write-Host "Give the user BOTH URLs below - each ext_ server needs its OWN one-time connection:" -ForegroundColor Cyan
-foreach ($srv in @('Anon', 'Auth')) {
-    # The '...p' (proxy) connector carries the user connection.
-    $c = $apis | Where-Object { $_.name -like "*ext-5f$slug$($srv.ToLower())p*" } | Select-Object -First 1
+Write-Host "Give the user $(if (-not $Server.Count) { 'BOTH URLs' } elseif ($targets.Count -gt 1) { 'ALL the URLs' } else { 'the URL' }) below - each ext_ server needs its OWN one-time connection:" -ForegroundColor Cyan
+$found = @()
+foreach ($t in $targets) {
+    $c = $apis | Where-Object { $_.name -like $t.like } | Select-Object -First 1
     if (-not $c) {
-        Write-Host "  $srv : connector not found yet (register ext_${Name}$srv first)." -ForegroundColor Yellow
+        Write-Host "  $($t.label) : connector not found yet (register $($t.server) first)." -ForegroundColor Yellow
         continue
     }
     # The connectionsMcp connectorId is the api name with 'shared_' rewritten to 'shared_tc-'. In the
@@ -108,10 +131,11 @@ foreach ($srv in @('Anon', 'Auth')) {
     # 'shared_tc-ext-...' (leave as-is) - guard against a doubled 'tc-'.
     $connectorId = if ($c.name -like 'shared_tc-*') { $c.name } else { $c.name -replace '^shared_', 'shared_tc-' }
     $url = "https://make.powerapps.com/connectionsMcp?connectorIds=$connectorId&environmentName=$EnvironmentId"
-    $authKind = if ($srv -eq 'Auth') { 'EntraOAuth - prompts an OAuth sign-in' } else { 'NoAuth' }
     Write-Host ""
-    Write-Host "  $srv ($($c.properties.displayName), $authKind):" -ForegroundColor Green
+    Write-Host "  $($t.label) ($($c.properties.displayName), $($t.kind)):" -ForegroundColor Green
     Write-Host "    $url"
+    $found += [pscustomobject]@{ server = $t.server; connectorId = $connectorId; environmentId = $EnvironmentId; url = $url }
 }
 Write-Host ""
 Write-Host "Fallback (lists every connector needing a connection): https://make.powerapps.com/connectionsMcp?environmentName=$EnvironmentId"
+if ($PassThru) { return $found }

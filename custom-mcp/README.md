@@ -127,6 +127,9 @@ center (Agents → Requested). CLI-based approval was removed; approval is admin
 > ```
 > It creates the missing proxy SPs and the AllPrincipals grants (idempotent) via a Graph token +
 > `Invoke-RestMethod`. Then the admin Approve succeeds on the first try (watch for a blocked popup).
+> For any other NoAuth `ext_` server (e.g. the Demo Builder servers) pass the full names instead:
+> `-Server ext_A,ext_B` (exact app names `<server>-A365Proxy` / `-PublicClients` / `' - BYO'`); add
+> `-PassThru` to get each server's **BYO audience** (the app id an OBO web UI tab needs as `customScopes`).
 
 > **Give the user the exact Power Platform connection URLs.** Each `ext_` server needs its own one-time
 > connection; `print-connection-urls.ps1 -Name <prefix>` prints the precise
@@ -143,7 +146,8 @@ center (Agents → Requested). CLI-based approval was removed; approval is admin
 > value, run `print-connection-urls.ps1 -Name <prefix> -EnvironmentId <id>` once (it caches it). The
 > connections are **per-user → created ONCE and reused** by ACA-OBO / FH-OBO / FD-OBO alike; **S2S and DW
 > never need them** (blocked). Anon tools working does NOT mean auth tools work — the auth connection is
-> separate.
+> separate. For any other registered `ext_` server use `-Server ext_A,ext_B` instead of `-Name` (one URL
+> per server; same environment resolution and cache); `-PassThru` also returns the URLs as objects.
 
 > BYO MCP servers are in **preview**; republishing a new version of a registered server isn't
 > currently supported. If you change the tool surface, register under a new `ext_` name.

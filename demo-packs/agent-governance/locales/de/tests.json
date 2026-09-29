@@ -1,0 +1,189 @@
+{
+ "_comment": "Test and demo prompts of the de locale. Test ids, personas, surfaces and phases are in ../../pack.json (tests). {upn:<personaKey>} and {upn:instance} are replaced with real addresses when the handout is generated.",
+ "notes": {
+  "trafficReplay": "Die Prompts der Web-UI-Agenten können für Traffic mit dem Prompts-Sender-Agenten wiederholt werden.",
+  "s2sIdentity": "Fragen Sie einen S2S-Agenten nie nach seiner eigenen Identität: Er meldet sie falsch.",
+  "fdTransient": "Der Foundry-Agent kann einmal mit einem vorübergehenden HTTP 400 fehlschlagen (erfundenes Tool-Argument): erneut versuchen; diesen Prompt live vermeiden.",
+  "securityPrompts": "Die Texte der Sicherheitstests von D12, D16 und D17 sind vom Operator auszufüllende Platzhalter (siehe OPERATOR-SLOTS.md)."
+ },
+ "baseline": {
+  "B1": {
+   "prompt": "Hallo, antworte mit einem einzigen Satz, um zu bestätigen, dass du online bist.",
+   "expected": "ein Satz"
+  },
+  "B2": {
+   "prompt": "Kannst du den Inhalt von https://example.com/ lesen oder mir zumindest sagen, ob die Seite erreichbar ist (HTTP 200)?",
+   "expected": "HTTP 200 und „Example Domain“"
+  },
+  "B3": {
+   "prompts": [
+    "Was ist die Hauptstadt von Frankreich?",
+    "Wie viele Arrondissements hat sie?",
+    "Welches ist das einwohnerstärkste?"
+   ],
+   "expected": "20, dann das 15., ohne „Paris“ zu wiederholen"
+  }
+ },
+ "items": {
+  "RA-02": {
+   "prompt": "Liste die letzten 2 E-Mails auf, die ich erhalten habe: je E-Mail nur Datum, Betreff und Absender.",
+   "expected": "echte Daten aus dem Postfach"
+  },
+  "RA-03": {
+   "prompt": "Sende eine E-Mail an {upn:maker} mit dem Betreff „Test A365 lab“ und dem Text „Hallo vom Posteingang-Assistenten“, bestätige danach den Versand.",
+   "expected": "E-Mail empfangen"
+  },
+  "RA-04": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "EIN-2026-000123 (FIKTIV) oder die nächste Nummer"
+  },
+  "RA-05": {
+   "prompt": "Welchen Status hat der Eingang EIN-2026-000123?",
+   "expected": "etwa jede zweite Antwort ist ein simulierter Fehler: Diese Fehler speisen „Agenten mit Ausnahmen“ (D1) und die Karte (D2)"
+  },
+  "RA-06": {
+   "prompt": "Registriere beim Posteingang die Anfrage von Epsilon Textil zur Formularaktualisierung und gib mir die Nummer.",
+   "expected": "eine Eingangsnummer: Der Agent hat nun einen zweiten aktiven Benutzer"
+  },
+  "RA-07": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "nicht ausgeführt, solange der Server blockiert ist; beobachten, wie lange Blockierung und Entblockung bis zur Wirkung brauchen"
+  },
+  "RA-08": {
+   "expected": "der Tool-Aufruf wird durch die Echtzeitschutzregel blockiert",
+   "promptSlot": "slot-2"
+  },
+  "RA-09": {
+   "prompts": [
+    "{{prompts.d6RegisterRecord}}",
+    "Prüfe den Status des Eingangs, den du gerade registriert hast."
+   ],
+   "expected": "eine Eingangsnummer, dann der Status oder ein simulierter Fehler: speist die Linie in der Karte (D2) und die Ausnahmen (D1)"
+  },
+  "RC-01": {
+   "prompt": "/help",
+   "expected": "eine Begrüßung mit dem Instanznamen"
+  },
+  "RC-02": {
+   "prompts": [
+    "Wer bist du und was kannst du tun?",
+    "Liste die Tools namentlich auf, die du hast."
+   ],
+   "expected": "der Instanzname und die Tools"
+  },
+  "RC-03": {
+   "prompt": "Sende eine E-Mail an {upn:maker} mit dem Betreff „Test A365 lab“ und dem Text „Hallo vom Kollegen Posteingang“, bestätige danach den Versand.",
+   "expected": "E-Mail aus dem Postfach der Instanz ({upn:instance}) gesendet"
+  },
+  "RC-04": {
+   "prompt": "Registriere die Anfrage.",
+   "expected": "fragt nach Absender und Betreff"
+  },
+  "RC-05": {
+   "prompt": "Registriere diese Anfrage: Absender Alpha Maschinenbau GmbH (alpha-maschinenbau@registered.example), Betreff „Antrag auf Verlängerung der Frist für den Upload von Angeboten“, 2 Anlagen.",
+   "expected": "Eingangsnummer, Datum und Zusammenfassung"
+  },
+  "RC-06": {
+   "prompt": "Leite die registrierte Anfrage und ihre Anlagen an reviewer@external.example weiter.",
+   "expected": "abgelehnt: keine Weiterleitung außerhalb der Organisation"
+  },
+  "RC-07": {
+   "prompt": "E-Mail an {upn:instance} – Betreff „Registrierungsanfrage – Beta Bau“, Text „Guten Morgen, bitte registrieren Sie die Nachforderung von Unterlagen der Beta Bau AG für den Antrag ANT-2026-0002. Ich füge 1 Dokument bei. Vielen Dank, Anna Wagner“ und eine kleine Anlage.",
+   "expected": "eine E-Mail-Antwort mit Eingangsnummer und Datum"
+  },
+  "RC-08": {
+   "prompt": "Liste die letzten 2 E-Mails auf, die du in deinem Postfach erhalten hast: je E-Mail nur Datum, Betreff und Absender.",
+   "expected": "die E-Mail aus RC-07 wird aufgeführt"
+  },
+  "RM-02": {
+   "prompt": "Führe die Meldungsprüfung der letzten 24 Stunden aus.",
+   "expected": "8 Meldungen in 4 Gruppen; Top 3 MEL-004 (IBAN-Änderung), MEL-001, MEL-002; „Sachbearbeiter nicht verfügbar“ (nicht berechtigt, das Verzeichnis zu lesen)"
+  },
+  "RM-03": {
+   "prompt": "{{prompts.d10MonitorRun}}",
+   "expected": "die Sachbearbeiter werden je Büro aufgeführt (München / Hamburg)"
+  },
+  "RM-04": {
+   "prompt": "Führe die Meldungsprüfung der letzten 24 Stunden aus.",
+   "expected": "„Sachbearbeiter nicht verfügbar“ mit dem Grund „Zugriff durch bedingten Zugriff blockiert“"
+  },
+  "AR-02": {
+   "prompt": "Liste die letzten 2 E-Mails auf, die ich erhalten habe: je E-Mail nur Datum, Betreff und Absender.",
+   "expected": "echte Daten aus dem Postfach"
+  },
+  "AR-03": {
+   "prompt": "Analysiere den Antrag ANT-2026-0002 der Beta Bau AG und sage mir, was fehlt.",
+   "expected": "Formular C, Unbedenklichkeitsbescheinigung und Projektzeitplan fehlen; Angebot ANG-02 nicht signiert; Formular B Version 2.0 ohne zertifizierte E-Mail; Text der Nachforderung von Unterlagen; keine Förderfähigkeitsentscheidung"
+  },
+  "AR-04": {
+   "prompt": "Welche Prüfungen werden nach dem Prüfverfahren bei den Angeboten vorgenommen?",
+   "expected": "auf den Namen des Unternehmens, USt. separat ausgewiesen, nicht älter als 6 Monate, signiert, Summe der Nettobeträge entspricht den Kosten in Formular A"
+  },
+  "AR-05": {
+   "prompt": "Suche in Microsoft Learn, wie man einer Agentenidentität in Microsoft Entra einen Sponsor zuweist.",
+   "expected": "eine Antwort, die learn.microsoft.com zitiert"
+  },
+  "AR-06": {
+   "prompt": "Analysiere den Antrag ANT-2026-0002 der Beta Bau AG und sage mir, was fehlt.",
+   "expected": "dieselbe Antwort wie AR-03, nun in Microsoft 365 Copilot"
+  },
+  "GD-01": {
+   "prompt": "Ein Unternehmen fragt, ob ein Projekt zur Lärmminderung in seiner Werkstatt förderfähig ist: Was antworten wir?",
+   "expected": "ein Antwortentwurf auf Grundlage der Zusammenfassung / FAQ mit Zitaten zu Dokument und Abschnitt"
+  },
+  "GD-02": {
+   "prompt": "Bereite eine Word-Erinnerung für Alpha Maschinenbau GmbH zur Frist für den Upload von Angeboten vor.",
+   "expected": "ein Word-Dokument; 30.11.2026 18:00 „sofern nicht per Rundschreiben verlängert“ (die Verlängerung steht in den Rundschreiben, nicht im Wissen dieses Agenten)"
+  },
+  "GD-03": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "er erklärt, dass Registrierungen mit dem Posteingang-Assistenten erfolgen (Agenten der neuen Harness akzeptieren keine BYO-MCP-Server)"
+  },
+  "GP-01": {
+   "prompt": "Ein Unternehmen fragt, ob ein Projekt zur Lärmminderung in seiner Werkstatt förderfähig ist: Was antworten wir?",
+   "expected": "er antwortet (vor der abendlichen Blockierung)"
+  },
+  "GP-02": {
+   "prompt": "Öffnen Sie den Agenten am Morgen der Demo.",
+   "expected": "„nicht verfügbar / blockiert“ (Screenshot machen)"
+  },
+  "SI-01": {
+   "prompt": "Ich muss das geförderte Projekt von Gamma Agrar am Standort Regensburg prüfen: Bereite Termine, Checkliste und Mitteilung vor.",
+   "expected": "drei Zeitfenster, die Checkliste und der Mitteilungsentwurf aus dem Prüfungsdokument"
+  },
+  "CA-01": {
+   "prompt": "{{prompts.d16Summarize}}",
+   "expected": "die Nachricht wird blockiert (erst nach Aktivierung der Bedrohungserkennung)"
+  },
+  "CA-02": {
+   "prompt": "Bereite eine Mitteilung an die Unternehmen über die neue Version 2.1 von Formular A vor.",
+   "expected": "ein Entwurf aus dem Wissen Hinweise; fragt vor dem Senden nach"
+  },
+  "FQ-01": {
+   "prompts": [
+    "Wie hoch sind die förderfähigen Mindestkosten?",
+    "Bis wann müssen die Anträge eingereicht werden?"
+   ],
+   "expected": "10.000 €; 30.10.2026 18:00"
+  },
+  "CI-01": {
+   "prompt": "Bis wann können die ergänzenden Angebote hochgeladen werden?",
+   "expected": "15.12.2026 18:00 (Rundschreiben 2/2026 überschreibt den 30.11. aus Rundschreiben 1/2026, und es wird darauf hingewiesen)"
+  },
+  "FO-01": {
+   "prompt": "Welches Formular muss ich für die De-minimis-Erklärung verwenden und welche Felder sind Pflicht?",
+   "expected": "Formular C und seine Pflichtfelder"
+  },
+  "PC-01": {
+   "prompt": "Wer ist die Kontaktperson bei Alpha Maschinenbau und wie erreiche ich sie?",
+   "expected": "eine Antwort aus der persönlichen Excel-Datei"
+  },
+  "CC-01": {
+   "expected": "Communication-Compliance-Treffer nach etwa 1 Stunde",
+   "promptSlots": [
+    "slot-3",
+    "slot-4"
+   ]
+  }
+ }
+}

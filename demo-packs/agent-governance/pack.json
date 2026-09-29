@@ -1,0 +1,1979 @@
+{
+ "$comment": "Language-neutral definition of the Contoso agent-governance demo. Every visible text (names, descriptions, instructions, tools, knowledge, prompts) lives in locales/<lang>.json under the same keys. Read by the Demo Builder skills (build, reset, guide). Field reference: README.md in this folder.",
+ "id": "agent-governance",
+ "version": 1,
+ "title": "Agent 365 governance demo - one fictional grants process, many agents, many people",
+ "defaultLocale": "en",
+ "locales": [
+  "en",
+  "it",
+  "fr",
+  "es",
+  "de"
+ ],
+ "licenseRoles": {
+  "copilotUser": {
+   "purpose": "Microsoft 365 Copilot + Agent 365 user features + Exchange mailbox + Entra ID P2 / ID Governance for agents (reference tenant: one Microsoft 365 E7 seat)",
+   "defaultSku": "MICROSOFT_365_E7_NO_TEAMS",
+   "alternativeSkus": [
+    "MICROSOFT_365_E7"
+   ],
+   "evidenceServicePlans": [
+    "AGENT_365",
+    "M365_COPILOT_BUSINESS_CHAT",
+    "AAD_PREMIUM_P2",
+    "Entra_Identity_Governance",
+    "ENTRA_CONDITIONAL_ACCESS_FOR_AGENTS",
+    "ENTRA_ID_PROTECTION_FOR_AGENTS"
+   ]
+  },
+  "teams": {
+   "purpose": "Microsoft Teams for the people whose Copilot SKU has no Teams (needed only with a *_NO_TEAMS SKU)",
+   "defaultSku": "Microsoft_Teams_Enterprise_New",
+   "alternativeSkus": [],
+   "notNeededWhenCopilotSkuHas": "TEAMS1",
+   "evidenceServicePlans": [
+    "TEAMS1"
+   ]
+  },
+  "frontierAgent": {
+   "purpose": "Agent user of an AI-teammate (Digital Worker) instance: one Frontier agent license per instance",
+   "defaultSku": "MICROSOFT_AGENT_FRONTIER_NO_TEAMS",
+   "alternativeSkus": [],
+   "evidenceServicePlans": [
+    "AGENT_365",
+    "AGENT_365_TOOLS"
+   ]
+  }
+ },
+ "personas": [
+  {
+   "key": "aiAdmin",
+   "profile": "P1",
+   "story": "AI administrator: opens the registry, decides, blocks, reassigns",
+   "entraRoles": [
+    "AI Administrator",
+    "Global Reader",
+    "Attribute Assignment Administrator"
+   ],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "manager": null,
+   "office": "main",
+   "demos": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8",
+    "D17"
+   ]
+  },
+  {
+   "key": "identityAdmin",
+   "profile": "P2",
+   "story": "identity and access: Conditional Access, entitlement management, attributes",
+   "entraRoles": [
+    "Conditional Access Administrator",
+    "Identity Governance Administrator",
+    "Attribute Definition Administrator",
+    "Attribute Assignment Administrator",
+    "Security Operator",
+    "Reports Reader"
+   ],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "manager": null,
+   "office": "main",
+   "demos": [
+    "D7",
+    "D9",
+    "D10",
+    "D11",
+    "D17"
+   ]
+  },
+  {
+   "key": "complianceOfficer",
+   "profile": "P3",
+   "story": "compliance and privacy: audit, Communication Compliance, eDiscovery, DSPM",
+   "entraRoles": [
+    "Compliance Administrator"
+   ],
+   "purviewRoleGroups": [
+    "eDiscoveryManager",
+    "CommunicationComplianceInvestigators",
+    "InsiderRiskManagementAnalysts",
+    "ContentExplorerContentViewer"
+   ],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "manager": null,
+   "office": "main",
+   "demos": [
+    "D12",
+    "D13",
+    "D15"
+   ]
+  },
+  {
+   "key": "socAnalyst",
+   "profile": "P4",
+   "story": "SOC analyst: posture, real-time protection, incidents, hunting",
+   "entraRoles": [
+    "Security Administrator"
+   ],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "manager": null,
+   "office": "main",
+   "demos": [
+    "D14",
+    "D16",
+    "D17"
+   ]
+  },
+  {
+   "key": "maker",
+   "profile": "P5",
+   "story": "business maker of the department and registry OWNER of the agents",
+   "entraRoles": [],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "powerPlatformRoles": [
+    "Environment Maker",
+    "Basic User"
+   ],
+   "manager": "director",
+   "office": "main",
+   "demos": [
+    "D4",
+    "D6",
+    "D7",
+    "D16"
+   ]
+  },
+  {
+   "key": "caseOfficer",
+   "profile": "P6",
+   "story": "case officer of the secondary office: the end user",
+   "entraRoles": [],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "powerPlatformRoles": [
+    "Environment Maker",
+    "Basic User"
+   ],
+   "manager": "maker",
+   "office": "secondary",
+   "demos": [
+    "D4",
+    "D5",
+    "D12",
+    "D16",
+    "D17"
+   ]
+  },
+  {
+   "key": "director",
+   "profile": "P8",
+   "story": "director of the department and Entra SPONSOR (business owner) of the agents",
+   "entraRoles": [],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "manager": null,
+   "office": "main",
+   "demos": [
+    "D10"
+   ]
+  },
+  {
+   "key": "programLead",
+   "profile": "P9",
+   "story": "program lead: new owner of the orphan agent (D5), creator of the agent that is rejected (D4)",
+   "entraRoles": [],
+   "licenses": [
+    "copilotUser",
+    "teams"
+   ],
+   "powerPlatformRoles": [
+    "Environment Maker",
+    "Basic User"
+   ],
+   "manager": "maker",
+   "office": "main",
+   "demos": [
+    "D4",
+    "D5"
+   ]
+  },
+  {
+   "key": "orphanLeaver",
+   "profile": "P10",
+   "story": "creator of the orphan agent; NO manager on purpose; permanently deleted (hard delete) before the demo",
+   "entraRoles": [],
+   "licenses": [
+    "copilotUser"
+   ],
+   "manager": null,
+   "office": "main",
+   "leaver": true,
+   "demos": [
+    "D1",
+    "D5"
+   ]
+  },
+  {
+   "key": "d8Leaver",
+   "profile": "P11",
+   "story": "creator of the forms agent; manager = maker; permanently deleted before the D8 rule runs",
+   "entraRoles": [],
+   "licenses": [
+    "copilotUser"
+   ],
+   "manager": "maker",
+   "office": "main",
+   "leaver": true,
+   "demos": [
+    "D8"
+   ]
+  }
+ ],
+ "groups": [
+  {
+   "key": "department",
+   "kind": "security",
+   "members": [
+    "maker",
+    "caseOfficer",
+    "programLead",
+    "director"
+   ],
+   "purpose": "department users: install / preinstall scope of the approved agents, sharing target of the Agent Builder agents"
+  },
+  {
+   "key": "directoryReaders",
+   "kind": "security",
+   "members": [],
+   "purpose": "resource of the access package granted to an agent identity (D10)"
+  },
+  {
+   "key": "site",
+   "kind": "m365",
+   "members": [
+    "maker",
+    "caseOfficer",
+    "programLead",
+    "orphanLeaver",
+    "d8Leaver",
+    "aiAdmin",
+    "director"
+   ],
+   "owners": [
+    "maker"
+   ],
+   "purpose": "SharePoint document site of the department (knowledge of every agent)"
+  }
+ ],
+ "knowledge": {
+  "siteGroup": "site",
+  "folders": [
+   "call",
+   "inspections",
+   "notices",
+   "circulars",
+   "forms",
+   "cases"
+  ],
+  "documents": [
+   {
+    "key": "callSummary",
+    "folder": "call",
+    "format": "docx"
+   },
+   {
+    "key": "callFaq",
+    "folder": "call",
+    "format": "docx"
+   },
+   {
+    "key": "reviewProcedure",
+    "folder": "call",
+    "format": "docx"
+   },
+   {
+    "key": "inspectionChecklist",
+    "folder": "inspections",
+    "format": "docx"
+   },
+   {
+    "key": "formsNotice",
+    "folder": "notices",
+    "format": "docx",
+    "poisoned": true
+   },
+   {
+    "key": "applicantsList",
+    "folder": "notices",
+    "format": "docx"
+   },
+   {
+    "key": "circular1",
+    "folder": "circulars",
+    "format": "docx"
+   },
+   {
+    "key": "circular2",
+    "folder": "circulars",
+    "format": "docx"
+   },
+   {
+    "key": "callForms",
+    "folder": "forms",
+    "format": "docx"
+   },
+   {
+    "key": "case1",
+    "folder": "cases",
+    "format": "pdf"
+   },
+   {
+    "key": "case2",
+    "folder": "cases",
+    "format": "pdf"
+   },
+   {
+    "key": "case3",
+    "folder": "cases",
+    "format": "pdf"
+   },
+   {
+    "key": "confidentialCase",
+    "folder": "cases",
+    "format": "docx",
+    "sensitivityLabel": "confidential"
+   }
+  ],
+  "personalFiles": [
+   {
+    "key": "companyContacts",
+    "format": "xlsx",
+    "owner": "programLead",
+    "location": "onedrive"
+   }
+  ]
+ },
+ "mcp": {
+  "backendImage": "contoso-demo-mcp",
+  "longLived": [
+   {
+    "key": "records",
+    "tools": [
+     "register",
+     "status"
+    ],
+    "failingTool": "status",
+    "failureRate": 0.5,
+    "attachTo": [
+     "recordsAssistant"
+    ]
+   },
+   {
+    "key": "companies",
+    "tools": [
+     "find"
+    ],
+    "attachTo": []
+   }
+  ],
+  "pool": [
+   {
+    "key": "deadlines",
+    "tools": [
+     "list"
+    ],
+    "roles": [
+     "live"
+    ],
+    "note": "the live D6 approval: registered the evening before, never approved in rehearsals"
+   },
+   {
+    "key": "forms",
+    "tools": [
+     "list"
+    ],
+    "roles": [
+     "rehearsal",
+     "spare"
+    ],
+    "note": "rehearsals and the spare request of the live run"
+   }
+  ],
+  "rules": [
+   "each backend exposes tool names that exist on no other server",
+   "at most ONE non-retired (pending or approved) instance per pool base",
+   "pool names ext_<Base><NN> (NN 01-99) are never reused",
+   "retiring is manual (Reject a pending request, Block an approved server): the platform delete API fails"
+  ]
+ },
+ "agents": [
+  {
+   "key": "recordsColleague",
+   "platform": "code",
+   "variant": "ACA-DW",
+   "overlay": "records-colleague",
+   "tools": [
+    "mcp_MailTools"
+   ],
+   "instance": {
+    "creator": "maker",
+    "manager": "maker",
+    "licenses": [
+     "frontierAgent",
+     "teams",
+     "copilotUser"
+    ],
+    "createFrom": "teams"
+   },
+   "registryOwner": "none",
+   "sponsor": "director",
+   "sponsorOn": "instance",
+   "demos": [
+    "D7",
+    "D13",
+    "D15"
+   ],
+   "leadTime": "instance creation takes minutes to hours; Teams visibility up to one day",
+   "buildOrder": 1,
+   "tags": [
+    "department",
+    "production"
+   ]
+  },
+  {
+   "key": "recordsAssistant",
+   "platform": "code",
+   "variant": "ACA-OBO",
+   "overlay": "records-assistant",
+   "tools": [
+    "mcp_MailTools",
+    "mcp:records"
+   ],
+   "webUi": true,
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "baseline": {
+    "blocked": false,
+    "usage": true,
+    "exceptions": true
+   },
+   "demos": [
+    "D1",
+    "D2",
+    "D6",
+    "D16"
+   ],
+   "note": "the role prompt deliberately has no recipient or content restriction: see demo D16 (reference lab, 28/09 section-6 instructions)",
+   "buildOrder": 2,
+   "tags": [
+    "department",
+    "production"
+   ]
+  },
+  {
+   "key": "reportsMonitor",
+   "platform": "code",
+   "variant": "ACA-S2S",
+   "overlay": "reports-monitor",
+   "tools": [],
+   "webUi": true,
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "attribute": "approved",
+   "baseline": {
+    "blocked": false,
+    "usage": true,
+    "risk": "none"
+   },
+   "accessPackageTarget": true,
+   "demos": [
+    "D1",
+    "D9",
+    "D10",
+    "D11",
+    "D17"
+   ],
+   "buildOrder": 3,
+   "tags": [
+    "department",
+    "production"
+   ]
+  },
+  {
+   "key": "reportsMonitorTest",
+   "platform": "code",
+   "variant": "ACA-S2S",
+   "overlay": "reports-monitor",
+   "tools": [],
+   "webUi": true,
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "attribute": "inReview",
+   "baseline": {
+    "blocked": false
+   },
+   "demos": [
+    "D11"
+   ],
+   "buildOrder": 4,
+   "tags": [
+    "department"
+   ]
+  },
+  {
+   "key": "applicationReview",
+   "platform": "code",
+   "variant": "FD-OBO",
+   "overlay": "application-review",
+   "tools": [],
+   "webUi": true,
+   "knowledgeFiles": [
+    "case1",
+    "case2",
+    "case3",
+    "reviewProcedure"
+   ],
+   "weaknesses": [
+    "learnMcpWithoutAllowedTools",
+    "guardrailWithoutJailbreakControl"
+   ],
+   "registryOwner": "admin",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "baseline": {
+    "blocked": false,
+    "usage": true
+   },
+   "demos": [
+    "D1",
+    "D2",
+    "D14"
+   ],
+   "buildOrder": 5,
+   "tags": [
+    "department",
+    "production"
+   ]
+  },
+  {
+   "key": "grantsDesk",
+   "platform": "copilotStudio",
+   "variant": "MCS-NH",
+   "environment": "payg",
+   "knowledgeFolder": "call",
+   "tools": [],
+   "channels": [
+    "microsoft365Copilot",
+    "teams"
+   ],
+   "memory": false,
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "baseline": {
+    "blocked": false,
+    "usage": true,
+    "installedFor": "group:department"
+   },
+   "demos": [
+    "D1",
+    "D2",
+    "D5",
+    "D12"
+   ],
+   "buildOrder": 6,
+   "note": "new-harness Copilot Studio agents accept no BYO MCP server and have no description field (reference lab, 27/09): registrations go to the records assistant",
+   "webSearch": false,
+   "tags": [
+    "department",
+    "production"
+   ]
+  },
+  {
+   "key": "grantsDeskPilot",
+   "platform": "copilotStudio",
+   "variant": "MCS-NH",
+   "environment": "payg",
+   "sameConfigAs": "grantsDesk",
+   "channels": [
+    "microsoft365Copilot",
+    "teams"
+   ],
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "baseline": {
+    "blocked": true,
+    "installedFor": "persona:caseOfficer"
+   },
+   "demos": [
+    "D5"
+   ],
+   "buildOrder": 7,
+   "webSearch": false,
+   "tags": [
+    "department",
+    "pilot"
+   ]
+  },
+  {
+   "key": "siteInspections",
+   "platform": "copilotStudio",
+   "variant": "MCS-NH",
+   "environment": "payg",
+   "knowledgeFolder": "inspections",
+   "tools": [],
+   "channels": [
+    "microsoft365Copilot",
+    "teams"
+   ],
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "baseline": {
+    "blocked": false,
+    "pendingRequest": true
+   },
+   "demos": [
+    "D4"
+   ],
+   "buildOrder": 8,
+   "webSearch": false,
+   "tags": [
+    "department"
+   ]
+  },
+  {
+   "key": "communicationsAssistant",
+   "platform": "copilotStudio",
+   "variant": "MCS-OH",
+   "environment": "payg",
+   "knowledgeFolder": "notices",
+   "tools": [
+    "outlookSendEmail"
+   ],
+   "authentication": "microsoft",
+   "channels": [
+    "microsoft365Copilot",
+    "teams"
+   ],
+   "registryOwner": "maker",
+   "entraOwner": "maker",
+   "sponsor": "director",
+   "baseline": {
+    "blocked": false,
+    "usage": true
+   },
+   "demos": [
+    "D16",
+    "D17"
+   ],
+   "buildOrder": 9,
+   "webSearch": false,
+   "tags": [
+    "department",
+    "production"
+   ]
+  },
+  {
+   "key": "faqPrototype",
+   "platform": "copilotStudio",
+   "variant": "MCS-OH",
+   "environment": "default",
+   "knowledgeUpload": [
+    "callFaq"
+   ],
+   "tools": [],
+   "authentication": "none",
+   "channels": [
+    "demoWebsite"
+   ],
+   "instructionsEmpty": true,
+   "outsideLabPlan": true,
+   "registryOwner": "admin",
+   "entraIdentity": true,
+   "baseline": {
+    "blocked": false,
+    "usage": true
+   },
+   "weaknesses": [
+    "noAuthentication",
+    "noInstructions"
+   ],
+   "removeAfterEvent": true,
+   "demos": [
+    "D14"
+   ],
+   "buildOrder": 10,
+   "catalog": false,
+   "webSearch": false,
+   "generalKnowledge": true,
+   "note": "Microsoft channels removed BEFORE choosing No authentication; web search off, only the FAQ document (reference lab, 28/09)"
+  },
+  {
+   "key": "circularsAssistant",
+   "platform": "agentBuilder",
+   "creator": "orphanLeaver",
+   "knowledgeFolder": "circulars",
+   "shareWith": "department",
+   "registryOwner": "none",
+   "leaver": "orphanLeaver",
+   "baseline": {
+    "blocked": false,
+    "usage": true,
+    "ownerless": true
+   },
+   "demos": [
+    "D1",
+    "D5"
+   ],
+   "buildOrder": 11,
+   "shareLinkOpenedBy": [
+    "maker",
+    "caseOfficer",
+    "programLead"
+   ],
+   "tags": [
+    "department"
+   ]
+  },
+  {
+   "key": "formsAssistant",
+   "platform": "agentBuilder",
+   "creator": "d8Leaver",
+   "knowledgeFolder": "forms",
+   "shareWith": "department",
+   "registryOwner": "none",
+   "leaver": "d8Leaver",
+   "baseline": {
+    "blocked": false,
+    "ownerless": true
+   },
+   "demos": [
+    "D8"
+   ],
+   "buildOrder": 12,
+   "note": "ownerless until the D8 rule runs live (then owned by the leaver's manager); the reset recreates the condition with New-OrphanAgent.ps1, never by reassignment",
+   "shareLinkOpenedBy": [
+    "maker",
+    "caseOfficer",
+    "programLead"
+   ],
+   "tags": [
+    "department"
+   ]
+  },
+  {
+   "key": "personalContacts",
+   "platform": "agentBuilder",
+   "creator": "programLead",
+   "knowledgePersonal": "companyContacts",
+   "registryOwner": "programLead",
+   "baseline": {
+    "pendingRequest": true
+   },
+   "demos": [
+    "D4"
+   ],
+   "buildOrder": 13,
+   "submitToCatalog": {
+    "developer": "creator",
+    "urls": "knowledgeSite",
+    "orgWideSharing": false
+   },
+   "tags": [
+    "department"
+   ]
+  }
+ ],
+ "webUi": {
+  "expose": [
+   "recordsAssistant",
+   "reportsMonitor",
+   "reportsMonitorTest",
+   "applicationReview"
+  ]
+ },
+ "solutionSizing": {
+  "azureOpenAICapacity": 600,
+  "note": "the Lab Builder default (20) returned HTTP 429 with about four turns per minute across the ACA agents (reference lab, 29/09); needs the regional quota of the SKU"
+ },
+ "photos": {
+  "personas": "all",
+  "defaultDir": "generated/<prefix>/demo/photos",
+  "match": "file named <personaKey>.jpg|.jpeg|.png, or any file whose name contains the persona's given name and surname (case, separators and accents ignored)",
+  "formats": [
+   "jpg",
+   "jpeg",
+   "png"
+  ],
+  "maxBytes": 4194304,
+  "recommended": "square, at least 648 x 648 pixels",
+  "leavers": "set before the leavers are deleted, and again on every recreation by the reset",
+  "shipped": false
+ },
+ "operatorSlots": [
+  {
+   "id": "slot-1",
+   "kind": "knowledgeText",
+   "document": "formsNotice",
+   "demos": [
+    "D16",
+    "D17"
+   ],
+   "note": "invisible run (white, 1 pt) at the end of the D16 notice"
+  },
+  {
+   "id": "slot-2",
+   "kind": "prompt",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "demos": [
+    "D16"
+   ],
+   "tests": [
+    "RA-08"
+   ]
+  },
+  {
+   "id": "slot-3",
+   "kind": "prompt",
+   "persona": "caseOfficer",
+   "demos": [
+    "D12"
+   ],
+   "tests": [
+    "CC-01"
+   ]
+  },
+  {
+   "id": "slot-4",
+   "kind": "prompt",
+   "persona": "caseOfficer",
+   "demos": [
+    "D12"
+   ],
+   "tests": [
+    "CC-01"
+   ]
+  },
+  {
+   "id": "slot-5",
+   "kind": "prompt",
+   "agent": "communicationsAssistant",
+   "persona": "caseOfficer",
+   "demos": [
+    "D17"
+   ]
+  }
+ ],
+ "tests": [
+  {
+   "id": "RA-01",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "uses": [
+    "B1",
+    "B2",
+    "B3"
+   ],
+   "phase": "agentTests"
+  },
+  {
+   "id": "RA-02",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests"
+  },
+  {
+   "id": "RA-03",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests"
+  },
+  {
+   "id": "RA-04",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests",
+   "needsConnection": "records"
+  },
+  {
+   "id": "RA-05",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests",
+   "repeatTimes": 4,
+   "demos": [
+    "D1",
+    "D2"
+   ]
+  },
+  {
+   "id": "RA-06",
+   "agent": "recordsAssistant",
+   "persona": "caseOfficer",
+   "surface": "webUi",
+   "phase": "agentTests",
+   "needsConnection": "records"
+  },
+  {
+   "id": "RA-07",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "repeat": "RA-04",
+   "phase": "d6Rehearsal",
+   "demos": [
+    "D6"
+   ]
+  },
+  {
+   "id": "RA-08",
+   "agent": "recordsAssistant",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "d16Rehearsal",
+   "demos": [
+    "D16"
+   ],
+   "after": "defenderSetup"
+  },
+  {
+   "id": "RA-09",
+   "agent": "recordsAssistant",
+   "personas": [
+    "caseOfficer",
+    "maker",
+    "programLead"
+   ],
+   "surface": "webUi",
+   "phase": "traffic",
+   "sameConversation": true,
+   "conversationsPerPersona": 3,
+   "window": "T-3..T-1",
+   "needsConnection": "records",
+   "demos": [
+    "D1",
+    "D2"
+   ],
+   "note": "C5 traffic: each persona creates the records connection once, then alternates in each conversation the register and the status check"
+  },
+  {
+   "id": "RC-01",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "phase": "agentTests",
+   "after": "dwInstance"
+  },
+  {
+   "id": "RC-02",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "uses": [
+    "B1",
+    "B2",
+    "B3"
+   ],
+   "phase": "agentTests"
+  },
+  {
+   "id": "RC-03",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "phase": "agentTests"
+  },
+  {
+   "id": "RC-04",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "phase": "agentTests",
+   "note": "first registration request of the chat"
+  },
+  {
+   "id": "RC-05",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "phase": "agentTests"
+  },
+  {
+   "id": "RC-06",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "phase": "agentTests",
+   "after": "RC-05"
+  },
+  {
+   "id": "RC-07",
+   "agent": "recordsColleague",
+   "persona": "caseOfficer",
+   "surface": "outlook",
+   "phase": "agentTests"
+  },
+  {
+   "id": "RC-08",
+   "agent": "recordsColleague",
+   "persona": "maker",
+   "surface": "teams",
+   "phase": "agentTests",
+   "after": "RC-07"
+  },
+  {
+   "id": "RM-01",
+   "agent": "reportsMonitor",
+   "persona": "maker",
+   "surface": "webUi",
+   "uses": [
+    "B1",
+    "B2",
+    "B3"
+   ],
+   "phase": "agentTests"
+  },
+  {
+   "id": "RM-02",
+   "agent": "reportsMonitor",
+   "alsoAgent": "reportsMonitorTest",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests"
+  },
+  {
+   "id": "RM-03",
+   "agent": "reportsMonitor",
+   "persona": "maker",
+   "surface": "webUi",
+   "repeat": "RM-02",
+   "phase": "accessPackageTrial",
+   "demos": [
+    "D10"
+   ]
+  },
+  {
+   "id": "RM-04",
+   "agent": "reportsMonitor",
+   "persona": "maker",
+   "surface": "webUi",
+   "repeat": "RM-02",
+   "phase": "confirmCompromiseThenSafe",
+   "demos": [
+    "D9",
+    "D17"
+   ]
+  },
+  {
+   "id": "AR-01",
+   "agent": "applicationReview",
+   "persona": "maker",
+   "surface": "webUi",
+   "uses": [
+    "B1",
+    "B2",
+    "B3"
+   ],
+   "phase": "agentTests"
+  },
+  {
+   "id": "AR-02",
+   "agent": "applicationReview",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests"
+  },
+  {
+   "id": "AR-03",
+   "agent": "applicationReview",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests",
+   "demos": [
+    "D1",
+    "D2"
+   ]
+  },
+  {
+   "id": "AR-04",
+   "agent": "applicationReview",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests"
+  },
+  {
+   "id": "AR-05",
+   "agent": "applicationReview",
+   "persona": "maker",
+   "surface": "webUi",
+   "phase": "agentTests"
+  },
+  {
+   "id": "AR-06",
+   "agent": "applicationReview",
+   "persona": "maker",
+   "surface": "m365Copilot",
+   "repeat": "AR-03",
+   "phase": "agentTests",
+   "after": "foundryPortal"
+  },
+  {
+   "id": "GD-01",
+   "agent": "grantsDesk",
+   "persona": "maker",
+   "surface": "testPane",
+   "phase": "agentTests",
+   "alsoPersonas": [
+    "caseOfficer",
+    "programLead"
+   ]
+  },
+  {
+   "id": "GD-02",
+   "agent": "grantsDesk",
+   "persona": "maker",
+   "surface": "testPane",
+   "phase": "agentTests"
+  },
+  {
+   "id": "GD-03",
+   "agent": "grantsDesk",
+   "persona": "maker",
+   "surface": "testPane",
+   "phase": "agentTests"
+  },
+  {
+   "id": "GP-01",
+   "agent": "grantsDeskPilot",
+   "persona": "caseOfficer",
+   "surface": "m365Copilot",
+   "repeat": "GD-01",
+   "phase": "agentTests",
+   "before": "blockPilot"
+  },
+  {
+   "id": "GP-02",
+   "agent": "grantsDeskPilot",
+   "persona": "caseOfficer",
+   "surface": "m365Copilot",
+   "phase": "smokeTest",
+   "demos": [
+    "D5"
+   ]
+  },
+  {
+   "id": "SI-01",
+   "agent": "siteInspections",
+   "persona": "maker",
+   "surface": "testPane",
+   "phase": "agentTests"
+  },
+  {
+   "id": "CA-01",
+   "agent": "communicationsAssistant",
+   "persona": "caseOfficer",
+   "surface": "m365Copilot",
+   "phase": "d16Rehearsal",
+   "demos": [
+    "D16"
+   ],
+   "after": "defenderSetup"
+  },
+  {
+   "id": "CA-02",
+   "agent": "communicationsAssistant",
+   "persona": "maker",
+   "surface": "testPane",
+   "phase": "agentTests"
+  },
+  {
+   "id": "FQ-01",
+   "agent": "faqPrototype",
+   "persona": "anyone",
+   "surface": "demoWebsite",
+   "phase": "agentTests"
+  },
+  {
+   "id": "CI-01",
+   "agent": "circularsAssistant",
+   "persona": "orphanLeaver",
+   "surface": "m365Copilot",
+   "phase": "agentBuilderAgents",
+   "alsoPersonas": [
+    "caseOfficer",
+    "maker",
+    "programLead"
+   ],
+   "traffic": "3 or more chats per person"
+  },
+  {
+   "id": "FO-01",
+   "agent": "formsAssistant",
+   "persona": "d8Leaver",
+   "surface": "m365Copilot",
+   "phase": "agentBuilderAgents",
+   "alsoPersonas": [
+    "caseOfficer",
+    "maker",
+    "programLead"
+   ]
+  },
+  {
+   "id": "PC-01",
+   "agent": "personalContacts",
+   "persona": "programLead",
+   "surface": "m365Copilot",
+   "phase": "agentBuilderAgents"
+  },
+  {
+   "id": "CC-01",
+   "agent": "any",
+   "persona": "caseOfficer",
+   "surface": "m365Copilot",
+   "phase": "ccMatches",
+   "demos": [
+    "D12"
+   ],
+   "promptsFrom": [
+    "d12Jailbreak",
+    "d12Backdate"
+   ]
+  }
+ ],
+ "governance": {
+  "attribute": {
+   "values": [
+    "new",
+    "inReview",
+    "approved"
+   ]
+  },
+  "conditionalAccess": [
+   {
+    "key": "blockHighRiskAgents",
+    "state": "enabled",
+    "validateInReportOnlyFirst": true,
+    "target": "allAgentIdentities",
+    "condition": "agentRiskHigh",
+    "grant": "block",
+    "demos": [
+     "D9",
+     "D17"
+    ]
+   },
+   {
+    "key": "onlyApprovedAgents",
+    "state": "enabledForReportingButNotEnforced",
+    "target": "allAgentIdentities",
+    "excludeByAttributeValue": "approved",
+    "grant": "block",
+    "demos": [
+     "D11"
+    ]
+   }
+  ],
+  "entitlement": {
+   "resources": [
+    "group:directoryReaders",
+    "graphAppRole:User.Read.All"
+   ],
+   "durationHours": 8,
+   "approvalStages": 1,
+   "requester": "director",
+   "approver": "identityAdmin",
+   "target": "reportsMonitor",
+   "note": "the Graph API permission is a resource role of the access package, added by a Global Administrator after the group and the agents policy, not a catalog resource (reference lab, 28/09)",
+   "demos": [
+    "D10"
+   ]
+  },
+  "purview": {
+   "sensitivityLabel": {
+    "appliesTo": [
+     "confidentialCase"
+    ],
+    "demos": [
+     "D12",
+     "D15"
+    ]
+   },
+   "dlp": {
+    "location": "Microsoft365Copilot",
+    "condition": "sensitivityLabel",
+    "activeHoursBefore": 4,
+    "demos": [
+     "D15"
+    ]
+   },
+   "auditRetention": {
+    "recordTypes": [
+     "CopilotInteraction",
+     "AI*"
+    ],
+    "demos": [
+     "D12"
+    ]
+   },
+   "communicationCompliance": {
+    "scope": [
+     "caseOfficer",
+     "maker",
+     "instance:recordsColleague"
+    ],
+    "demos": [
+     "D12"
+    ]
+   },
+   "ediscovery": {
+    "sources": [
+     "caseOfficer",
+     "instance:recordsColleague"
+    ],
+    "demos": [
+     "D13"
+    ]
+   },
+   "dspm": {
+    "oneClickPolicies": true,
+    "leadHours": 24,
+    "demos": [
+     "D15"
+    ]
+   }
+  },
+  "defender": {
+   "securityForAi": true,
+   "microsoft365Connector": true,
+   "copilotStudioThreatDetection": {
+    "environment": "payg",
+    "demos": [
+     "D16"
+    ]
+   },
+   "rtpRule": {
+    "agent": "recordsAssistant",
+    "action": "block",
+    "demos": [
+     "D16"
+    ]
+   }
+  },
+  "adminCenter": {
+   "tags": [
+    "department",
+    "pilot",
+    "production"
+   ],
+   "templates": [
+    {
+     "key": "productionTemplate",
+     "agentType": "withoutOwnIdentity",
+     "includes": [
+      "ca:onlyApprovedAgents",
+      "accessPackage",
+      "attribute:approved"
+     ],
+     "demos": [
+      "D4",
+      "D7"
+     ],
+     "note": "'Agents without their own identity' = every agent except AI teammates; it takes the Entra custom policies (reference lab, 28/09)"
+    },
+    {
+     "key": "aiTeammateTemplate",
+     "agentType": "withOwnIdentity",
+     "licenses": [
+      "frontierAgent",
+      "teams"
+     ],
+     "forAgent": "recordsColleague",
+     "demos": [
+      "D7"
+     ]
+    }
+   ],
+   "rules": [
+    {
+     "key": "reassignOwnerlessToManager",
+     "demos": [
+      "D8"
+     ]
+    }
+   ]
+  }
+ },
+ "acts": [
+  {
+   "id": 1,
+   "title": "Visibility: what agents exist and how they are used"
+  },
+  {
+   "id": 2,
+   "title": "Governance: lifecycle, ownership and access"
+  },
+  {
+   "id": 3,
+   "title": "Security: posture, protection and response"
+  }
+ ],
+ "demos": [
+  {
+   "id": "D1",
+   "title": "Registry overview: usage, agents without owners, exceptions",
+   "act": 1,
+   "importance": "high",
+   "minutes": [
+    4,
+    6
+   ],
+   "status": "GA",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin"
+   ],
+   "agents": [
+    "grantsDesk",
+    "circularsAssistant"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "manualReset": [
+    "Traffic in the last 24-72 hours on every agent: the Prompts Sender for the web-UI agents; three users with three chats each on the Copilot Studio and Agent Builder agents."
+   ],
+   "notes": [
+    "'Agents without owners' lists only shared agents: the Digital Worker template has no owner by design and must not appear.",
+    "The card can lag for hours after the creator leaves: if it still shows 0, show the empty Owner column in All agents and say it."
+   ]
+  },
+  {
+   "id": "D2",
+   "title": "Map of an agent's connections",
+   "act": 1,
+   "importance": "high",
+   "minutes": [
+    1,
+    2
+   ],
+   "status": "GA; single-agent map Preview",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin"
+   ],
+   "agents": [
+    "grantsDesk",
+    "recordsAssistant"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "notes": [
+    "Plan B: a screenshot, or the map of an agent whose telemetry is already visible."
+   ]
+  },
+  {
+   "id": "D3",
+   "title": "Agents from every platform in one registry",
+   "act": 1,
+   "importance": "medium",
+   "minutes": [
+    0,
+    2.5
+   ],
+   "status": "GA; some platforms Preview",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin"
+   ],
+   "agents": [],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "optional": true
+  },
+  {
+   "id": "D4",
+   "title": "Agent requests: approve with a template, reject with a reason",
+   "act": 2,
+   "importance": "high",
+   "minutes": [
+    3,
+    5
+   ],
+   "status": "GA",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "maker",
+    "aiAdmin",
+    "caseOfficer",
+    "programLead"
+   ],
+   "agents": [
+    "siteInspections",
+    "personalContacts",
+    "grantsDesk"
+   ],
+   "resetClass": "consumes",
+   "leadHours": 12,
+   "manualReset": [
+    "{agent:siteInspections}: as {name:maker}, publish a new version in Copilot Studio and submit it for admin approval (each submission creates a new pending request).",
+    "{agent:personalContacts}: as {name:programLead}, Microsoft 365 Copilot > Agents > {agent:personalContacts} > share to the organization catalog (new request).",
+    "Keep one spare request that can be approved."
+   ],
+   "notes": [
+    "Rehearsals stop before Publish on {agent:siteInspections}: publishing consumes the request needed live.",
+    "If the custom template is not offered when approving, check its type (agents without their own identity)."
+   ]
+  },
+  {
+   "id": "D5",
+   "title": "Distribute, block and hand over agents",
+   "act": 2,
+   "importance": "high",
+   "minutes": [
+    4,
+    6
+   ],
+   "status": "GA",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin",
+    "caseOfficer"
+   ],
+   "agents": [
+    "grantsDesk",
+    "grantsDeskPilot",
+    "circularsAssistant"
+   ],
+   "resetClass": "consumes",
+   "leadHours": 12,
+   "manualReset": [
+    "{agent:grantsDesk} approved and installed for {group:department} (admin center > Requests, then the Users tab of the published entry).",
+    "Blocking an agent disables its agent ID and removes its installations: after the live block and unblock of {agent:grantsDesk}, re-install it for {group:department} and remove any test install or pin.",
+    "{agent:grantsDeskPilot} (published entry) blocked by {name:aiAdmin} the evening before; it stays blocked.",
+    "Rehearsals: stop at the 'Assign a new owner' pane, or recreate the orphan afterwards (New-OrphanAgent.ps1, about 45 minutes, then the share link opened again by the recipients)."
+   ],
+   "notes": [
+    "Change the owner ONLY of {agent:circularsAssistant} (Assign new owner → {name:programLead}); never of {agent:grantsDesk}: the previous owner loses all access, including read, and {name:maker} needs it in D6.",
+    "'Add owner' is not offered on an ownerless agent. Rehearsals stop at the 'Assign a new owner' pane."
+   ]
+  },
+  {
+   "id": "D6",
+   "title": "Approve a tool (MCP) server, then block a tool",
+   "act": 2,
+   "importance": "high",
+   "minutes": [
+    2,
+    4
+   ],
+   "status": "Tools GA; BYO MCP Preview",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin",
+    "maker"
+   ],
+   "agents": [
+    "recordsAssistant"
+   ],
+   "resetClass": "consumes",
+   "leadHours": 2,
+   "manualReset": [
+    "{{mcp.servers.records.name}} unblocked (admin center > Agents > Tools).",
+    "Live: approve ONLY the pending live pool instance (read its exact number in Tools > Requests); approve the spare instance only if the live one fails. Rehearsals approve the rehearsal instance.",
+    "After ANY approval (rehearsal or live): Block the approved pool server in Tools, record it (New-DemoMcpRegistration.ps1 -Action Retire -Name <n> -Confirmed), then Reset-DemoState.ps1 -Demo D6 -Apply prepares the next number."
+   ],
+   "notes": [
+    "Block → the tool call of {agent:recordsAssistant} fails → Unblock: the effect can take up to about 30 minutes, time it in the rehearsal.",
+    "Servers of other labs in the same tenant clutter Tools: use the search box."
+   ]
+  },
+  {
+   "id": "D7",
+   "title": "Policy templates and the AI teammate",
+   "act": 2,
+   "importance": "medium",
+   "minutes": [
+    3,
+    6
+   ],
+   "status": "templates GA; AI teammates Frontier",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin",
+    "identityAdmin"
+   ],
+   "agents": [
+    "recordsColleague"
+   ],
+   "resetClass": "consumes",
+   "leadHours": 1,
+   "manualReset": [
+    "Delete the template created live during the previous run (admin center > Agents > Settings > Templates).",
+    "Custom templates of earlier labs are visible in D7 (some show personal names): remove or rename them first, unless another lab still needs them."
+   ],
+   "notes": [
+    "Custom templates of other labs are visible: scroll past them or search."
+   ]
+  },
+  {
+   "id": "D8",
+   "title": "Management rule: ownerless agents go to the creator's manager",
+   "act": 2,
+   "importance": "medium",
+   "minutes": [
+    1.5,
+    3
+   ],
+   "status": "GA",
+   "portal": "microsoft365Admin",
+   "profiles": [
+    "aiAdmin"
+   ],
+   "agents": [
+    "formsAssistant"
+   ],
+   "resetClass": "time",
+   "leadHours": 24,
+   "manualReset": [
+    "The rule that reassigns ownerless Agent Builder agents to the creator's manager exists; after a run {agent:formsAssistant} is owned by {name:maker}. To show it again: New-OrphanAgent.ps1 -Agent formsAssistant, then run the rule live."
+   ],
+   "notes": [
+    "The rule is predefined: it is only RUN, live, once {agent:formsAssistant} shows in 'Agents to review'. Plan B: Assign new owner → {name:maker}, stated on camera."
+   ]
+  },
+  {
+   "id": "D9",
+   "title": "Conditional Access blocks a high-risk agent",
+   "act": 2,
+   "importance": "high",
+   "minutes": [
+    2.5,
+    4
+   ],
+   "status": "Agent ID GA; agent risk condition Preview",
+   "portal": "entra",
+   "profiles": [
+    "identityAdmin"
+   ],
+   "agents": [
+    "reportsMonitor"
+   ],
+   "resetClass": "self",
+   "leadHours": 1,
+   "manualReset": [
+    "What If on '{{governance.conditionalAccess.blockHighRiskAgents}}' prepared; the sign-in log of the T-1 compromise confirmation available."
+   ]
+  },
+  {
+   "id": "D10",
+   "title": "The sponsor requests time-limited access for an agent",
+   "act": 2,
+   "importance": "medium",
+   "minutes": [
+    2,
+    4
+   ],
+   "status": "GA",
+   "portal": "entra",
+   "profiles": [
+    "identityAdmin",
+    "director"
+   ],
+   "agents": [
+    "reportsMonitor"
+   ],
+   "resetClass": "consumes",
+   "leadHours": 1,
+   "notes": [
+    "The agent's token is cached up to about one hour: if the officers do not appear after the approval, wait or restart the container revision off camera.",
+    "The approver of the access package must be the persona who approves on camera."
+   ]
+  },
+  {
+   "id": "D11",
+   "title": "Only approved agents: Conditional Access by attribute (report-only)",
+   "act": 2,
+   "importance": "low",
+   "minutes": [
+    2,
+    3
+   ],
+   "status": "attributes GA; agent targeting by attribute Preview",
+   "portal": "entra",
+   "profiles": [
+    "identityAdmin"
+   ],
+   "agents": [
+    "reportsMonitor",
+    "reportsMonitorTest"
+   ],
+   "resetClass": "self",
+   "leadHours": 1,
+   "onDemand": true,
+   "notes": [
+    "Keep the policy report-only: enforcing it would block {agent:reportsMonitorTest}.",
+    "Custom security attributes are visible only to the attribute roles: check them as {name:identityAdmin}."
+   ]
+  },
+  {
+   "id": "D12",
+   "title": "Audit and Communication Compliance on agent interactions",
+   "act": 2,
+   "importance": "high",
+   "minutes": [
+    3,
+    5
+   ],
+   "status": "GA",
+   "portal": "purview",
+   "profiles": [
+    "complianceOfficer"
+   ],
+   "agents": [
+    "grantsDesk",
+    "grantsDeskPilot"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24
+  },
+  {
+   "id": "D13",
+   "title": "eDiscovery on the AI teammate",
+   "act": 2,
+   "importance": "medium",
+   "minutes": [
+    2,
+    4
+   ],
+   "status": "GA",
+   "portal": "purview",
+   "profiles": [
+    "complianceOfficer"
+   ],
+   "agents": [
+    "recordsColleague"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "onDemand": true
+  },
+  {
+   "id": "D14",
+   "title": "Security posture of the agents",
+   "act": 3,
+   "importance": "medium",
+   "minutes": [
+    2,
+    3
+   ],
+   "status": "inventory GA; risk indicators Preview",
+   "portal": "defender",
+   "profiles": [
+    "socAnalyst"
+   ],
+   "agents": [
+    "faqPrototype",
+    "applicationReview"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "manualReset": [
+    "{agent:faqPrototype} still without authentication and on the demo website only; the Foundry guardrail without the jailbreak control; the Learn MCP tool without an allowed-tools list (deliberate weaknesses)."
+   ]
+  },
+  {
+   "id": "D15",
+   "title": "Data security posture and DLP for agents",
+   "act": 3,
+   "importance": "medium",
+   "minutes": [
+    2,
+    3
+   ],
+   "status": "GA",
+   "portal": "purview",
+   "profiles": [
+    "complianceOfficer"
+   ],
+   "agents": [
+    "recordsColleague"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "onDemand": true
+  },
+  {
+   "id": "D16",
+   "title": "Real-time protection of agents",
+   "act": 3,
+   "importance": "high",
+   "minutes": [
+    3,
+    4
+   ],
+   "status": "variant A Preview; variant B GA",
+   "portal": "copilot",
+   "profiles": [
+    "caseOfficer",
+    "socAnalyst",
+    "maker"
+   ],
+   "agents": [
+    "communicationsAssistant",
+    "recordsAssistant"
+   ],
+   "resetClass": "readOnly",
+   "leadHours": 24,
+   "manualReset": [
+    "Copilot Studio threat detection on the pay-as-you-go environment; the real-time protection rule '{{governance.rtpRule}}' On (block) for {agent:recordsAssistant}."
+   ]
+  },
+  {
+   "id": "D17",
+   "title": "An agent incident and risk-based access",
+   "act": 3,
+   "importance": "high",
+   "minutes": [
+    3,
+    5
+   ],
+   "status": "agent detections Preview; incidents and hunting GA",
+   "portal": "defender",
+   "profiles": [
+    "socAnalyst",
+    "aiAdmin",
+    "identityAdmin"
+   ],
+   "agents": [
+    "communicationsAssistant",
+    "reportsMonitor"
+   ],
+   "resetClass": "consumes",
+   "leadHours": 24,
+   "manualReset": [
+    "The incident prepared at T-1 on {agent:communicationsAssistant} present in Defender; the hunting queries saved."
+   ]
+  }
+ ],
+ "timeline": [
+  {
+   "day": -5,
+   "focus": "long lead",
+   "tasks": [
+    "licenses",
+    "identities",
+    "knowledge",
+    "dwTemplate",
+    "dwInstance",
+    "agentBuilderAgents",
+    "shareLinksOpened",
+    "dspmOneClick",
+    "firstTraffic"
+   ]
+  },
+  {
+   "day": -4,
+   "focus": "agents",
+   "tasks": [
+    "labAgents",
+    "aoaiCapacity",
+    "copilotStudioConfig",
+    "foundryPortal",
+    "mcpServers",
+    "connectionUrls",
+    "agentTests",
+    "hardDeleteLeavers"
+   ]
+  },
+  {
+   "day": -3,
+   "focus": "governance",
+   "tasks": [
+    "ownersSponsors",
+    "attributes",
+    "accessPackage",
+    "conditionalAccessReportOnly",
+    "purviewSetup",
+    "defenderSetup",
+    "adminCenterTagsTemplates",
+    "d8Rule",
+    "check429AfterFirstRound"
+   ]
+  },
+  {
+   "day": -2,
+   "focus": "rehearse",
+   "tasks": [
+    "communicationCompliance",
+    "d16Rehearsal",
+    "d9Rehearsal",
+    "dlpActive",
+    "traffic"
+   ]
+  },
+  {
+   "day": -1,
+   "focus": "stage",
+   "tasks": [
+    "d17Incident",
+    "ccMatches",
+    "auditSearches",
+    "registryActivityEveryAgentType",
+    "ownerlessCardCheck",
+    "approvePreinstallGrantsDesk",
+    "blockPilot",
+    "submitPendingRequests",
+    "registerLiveMcp",
+    "confirmCompromiseThenSafe",
+    "accessPackageTrial",
+    "ediscoveryCase",
+    "fullReset",
+    "freeze"
+   ]
+  },
+  {
+   "day": 0,
+   "focus": "run",
+   "tasks": [
+    "smokeTest",
+    "noConfigChanges"
+   ]
+  }
+ ]
+}

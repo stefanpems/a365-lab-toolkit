@@ -1,0 +1,602 @@
+{
+ "_comment": "Locale pack (en, canonical). Locale packs are the only non-English-by-policy content of the repo: they hold the visible texts of the demo in each language. Keys mirror ../../pack.json. {{a.b.c}} placeholders are resolved against this locale. Run Test-DemoPack.ps1 after every edit.",
+ "locale": "en",
+ "language": "English",
+ "usageLocation": "IE",
+ "org": {
+  "name": "Contoso",
+  "department": "Incentives Department",
+  "program": "Innovation Grant 2026",
+  "portal": "Contoso Grants Online",
+  "fictionalBanner": "FICTIONAL DOCUMENT – DEMO ONLY",
+  "fictionalSuffix": "(FICTIONAL)",
+  "namePrefix": "Contoso –",
+  "publisher": "Contoso",
+  "offices": {
+   "main": "Dublin",
+   "secondary": "Cork"
+  },
+  "caseIdPrefix": "APP-2026-",
+  "recordIdPrefix": "REC-2026-"
+ },
+ "personas": {
+  "aiAdmin": {
+   "givenName": "Grace",
+   "surname": "Collins",
+   "jobTitle": "AI Administrator",
+   "department": "IT Governance"
+  },
+  "identityAdmin": {
+   "givenName": "Paul",
+   "surname": "Greene",
+   "jobTitle": "Identity and Access Specialist",
+   "department": "Identity and Access Management"
+  },
+  "complianceOfficer": {
+   "givenName": "Ellen",
+   "surname": "Costello",
+   "jobTitle": "Compliance and Privacy Officer",
+   "department": "Compliance and Privacy"
+  },
+  "socAnalyst": {
+   "givenName": "Mark",
+   "surname": "Gallagher",
+   "jobTitle": "SOC Analyst",
+   "department": "Security Operations"
+  },
+  "maker": {
+   "givenName": "Luke",
+   "surname": "Byrne",
+   "jobTitle": "Business Maker",
+   "department": "Incentives Department"
+  },
+  "caseOfficer": {
+   "givenName": "Anna",
+   "surname": "Walsh",
+   "jobTitle": "Case Officer",
+   "department": "Incentives Department"
+  },
+  "director": {
+   "givenName": "Sylvia",
+   "surname": "Coleman",
+   "jobTitle": "Director",
+   "department": "Incentives Department"
+  },
+  "programLead": {
+   "givenName": "Martha",
+   "surname": "Nolan",
+   "jobTitle": "Program Lead",
+   "department": "Incentives Department"
+  },
+  "orphanLeaver": {
+   "givenName": "Frank",
+   "surname": "Rourke",
+   "jobTitle": "Case Officer",
+   "department": "Incentives Department"
+  },
+  "d8Leaver": {
+   "givenName": "Claire",
+   "surname": "Lynch",
+   "jobTitle": "Forms Specialist",
+   "department": "Incentives Department"
+  }
+ },
+ "groups": {
+  "department": {
+   "displayName": "GRP-Incentives-Department",
+   "mailNickname": "GRP-Incentives-Department",
+   "description": "Incentives Department business users (demo)."
+  },
+  "directoryReaders": {
+   "displayName": "GRP-Agents-Directory-Read",
+   "mailNickname": "GRP-Agents-Directory-Read",
+   "description": "Security group granted to agents through the access package (demo)."
+  },
+  "site": {
+   "displayName": "Incentives Department – Grants (demo)",
+   "mailNickname": "IncentivesGrants",
+   "description": "Document site of the Incentives Department (fictional demo content)."
+  }
+ },
+ "agents": {
+  "recordsColleague": {
+   "codeName": "Records-Colleague",
+   "displayName": "Records Colleague",
+   "blueprint": "Records Colleague",
+   "identity": "Records Colleague Identity",
+   "manifest": {
+    "nameShort": "Records Colleague",
+    "nameFull": "Records office digital colleague",
+    "descriptionShort": "Digital colleague of the Incentives Department records office (demo).",
+    "descriptionFull": "Receives registration requests by e-mail and in Teams, registers them with the records tool and replies to the sender with number and date. Demo context: all data is fictional.",
+    "developer": "Contoso"
+   },
+   "instance": {
+    "displayName": "Records Colleague Dublin",
+    "alias": "records.colleague.dublin",
+    "description": "Records office digital colleague of the Dublin office (demo)."
+   }
+  },
+  "recordsAssistant": {
+   "codeName": "Records-Assistant",
+   "displayName": "Records Assistant",
+   "blueprint": "Records Assistant Blueprint",
+   "identity": "Records Assistant"
+  },
+  "reportsMonitor": {
+   "codeName": "Reports-Monitor",
+   "displayName": "Reports Monitor",
+   "blueprint": "Reports Monitor Blueprint",
+   "identity": "Reports Monitor"
+  },
+  "reportsMonitorTest": {
+   "codeName": "Reports-Monitor-Test",
+   "displayName": "Reports Monitor – Test",
+   "blueprint": "Reports Monitor - Test Blueprint",
+   "identity": "Reports Monitor - Test"
+  },
+  "applicationReview": {
+   "codeName": "Application-Review",
+   "displayName": "Application Review",
+   "blueprint": "Application Review Blueprint",
+   "identity": "Application Review"
+  },
+  "grantsDesk": {
+   "codeName": "Grants-Desk",
+   "displayName": "Grants Desk",
+   "shortDescription": "Answers businesses' questions on the Innovation Grant 2026 (demo).",
+   "description": "Helps Incentives Department staff answer businesses' questions about the Innovation Grant 2026 (fictional data), prepares reminders and registers requests with the records office.",
+   "instructions": "You are “Grants Desk”, the internal assistant of the Contoso Incentives Department for the Innovation Grant 2026.\nContext: demo environment; the grant, the businesses and the applications are fictional.\n\nGoal\nHelp case officers answer the questions that businesses ask about the grant correctly, quickly and consistently.\n\nHow you work\n1. Answer using only the documents of the “Innovation Grant 2026” knowledge (Grant summary, FAQ, Review procedure). Always cite the document and the section you take the information from.\n2. If you are asked for an answer to a business, prepare a draft in an institutional, clear and courteous tone, with: subject, summary of the question, answer, references to the grant.\n3. If you are asked for a reminder, create a Word document with the same structure.\n4. If you are asked to register a request with the records office, explain that registrations are made with the “{{agents.recordsAssistant.displayName}}” agent and summarize what to send.\n5. Before sending any e-mail, ask the user for explicit confirmation and show recipients and text.\n\nLimits\n- Do not invent deadlines, amounts, requirements or percentages: if a piece of information is not in the documents, say so and suggest contacting the competent office.\n- Do not express eligibility assessments: the decision always belongs to the case officer.\n- Do not process personal or confidential data: if the user enters it, ask them to remove it.\n- Answer in English."
+  },
+  "grantsDeskPilot": {
+   "codeName": "Grants-Desk-Pilot",
+   "displayName": "Grants Desk – Pilot",
+   "shortDescription": "Pilot copy of Grants Desk (demo).",
+   "description": "Pilot copy of Grants Desk, used to show a blocked agent from the user side (fictional data).",
+   "instructions": "{{agents.grantsDesk.instructions}}"
+  },
+  "siteInspections": {
+   "codeName": "Site-Inspections",
+   "displayName": "Site Inspection Requests",
+   "shortDescription": "Plans site inspections of funded projects (demo).",
+   "description": "Helps Incentives Department technicians plan the site inspections of funded projects (fictional data): proposes dates, prepares the checklist and the communication to the business.",
+   "instructions": "You are “Site Inspection Requests”, the assistant of the Contoso Incentives Department technicians for the checks on the projects funded by the Innovation Grant 2026 (demo context, fictional data).\n\nFor every site-inspection request:\n1. Summarize the business, the funded project, the site and the contact person given by the user.\n2. Propose three date windows on the working days after the request, in the morning or in the afternoon.\n3. Generate the inspection checklist from the document “Inspections of funded projects”.\n4. Prepare the draft of the communication to the business, without sending it: sending it is up to the technician.\n\nLimits: do not invent requirements that are not in the procedure; do not judge the outcome of the inspection; answer in English."
+  },
+  "communicationsAssistant": {
+   "codeName": "Communications-Assistant",
+   "displayName": "Communications Assistant",
+   "shortDescription": "Summarizes notices and sends communications (demo).",
+   "description": "Summarizes the notices and documents of the Innovation Grant 2026 (fictional) and prepares and sends the communications to the contact persons.",
+   "instructions": "You are “Communications Assistant” of the Contoso Incentives Department (demo context, fictional data).\nYou help case officers prepare the communications about the Innovation Grant 2026.\n- When you are asked to summarize a notice or a document, use the “Notices” knowledge and produce a summary of at most ten lines with the action items.\n- When you are asked to prepare a communication, write subject and text in an institutional tone.\n- When you are asked to send it, use the e-mail sending tool.\nAnswer in English."
+  },
+  "faqPrototype": {
+   "codeName": "Business-FAQ-Prototype",
+   "displayName": "Business FAQ (prototype)",
+   "shortDescription": "Prototype of automatic answers to businesses (demo).",
+   "description": "Prototype of automatic answers to businesses about the Innovation Grant 2026 (NOT in production, fictional data).",
+   "instructions": ""
+  },
+  "circularsAssistant": {
+   "displayName": "Circulars Assistant",
+   "description": "Answers questions on the internal circulars of the Innovation Grant 2026 (demo).",
+   "instructions": "You are “Circulars Assistant”: answer staff questions about the internal circulars on the Innovation Grant 2026 (demo context, fictional circulars).\n- Use only the circulars of the “Circulars” folder and cite the number and the date of the circular.\n- If two circulars conflict, the most recent one prevails: point it out.\n- If the answer is not in the circulars, say so.\nAnswer in English, concisely."
+  },
+  "formsAssistant": {
+   "displayName": "Forms Assistant",
+   "description": "Helps choose and check the Innovation Grant 2026 forms (fictional).",
+   "instructions": "You are “Forms Assistant”: you help staff choose the correct Innovation Grant 2026 form and check how it is filled in (fictional forms). Always give the name of the form and its mandatory fields. Do not fill in forms with real personal data. Answer in English."
+  },
+  "personalContacts": {
+   "displayName": "Personal Contacts Draft",
+   "description": "Answers questions on the business contacts I follow (personal file).",
+   "instructions": "Answer the questions about the contact persons of the businesses I follow using the file “{{knowledge.personal.companyContacts.file}}”. Answer in English.",
+   "rejectionReason": "Uses contact data from an ungoverned personal file: move the data to an approved source and resubmit."
+  }
+ },
+ "mcp": {
+  "servers": {
+   "records": {
+    "name": "ext_RecordsTest",
+    "description": "Contoso records office (test server, fictional data).",
+    "tools": {
+     "register": {
+      "name": "register_record",
+      "description": "Registers a request with the records office and returns number and date (fictional data).",
+      "params": {
+       "sender": {
+        "name": "sender",
+        "description": "Sender of the request (name, business or e-mail address)."
+       },
+       "subject": {
+        "name": "subject",
+        "description": "Subject of the request to register."
+       }
+      }
+     },
+     "status": {
+      "name": "record_status",
+      "description": "Returns the status of a record registration (test server: fails about one time in two).",
+      "params": {
+       "number": {
+        "name": "number",
+        "description": "Record number, for example REC-2026-000123."
+       }
+      }
+     }
+    },
+    "strings": {
+     "office": "Records – Incentives Department",
+     "registered": "Registered",
+     "notFound": "Not found (fictional data)",
+     "assignedTo": "Incentives Department",
+     "failure": "Records service temporarily unavailable (error simulated by the test server)."
+    }
+   },
+   "companies": {
+    "name": "ext_CompaniesTest",
+    "description": "Directory of the applicant businesses (test server, fictional data).",
+    "tools": {
+     "find": {
+      "name": "find_company",
+      "description": "Finds a business by VAT number in the test directory and returns its details (fictional data).",
+      "params": {
+       "vat": {
+        "name": "vat_number",
+        "description": "VAT number of the business, for example IE1000011A."
+       }
+      }
+     }
+    },
+    "strings": {
+     "found": "found (fictional data)",
+     "notFound": "No business found (fictional data)",
+     "active": "active"
+    },
+    "data": [
+     {
+      "vat": "IE1000011A",
+      "name": "Alpha Engineering Ltd",
+      "legalForm": "Private company limited by shares",
+      "city": "Dublin",
+      "registeredEmail": "alphaengineering@registered.example"
+     },
+     {
+      "vat": "IE2000022B",
+      "name": "Beta Construction DAC",
+      "legalForm": "Designated activity company",
+      "city": "Cork",
+      "registeredEmail": "betaconstruction@registered.example"
+     },
+     {
+      "vat": "IE3000033C",
+      "name": "Gamma Farms Co-operative",
+      "legalForm": "Co-operative society",
+      "city": "Galway",
+      "registeredEmail": "gammafarms@registered.example"
+     },
+     {
+      "vat": "IE4000044D",
+      "name": "Delta Logistics Ltd",
+      "legalForm": "Private company limited by shares",
+      "city": "Limerick",
+      "registeredEmail": "deltalogistics@registered.example"
+     },
+     {
+      "vat": "IE5000055E",
+      "name": "Epsilon Textiles Ltd",
+      "legalForm": "Private company limited by shares",
+      "city": "Waterford",
+      "registeredEmail": "epsilontextiles@registered.example"
+     }
+    ]
+   },
+   "deadlines": {
+    "base": "ext_DatesTest",
+    "description": "Deadlines of the Innovation Grant 2026 (test server, fictional data).",
+    "tools": {
+     "list": {
+      "name": "list_grant_deadlines",
+      "description": "Lists the Innovation Grant 2026 deadlines and the extensions by circular (fictional data).",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Innovation Grant 2026 (FICTIONAL)",
+     "items": [
+      {
+       "phase": "Publication of the call",
+       "date": "15/06/2026"
+      },
+      {
+       "phase": "Opening of the application window",
+       "date": "01/09/2026 10:00"
+      },
+      {
+       "phase": "Closing of the application window",
+       "date": "30/10/2026 18:00"
+      },
+      {
+       "phase": "Upload of supplementary quotes",
+       "date": "15/12/2026 18:00",
+       "note": "extended by Circular no. 2/2026 (originally 30/11/2026)"
+      },
+      {
+       "phase": "Form A version 2.0",
+       "date": "accepted until 15/10/2026",
+       "note": "version 2.1 available from 01/10/2026"
+      }
+     ],
+     "sources": "Grant summary; Circulars no. 1/2026 and no. 2/2026 (fictional)"
+    }
+   },
+   "forms": {
+    "base": "ext_FormsTest",
+    "description": "Forms of the Innovation Grant 2026 (test server, fictional data).",
+    "tools": {
+     "list": {
+      "name": "list_grant_forms",
+      "description": "Lists the Innovation Grant 2026 forms with version and mandatory fields (fictional data).",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Innovation Grant 2026 (FICTIONAL)",
+     "items": [
+      {
+       "form": "Form A – Grant application",
+       "version": "2.1 (2.0 accepted until 15/10/2026)",
+       "mandatoryFields": [
+        "VAT number",
+        "eligible cost and grant requested",
+        "digital signature of the legal representative"
+       ]
+      },
+      {
+       "form": "Form B – Eligibility self-declaration",
+       "version": "2.1",
+       "mandatoryFields": [
+        "registered e-mail of the business (mandatory from version 2.1)",
+        "digital signature"
+       ]
+      },
+      {
+       "form": "Form C – De minimis declaration",
+       "version": "2.1",
+       "mandatoryFields": [
+        "aid received in the current and the two previous financial years",
+        "digital signature"
+       ]
+      }
+     ],
+     "sources": "Grant forms, version 2.1 of 01/10/2026 (fictional)"
+    }
+   }
+  }
+ },
+ "overlays": {
+  "records-assistant": {
+   "rolePrompt": "You are “Records Assistant” of the Incentives Department (demo context, fictional data).\nAt the user's request you:\n- register requests and communications with the records office using the tool “{{mcp.servers.records.tools.register.name}}” and report the number you obtained;\n- check the status of a record with the tool “{{mcp.servers.records.tools.status.name}}”;\n- prepare and send, on their behalf, outgoing communications with the mail tool. Before sending, summarize recipients, subject and text.\nIf a tool does not respond or is unavailable, tell the user without making up the result.\nAnswer in English."
+  },
+  "records-colleague": {
+   "rolePrompt": "You are a digital colleague of the records office of the Contoso Incentives Department (demo context, fictional data). Your name is the name of your instance, given at the beginning of every conversation: always use it when you introduce yourself or sign a message. You have your own mailbox and you are present in Teams.\nWhen you receive an e-mail or a message with a registration request:\n1. Extract sender, subject and number of attachments.\n2. Register the request with the “{{overlays.records-colleague.tools.register.name}}” tool and get the number.\n3. Reply to the sender confirming the record number and date.\n4. If the request is not clear, ask the sender for clarification instead of proceeding.\nNever forward documents to recipients outside the organization. Always answer in English.",
+   "tools": {
+    "register": {
+     "name": "register_record",
+     "description": "Registers a request in the records office of the Incentives Department (DEMO: fictional numbers) and returns number and date.",
+     "params": {
+      "sender": {
+       "name": "sender",
+       "description": "Sender of the request (name or e-mail address)."
+      },
+      "subject": {
+       "name": "subject",
+       "description": "Subject of the request to register."
+      },
+      "attachments": {
+       "name": "attachments",
+       "description": "Number of attachments received."
+      }
+     }
+    }
+   },
+   "strings": {
+    "office": "Records – Incentives Department"
+   },
+   "texts": {
+    "welcome": "👋 Hi! I'm **{name}**, the digital colleague of the records office of the Contoso Incentives Department.\n\nSend me a request to register, in chat or by e-mail: I register it and reply with the record number and date. How can I help?",
+    "hired": "Thank you for hiring me! I'm **{name}** and from today I take care of the registration requests of the Incentives Department.",
+    "goodbye": "Thank you for the time together: it was a pleasure working with you.",
+    "identityNote": "Your name (the name of this instance) is “{name}”: always introduce yourself and sign with this name.",
+    "callerNote": "You are talking with: {caller}.",
+    "emailSender": "the sender of the e-mail",
+    "notificationSender": "the sender of the notification"
+   }
+  },
+  "reports-monitor": {
+   "rolePrompt": "You are “Reports Monitor”, an autonomous agent of the Contoso Incentives Department that works without a signed-in user (demo context, fictional data).\nAt every run (for example when you are asked to run the reports check):\n1. Read with the “{{overlays.reports-monitor.tools.readReports.name}}” tool the anomaly reports on the Innovation Grant 2026 applications received in the last 24 hours.\n2. Group them by type: duplicate application, inconsistent amounts, missing documents, other.\n3. To find the officer responsible for each application use the “{{overlays.reports-monitor.tools.findOfficers.name}}” tool with the competent office. If the tool says that you are not authorized to read the directory or that the access is blocked, write “officer not available” and briefly report the reason at the end of the summary.\n4. Produce a summary of at most fifteen lines for the director, with the three most urgent reports.\nDo not change data and do not contact the businesses. Always answer in English.",
+   "tools": {
+    "readReports": {
+     "name": "read_reports",
+     "description": "Returns the anomaly reports on the Innovation Grant 2026 applications received in the last 24 hours (fictional data).",
+     "params": {}
+    },
+    "findOfficers": {
+     "name": "find_officers",
+     "description": "Searches the directory (Microsoft Entra ID), with the agent's own identity, for the Incentives Department officers of the given office.",
+     "params": {
+      "office": {
+       "name": "office",
+       "description": "Competent office of the application, for example Dublin or Cork."
+      }
+     }
+    }
+   },
+   "strings": {
+    "ok": "ok",
+    "notAuthorized": "not authorized to read the directory",
+    "blockedByCa": "access blocked by Conditional Access",
+    "authError": "agent authentication error",
+    "incompleteConfig": "incomplete agent identity configuration (AGENT_IDENTITY_ID missing)",
+    "receivedAt": "received"
+   },
+   "reports": [
+    {
+     "id": "REP-001",
+     "hoursAgo": 2,
+     "application": "APP-2026-0003",
+     "business": "Gamma Farms Co-operative",
+     "office": "Dublin",
+     "type": "inconsistent amounts",
+     "priority": "high",
+     "description": "Grant requested of €85,000 not consistent with the sum of the quotes (€112,000 at 70% = €78,400)."
+    },
+    {
+     "id": "REP-002",
+     "hoursAgo": 3,
+     "application": "APP-2026-0002",
+     "business": "Beta Construction DAC",
+     "office": "Cork",
+     "type": "missing documents",
+     "priority": "high",
+     "description": "Form C, tax clearance certificate and project schedule are missing; one quote is not digitally signed."
+    },
+    {
+     "id": "REP-003",
+     "hoursAgo": 5,
+     "application": "APP-2026-0005",
+     "business": "Epsilon Textiles Ltd",
+     "office": "Dublin",
+     "type": "duplicate application",
+     "priority": "medium",
+     "description": "Same VAT number as application APP-2026-0011, submitted two days later for the same track."
+    },
+    {
+     "id": "REP-004",
+     "hoursAgo": 7,
+     "application": "APP-2026-0004",
+     "business": "Delta Logistics Ltd",
+     "office": "Dublin",
+     "type": "other",
+     "priority": "high",
+     "description": "Request to change the IBAN to an account held by a private individual, received from an unregistered e-mail address."
+    },
+    {
+     "id": "REP-005",
+     "hoursAgo": 9,
+     "application": "APP-2026-0007",
+     "business": "Zeta Systems Ltd",
+     "office": "Dublin",
+     "type": "inconsistent amounts",
+     "priority": "medium",
+     "description": "Grant calculated on the VAT-inclusive amount."
+    },
+    {
+     "id": "REP-006",
+     "hoursAgo": 12,
+     "application": "APP-2026-0008",
+     "business": "Eta Services Ltd",
+     "office": "Cork",
+     "type": "missing documents",
+     "priority": "low",
+     "description": "Company extract older than 6 months."
+    },
+    {
+     "id": "REP-007",
+     "hoursAgo": 15,
+     "application": "APP-2026-0009",
+     "business": "Theta Foods Ltd",
+     "office": "Dublin",
+     "type": "duplicate application",
+     "priority": "medium",
+     "description": "Application submitted twice 10 minutes apart with the same attachments."
+    },
+    {
+     "id": "REP-008",
+     "hoursAgo": 20,
+     "application": "APP-2026-0010",
+     "business": "Iota Plastics Ltd",
+     "office": "Cork",
+     "type": "other",
+     "priority": "low",
+     "description": "The contact person asks to bring the site inspection forward for organizational reasons."
+    }
+   ]
+  },
+  "application-review": {
+   "rolePrompt": "You are “Application Review”, the pre-review agent for the Innovation Grant 2026 applications of the Contoso Incentives Department (demo context, fictional applications).\nFor every application the user indicates:\n1. List the documents in the application file.\n2. Compare them with the checklist of the “Review procedure” and indicate the missing ones.\n3. Point out inconsistencies between documents (dates, amounts, VAT number, signatures).\n4. Propose the text of the request for additional documents.\nNever decide on the eligibility of the application: the decision belongs to the reviewing case officer, to whom you only present evidence and proposals.\nAnswer in English, with a bullet list for each section.",
+   "learnMcpDescription": "Public Microsoft Learn documentation.",
+   "vectorStoreName": "Innovation Grant 2026 applications (fictional)"
+  }
+ },
+ "governance": {
+  "attributeSet": {
+   "id": "AgentGovernance",
+   "description": "Agent governance (Contoso demo)"
+  },
+  "attribute": {
+   "name": "ApprovalStatus",
+   "description": "Approval status of the agent",
+   "values": {
+    "new": "New",
+    "inReview": "InReview",
+    "approved": "ApprovedForProduction"
+   }
+  },
+  "conditionalAccess": {
+   "blockHighRiskAgents": "Contoso – Block high-risk agents",
+   "onlyApprovedAgents": "Contoso – Only production-approved agents"
+  },
+  "catalog": {
+   "name": "Agent Catalog – Incentives Department",
+   "description": "Resources for the Incentives Department agents (demo)."
+  },
+  "accessPackage": {
+   "name": "AP – Directory read (8 hours)",
+   "description": "Read access to the directory of the Incentives Department staff for the reports check. Time-limited access for agents: 8 hours, with approval (fictional data).",
+   "justification": "Tonight's reports check needs the responsible officers."
+  },
+  "sensitivityLabel": {
+   "name": "Contoso Confidential (demo)",
+   "tooltip": "Confidential demo content: do not share outside Contoso."
+  },
+  "dlpPolicy": "Contoso – Confidential files and Copilot",
+  "auditRetentionPolicy": "Contoso – Copilot and AI audit (1 year)",
+  "auditSearches": {
+   "agentInteractions": "Grants Desk interactions",
+   "agentAdminActions": "Admin actions on agents"
+  },
+  "communicationCompliancePolicy": "Contoso – Copilot and agent interactions",
+  "communicationComplianceKeywords": [
+   "falsify",
+   "backdate",
+   "fake document"
+  ],
+  "ediscoveryCase": "Contoso – Grants Desk interactions review",
+  "rtpRule": "Contoso – Exfiltration block",
+  "tags": {
+   "department": "Contoso – I.D.",
+   "pilot": "Contoso-ID-Test",
+   "production": "Contoso-ID-Prod"
+  },
+  "tagDescriptions": {
+   "department": "Agents of the Incentives Department (demo).",
+   "pilot": "Pilot and test agents of the Incentives Department (demo).",
+   "production": "Production agents of the Incentives Department (demo)."
+  },
+  "templates": {
+   "productionTemplate": "Contoso – Production agents (without their own identity)",
+   "aiTeammateTemplate": "Contoso – AI teammate"
+  },
+  "huntingQueries": {
+   "agentsLatestState": "AI agents – latest state",
+   "agentActivity24h": "AI agents – activity in the last 24 hours",
+   "promptInjectionAlerts": "AI agents – prompt injection alerts"
+  }
+ },
+ "prompts": {
+  "d6RegisterRecord": "Register with the records office the request of Alpha Engineering about uploading quotes and give me the number.",
+  "d10MonitorRun": "Run today's reports check",
+  "d16Summarize": "Summarize the notice to businesses about the forms update and prepare the communication for the internal contacts.",
+  "mcpSetupUrl": "Give me the Power Platform setup URL for the {server} server."
+ }
+}

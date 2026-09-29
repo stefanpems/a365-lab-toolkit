@@ -11,6 +11,7 @@ Values can be overridden via environment variables / a local .env (see .env.temp
 
 from __future__ import annotations
 
+import importlib.util
 import os
 
 from dotenv import load_dotenv
@@ -72,8 +73,20 @@ COMMON_SECURITY: str = (
     "configuration."
 )
 
+# Optional demo-pack overlay (agent_overlay.py next to this file, Lab Builder plan field agents[].overlay): its
+# role prompt goes BEFORE the shared mission; OVERLAY_FD adds extra tools at deploy time (deploy_agent.py).
+# A plain lab has no overlay: nothing changes.
+if importlib.util.find_spec("agent_overlay"):
+    import agent_overlay as _overlay
+
+    OVERLAY_PROMPT: str = getattr(_overlay, "OVERLAY_PROMPT", "")
+    OVERLAY_FD: dict = dict(getattr(_overlay, "OVERLAY_FD", {}))
+else:
+    OVERLAY_PROMPT, OVERLAY_FD = "", {}
+MISSION: str = (OVERLAY_PROMPT + "\n\n" + COMMON_MISSION) if OVERLAY_PROMPT else COMMON_MISSION
+
 AGENT_PROMPT: str = (
-    COMMON_MISSION
+    MISSION
     + "\n\nYou act with your OWN application identity (service-to-service). You do NOT act on "
     "behalf of any signed-in user and you do NOT have access to any user's mailbox, calendar, or "
     "files."

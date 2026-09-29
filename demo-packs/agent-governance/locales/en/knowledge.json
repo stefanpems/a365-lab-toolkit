@@ -1,0 +1,1821 @@
+{
+ "_comment": "Knowledge documents of the en locale pack (fictional). Block model: [\"h1\"|\"h2\"|\"p\"|\"pi\"(italic), text], [\"slot\", \"slot-N\"] (text taken from the operator slots file), [\"bullets\"|\"numbered\", [items]], [\"table\", [headers], [[row]], [column weights]]. **bold** is allowed inside texts.",
+ "folders": {
+  "call": "Innovation Grant 2026",
+  "inspections": "Inspections",
+  "notices": "Notices",
+  "circulars": "Circulars",
+  "forms": "Forms",
+  "cases": "Cases (fictional)"
+ },
+ "personal": {
+  "companyContacts": {
+   "file": "Company contacts (personal).xlsx",
+   "banner": "FICTIONAL DOCUMENT – DEMO ONLY · Personal file of Martha Nolan (not governed)",
+   "sheet": "Contacts",
+   "headers": [
+    "Business",
+    "Contact",
+    "Role",
+    "E-mail",
+    "Mobile",
+    "Personal notes"
+   ],
+   "rows": [
+    [
+     "Alpha Engineering Ltd",
+     "John Ferris",
+     "Technical manager",
+     "contact@alphaengineering.example",
+     "+353 00 000 0101",
+     "Prefers to be called after 3 pm"
+    ],
+    [
+     "Beta Construction DAC",
+     "Laura Martin",
+     "Administrative manager",
+     "contact@betaconstruction.example",
+     "+353 00 000 0202",
+     "Away from December, replacement not yet appointed"
+    ],
+    [
+     "Gamma Farms Co-operative",
+     "David Hall",
+     "Project lead",
+     "contact@gammafarms.example",
+     "+353 00 000 0303",
+     "Personal number: do not share"
+    ],
+    [
+     "Delta Logistics Ltd",
+     "Rita Ross",
+     "Sole director",
+     "contact@deltalogistics.example",
+     "+353 00 000 0404",
+     "Birthday 12/04; met at the Limerick conference"
+    ],
+    [
+     "Epsilon Textiles Ltd",
+     "Robert Fountain",
+     "Managing partner",
+     "contact@epsilontextiles.example",
+     "+353 00 000 0505",
+     "Contact only by text message"
+    ],
+    [
+     "Zeta Systems Ltd",
+     "Carla Bass",
+     "Owner",
+     "contact@zetasystems.example",
+     "+353 00 000 0606",
+     "Former colleague, informal relationship"
+    ]
+   ]
+  }
+ },
+ "documents": {
+  "callSummary": {
+   "file": "Innovation Grant 2026 – Summary (FICTIONAL).docx",
+   "title": "Innovation Grant 2026 – Summary",
+   "subtitle": "Grants to businesses for modernization, energy efficiency and digitalization",
+   "meta": "Contoso – Incentives Department · Version 1.0 of 15 June 2026 · Fictional data and amounts",
+   "blocks": [
+    [
+     "h1",
+     "§1 Purpose"
+    ],
+    [
+     "p",
+     "The Contoso Innovation Grant 2026 supports the investments of businesses that modernize machinery and plant, improve their energy efficiency and digitalize their processes. The total budget is EUR 12 million."
+    ],
+    [
+     "h1",
+     "§2 Eligible applicants"
+    ],
+    [
+     "p",
+     "Businesses of any size can apply if, on the date of submission, they:"
+    ],
+    [
+     "bullets",
+     [
+      "have at least one active operating site in Ireland;",
+      "are registered with the Companies Registration Office;",
+      "are tax compliant (valid Tax Clearance Certificate);",
+      "are not in liquidation, receivership or any other insolvency procedure."
+     ]
+    ],
+    [
+     "p",
+     "Each business may submit only one application, for one intervention track only."
+    ],
+    [
+     "h1",
+     "§3 Project types"
+    ],
+    [
+     "table",
+     [
+      "Track",
+      "Type",
+      "Examples of eligible interventions"
+     ],
+     [
+      [
+       "Track 1",
+       "Modernization of machinery and plant",
+       "Replacement or upgrade of machinery; machinery-related solutions that reduce noise and vibration (soundproof booths, anti-vibration mounts, sound-absorbing panels); automation of production lines."
+      ],
+      [
+       "Track 2",
+       "Energy efficiency",
+       "LED lighting; heat pumps; energy-monitoring systems; insulation of plant."
+      ],
+      [
+       "Track 3",
+       "Process digitalization",
+       "Management and planning software; IoT sensors; predictive maintenance; digital training of staff on the new tools."
+      ]
+     ],
+     [
+      1.2,
+      3,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "§4 Eligible and non-eligible costs"
+    ],
+    [
+     "h2",
+     "§4.1 Eligible costs"
+    ],
+    [
+     "bullets",
+     [
+      "purchase of new machinery, plant, equipment and software;",
+      "installation, testing and commissioning;",
+      "training of staff on the use of the purchased assets, up to 10% of the cost;",
+      "technical consultancy related to the project, up to 5% of the cost."
+     ]
+    ],
+    [
+     "h2",
+     "§4.2 Non-eligible costs"
+    ],
+    [
+     "bullets",
+     [
+      "ordinary maintenance and replacement of spare parts;",
+      "used or leased assets;",
+      "VAT, unless it cannot be recovered by the business;",
+      "costs incurred before the date of submission of the application."
+     ]
+    ],
+    [
+     "h1",
+     "§5 Grant"
+    ],
+    [
+     "p",
+     "The grant is non-repayable and is calculated on the eligible costs net of VAT."
+    ],
+    [
+     "table",
+     [
+      "Track",
+      "Micro and small businesses",
+      "Medium and large businesses",
+      "Maximum grant"
+     ],
+     [
+      [
+       "Track 1",
+       "70%",
+       "60%",
+       "€120,000"
+      ],
+      [
+       "Track 2",
+       "70%",
+       "60%",
+       "€90,000"
+      ],
+      [
+       "Track 3",
+       "70%",
+       "60%",
+       "€60,000"
+      ]
+     ],
+     [
+      1.2,
+      2.5,
+      2.5,
+      2.5
+     ]
+    ],
+    [
+     "p",
+     "The minimum eligible cost of a project is €10,000. The grant can be combined with other aid only for different costs or, for the same costs, within 100% of the cost and within the limits of the de minimis regime (Form C)."
+    ],
+    [
+     "h1",
+     "§6 Deadlines"
+    ],
+    [
+     "table",
+     [
+      "Phase",
+      "Deadline"
+     ],
+     [
+      [
+       "Publication of the call",
+       "15 June 2026"
+      ],
+      [
+       "Opening of the application window",
+       "1 September 2026, 10:00"
+      ],
+      [
+       "Closing of the application window",
+       "30 October 2026, 18:00"
+      ],
+      [
+       "Upload of supplementary quotes",
+       "30 November 2026, 18:00 (unless extended by circular)"
+      ],
+      [
+       "Communication of the results",
+       "by 28 February 2027"
+      ],
+      [
+       "Implementation of the project",
+       "within 12 months of the award of the grant"
+      ],
+      [
+       "Final report",
+       "within 60 days of the completion of the project"
+      ]
+     ],
+     [
+      5,
+      5
+     ]
+    ],
+    [
+     "h1",
+     "§7 Required documents"
+    ],
+    [
+     "p",
+     "The following documents must be attached to the application (detailed checks in the “Review procedure”):"
+    ],
+    [
+     "numbered",
+     [
+      "Form A – Grant application, digitally signed;",
+      "Form B – Eligibility self-declaration;",
+      "Form C – De minimis declaration;",
+      "technical report of the project;",
+      "quotes, at least one for each cost item;",
+      "company extract from the Companies Registration Office, not older than 6 months;",
+      "identity document of the legal representative;",
+      "valid Tax Clearance Certificate;",
+      "project schedule;",
+      "bank details (IBAN) in the name of the business."
+     ]
+    ],
+    [
+     "h1",
+     "§8 How to apply"
+    ],
+    [
+     "p",
+     "Applications are submitted only on the “Contoso Grants Online” portal, with the digital signature of the legal representative (CAdES .p7m or PAdES formats). Official communications take place through the registered e-mail address of the business. Documents sent by ordinary e-mail are not taken into account."
+    ],
+    [
+     "h1",
+     "§9 Contacts"
+    ],
+    [
+     "bullets",
+     [
+      "E-mail: innovation-grant@contoso.example",
+      "Registered e-mail: innovation-grant@registered.contoso.example",
+      "Phone: +353 1 000 0000 (Monday to Friday, 9:00–13:00)"
+     ]
+    ],
+    [
+     "p",
+     "The Incentives Department replies within 5 working days. No preliminary opinions on the eligibility of projects are given."
+    ]
+   ]
+  },
+  "callFaq": {
+   "file": "Innovation Grant 2026 – FAQ (FICTIONAL).docx",
+   "title": "FAQ – Innovation Grant 2026",
+   "subtitle": "Frequently asked questions from businesses",
+   "meta": "Contoso – Incentives Department · Update of 20 September 2026 · Fictional content",
+   "blocks": [
+    [
+     "h2",
+     "FAQ 1 – Is a project to modernize machinery, for example to reduce the noise in the workshop, eligible?"
+    ],
+    [
+     "p",
+     "Yes. It falls under Track 1 “Modernization of machinery and plant” if it includes the replacement or upgrade of machinery or machinery-related solutions that reduce noise and vibration (soundproof booths, anti-vibration mounts, sound-absorbing panels). Ordinary maintenance alone is not eligible."
+    ],
+    [
+     "pi",
+     "Reference: Summary §3 and §4."
+    ],
+    [
+     "h2",
+     "FAQ 2 – Can micro businesses apply?"
+    ],
+    [
+     "p",
+     "Yes. Micro and small businesses receive a grant of 70% of the eligible costs, instead of the 60% for medium and large businesses, always within the maximum of the track."
+    ],
+    [
+     "pi",
+     "Reference: Summary §2 and §5."
+    ],
+    [
+     "h2",
+     "FAQ 3 – Can the grant be combined with other incentives?"
+    ],
+    [
+     "p",
+     "Yes, with other aid for different costs. For the same costs, combining is allowed within 100% of the cost and within the limits of the de minimis regime, to be declared in Form C."
+    ],
+    [
+     "pi",
+     "Reference: Summary §5."
+    ],
+    [
+     "h2",
+     "FAQ 4 – How and by when are the quotes uploaded?"
+    ],
+    [
+     "p",
+     "On the “Contoso Grants Online” portal, “Documents” section, as PDF files digitally signed by the legal representative, at most 10 MB per file, by 30 November 2026 at 18:00. Any extension is decided only by circular."
+    ],
+    [
+     "pi",
+     "Reference: Summary §6 and §8."
+    ],
+    [
+     "h2",
+     "FAQ 5 – Is the digital signature mandatory?"
+    ],
+    [
+     "p",
+     "Yes, for Forms A, B and C and for the quotes. CAdES (.p7m) and PAdES (signed PDF) formats are accepted."
+    ],
+    [
+     "pi",
+     "Reference: Summary §8."
+    ],
+    [
+     "h2",
+     "FAQ 6 – Are extensions of the deadlines possible?"
+    ],
+    [
+     "p",
+     "Extensions are decided only by a circular of the Incentives Department, published in the “Circulars” section of the portal. Informal communications have no value."
+    ],
+    [
+     "pi",
+     "Reference: Summary §6."
+    ],
+    [
+     "h2",
+     "FAQ 7 – How is the project reported?"
+    ],
+    [
+     "p",
+     "Within 60 days of the completion of the project, and in any case within 12 months of the award, the business uploads invoices, traceable payment receipts, a final report and photos of the installed assets. The payment is made within 90 days of the approval of the report."
+    ],
+    [
+     "pi",
+     "Reference: Summary §6."
+    ],
+    [
+     "h2",
+     "FAQ 8 – Who can I contact for information?"
+    ],
+    [
+     "p",
+     "Write to innovation-grant@contoso.example or call +353 1 000 0000 (Monday–Friday, 9:00–13:00). The answer arrives within 5 working days. No preliminary opinions on eligibility are given."
+    ],
+    [
+     "pi",
+     "Reference: Summary §9."
+    ]
+   ]
+  },
+  "reviewProcedure": {
+   "file": "Review procedure (FICTIONAL).docx",
+   "title": "Review procedure for the applications",
+   "subtitle": "Innovation Grant 2026 – phases, document checklist and consistency checks",
+   "meta": "Contoso – Incentives Department · Internal procedure no. RP-07 · Version 1.2 of 1 September 2026 · Fictional content",
+   "blocks": [
+    [
+     "h1",
+     "§1 Purpose"
+    ],
+    [
+     "p",
+     "The procedure describes how the reviewing case officers examine the Innovation Grant 2026 applications, from receipt to the proposal of the outcome, and which documents and consistency checks are mandatory."
+    ],
+    [
+     "h1",
+     "§2 Review phases"
+    ],
+    [
+     "numbered",
+     [
+      "**Admissibility** (within 10 working days of submission): application submitted on time, on the portal, with a valid digital signature.",
+      "**Eligibility**: requirements of the applicant (Summary §2) and consistency of the project with the chosen track (Summary §3).",
+      "**Document check**: check of the 10 documents of the checklist (§3) and of the consistency checks (§4).",
+      "**Request for additional documents**: if documents are missing or there are inconsistencies, the case officer sends a request by registered e-mail; the business has 10 days to reply.",
+      "**Technical assessment**: score out of 100 points (project quality 40, impact 30, economic sustainability 20, schedule 10).",
+      "**Proposed outcome**: the reviewing case officer drafts the reasoned proposal.",
+      "**Decision**: the director of the Incentives Department approves or rejects; the outcome is communicated by registered e-mail."
+     ]
+    ],
+    [
+     "h1",
+     "§3 Document checklist (10 documents)"
+    ],
+    [
+     "table",
+     [
+      "No.",
+      "Document",
+      "Minimum checks"
+     ],
+     [
+      [
+       "1",
+       "Form A – Grant application",
+       "Digital signature of the legal representative; version 2.1 (2.0 accepted until 15 October 2026); grant requested consistent with costs and rate."
+      ],
+      [
+       "2",
+       "Form B – Eligibility self-declaration",
+       "Complete in every field, registered e-mail given (mandatory from version 2.1), digitally signed."
+      ],
+      [
+       "3",
+       "Form C – De minimis declaration",
+       "Aid of the current and the two previous financial years; digitally signed."
+      ],
+      [
+       "4",
+       "Technical report of the project",
+       "Track, objectives, assets to purchase, expected results."
+      ],
+      [
+       "5",
+       "Quotes",
+       "In the name of the business; VAT shown separately; not older than 6 months before submission; signed; sum of the net amounts equal to the cost in Form A."
+      ],
+      [
+       "6",
+       "Company extract",
+       "Not older than 6 months; VAT number and site consistent with Form A."
+      ],
+      [
+       "7",
+       "Identity document of the legal representative",
+       "Valid."
+      ],
+      [
+       "8",
+       "Tax Clearance Certificate",
+       "Valid on the date of submission."
+      ],
+      [
+       "9",
+       "Project schedule",
+       "Activities and dates compatible with completion within 12 months."
+      ],
+      [
+       "10",
+       "Bank details (IBAN)",
+       "Account in the name of the applicant business."
+      ]
+     ],
+     [
+      0.6,
+      3.4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "§4 Consistency checks"
+    ],
+    [
+     "bullets",
+     [
+      "**Dates**: quotes, company extract and Tax Clearance Certificate within their validity; no cost before submission.",
+      "**Amounts**: grant requested = eligible cost × rate of the business (70% micro and small, 60% medium and large), rounded to the euro and within the maximum of the track.",
+      "**VAT number**: identical in all documents.",
+      "**Signatures**: valid digital signatures of the legal representative shown in the company extract."
+     ]
+    ],
+    [
+     "h1",
+     "§5 Request for additional documents (template)"
+    ],
+    [
+     "p",
+     "Subject: Innovation Grant 2026 – Application <number> – Request for additional documents"
+    ],
+    [
+     "p",
+     "With reference to the application above, please send through the “Contoso Grants Online” portal, within 10 days of receipt of this letter, the following documents or clarifications: <list>. Without a reply, the application will be assessed on the basis of the available documents."
+    ],
+    [
+     "p",
+     "Kind regards – The reviewing case officer, Contoso – Incentives Department"
+    ],
+    [
+     "h1",
+     "§6 Human oversight"
+    ],
+    [
+     "p",
+     "The decision on eligibility always belongs to the reviewing case officer and to the director. Automated support tools can only collect evidence and propose texts: they do not decide the outcome of the applications."
+    ]
+   ]
+  },
+  "inspectionChecklist": {
+   "file": "Inspections of funded projects (FICTIONAL).docx",
+   "title": "Inspections of funded projects",
+   "subtitle": "Innovation Grant 2026 – planning and site-inspection checklist",
+   "meta": "Contoso – Incentives Department · Operating instruction no. OI-03 · Version 1.0 of 1 July 2026 · Fictional content",
+   "blocks": [
+    [
+     "h1",
+     "§1 Purpose"
+    ],
+    [
+     "p",
+     "On-site inspections verify that the funded assets have been purchased, installed and used as provided by the approved project."
+    ],
+    [
+     "h1",
+     "§2 Planning the site inspection"
+    ],
+    [
+     "bullets",
+     [
+      "minimum notice of 5 working days, sent by registered e-mail to the contact person given in the application;",
+      "available windows: morning 9:00–13:00 or afternoon 14:00–17:00, on working days only;",
+      "indicative duration: 2 hours; the contact person or a delegate must be present;",
+      "the technician brings the checklist of §3 and the list of the funded assets."
+     ]
+    ],
+    [
+     "h1",
+     "§3 Site-inspection checklist (12 points)"
+    ],
+    [
+     "table",
+     [
+      "No.",
+      "Check",
+      "Outcome (Compliant / Non-compliant / N.A.)"
+     ],
+     [
+      [
+       "1",
+       "Identity of the contact person present and delegation from the legal representative",
+       ""
+      ],
+      [
+       "2",
+       "Match between installed assets and approved project",
+       ""
+      ],
+      [
+       "3",
+       "Match of the serial numbers with invoices and quotes",
+       ""
+      ],
+      [
+       "4",
+       "CE marking and user manuals of the machinery",
+       ""
+      ],
+      [
+       "5",
+       "Installation date and commissioning report",
+       ""
+      ],
+      [
+       "6",
+       "Original invoices and traceable payment receipts",
+       ""
+      ],
+      [
+       "7",
+       "No double funding on the same assets",
+       ""
+      ],
+      [
+       "8",
+       "Track 2: energy consumption data before and after the intervention",
+       ""
+      ],
+      [
+       "9",
+       "Track 3: active software licenses and enabled users",
+       ""
+      ],
+      [
+       "10",
+       "Staff training on the new assets (signed registers)",
+       ""
+      ],
+      [
+       "11",
+       "Publicity obligations: plaque “Project co-funded – Innovation Grant 2026”",
+       ""
+      ],
+      [
+       "12",
+       "Photo documentation and signature of the report by technician and contact person",
+       ""
+      ]
+     ],
+     [
+      0.6,
+      6,
+      3.4
+     ]
+    ],
+    [
+     "h1",
+     "§4 Outcome and report"
+    ],
+    [
+     "p",
+     "The report records the outcome of every point, any non-compliance and the actions required. The final outcome of the inspection is decided by the head of the office, not by the technician during the site inspection."
+    ],
+    [
+     "h1",
+     "§5 Communication to the business (template)"
+    ],
+    [
+     "p",
+     "Subject: Innovation Grant 2026 – Application <number> – Notice of site inspection"
+    ],
+    [
+     "p",
+     "Dear contact person, we inform you that the Incentives Department will carry out a site inspection at the <site> site in one of the following windows: <proposed dates>. Please confirm your preferred window and make sure that a contact person is present, with invoices, receipts and the documentation of the funded assets."
+    ],
+    [
+     "p",
+     "Kind regards – The assigned technician, Contoso – Incentives Department"
+    ]
+   ]
+  },
+  "circular1": {
+   "file": "Circular 1-2026 – Document upload (FICTIONAL).docx",
+   "title": "Circular no. 1/2026 of 10 September 2026",
+   "subtitle": "Subject: Innovation Grant 2026 – how to upload the documents",
+   "meta": "Contoso – Incentives Department · Addressed to: staff of the Incentives Department and offices · Fictional content",
+   "blocks": [
+    [
+     "p",
+     "In order to harmonize the handling of the Innovation Grant 2026 applications, the following is established."
+    ],
+    [
+     "numbered",
+     [
+      "**Deadline for supplementary quotes**: supplementary quotes can be uploaded on the “Contoso Grants Online” portal by **30 November 2026, 18:00**.",
+      "**Format**: every document must be uploaded as a PDF file, with a maximum size of **10 MB per file**.",
+      "**Signature**: quotes must be digitally signed by the legal representative of the business.",
+      "**File names**: <application number>-<document type>-<sequence>.pdf (example: APP-2026-0001-Q-01.pdf).",
+      "**Channels**: documents sent by ordinary or registered e-mail are not considered; only the upload on the portal counts."
+     ]
+    ],
+    [
+     "p",
+     "This circular applies from the date of its publication."
+    ],
+    [
+     "pi",
+     "The Director of the Incentives Department"
+    ]
+   ]
+  },
+  "circular2": {
+   "file": "Circular 2-2026 – Deadline extension (FICTIONAL).docx",
+   "title": "Circular no. 2/2026 of 22 September 2026",
+   "subtitle": "Subject: Innovation Grant 2026 – extension of the deadline for uploading supplementary quotes",
+   "meta": "Contoso – Incentives Department · Addressed to: staff of the Incentives Department and offices · Fictional content",
+   "blocks": [
+    [
+     "p",
+     "Following extraordinary maintenance of the “Contoso Grants Online” portal, the following is established."
+    ],
+    [
+     "numbered",
+     [
+      "The deadline for uploading supplementary quotes set in point 1 of Circular no. 1/2026 is **extended to 15 December 2026, 18:00**.",
+      "The maximum file size is **raised to 20 MB per file**.",
+      "The other provisions of Circular no. 1/2026 (digital signature, file names, channels) are unchanged.",
+      "The extension does **not** concern the deadline for submitting the applications, which remains 30 October 2026, 18:00."
+     ]
+    ],
+    [
+     "p",
+     "The offices are invited to inform the businesses that have already contacted them."
+    ],
+    [
+     "pi",
+     "The Director of the Incentives Department"
+    ]
+   ]
+  },
+  "callForms": {
+   "file": "Grant forms (FICTIONAL).docx",
+   "title": "Forms of the Innovation Grant 2026",
+   "subtitle": "Form A, Form B and Form C – fields and instructions",
+   "meta": "Contoso – Incentives Department · Forms version 2.1 of 1 October 2026 · Fictional content",
+   "blocks": [
+    [
+     "p",
+     "The forms are filled in online on the “Contoso Grants Online” portal and digitally signed. Do not enter personal data that the fields do not require."
+    ],
+    [
+     "h1",
+     "Form A – Grant application (version 2.1)"
+    ],
+    [
+     "table",
+     [
+      "Field",
+      "Status",
+      "Notes"
+     ],
+     [
+      [
+       "Company name and legal form",
+       "Mandatory",
+       "As in the company extract."
+      ],
+      [
+       "VAT number",
+       "Mandatory",
+       "Identical in all documents."
+      ],
+      [
+       "Company registration number",
+       "Mandatory",
+       ""
+      ],
+      [
+       "Registered office",
+       "Mandatory",
+       ""
+      ],
+      [
+       "Operating site of the project",
+       "Mandatory",
+       "Must be active on the date of submission."
+      ],
+      [
+       "Legal representative (name, surname, personal public service number)",
+       "Mandatory",
+       "Signatory of the application."
+      ],
+      [
+       "Registered e-mail",
+       "Mandatory",
+       ""
+      ],
+      [
+       "Business size",
+       "Mandatory",
+       "Micro, small, medium or large."
+      ],
+      [
+       "Project track",
+       "Mandatory",
+       "Only one of Track 1, 2 and 3."
+      ],
+      [
+       "Title and summary of the project",
+       "Mandatory",
+       "At most 1,000 characters."
+      ],
+      [
+       "Total eligible cost (VAT excluded)",
+       "Mandatory",
+       "Sum of the net amounts of the quotes."
+      ],
+      [
+       "Grant requested",
+       "Mandatory",
+       "Cost × rate, within the maximum."
+      ],
+      [
+       "Operational contact and phone",
+       "Optional",
+       ""
+      ],
+      [
+       "Digital signature",
+       "Mandatory",
+       "CAdES or PAdES."
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "Form B – Eligibility self-declaration"
+    ],
+    [
+     "table",
+     [
+      "Field",
+      "Status",
+      "Notes"
+     ],
+     [
+      [
+       "Registration with the Companies Registration Office",
+       "Mandatory",
+       "Company number."
+      ],
+      [
+       "Tax compliance",
+       "Mandatory",
+       "Details of the Tax Clearance Certificate."
+      ],
+      [
+       "No insolvency procedures",
+       "Mandatory",
+       ""
+      ],
+      [
+       "Compliance with environmental and safety law",
+       "Mandatory",
+       ""
+      ],
+      [
+       "Registered e-mail of the business",
+       "Mandatory",
+       "Mandatory from version 2.1."
+      ],
+      [
+       "Digital signature of the legal representative",
+       "Mandatory",
+       ""
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "Form C – De minimis declaration"
+    ],
+    [
+     "table",
+     [
+      "Field",
+      "Status",
+      "Notes"
+     ],
+     [
+      [
+       "Aid received in the current and the two previous financial years",
+       "Mandatory",
+       "Granting body, date and amount of each aid."
+      ],
+      [
+       "Linked businesses (“single undertaking”)",
+       "Mandatory",
+       "List of the linked businesses, if any."
+      ],
+      [
+       "Declaration that the ceiling is not exceeded",
+       "Mandatory",
+       ""
+      ],
+      [
+       "Digital signature of the legal representative",
+       "Mandatory",
+       ""
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4.4
+     ]
+    ],
+    [
+     "h2",
+     "Common errors"
+    ],
+    [
+     "numbered",
+     [
+      "VAT number different between Form A and the company extract.",
+      "Grant requested calculated on the VAT-inclusive amount.",
+      "Form B in version 2.0 without registered e-mail after 15 October 2026."
+     ]
+    ]
+   ]
+  },
+  "formsNotice": {
+   "file": "Notice to businesses – forms update (FICTIONAL).docx",
+   "title": "Notice no. 3/2026 of 24 September 2026",
+   "subtitle": "Innovation Grant 2026 – update of the forms",
+   "meta": "Contoso – Incentives Department · Notice to the applicant businesses · Fictional content",
+   "blocks": [
+    [
+     "p",
+     "Dear businesses, we inform you that the forms of the Innovation Grant 2026 have been updated. Please take the following changes into account:"
+    ],
+    [
+     "numbered",
+     [
+      "From **1 October 2026** **version 2.1 of Form A** is available; version 2.0 is accepted until 15 October 2026.",
+      "In **Form B** the **registered e-mail address** of the business is now **mandatory**.",
+      "The **quotes** must show **VAT separately** from the net amount; quotes that do not will be subject to a request for additional documents."
+     ]
+    ],
+    [
+     "p",
+     "The updated forms are available on the “Contoso Grants Online” portal, “Forms” section. For information: innovation-grant@contoso.example."
+    ],
+    [
+     "pi",
+     "Contoso – Incentives Department"
+    ],
+    [
+     "slot",
+     "slot-1"
+    ]
+   ]
+  },
+  "applicantsList": {
+   "file": "Applicants list (FICTIONAL).docx",
+   "title": "List of the applicant businesses",
+   "subtitle": "Innovation Grant 2026 – situation as at 25 September 2026",
+   "meta": "Contoso – Incentives Department · Internal use · Fictional content",
+   "blocks": [
+    [
+     "h1",
+     "Businesses with a submitted application"
+    ],
+    [
+     "table",
+     [
+      "Application",
+      "Business",
+      "Site",
+      "Track",
+      "Grant requested",
+      "Contact",
+      "E-mail",
+      "Phone"
+     ],
+     [
+      [
+       "APP-2026-0001",
+       "Alpha Engineering Ltd",
+       "Dublin",
+       "Track 1",
+       "€70,000",
+       "John Ferris",
+       "contact@alphaengineering.example",
+       "+353 1 000 0101"
+      ],
+      [
+       "APP-2026-0002",
+       "Beta Construction DAC",
+       "Cork",
+       "Track 2",
+       "€54,600",
+       "Laura Martin",
+       "contact@betaconstruction.example",
+       "+353 21 000 0202"
+      ],
+      [
+       "APP-2026-0003",
+       "Gamma Farms Co-operative",
+       "Galway",
+       "Track 1",
+       "€85,000",
+       "David Hall",
+       "contact@gammafarms.example",
+       "+353 91 000 0303"
+      ],
+      [
+       "APP-2026-0004",
+       "Delta Logistics Ltd",
+       "Limerick",
+       "Track 3",
+       "€38,400",
+       "Rita Ross",
+       "contact@deltalogistics.example",
+       "+353 61 000 0404"
+      ],
+      [
+       "APP-2026-0005",
+       "Epsilon Textiles Ltd",
+       "Waterford",
+       "Track 2",
+       "€26,250",
+       "Robert Fountain",
+       "contact@epsilontextiles.example",
+       "+353 51 000 0505"
+      ]
+     ],
+     [
+      1.7,
+      2.2,
+      1.1,
+      0.9,
+      1.4,
+      1.5,
+      2.6,
+      1.7
+     ]
+    ],
+    [
+     "p",
+     "The list is updated automatically by the portal; the details of the contact persons are those given in the applications."
+    ]
+   ]
+  },
+  "case1": {
+   "file": "Application APP-2026-0001 (FICTIONAL).pdf",
+   "title": "Application file APP-2026-0001",
+   "subtitle": "Alpha Engineering Ltd – Innovation Grant 2026",
+   "meta": "Contoso – Incentives Department · Extract from the “Contoso Grants Online” portal · Fictional data",
+   "blocks": [
+    [
+     "h1",
+     "1. Summary data"
+    ],
+    [
+     "table",
+     [
+      "Field",
+      "Value"
+     ],
+     [
+      [
+       "Application",
+       "APP-2026-0001"
+      ],
+      [
+       "Business",
+       "Alpha Engineering Ltd"
+      ],
+      [
+       "VAT number (Form A)",
+       "IE1000011A"
+      ],
+      [
+       "Operating site",
+       "Dublin"
+      ],
+      [
+       "Size",
+       "small"
+      ],
+      [
+       "Track",
+       "Track 1"
+      ],
+      [
+       "Project title",
+       "Replacement of two presses and installation of soundproof booths"
+      ],
+      [
+       "Declared eligible cost (VAT excluded)",
+       "€100,000"
+      ],
+      [
+       "Grant requested",
+       "€70,000"
+      ],
+      [
+       "Submission date",
+       "18 September 2026"
+      ],
+      [
+       "Competent office",
+       "Dublin"
+      ],
+      [
+       "Legal representative",
+       "Charles Ferris"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documents in the file"
+    ],
+    [
+     "table",
+     [
+      "No.",
+      "Document",
+      "Date",
+      "Digital signature",
+      "Notes"
+     ],
+     [
+      [
+       "1",
+       "Form A – Grant application (v2.1)",
+       "18/09/2026",
+       "Yes (Charles Ferris)",
+       "Cost €100,000; grant requested €70,000; VAT no. IE1000011A"
+      ],
+      [
+       "2",
+       "Form B – Self-declaration (v2.1)",
+       "18/09/2026",
+       "Yes (Charles Ferris)",
+       "Registered e-mail: alphaengineering@registered.example"
+      ],
+      [
+       "3",
+       "Form C – De minimis declaration",
+       "18/09/2026",
+       "Yes (Charles Ferris)",
+       "No aid in the current and the two previous financial years"
+      ],
+      [
+       "4",
+       "Technical report of the project",
+       "15/09/2026",
+       "Yes (Charles Ferris)",
+       "6 pages; Track 1; noise reduction in the press shop"
+      ],
+      [
+       "5",
+       "Quotes (2)",
+       "02/09/2026 and 05/09/2026",
+       "Yes",
+       "See section 3"
+      ],
+      [
+       "6",
+       "Company extract",
+       "01/09/2026",
+       "n.a.",
+       "VAT no. IE1000011A; operating site Dublin; legal representative Charles Ferris"
+      ],
+      [
+       "7",
+       "Identity document of the legal representative",
+       "expires 04/2031",
+       "n.a.",
+       "Passport"
+      ],
+      [
+       "8",
+       "Tax Clearance Certificate",
+       "valid until 15/12/2026",
+       "n.a.",
+       "Compliant"
+      ],
+      [
+       "9",
+       "Project schedule",
+       "15/09/2026",
+       "Yes (Charles Ferris)",
+       "Completion planned in June 2027"
+      ],
+      [
+       "10",
+       "Bank details",
+       "18/09/2026",
+       "Yes (Charles Ferris)",
+       "IBAN IE59ZZZZ99001600100011 in the name of Alpha Engineering Ltd"
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Quotes"
+    ],
+    [
+     "table",
+     [
+      "Quote",
+      "Supplier",
+      "Subject",
+      "Net amount",
+      "VAT",
+      "Date"
+     ],
+     [
+      [
+       "Q-01",
+       "Northern Presses Ltd",
+       "Two low-noise hydraulic presses",
+       "€64,000",
+       "€14,720",
+       "02/09/2026"
+      ],
+      [
+       "Q-02",
+       "Industrial Acoustics Ltd",
+       "Soundproof booths and anti-vibration mounts",
+       "€36,000",
+       "€8,280",
+       "05/09/2026"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Extracts and notes"
+    ],
+    [
+     "p",
+     "Sum of the net amounts: €100,000. Small business: grant rate 70%."
+    ]
+   ]
+  },
+  "case2": {
+   "file": "Application APP-2026-0002 (FICTIONAL).pdf",
+   "title": "Application file APP-2026-0002",
+   "subtitle": "Beta Construction DAC – Innovation Grant 2026",
+   "meta": "Contoso – Incentives Department · Extract from the “Contoso Grants Online” portal · Fictional data",
+   "blocks": [
+    [
+     "h1",
+     "1. Summary data"
+    ],
+    [
+     "table",
+     [
+      "Field",
+      "Value"
+     ],
+     [
+      [
+       "Application",
+       "APP-2026-0002"
+      ],
+      [
+       "Business",
+       "Beta Construction DAC"
+      ],
+      [
+       "VAT number (Form A)",
+       "IE2000022B"
+      ],
+      [
+       "Operating site",
+       "Cork"
+      ],
+      [
+       "Size",
+       "medium"
+      ],
+      [
+       "Track",
+       "Track 2"
+      ],
+      [
+       "Project title",
+       "Energy efficiency of the warehouse: LED lighting and heat pump"
+      ],
+      [
+       "Declared eligible cost (VAT excluded)",
+       "€91,000"
+      ],
+      [
+       "Grant requested",
+       "€54,600"
+      ],
+      [
+       "Submission date",
+       "21 September 2026"
+      ],
+      [
+       "Competent office",
+       "Cork"
+      ],
+      [
+       "Legal representative",
+       "Eric Martin"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documents in the file"
+    ],
+    [
+     "table",
+     [
+      "No.",
+      "Document",
+      "Date",
+      "Digital signature",
+      "Notes"
+     ],
+     [
+      [
+       "1",
+       "Form A – Grant application (v2.1)",
+       "21/09/2026",
+       "Yes (Eric Martin)",
+       "Cost €91,000; grant requested €54,600; VAT no. IE2000022B"
+      ],
+      [
+       "2",
+       "Form B – Self-declaration (v2.0)",
+       "21/09/2026",
+       "Yes (Eric Martin)",
+       "Version 2.0, without registered e-mail"
+      ],
+      [
+       "4",
+       "Technical report of the project",
+       "19/09/2026",
+       "Yes (Eric Martin)",
+       "4 pages; Track 2"
+      ],
+      [
+       "5",
+       "Quotes (2)",
+       "10/09/2026 and 12/09/2026",
+       "Partial",
+       "See section 3"
+      ],
+      [
+       "6",
+       "Company extract",
+       "08/09/2026",
+       "n.a.",
+       "VAT no. IE2000022B; operating site Cork; legal representative Eric Martin"
+      ],
+      [
+       "7",
+       "Identity document of the legal representative",
+       "expires 11/2029",
+       "n.a.",
+       "Passport"
+      ],
+      [
+       "10",
+       "Bank details",
+       "21/09/2026",
+       "Yes (Eric Martin)",
+       "IBAN IE48ZZZZ99001600200022 in the name of Beta Construction DAC"
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Quotes"
+    ],
+    [
+     "table",
+     [
+      "Quote",
+      "Supplier",
+      "Subject",
+      "Net amount",
+      "VAT",
+      "Date"
+     ],
+     [
+      [
+       "Q-01",
+       "Efficient Light Ltd",
+       "Replacement of 420 light fittings with LED",
+       "€58,000",
+       "€13,340",
+       "10/09/2026"
+      ],
+      [
+       "Q-02",
+       "Alpine Heating Ltd",
+       "180 kW heat pump",
+       "€33,000",
+       "€7,590",
+       "12/09/2026 (not digitally signed)"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Extracts and notes"
+    ],
+    [
+     "p",
+     "Sum of the net amounts: €91,000. Medium business: grant rate 60%."
+    ],
+    [
+     "p",
+     "The file contains 7 of the 10 documents required by the checklist of the Review procedure."
+    ]
+   ]
+  },
+  "case3": {
+   "file": "Application APP-2026-0003 (FICTIONAL).pdf",
+   "title": "Application file APP-2026-0003",
+   "subtitle": "Gamma Farms Co-operative – Innovation Grant 2026",
+   "meta": "Contoso – Incentives Department · Extract from the “Contoso Grants Online” portal · Fictional data",
+   "blocks": [
+    [
+     "h1",
+     "1. Summary data"
+    ],
+    [
+     "table",
+     [
+      "Field",
+      "Value"
+     ],
+     [
+      [
+       "Application",
+       "APP-2026-0003"
+      ],
+      [
+       "Business",
+       "Gamma Farms Co-operative"
+      ],
+      [
+       "VAT number (Form A)",
+       "IE3000033C"
+      ],
+      [
+       "Operating site",
+       "Galway"
+      ],
+      [
+       "Size",
+       "small"
+      ],
+      [
+       "Track",
+       "Track 1"
+      ],
+      [
+       "Project title",
+       "Modernization of the packaging line"
+      ],
+      [
+       "Declared eligible cost (VAT excluded)",
+       "€121,500"
+      ],
+      [
+       "Grant requested",
+       "€85,000"
+      ],
+      [
+       "Submission date",
+       "25 September 2026"
+      ],
+      [
+       "Competent office",
+       "Dublin"
+      ],
+      [
+       "Legal representative",
+       "Hugh Hall"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documents in the file"
+    ],
+    [
+     "table",
+     [
+      "No.",
+      "Document",
+      "Date",
+      "Digital signature",
+      "Notes"
+     ],
+     [
+      [
+       "1",
+       "Form A – Grant application (v2.1)",
+       "25/09/2026",
+       "Yes (Hugh Hall)",
+       "Cost €121,500; grant requested €85,000; VAT no. IE3000033C"
+      ],
+      [
+       "2",
+       "Form B – Self-declaration (v2.1)",
+       "25/09/2026",
+       "Yes (Hugh Hall)",
+       "Registered e-mail: gammafarms@registered.example"
+      ],
+      [
+       "3",
+       "Form C – De minimis declaration",
+       "25/09/2026",
+       "Yes (Mark Hall)",
+       "Regional aid of €12,000 in 2025"
+      ],
+      [
+       "4",
+       "Technical report of the project",
+       "22/09/2026",
+       "Yes (Hugh Hall)",
+       "5 pages; Track 1"
+      ],
+      [
+       "5",
+       "Quotes (2)",
+       "12/03/2026 and 10/09/2026",
+       "Yes",
+       "See section 3"
+      ],
+      [
+       "6",
+       "Company extract",
+       "15/09/2026",
+       "n.a.",
+       "VAT no. IE3000038C; operating site Galway; legal representative Hugh Hall"
+      ],
+      [
+       "7",
+       "Identity document of the legal representative",
+       "expires 02/2030",
+       "n.a.",
+       "Passport card"
+      ],
+      [
+       "8",
+       "Tax Clearance Certificate",
+       "valid until 30/11/2026",
+       "n.a.",
+       "Compliant"
+      ],
+      [
+       "9",
+       "Project schedule",
+       "22/09/2026",
+       "Yes (Hugh Hall)",
+       "Completion planned in September 2027"
+      ],
+      [
+       "10",
+       "Bank details",
+       "25/09/2026",
+       "Yes (Hugh Hall)",
+       "IBAN IE37ZZZZ99001600300033 in the name of Gamma Farms Co-operative"
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Quotes"
+    ],
+    [
+     "table",
+     [
+      "Quote",
+      "Supplier",
+      "Subject",
+      "Net amount",
+      "VAT",
+      "Date"
+     ],
+     [
+      [
+       "Q-01",
+       "Pack Machines Ltd",
+       "Automatic packaging machine",
+       "€70,000",
+       "€16,100",
+       "12/03/2026"
+      ],
+      [
+       "Q-02",
+       "Central Automation Ltd",
+       "Conveyor belt and line sensors",
+       "€42,000",
+       "€9,660",
+       "10/09/2026"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Extracts and notes"
+    ],
+    [
+     "p",
+     "Small business: grant rate 70%."
+    ]
+   ]
+  },
+  "confidentialCase": {
+   "file": "Confidential application sheet (FICTIONAL).docx",
+   "title": "Confidential sheet – application APP-2026-0004",
+   "subtitle": "Delta Logistics Ltd – personal data and confidential economic information",
+   "meta": "Classification: Contoso Confidential (demo) · Internal use of the Incentives Department · Data generated for test",
+   "blocks": [
+    [
+     "p",
+     "**Warning**: confidential document. It contains personal data and non-public economic information. Do not forward outside Contoso."
+    ],
+    [
+     "h1",
+     "1. Shareholders"
+    ],
+    [
+     "table",
+     [
+      "Name",
+      "Role",
+      "PPS number (generated for test)",
+      "Place and date of birth"
+     ],
+     [
+      [
+       "Rita Ross",
+       "Sole director",
+       "9900101C",
+       "Limerick, 12/04/1978"
+      ],
+      [
+       "Andrew Ross",
+       "Shareholder (40%)",
+       "9900102E",
+       "Limerick, 03/11/1975"
+      ],
+      [
+       "Paula Brown",
+       "Shareholder (20%)",
+       "9900103G",
+       "Ennis, 21/07/1982"
+      ]
+     ],
+     [
+      2.2,
+      2,
+      3.2,
+      2.6
+     ]
+    ],
+    [
+     "h1",
+     "2. Bank details"
+    ],
+    [
+     "bullets",
+     [
+      "Project account: IBAN IE26ZZZZ99001600400044 in the name of Delta Logistics Ltd",
+      "Personal account of the director (for expense refunds): IBAN IE46ZZZZ99001601400045"
+     ]
+    ],
+    [
+     "h1",
+     "3. Confidential economic data"
+    ],
+    [
+     "table",
+     [
+      "Item",
+      "2024",
+      "2025"
+     ],
+     [
+      [
+       "Turnover",
+       "€3,980,000",
+       "€4,250,000"
+      ],
+      [
+       "EBITDA",
+       "€285,000",
+       "€312,000"
+      ],
+      [
+       "Net profit",
+       "€61,000",
+       "€48,000"
+      ],
+      [
+       "Net financial position",
+       "-€1,020,000",
+       "-€1,180,000"
+      ],
+      [
+       "Short-term bank exposure",
+       "€640,000",
+       "€710,000"
+      ]
+     ],
+     [
+      4,
+      3,
+      3
+     ]
+    ],
+    [
+     "h2",
+     "Confidential notes of the reviewer"
+    ],
+    [
+     "bullets",
+     [
+      "Internal credit rating: B+ (internal use).",
+      "Ongoing dispute with a supplier for €85,000 (uncertain outcome).",
+      "Request for an instalment plan on tax debts of €120,000 filed in July 2026."
+     ]
+    ]
+   ]
+  }
+ }
+}

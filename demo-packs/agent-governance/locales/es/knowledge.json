@@ -1,0 +1,1821 @@
+{
+ "_comment": "Knowledge documents of the es locale pack (fictional). Block model: [\"h1\"|\"h2\"|\"p\"|\"pi\"(italic), text], [\"slot\", \"slot-N\"] (text taken from the operator slots file), [\"bullets\"|\"numbered\", [items]], [\"table\", [headers], [[row]], [column weights]]. **bold** is allowed inside texts.",
+ "folders": {
+  "call": "Convocatoria Innovación 2026",
+  "inspections": "Inspecciones",
+  "notices": "Avisos",
+  "circulars": "Circulares",
+  "forms": "Formularios",
+  "cases": "Expedientes (ficticios)"
+ },
+ "personal": {
+  "companyContacts": {
+   "file": "Contactos de empresas (personal).xlsx",
+   "banner": "DOCUMENTO FICTICIO – SOLO DEMO · Archivo personal de Marta Salas (no gobernado)",
+   "sheet": "Contactos",
+   "headers": [
+    "Empresa",
+    "Contacto",
+    "Cargo",
+    "E-mail",
+    "Móvil",
+    "Notas personales"
+   ],
+   "rows": [
+    [
+     "Alfa Mecánica S.L.",
+     "Juan Ferrer",
+     "Responsable técnico",
+     "contact@alfamecanica.example",
+     "+34 910 000 101",
+     "Prefiere que le llamen después de las 15:00"
+    ],
+    [
+     "Beta Construcciones S.A.",
+     "Laura Martín",
+     "Responsable administrativa",
+     "contact@betaconstrucciones.example",
+     "+34 910 000 202",
+     "Ausente desde diciembre, sustituto aún no designado"
+    ],
+    [
+     "Gamma Agrícola S.Coop.",
+     "David León",
+     "Responsable del proyecto",
+     "contact@gammaagricola.example",
+     "+34 910 000 303",
+     "Número personal: no compartir"
+    ],
+    [
+     "Delta Logística S.L.",
+     "Rita Rojas",
+     "Administradora única",
+     "contact@deltalogistica.example",
+     "+34 910 000 404",
+     "Cumpleaños 12/04; conocida en el congreso de Zaragoza"
+    ],
+    [
+     "Épsilon Textil S.L.",
+     "Roberto Fuente",
+     "Socio gerente",
+     "contact@epsilontextil.example",
+     "+34 910 000 505",
+     "Contactar solo por mensaje de texto"
+    ],
+    [
+     "Zeta Sistemas S.L.",
+     "Carla Bajo",
+     "Propietaria",
+     "contact@zetasistemas.example",
+     "+34 910 000 606",
+     "Antigua compañera, relación informal"
+    ]
+   ]
+  }
+ },
+ "documents": {
+  "callSummary": {
+   "file": "Convocatoria Innovacion 2026 - Resumen (FICTICIO).docx",
+   "title": "Convocatoria Innovación 2026 – Resumen",
+   "subtitle": "Ayudas a empresas para modernización, eficiencia energética y digitalización",
+   "meta": "Contoso – Dirección de Incentivos · Versión 1.0 de 15 de junio de 2026 · Datos e importes ficticios",
+   "blocks": [
+    [
+     "h1",
+     "§1 Objeto"
+    ],
+    [
+     "p",
+     "La Convocatoria Innovación 2026 de Contoso apoya las inversiones de empresas que modernicen maquinaria e instalaciones, mejoren su eficiencia energética y digitalicen sus procesos. El presupuesto total es de 12 millones de euros."
+    ],
+    [
+     "h1",
+     "§2 Solicitantes elegibles"
+    ],
+    [
+     "p",
+     "Pueden presentar solicitud empresas de cualquier tamaño si, en la fecha de presentación:"
+    ],
+    [
+     "bullets",
+     [
+      "tienen al menos un centro operativo activo en España;",
+      "están inscritas en el Registro Mercantil;",
+      "están al corriente con la Seguridad Social (certificado válido);",
+      "no se encuentran en liquidación, concurso ni ningún otro procedimiento de insolvencia."
+     ]
+    ],
+    [
+     "p",
+     "Cada empresa puede presentar una sola solicitud, para una única línea de actuación."
+    ],
+    [
+     "h1",
+     "§3 Tipos de proyecto"
+    ],
+    [
+     "table",
+     [
+      "Línea",
+      "Tipo",
+      "Ejemplos de actuaciones subvencionables"
+     ],
+     [
+      [
+       "Línea 1",
+       "Modernización de maquinaria e instalaciones",
+       "Sustitución o mejora de maquinaria; soluciones asociadas a maquinaria que reduzcan ruido y vibración (cabinas insonorizadas, apoyos antivibratorios, paneles absorbentes); automatización de líneas de producción."
+      ],
+      [
+       "Línea 2",
+       "Eficiencia energética",
+       "Iluminación LED; bombas de calor; sistemas de monitorización energética; aislamiento de instalaciones."
+      ],
+      [
+       "Línea 3",
+       "Digitalización de procesos",
+       "Software de gestión y planificación; sensores IoT; mantenimiento predictivo; formación digital del personal en las nuevas herramientas."
+      ]
+     ],
+     [
+      1.2,
+      3,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "§4 Costes subvencionables y no subvencionables"
+    ],
+    [
+     "h2",
+     "§4.1 Costes subvencionables"
+    ],
+    [
+     "bullets",
+     [
+      "adquisición de maquinaria, instalaciones, equipos y software nuevos;",
+      "instalación, pruebas y puesta en servicio;",
+      "formación del personal en el uso de los activos adquiridos, hasta el 10% del coste;",
+      "consultoría técnica relacionada con el proyecto, hasta el 5% del coste."
+     ]
+    ],
+    [
+     "h2",
+     "§4.2 Costes no subvencionables"
+    ],
+    [
+     "bullets",
+     [
+      "mantenimiento ordinario y sustitución de repuestos;",
+      "activos usados o en arrendamiento;",
+      "IVA, salvo que la empresa no pueda recuperarlo;",
+      "costes incurridos antes de la fecha de presentación de la solicitud."
+     ]
+    ],
+    [
+     "h1",
+     "§5 Ayuda"
+    ],
+    [
+     "p",
+     "La ayuda es a fondo perdido y se calcula sobre los costes subvencionables netos de IVA."
+    ],
+    [
+     "table",
+     [
+      "Línea",
+      "Microempresas y pequeñas empresas",
+      "Medianas y grandes empresas",
+      "Ayuda máxima"
+     ],
+     [
+      [
+       "Línea 1",
+       "70%",
+       "60%",
+       "120.000 €"
+      ],
+      [
+       "Línea 2",
+       "70%",
+       "60%",
+       "90.000 €"
+      ],
+      [
+       "Línea 3",
+       "70%",
+       "60%",
+       "60.000 €"
+      ]
+     ],
+     [
+      1.2,
+      2.5,
+      2.5,
+      2.5
+     ]
+    ],
+    [
+     "p",
+     "El coste subvencionable mínimo de un proyecto es de 10.000 €. La ayuda puede acumularse con otras ayudas solo para costes distintos o, para los mismos costes, dentro del 100% del coste y de los límites del régimen de minimis (Formulario C)."
+    ],
+    [
+     "h1",
+     "§6 Plazos"
+    ],
+    [
+     "table",
+     [
+      "Fase",
+      "Plazo"
+     ],
+     [
+      [
+       "Publicación de la convocatoria",
+       "15 de junio de 2026"
+      ],
+      [
+       "Apertura del plazo de solicitudes",
+       "1 de septiembre de 2026, 10:00"
+      ],
+      [
+       "Cierre del plazo de solicitudes",
+       "30 de octubre de 2026, 18:00"
+      ],
+      [
+       "Subida de presupuestos complementarios",
+       "30 de noviembre de 2026, 18:00 (salvo prórroga por circular)"
+      ],
+      [
+       "Comunicación de resultados",
+       "antes del 28 de febrero de 2027"
+      ],
+      [
+       "Ejecución del proyecto",
+       "en los 12 meses siguientes a la concesión de la ayuda"
+      ],
+      [
+       "Justificación final",
+       "en los 60 días siguientes a la finalización del proyecto"
+      ]
+     ],
+     [
+      5,
+      5
+     ]
+    ],
+    [
+     "h1",
+     "§7 Documentación requerida"
+    ],
+    [
+     "p",
+     "Deben adjuntarse a la solicitud los documentos siguientes (comprobaciones detalladas en el «Procedimiento de revisión»):"
+    ],
+    [
+     "numbered",
+     [
+      "Formulario A – Solicitud de ayuda, firmado digitalmente;",
+      "Formulario B – Declaración responsable de elegibilidad;",
+      "Formulario C – Declaración de minimis;",
+      "memoria técnica del proyecto;",
+      "presupuestos, al menos uno por cada partida de coste;",
+      "nota simple del Registro Mercantil, con antigüedad no superior a 6 meses;",
+      "documento de identidad del representante legal;",
+      "certificado de estar al corriente con la Seguridad Social válido;",
+      "calendario del proyecto;",
+      "datos bancarios (IBAN) a nombre de la empresa."
+     ]
+    ],
+    [
+     "h1",
+     "§8 Cómo presentar la solicitud"
+    ],
+    [
+     "p",
+     "Las solicitudes se presentan únicamente en el portal «Contoso Convocatorias en línea», con firma digital del representante legal (formatos CAdES .p7m o PAdES). Las comunicaciones oficiales se realizan mediante la dirección de correo electrónico certificado de la empresa. No se tienen en cuenta los documentos enviados por correo electrónico ordinario."
+    ],
+    [
+     "h1",
+     "§9 Contacto"
+    ],
+    [
+     "bullets",
+     [
+      "E-mail: innovacion-convocatoria@contoso.example",
+      "Correo electrónico certificado: innovacion-convocatoria@registered.contoso.example",
+      "Teléfono: +34 910 000 000 (lunes a viernes, 9:00–13:00)"
+     ]
+    ],
+    [
+     "p",
+     "La Dirección de Incentivos responde en un plazo de 5 días laborables. No se emiten opiniones preliminares sobre la elegibilidad de proyectos."
+    ]
+   ]
+  },
+  "callFaq": {
+   "file": "Convocatoria Innovacion 2026 - FAQ (FICTICIO).docx",
+   "title": "FAQ – Convocatoria Innovación 2026",
+   "subtitle": "Preguntas frecuentes de las empresas",
+   "meta": "Contoso – Dirección de Incentivos · Actualización de 20 de septiembre de 2026 · Contenido ficticio",
+   "blocks": [
+    [
+     "h2",
+     "FAQ 1 – ¿Es subvencionable un proyecto para modernizar maquinaria, por ejemplo para reducir el ruido en el taller?"
+    ],
+    [
+     "p",
+     "Sí. Encaja en la Línea 1 «Modernización de maquinaria e instalaciones» si incluye la sustitución o mejora de maquinaria o soluciones asociadas a maquinaria que reduzcan ruido y vibración (cabinas insonorizadas, apoyos antivibratorios, paneles absorbentes). El mantenimiento ordinario por sí solo no es subvencionable."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §3 y §4."
+    ],
+    [
+     "h2",
+     "FAQ 2 – ¿Pueden solicitar la ayuda las microempresas?"
+    ],
+    [
+     "p",
+     "Sí. Las microempresas y pequeñas empresas reciben una ayuda del 70% de los costes subvencionables, frente al 60% de las medianas y grandes empresas, siempre dentro del máximo de la línea."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §2 y §5."
+    ],
+    [
+     "h2",
+     "FAQ 3 – ¿Puede acumularse la ayuda con otros incentivos?"
+    ],
+    [
+     "p",
+     "Sí, con otras ayudas para costes distintos. Para los mismos costes, la acumulación se permite dentro del 100% del coste y de los límites del régimen de minimis, que debe declararse en el Formulario C."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §5."
+    ],
+    [
+     "h2",
+     "FAQ 4 – ¿Cómo y hasta cuándo se suben los presupuestos?"
+    ],
+    [
+     "p",
+     "En el portal «Contoso Convocatorias en línea», sección «Documentos», como archivos PDF firmados digitalmente por el representante legal, con un máximo de 10 MB por archivo, hasta el 30 de noviembre de 2026 a las 18:00. Cualquier prórroga se decide solo por circular."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §6 y §8."
+    ],
+    [
+     "h2",
+     "FAQ 5 – ¿Es obligatoria la firma digital?"
+    ],
+    [
+     "p",
+     "Sí, para los Formularios A, B y C y para los presupuestos. Se aceptan formatos CAdES (.p7m) y PAdES (PDF firmado)."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §8."
+    ],
+    [
+     "h2",
+     "FAQ 6 – ¿Son posibles prórrogas de los plazos?"
+    ],
+    [
+     "p",
+     "Las prórrogas se deciden únicamente mediante circular de la Dirección de Incentivos, publicada en la sección «Circulares» del portal. Las comunicaciones informales no tienen validez."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §6."
+    ],
+    [
+     "h2",
+     "FAQ 7 – ¿Cómo se justifica el proyecto?"
+    ],
+    [
+     "p",
+     "En los 60 días siguientes a la finalización del proyecto y, en todo caso, dentro de los 12 meses posteriores a la concesión, la empresa sube facturas, justificantes de pago trazables, informe final y fotografías de los activos instalados. El pago se efectúa en los 90 días siguientes a la aprobación de la justificación."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §6."
+    ],
+    [
+     "h2",
+     "FAQ 8 – ¿Con quién puedo contactar para obtener información?"
+    ],
+    [
+     "p",
+     "Escriba a innovacion-convocatoria@contoso.example o llame al +34 910 000 000 (lunes–viernes, 9:00–13:00). La respuesta llega en un plazo de 5 días laborables. No se emiten opiniones preliminares sobre elegibilidad."
+    ],
+    [
+     "pi",
+     "Referencia: Resumen §9."
+    ]
+   ]
+  },
+  "reviewProcedure": {
+   "file": "Procedimiento de revision (FICTICIO).docx",
+   "title": "Procedimiento de revisión de solicitudes",
+   "subtitle": "Convocatoria Innovación 2026 – fases, lista documental y comprobaciones de coherencia",
+   "meta": "Contoso – Dirección de Incentivos · Procedimiento interno n.º PR-07 · Versión 1.2 de 1 de septiembre de 2026 · Contenido ficticio",
+   "blocks": [
+    [
+     "h1",
+     "§1 Objeto"
+    ],
+    [
+     "p",
+     "El procedimiento describe cómo los técnicos instructores revisan las solicitudes de la Convocatoria Innovación 2026, desde la recepción hasta la propuesta de resolución, y qué documentos y comprobaciones de coherencia son obligatorios."
+    ],
+    [
+     "h1",
+     "§2 Fases de revisión"
+    ],
+    [
+     "numbered",
+     [
+      "**Admisibilidad** (en los 10 días laborables siguientes a la presentación): solicitud presentada en plazo, en el portal y con firma digital válida.",
+      "**Elegibilidad**: requisitos del solicitante (Resumen §2) y coherencia del proyecto con la línea elegida (Resumen §3).",
+      "**Comprobación documental**: revisión de los 10 documentos de la lista (§3) y de las comprobaciones de coherencia (§4).",
+      "**Solicitud de documentación adicional**: si faltan documentos o existen incoherencias, el técnico instructor envía una solicitud por correo electrónico certificado; la empresa dispone de 10 días para responder.",
+      "**Valoración técnica**: puntuación sobre 100 puntos (calidad del proyecto 40, impacto 30, sostenibilidad económica 20, calendario 10).",
+      "**Propuesta de resolución**: el técnico instructor redacta la propuesta motivada.",
+      "**Decisión**: la directora de la Dirección de Incentivos aprueba o deniega; el resultado se comunica por correo electrónico certificado."
+     ]
+    ],
+    [
+     "h1",
+     "§3 Lista de comprobación documental (10 documentos)"
+    ],
+    [
+     "table",
+     [
+      "N.º",
+      "Documento",
+      "Comprobaciones mínimas"
+     ],
+     [
+      [
+       "1",
+       "Formulario A – Solicitud de ayuda",
+       "Firma digital del representante legal; versión 2.1 (2.0 aceptada hasta el 15 de octubre de 2026); ayuda solicitada coherente con costes y porcentaje."
+      ],
+      [
+       "2",
+       "Formulario B – Declaración responsable de elegibilidad",
+       "Completo en todos sus campos, dirección de correo electrónico certificado indicada (obligatoria desde la versión 2.1), firmado digitalmente."
+      ],
+      [
+       "3",
+       "Formulario C – Declaración de minimis",
+       "Ayudas del ejercicio en curso y de los dos ejercicios anteriores; firmado digitalmente."
+      ],
+      [
+       "4",
+       "Memoria técnica del proyecto",
+       "Línea, objetivos, activos que se adquirirán, resultados esperados."
+      ],
+      [
+       "5",
+       "Presupuestos",
+       "A nombre de la empresa; IVA desglosado; antigüedad no superior a 6 meses antes de la presentación; firmados; suma de importes netos igual al coste del Formulario A."
+      ],
+      [
+       "6",
+       "Nota simple del Registro Mercantil",
+       "Antigüedad no superior a 6 meses; NIF y centro coherentes con el Formulario A."
+      ],
+      [
+       "7",
+       "Documento de identidad del representante legal",
+       "Válido."
+      ],
+      [
+       "8",
+       "Certificado de estar al corriente con la Seguridad Social",
+       "Válido en la fecha de presentación."
+      ],
+      [
+       "9",
+       "Calendario del proyecto",
+       "Actividades y fechas compatibles con la finalización en 12 meses."
+      ],
+      [
+       "10",
+       "Datos bancarios (IBAN)",
+       "Cuenta a nombre de la empresa solicitante."
+      ]
+     ],
+     [
+      0.6,
+      3.4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "§4 Comprobaciones de coherencia"
+    ],
+    [
+     "bullets",
+     [
+      "**Fechas**: presupuestos, nota simple del Registro Mercantil y certificado de estar al corriente con la Seguridad Social dentro de su validez; ningún coste anterior a la presentación.",
+      "**Importes**: ayuda solicitada = coste subvencionable × porcentaje de la empresa (70% micro y pequeñas, 60% medianas y grandes), redondeado al euro y dentro del máximo de la línea.",
+      "**NIF**: idéntico en todos los documentos.",
+      "**Firmas**: firmas digitales válidas del representante legal que figure en la nota simple del Registro Mercantil."
+     ]
+    ],
+    [
+     "h1",
+     "§5 Solicitud de documentación adicional (plantilla)"
+    ],
+    [
+     "p",
+     "Asunto: Convocatoria Innovación 2026 – Expediente <número> – Solicitud de documentación adicional"
+    ],
+    [
+     "p",
+     "En relación con el expediente indicado, le rogamos que remita a través del portal «Contoso Convocatorias en línea», en el plazo de 10 días desde la recepción de esta comunicación, los siguientes documentos o aclaraciones: <lista>. En ausencia de respuesta, el expediente se valorará sobre la base de la documentación disponible."
+    ],
+    [
+     "p",
+     "Atentamente – El técnico instructor, Contoso – Dirección de Incentivos"
+    ],
+    [
+     "h1",
+     "§6 Supervisión humana"
+    ],
+    [
+     "p",
+     "La decisión sobre la elegibilidad corresponde siempre al técnico instructor y a la directora. Las herramientas automatizadas de apoyo solo pueden recopilar evidencias y proponer textos: no deciden el resultado de las solicitudes."
+    ]
+   ]
+  },
+  "inspectionChecklist": {
+   "file": "Inspecciones de proyectos financiados (FICTICIO).docx",
+   "title": "Inspecciones de proyectos financiados",
+   "subtitle": "Convocatoria Innovación 2026 – planificación y lista de comprobación de la visita",
+   "meta": "Contoso – Dirección de Incentivos · Instrucción operativa n.º IO-03 · Versión 1.0 de 1 de julio de 2026 · Contenido ficticio",
+   "blocks": [
+    [
+     "h1",
+     "§1 Objeto"
+    ],
+    [
+     "p",
+     "Las inspecciones in situ verifican que los activos financiados se han adquirido, instalado y usado según lo previsto en el proyecto aprobado."
+    ],
+    [
+     "h1",
+     "§2 Planificación de la visita de inspección"
+    ],
+    [
+     "bullets",
+     [
+      "preaviso mínimo de 5 días laborables, enviado por correo electrónico certificado a la persona de contacto indicada en la solicitud;",
+      "ventanas disponibles: mañana 9:00–13:00 o tarde 14:00–17:00, solo en días laborables;",
+      "duración orientativa: 2 horas; debe estar presente la persona de contacto o un delegado;",
+      "el técnico lleva la lista de comprobación del §3 y la relación de activos financiados."
+     ]
+    ],
+    [
+     "h1",
+     "§3 Lista de comprobación de la visita (12 puntos)"
+    ],
+    [
+     "table",
+     [
+      "N.º",
+      "Comprobación",
+      "Resultado (Conforme / No conforme / N.A.)"
+     ],
+     [
+      [
+       "1",
+       "Identidad de la persona de contacto presente y delegación del representante legal",
+       ""
+      ],
+      [
+       "2",
+       "Correspondencia entre activos instalados y proyecto aprobado",
+       ""
+      ],
+      [
+       "3",
+       "Correspondencia de números de serie con facturas y presupuestos",
+       ""
+      ],
+      [
+       "4",
+       "Marcado CE y manuales de usuario de la maquinaria",
+       ""
+      ],
+      [
+       "5",
+       "Fecha de instalación y acta de puesta en servicio",
+       ""
+      ],
+      [
+       "6",
+       "Facturas originales y justificantes de pago trazables",
+       ""
+      ],
+      [
+       "7",
+       "Ausencia de doble financiación sobre los mismos activos",
+       ""
+      ],
+      [
+       "8",
+       "Línea 2: datos de consumo energético antes y después de la actuación",
+       ""
+      ],
+      [
+       "9",
+       "Línea 3: licencias de software activas y usuarios habilitados",
+       ""
+      ],
+      [
+       "10",
+       "Formación del personal sobre los nuevos activos (registros firmados)",
+       ""
+      ],
+      [
+       "11",
+       "Obligaciones de publicidad: placa «Proyecto cofinanciado – Convocatoria Innovación 2026»",
+       ""
+      ],
+      [
+       "12",
+       "Documentación fotográfica y firma del acta por técnico y persona de contacto",
+       ""
+      ]
+     ],
+     [
+      0.6,
+      6,
+      3.4
+     ]
+    ],
+    [
+     "h1",
+     "§4 Resultado e informe"
+    ],
+    [
+     "p",
+     "El informe recoge el resultado de cada punto, las posibles no conformidades y las actuaciones requeridas. El resultado final de la inspección lo decide el responsable de la oficina, no el técnico durante la visita."
+    ],
+    [
+     "h1",
+     "§5 Comunicación a la empresa (plantilla)"
+    ],
+    [
+     "p",
+     "Asunto: Convocatoria Innovación 2026 – Expediente <número> – Aviso de visita de inspección"
+    ],
+    [
+     "p",
+     "Estimada persona de contacto: le informamos de que la Dirección de Incentivos realizará una visita de inspección al centro <centro> en una de las siguientes ventanas: <fechas propuestas>. Le rogamos confirme la ventana preferida y asegure la presencia de una persona de contacto, con facturas, justificantes y documentación de los activos financiados."
+    ],
+    [
+     "p",
+     "Atentamente – El técnico asignado, Contoso – Dirección de Incentivos"
+    ]
+   ]
+  },
+  "circular1": {
+   "file": "Circular 1-2026 - Subida de documentos (FICTICIO).docx",
+   "title": "Circular n.º 1/2026 de 10 de septiembre de 2026",
+   "subtitle": "Asunto: Convocatoria Innovación 2026 – forma de subir los documentos",
+   "meta": "Contoso – Dirección de Incentivos · Dirigida a: personal de la Dirección de Incentivos y oficinas · Contenido ficticio",
+   "blocks": [
+    [
+     "p",
+     "Con el fin de armonizar la tramitación de las solicitudes de la Convocatoria Innovación 2026, se establece lo siguiente."
+    ],
+    [
+     "numbered",
+     [
+      "**Plazo para presupuestos complementarios**: los presupuestos complementarios podrán subirse al portal «Contoso Convocatorias en línea» hasta el **30 de noviembre de 2026, 18:00**.",
+      "**Formato**: cada documento debe subirse como archivo PDF, con tamaño máximo de **10 MB por archivo**.",
+      "**Firma**: los presupuestos deben estar firmados digitalmente por el representante legal de la empresa.",
+      "**Nombres de archivo**: <número de expediente>-<tipo de documento>-<secuencia>.pdf (ejemplo: EXP-2026-0001-PRE-01.pdf).",
+      "**Canales**: no se consideran los documentos enviados por correo ordinario o certificado; solo cuenta la subida al portal."
+     ]
+    ],
+    [
+     "p",
+     "Esta circular será aplicable desde la fecha de su publicación."
+    ],
+    [
+     "pi",
+     "La Directora de la Dirección de Incentivos"
+    ]
+   ]
+  },
+  "circular2": {
+   "file": "Circular 2-2026 - Prorroga del plazo (FICTICIO).docx",
+   "title": "Circular n.º 2/2026 de 22 de septiembre de 2026",
+   "subtitle": "Asunto: Convocatoria Innovación 2026 – prórroga del plazo para subir presupuestos complementarios",
+   "meta": "Contoso – Dirección de Incentivos · Dirigida a: personal de la Dirección de Incentivos y oficinas · Contenido ficticio",
+   "blocks": [
+    [
+     "p",
+     "Tras el mantenimiento extraordinario del portal «Contoso Convocatorias en línea», se establece lo siguiente."
+    ],
+    [
+     "numbered",
+     [
+      "El plazo para subir presupuestos complementarios fijado en el punto 1 de la Circular n.º 1/2026 se **prorroga hasta el 15 de diciembre de 2026, 18:00**.",
+      "El tamaño máximo de archivo se **eleva a 20 MB por archivo**.",
+      "Las demás disposiciones de la Circular n.º 1/2026 (firma digital, nombres de archivo, canales) permanecen inalteradas.",
+      "La prórroga **no** afecta al plazo de presentación de solicitudes, que se mantiene el 30 de octubre de 2026, 18:00."
+     ]
+    ],
+    [
+     "p",
+     "Se invita a las oficinas a informar a las empresas que ya se hayan puesto en contacto con ellas."
+    ],
+    [
+     "pi",
+     "La Directora de la Dirección de Incentivos"
+    ]
+   ]
+  },
+  "callForms": {
+   "file": "Formularios de la convocatoria (FICTICIO).docx",
+   "title": "Formularios de la Convocatoria Innovación 2026",
+   "subtitle": "Formulario A, Formulario B y Formulario C – campos e instrucciones",
+   "meta": "Contoso – Dirección de Incentivos · Versión de formularios 2.1 de 1 de octubre de 2026 · Contenido ficticio",
+   "blocks": [
+    [
+     "p",
+     "Los formularios se cumplimentan en línea en el portal «Contoso Convocatorias en línea» y se firman digitalmente. No introduzca datos personales que los campos no requieran."
+    ],
+    [
+     "h1",
+     "Formulario A – Solicitud de ayuda (versión 2.1)"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Estado",
+      "Notas"
+     ],
+     [
+      [
+       "Razón social y forma jurídica",
+       "Obligatorio",
+       "Como en la nota simple del Registro Mercantil."
+      ],
+      [
+       "NIF",
+       "Obligatorio",
+       "Idéntico en todos los documentos."
+      ],
+      [
+       "Número registral de la empresa",
+       "Obligatorio",
+       ""
+      ],
+      [
+       "Domicilio social",
+       "Obligatorio",
+       ""
+      ],
+      [
+       "Centro operativo del proyecto",
+       "Obligatorio",
+       "Debe estar activo en la fecha de presentación."
+      ],
+      [
+       "Representante legal (nombre, apellidos, DNI/NIE)",
+       "Obligatorio",
+       "Firmante de la solicitud."
+      ],
+      [
+       "Correo electrónico certificado",
+       "Obligatorio",
+       ""
+      ],
+      [
+       "Tamaño de la empresa",
+       "Obligatorio",
+       "Micro, pequeña, mediana o grande."
+      ],
+      [
+       "Línea del proyecto",
+       "Obligatorio",
+       "Solo una de las Líneas 1, 2 y 3."
+      ],
+      [
+       "Título y resumen del proyecto",
+       "Obligatorio",
+       "Máximo 1.000 caracteres."
+      ],
+      [
+       "Coste subvencionable total (IVA excluido)",
+       "Obligatorio",
+       "Suma de los importes netos de los presupuestos."
+      ],
+      [
+       "Ayuda solicitada",
+       "Obligatorio",
+       "Coste × porcentaje, dentro del máximo."
+      ],
+      [
+       "Contacto operativo y teléfono",
+       "Opcional",
+       ""
+      ],
+      [
+       "Firma digital",
+       "Obligatorio",
+       "CAdES o PAdES."
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "Formulario B – Declaración responsable de elegibilidad"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Estado",
+      "Notas"
+     ],
+     [
+      [
+       "Inscripción en el Registro Mercantil",
+       "Obligatorio",
+       "Número registral."
+      ],
+      [
+       "Estar al corriente con la Seguridad Social",
+       "Obligatorio",
+       "Datos del certificado de estar al corriente con la Seguridad Social."
+      ],
+      [
+       "Ausencia de procedimientos de insolvencia",
+       "Obligatorio",
+       ""
+      ],
+      [
+       "Cumplimiento de la normativa ambiental y de seguridad",
+       "Obligatorio",
+       ""
+      ],
+      [
+       "Dirección de correo electrónico certificado de la empresa",
+       "Obligatorio",
+       "Obligatoria desde la versión 2.1."
+      ],
+      [
+       "Firma digital del representante legal",
+       "Obligatorio",
+       ""
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "Formulario C – Declaración de minimis"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Estado",
+      "Notas"
+     ],
+     [
+      [
+       "Ayudas recibidas en el ejercicio en curso y los dos anteriores",
+       "Obligatorio",
+       "Órgano concedente, fecha e importe de cada ayuda."
+      ],
+      [
+       "Empresas vinculadas («empresa única»)",
+       "Obligatorio",
+       "Relación de empresas vinculadas, si las hay."
+      ],
+      [
+       "Declaración de que no se supera el límite",
+       "Obligatorio",
+       ""
+      ],
+      [
+       "Firma digital del representante legal",
+       "Obligatorio",
+       ""
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4.4
+     ]
+    ],
+    [
+     "h2",
+     "Errores comunes"
+    ],
+    [
+     "numbered",
+     [
+      "NIF distinto entre el Formulario A y la nota simple del Registro Mercantil.",
+      "Ayuda solicitada calculada sobre el importe con IVA incluido.",
+      "Formulario B en versión 2.0 sin correo electrónico certificado después del 15 de octubre de 2026."
+     ]
+    ]
+   ]
+  },
+  "formsNotice": {
+   "file": "Aviso a empresas - actualizacion de formularios (FICTICIO).docx",
+   "title": "Aviso n.º 3/2026 de 24 de septiembre de 2026",
+   "subtitle": "Convocatoria Innovación 2026 – actualización de los formularios",
+   "meta": "Contoso – Dirección de Incentivos · Aviso a las empresas solicitantes · Contenido ficticio",
+   "blocks": [
+    [
+     "p",
+     "Estimadas empresas: les informamos de que se han actualizado los formularios de la Convocatoria Innovación 2026. Les rogamos tengan en cuenta los cambios siguientes:"
+    ],
+    [
+     "numbered",
+     [
+      "Desde el **1 de octubre de 2026** está disponible la **versión 2.1 del Formulario A**; la versión 2.0 se acepta hasta el 15 de octubre de 2026.",
+      "En el **Formulario B** la **dirección de correo electrónico certificado** de la empresa pasa a ser **obligatoria**.",
+      "Los **presupuestos** deben mostrar el **IVA desglosado** respecto del importe neto; los presupuestos que no lo hagan serán objeto de solicitud de documentación adicional."
+     ]
+    ],
+    [
+     "p",
+     "Los formularios actualizados están disponibles en el portal «Contoso Convocatorias en línea», sección «Formularios». Para información: innovacion-convocatoria@contoso.example."
+    ],
+    [
+     "pi",
+     "Contoso – Dirección de Incentivos"
+    ],
+    [
+     "slot",
+     "slot-1"
+    ]
+   ]
+  },
+  "applicantsList": {
+   "file": "Listado de solicitantes (FICTICIO).docx",
+   "title": "Listado de empresas solicitantes",
+   "subtitle": "Convocatoria Innovación 2026 – situación a 25 de septiembre de 2026",
+   "meta": "Contoso – Dirección de Incentivos · Uso interno · Contenido ficticio",
+   "blocks": [
+    [
+     "h1",
+     "Empresas con solicitud presentada"
+    ],
+    [
+     "table",
+     [
+      "Expediente",
+      "Empresa",
+      "Centro",
+      "Línea",
+      "Ayuda solicitada",
+      "Contacto",
+      "E-mail",
+      "Teléfono"
+     ],
+     [
+      [
+       "EXP-2026-0001",
+       "Alfa Mecánica S.L.",
+       "Madrid",
+       "Línea 1",
+       "70.000 €",
+       "Juan Ferrer",
+       "contact@alfamecanica.example",
+       "+34 910 000 101"
+      ],
+      [
+       "EXP-2026-0002",
+       "Beta Construcciones S.A.",
+       "Sevilla",
+       "Línea 2",
+       "54.600 €",
+       "Laura Martín",
+       "contact@betaconstrucciones.example",
+       "+34 910 000 202"
+      ],
+      [
+       "EXP-2026-0003",
+       "Gamma Agrícola S.Coop.",
+       "Valencia",
+       "Línea 1",
+       "85.000 €",
+       "David León",
+       "contact@gammaagricola.example",
+       "+34 910 000 303"
+      ],
+      [
+       "EXP-2026-0004",
+       "Delta Logística S.L.",
+       "Zaragoza",
+       "Línea 3",
+       "38.400 €",
+       "Rita Rojas",
+       "contact@deltalogistica.example",
+       "+34 910 000 404"
+      ],
+      [
+       "EXP-2026-0005",
+       "Épsilon Textil S.L.",
+       "Bilbao",
+       "Línea 2",
+       "26.250 €",
+       "Roberto Fuente",
+       "contact@epsilontextil.example",
+       "+34 910 000 505"
+      ]
+     ],
+     [
+      1.7,
+      2.2,
+      1.1,
+      0.9,
+      1.4,
+      1.5,
+      2.6,
+      1.7
+     ]
+    ],
+    [
+     "p",
+     "El listado se actualiza automáticamente desde el portal; los datos de contacto son los indicados en las solicitudes."
+    ]
+   ]
+  },
+  "case1": {
+   "file": "Expediente EXP-2026-0001 (FICTICIO).pdf",
+   "title": "Expediente EXP-2026-0001",
+   "subtitle": "Alfa Mecánica S.L. – Convocatoria Innovación 2026",
+   "meta": "Contoso – Dirección de Incentivos · Extracto del portal «Contoso Convocatorias en línea» · Datos ficticios",
+   "blocks": [
+    [
+     "h1",
+     "1. Datos resumen"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Valor"
+     ],
+     [
+      [
+       "Expediente",
+       "EXP-2026-0001"
+      ],
+      [
+       "Empresa",
+       "Alfa Mecánica S.L."
+      ],
+      [
+       "NIF (Formulario A)",
+       "ESB10000011"
+      ],
+      [
+       "Centro operativo",
+       "Madrid"
+      ],
+      [
+       "Tamaño",
+       "pequeña"
+      ],
+      [
+       "Línea",
+       "Línea 1"
+      ],
+      [
+       "Título del proyecto",
+       "Sustitución de dos prensas e instalación de cabinas insonorizadas"
+      ],
+      [
+       "Coste subvencionable declarado (IVA excluido)",
+       "100.000 €"
+      ],
+      [
+       "Ayuda solicitada",
+       "70.000 €"
+      ],
+      [
+       "Fecha de presentación",
+       "18 de septiembre de 2026"
+      ],
+      [
+       "Oficina competente",
+       "Madrid"
+      ],
+      [
+       "Representante legal",
+       "Carlos Ferrer"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documentos del expediente"
+    ],
+    [
+     "table",
+     [
+      "N.º",
+      "Documento",
+      "Fecha",
+      "Firma digital",
+      "Notas"
+     ],
+     [
+      [
+       "1",
+       "Formulario A – Solicitud de ayuda (v2.1)",
+       "18/09/2026",
+       "Sí (Carlos Ferrer)",
+       "Coste 100.000 €; ayuda solicitada 70.000 €; NIF ESB10000011"
+      ],
+      [
+       "2",
+       "Formulario B – Declaración responsable (v2.1)",
+       "18/09/2026",
+       "Sí (Carlos Ferrer)",
+       "Correo electrónico certificado: alfamecanica@registered.example"
+      ],
+      [
+       "3",
+       "Formulario C – Declaración de minimis",
+       "18/09/2026",
+       "Sí (Carlos Ferrer)",
+       "Sin ayudas en el ejercicio en curso ni en los dos anteriores"
+      ],
+      [
+       "4",
+       "Memoria técnica del proyecto",
+       "15/09/2026",
+       "Sí (Carlos Ferrer)",
+       "6 páginas; Línea 1; reducción de ruido en la zona de prensas"
+      ],
+      [
+       "5",
+       "Presupuestos (2)",
+       "02/09/2026 y 05/09/2026",
+       "Sí",
+       "Véase sección 3"
+      ],
+      [
+       "6",
+       "Nota simple del Registro Mercantil",
+       "01/09/2026",
+       "n.a.",
+       "NIF ESB10000011; centro operativo Madrid; representante legal Carlos Ferrer"
+      ],
+      [
+       "7",
+       "Documento de identidad del representante legal",
+       "caduca 04/2031",
+       "n.a.",
+       "Pasaporte"
+      ],
+      [
+       "8",
+       "Certificado de estar al corriente con la Seguridad Social",
+       "válido hasta 15/12/2026",
+       "n.a.",
+       "Al corriente"
+      ],
+      [
+       "9",
+       "Calendario del proyecto",
+       "15/09/2026",
+       "Sí (Carlos Ferrer)",
+       "Finalización prevista en junio de 2027"
+      ],
+      [
+       "10",
+       "Datos bancarios",
+       "18/09/2026",
+       "Sí (Carlos Ferrer)",
+       "IBAN ES9899990160780000100011 a nombre de Alfa Mecánica S.L."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Presupuestos"
+    ],
+    [
+     "table",
+     [
+      "Presupuesto",
+      "Proveedor",
+      "Objeto",
+      "Importe neto",
+      "IVA",
+      "Fecha"
+     ],
+     [
+      [
+       "PRE-01",
+       "Prensas Norte S.L.",
+       "Dos prensas hidráulicas de bajo ruido",
+       "64.000 €",
+       "13.440 €",
+       "02/09/2026"
+      ],
+      [
+       "PRE-02",
+       "Acústica Industrial S.L.",
+       "Cabinas insonorizadas y apoyos antivibratorios",
+       "36.000 €",
+       "7.560 €",
+       "05/09/2026"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Extractos y notas"
+    ],
+    [
+     "p",
+     "Suma de importes netos: 100.000 €. Pequeña empresa: porcentaje de ayuda 70%."
+    ]
+   ]
+  },
+  "case2": {
+   "file": "Expediente EXP-2026-0002 (FICTICIO).pdf",
+   "title": "Expediente EXP-2026-0002",
+   "subtitle": "Beta Construcciones S.A. – Convocatoria Innovación 2026",
+   "meta": "Contoso – Dirección de Incentivos · Extracto del portal «Contoso Convocatorias en línea» · Datos ficticios",
+   "blocks": [
+    [
+     "h1",
+     "1. Datos resumen"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Valor"
+     ],
+     [
+      [
+       "Expediente",
+       "EXP-2026-0002"
+      ],
+      [
+       "Empresa",
+       "Beta Construcciones S.A."
+      ],
+      [
+       "NIF (Formulario A)",
+       "ESA20000022"
+      ],
+      [
+       "Centro operativo",
+       "Sevilla"
+      ],
+      [
+       "Tamaño",
+       "mediana"
+      ],
+      [
+       "Línea",
+       "Línea 2"
+      ],
+      [
+       "Título del proyecto",
+       "Eficiencia energética de almacén: iluminación LED y bomba de calor"
+      ],
+      [
+       "Coste subvencionable declarado (IVA excluido)",
+       "91.000 €"
+      ],
+      [
+       "Ayuda solicitada",
+       "54.600 €"
+      ],
+      [
+       "Fecha de presentación",
+       "21 de septiembre de 2026"
+      ],
+      [
+       "Oficina competente",
+       "Sevilla"
+      ],
+      [
+       "Representante legal",
+       "Enrique Martín"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documentos del expediente"
+    ],
+    [
+     "table",
+     [
+      "N.º",
+      "Documento",
+      "Fecha",
+      "Firma digital",
+      "Notas"
+     ],
+     [
+      [
+       "1",
+       "Formulario A – Solicitud de ayuda (v2.1)",
+       "21/09/2026",
+       "Sí (Enrique Martín)",
+       "Coste 91.000 €; ayuda solicitada 54.600 €; NIF ESA20000022"
+      ],
+      [
+       "2",
+       "Formulario B – Declaración responsable (v2.0)",
+       "21/09/2026",
+       "Sí (Enrique Martín)",
+       "Versión 2.0, sin correo electrónico certificado"
+      ],
+      [
+       "4",
+       "Memoria técnica del proyecto",
+       "19/09/2026",
+       "Sí (Enrique Martín)",
+       "4 páginas; Línea 2"
+      ],
+      [
+       "5",
+       "Presupuestos (2)",
+       "10/09/2026 y 12/09/2026",
+       "Parcial",
+       "Véase sección 3"
+      ],
+      [
+       "6",
+       "Nota simple del Registro Mercantil",
+       "08/09/2026",
+       "n.a.",
+       "NIF ESA20000022; centro operativo Sevilla; representante legal Enrique Martín"
+      ],
+      [
+       "7",
+       "Documento de identidad del representante legal",
+       "caduca 11/2029",
+       "n.a.",
+       "Pasaporte"
+      ],
+      [
+       "10",
+       "Datos bancarios",
+       "21/09/2026",
+       "Sí (Enrique Martín)",
+       "IBAN ES7999990160750000200022 a nombre de Beta Construcciones S.A."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Presupuestos"
+    ],
+    [
+     "table",
+     [
+      "Presupuesto",
+      "Proveedor",
+      "Objeto",
+      "Importe neto",
+      "IVA",
+      "Fecha"
+     ],
+     [
+      [
+       "PRE-01",
+       "Luz Eficiente S.L.",
+       "Sustitución de 420 luminarias por LED",
+       "58.000 €",
+       "12.180 €",
+       "10/09/2026"
+      ],
+      [
+       "PRE-02",
+       "Calor Alpino S.L.",
+       "Bomba de calor de 180 kW",
+       "33.000 €",
+       "6.930 €",
+       "12/09/2026 (no firmado digitalmente)"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Extractos y notas"
+    ],
+    [
+     "p",
+     "Suma de importes netos: 91.000 €. Mediana empresa: porcentaje de ayuda 60%."
+    ],
+    [
+     "p",
+     "El expediente contiene 7 de los 10 documentos requeridos por la lista de comprobación del Procedimiento de revisión."
+    ]
+   ]
+  },
+  "case3": {
+   "file": "Expediente EXP-2026-0003 (FICTICIO).pdf",
+   "title": "Expediente EXP-2026-0003",
+   "subtitle": "Gamma Agrícola S.Coop. – Convocatoria Innovación 2026",
+   "meta": "Contoso – Dirección de Incentivos · Extracto del portal «Contoso Convocatorias en línea» · Datos ficticios",
+   "blocks": [
+    [
+     "h1",
+     "1. Datos resumen"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Valor"
+     ],
+     [
+      [
+       "Expediente",
+       "EXP-2026-0003"
+      ],
+      [
+       "Empresa",
+       "Gamma Agrícola S.Coop."
+      ],
+      [
+       "NIF (Formulario A)",
+       "ESF30000033"
+      ],
+      [
+       "Centro operativo",
+       "Valencia"
+      ],
+      [
+       "Tamaño",
+       "pequeña"
+      ],
+      [
+       "Línea",
+       "Línea 1"
+      ],
+      [
+       "Título del proyecto",
+       "Modernización de la línea de envasado"
+      ],
+      [
+       "Coste subvencionable declarado (IVA excluido)",
+       "121.500 €"
+      ],
+      [
+       "Ayuda solicitada",
+       "85.000 €"
+      ],
+      [
+       "Fecha de presentación",
+       "25 de septiembre de 2026"
+      ],
+      [
+       "Oficina competente",
+       "Madrid"
+      ],
+      [
+       "Representante legal",
+       "Hugo León"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documentos del expediente"
+    ],
+    [
+     "table",
+     [
+      "N.º",
+      "Documento",
+      "Fecha",
+      "Firma digital",
+      "Notas"
+     ],
+     [
+      [
+       "1",
+       "Formulario A – Solicitud de ayuda (v2.1)",
+       "25/09/2026",
+       "Sí (Hugo León)",
+       "Coste 121.500 €; ayuda solicitada 85.000 €; NIF ESF30000033"
+      ],
+      [
+       "2",
+       "Formulario B – Declaración responsable (v2.1)",
+       "25/09/2026",
+       "Sí (Hugo León)",
+       "Correo electrónico certificado: gammaagricola@registered.example"
+      ],
+      [
+       "3",
+       "Formulario C – Declaración de minimis",
+       "25/09/2026",
+       "Sí (Marcos León)",
+       "Ayuda regional de 12.000 € en 2025"
+      ],
+      [
+       "4",
+       "Memoria técnica del proyecto",
+       "22/09/2026",
+       "Sí (Hugo León)",
+       "5 páginas; Línea 1"
+      ],
+      [
+       "5",
+       "Presupuestos (2)",
+       "12/03/2026 y 10/09/2026",
+       "Sí",
+       "Véase sección 3"
+      ],
+      [
+       "6",
+       "Nota simple del Registro Mercantil",
+       "15/09/2026",
+       "n.a.",
+       "NIF ESF30000038; centro operativo Valencia; representante legal Hugo León"
+      ],
+      [
+       "7",
+       "Documento de identidad del representante legal",
+       "caduca 02/2030",
+       "n.a.",
+       "DNI"
+      ],
+      [
+       "8",
+       "Certificado de estar al corriente con la Seguridad Social",
+       "válido hasta 30/11/2026",
+       "n.a.",
+       "Al corriente"
+      ],
+      [
+       "9",
+       "Calendario del proyecto",
+       "22/09/2026",
+       "Sí (Hugo León)",
+       "Finalización prevista en septiembre de 2027"
+      ],
+      [
+       "10",
+       "Datos bancarios",
+       "25/09/2026",
+       "Sí (Hugo León)",
+       "IBAN ES6099990160720000300033 a nombre de Gamma Agrícola S.Coop."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Presupuestos"
+    ],
+    [
+     "table",
+     [
+      "Presupuesto",
+      "Proveedor",
+      "Objeto",
+      "Importe neto",
+      "IVA",
+      "Fecha"
+     ],
+     [
+      [
+       "PRE-01",
+       "Máquinas de Envasado S.L.",
+       "Máquina automática de envasado",
+       "70.000 €",
+       "14.700 €",
+       "12/03/2026"
+      ],
+      [
+       "PRE-02",
+       "Automatización Central S.L.",
+       "Cinta transportadora y sensores de línea",
+       "42.000 €",
+       "8.820 €",
+       "10/09/2026"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Extractos y notas"
+    ],
+    [
+     "p",
+     "Pequeña empresa: porcentaje de ayuda 70%."
+    ]
+   ]
+  },
+  "confidentialCase": {
+   "file": "Ficha confidencial de expediente (FICTICIO).docx",
+   "title": "Ficha confidencial – expediente EXP-2026-0004",
+   "subtitle": "Delta Logística S.L. – datos personales e información económica confidencial",
+   "meta": "Clasificación: Contoso Confidencial (demo) · Uso interno de la Dirección de Incentivos · Datos generados para prueba",
+   "blocks": [
+    [
+     "p",
+     "**Advertencia**: documento confidencial. Contiene datos personales e información económica no pública. No reenviar fuera de Contoso."
+    ],
+    [
+     "h1",
+     "1. Socios"
+    ],
+    [
+     "table",
+     [
+      "Nombre",
+      "Función",
+      "DNI (generado para pruebas)",
+      "Lugar y fecha de nacimiento"
+     ],
+     [
+      [
+       "Rita Rojas",
+       "Administradora única",
+       "99000101M",
+       "Zaragoza, 12/04/1978"
+      ],
+      [
+       "Andrés Rojas",
+       "Socio (40%)",
+       "99000102Y",
+       "Zaragoza, 03/11/1975"
+      ],
+      [
+       "Paula Moreno",
+       "Socia (20%)",
+       "99000103F",
+       "Huesca, 21/07/1982"
+      ]
+     ],
+     [
+      2.2,
+      2,
+      3.2,
+      2.6
+     ]
+    ],
+    [
+     "h1",
+     "2. Datos bancarios"
+    ],
+    [
+     "bullets",
+     [
+      "Cuenta del proyecto: IBAN ES1499990160710000400044 a nombre de Delta Logística S.L.",
+      "Cuenta personal de la directora (para reembolso de gastos): IBAN ES5099990160770001400045"
+     ]
+    ],
+    [
+     "h1",
+     "3. Datos económicos confidenciales"
+    ],
+    [
+     "table",
+     [
+      "Concepto",
+      "2024",
+      "2025"
+     ],
+     [
+      [
+       "Facturación",
+       "3.980.000 €",
+       "4.250.000 €"
+      ],
+      [
+       "EBITDA",
+       "285.000 €",
+       "312.000 €"
+      ],
+      [
+       "Beneficio neto",
+       "61.000 €",
+       "48.000 €"
+      ],
+      [
+       "Posición financiera neta",
+       "-1.020.000 €",
+       "-1.180.000 €"
+      ],
+      [
+       "Exposición bancaria a corto plazo",
+       "640.000 €",
+       "710.000 €"
+      ]
+     ],
+     [
+      4,
+      3,
+      3
+     ]
+    ],
+    [
+     "h2",
+     "Notas confidenciales del revisor"
+    ],
+    [
+     "bullets",
+     [
+      "Calificación crediticia interna: B+ (uso interno).",
+      "Litigio en curso con un proveedor por 85.000 € (resultado incierto).",
+      "Solicitud de plan de fraccionamiento de deudas con la Seguridad Social por 120.000 € presentada en julio de 2026."
+     ]
+    ]
+   ]
+  }
+ }
+}

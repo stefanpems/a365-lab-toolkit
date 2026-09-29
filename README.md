@@ -38,6 +38,7 @@ a365-lab-toolkit/
 ├─ docs/                     # Documentation: intro + one setup guide per agent type + web UI
 ├─ ui/                       # MSAL web SPA (Azure Static Web Apps) for the OBO/S2S agents
 ├─ custom-mcp/               # Optional sample custom MCP server (anonymous + authenticated) for tool tests
+├─ demo-packs/               # Demo packs for the Demo Builder (pack.json + one locale folder per language)
 ├─ web-fetch-mcp/            # Web access (fetch_url) for the FD prompt agents; web_fetch.py = the shared tool
 ├─ aca/                      # Azure Container Apps (A365-SDK-hosted) agents
 │  ├─ obo/                   # MAF-ACA-OBO  — acts on behalf of the signed-in user
@@ -129,6 +130,19 @@ a365-lab-toolkit/
 
 Each family/component sub-skill references the canonical `docs/` guide instead of duplicating it; see
 [.github/skills/agent365-wizard/SKILL.md](.github/skills/agent365-wizard/SKILL.md) for the flow.
+
+### Full demo environments (the Demo Builder, preview)
+The [Demo Builder](.github/agents/demo-builder.agent.md) recreates a complete, repeatable demo in any tenant and in
+a selectable language (en, it, fr, es, de) from a **demo pack** in [demo-packs/](demo-packs/): fictional personas,
+groups, photos and documents, demo MCP servers, the lab agents (built by the Lab Builder engine from a generated
+plan), Entra governance objects, guided cards for the portal steps and a test hand-out. Two sibling skills keep it
+repeatable: [agent365-demo-reset](.github/skills/agent365-demo-reset/SKILL.md) (pre-flight and reset of the starting
+conditions before every rehearsal) and [agent365-demo-guide](.github/skills/agent365-demo-guide/SKILL.md) (the run of
+show). Start with the license gate in
+[docs/demo-environment-prerequisites.md](docs/demo-environment-prerequisites.md); the shipped pack is described in
+[demo-packs/agent-governance/README.md](demo-packs/agent-governance/README.md).
+**Preview, not yet validated end to end:** checked offline and read-only against a real tenant; a complete build in a
+new tenant has not been run yet.
 
 ## Security & configuration
 

@@ -1,0 +1,602 @@
+{
+ "_comment": "Locale pack (de). Locale packs are the only non-English-by-policy content of the repo: they hold the visible texts of the demo in each language. Keys mirror ../../pack.json. {{a.b.c}} placeholders are resolved against this locale. Run Test-DemoPack.ps1 after every edit.",
+ "locale": "de",
+ "language": "Deutsch",
+ "usageLocation": "DE",
+ "org": {
+  "name": "Contoso",
+  "department": "Abteilung Förderung",
+  "program": "Förderaufruf Innovation 2026",
+  "portal": "Contoso Förderportal",
+  "fictionalBanner": "FIKTIVES DOKUMENT – NUR DEMO",
+  "fictionalSuffix": "(FIKTIV)",
+  "namePrefix": "Contoso –",
+  "publisher": "Contoso",
+  "offices": {
+   "main": "München",
+   "secondary": "Hamburg"
+  },
+  "caseIdPrefix": "ANT-2026-",
+  "recordIdPrefix": "EIN-2026-"
+ },
+ "personas": {
+  "aiAdmin": {
+   "givenName": "Greta",
+   "surname": "Schneider",
+   "jobTitle": "KI-Administratorin",
+   "department": "IT-Governance"
+  },
+  "identityAdmin": {
+   "givenName": "Paul",
+   "surname": "Becker",
+   "jobTitle": "Spezialist für Identität und Zugriff",
+   "department": "Identitäts- und Zugriffsmanagement"
+  },
+  "complianceOfficer": {
+   "givenName": "Elena",
+   "surname": "Hoffmann",
+   "jobTitle": "Compliance- und Datenschutzbeauftragte",
+   "department": "Compliance und Datenschutz"
+  },
+  "socAnalyst": {
+   "givenName": "Markus",
+   "surname": "Vogel",
+   "jobTitle": "SOC-Analyst",
+   "department": "Security Operations"
+  },
+  "maker": {
+   "givenName": "Lukas",
+   "surname": "Bauer",
+   "jobTitle": "Fachlicher Maker",
+   "department": "Abteilung Förderung"
+  },
+  "caseOfficer": {
+   "givenName": "Anna",
+   "surname": "Wagner",
+   "jobTitle": "Sachbearbeiterin",
+   "department": "Abteilung Förderung"
+  },
+  "director": {
+   "givenName": "Silvia",
+   "surname": "König",
+   "jobTitle": "Abteilungsleiterin",
+   "department": "Abteilung Förderung"
+  },
+  "programLead": {
+   "givenName": "Martha",
+   "surname": "Neumann",
+   "jobTitle": "Programmverantwortliche",
+   "department": "Abteilung Förderung"
+  },
+  "orphanLeaver": {
+   "givenName": "Frank",
+   "surname": "Ritter",
+   "jobTitle": "Sachbearbeiter",
+   "department": "Abteilung Förderung"
+  },
+  "d8Leaver": {
+   "givenName": "Klara",
+   "surname": "Lorenz",
+   "jobTitle": "Spezialistin Formulare",
+   "department": "Abteilung Förderung"
+  }
+ },
+ "groups": {
+  "department": {
+   "displayName": "GRP-Abteilung-Foerderung",
+   "mailNickname": "GRP-Abteilung-Foerderung",
+   "description": "Fachliche Benutzer der Abteilung Förderung (Demo)."
+  },
+  "directoryReaders": {
+   "displayName": "GRP-Agenten-Verzeichnis-Lesen",
+   "mailNickname": "GRP-Agenten-Verzeichnis-Lesen",
+   "description": "Sicherheitsgruppe, die Agenten über das Zugriffspaket zugewiesen wird (Demo)."
+  },
+  "site": {
+   "displayName": "Abteilung Förderung – Förderungen (Demo)",
+   "mailNickname": "AbteilungFoerderung",
+   "description": "Dokumentwebsite der Abteilung Förderung (fiktive Demoinhalte)."
+  }
+ },
+ "agents": {
+  "recordsColleague": {
+   "codeName": "Kollege-Posteingang",
+   "displayName": "Kollege Posteingang",
+   "blueprint": "Kollege Posteingang",
+   "identity": "Identität Kollege Posteingang",
+   "manifest": {
+    "nameShort": "Kollege Posteingang",
+    "nameFull": "Digitaler Kollege Posteingang",
+    "descriptionShort": "Digitaler Kollege des Posteingangs der Abteilung Förderung (Demo).",
+    "descriptionFull": "Empfängt Registrierungsanfragen per E-Mail und in Teams, registriert sie mit dem Posteingangstool und antwortet dem Absender mit Nummer und Datum. Demokontext: Alle Daten sind fiktiv.",
+    "developer": "Contoso"
+   },
+   "instance": {
+    "displayName": "Kollege Posteingang München",
+    "alias": "kollege.posteingang.muenchen",
+    "description": "Digitaler Kollege des Posteingangs am Standort München (Demo)."
+   }
+  },
+  "recordsAssistant": {
+   "codeName": "Posteingang-Assistent",
+   "displayName": "Posteingang-Assistent",
+   "blueprint": "Posteingang-Assistent Blueprint",
+   "identity": "Posteingang-Assistent"
+  },
+  "reportsMonitor": {
+   "codeName": "Meldungsmonitor",
+   "displayName": "Meldungsmonitor",
+   "blueprint": "Meldungsmonitor Blueprint",
+   "identity": "Meldungsmonitor"
+  },
+  "reportsMonitorTest": {
+   "codeName": "Meldungsmonitor-Test",
+   "displayName": "Meldungsmonitor – Test",
+   "blueprint": "Meldungsmonitor - Test Blueprint",
+   "identity": "Meldungsmonitor - Test"
+  },
+  "applicationReview": {
+   "codeName": "Antragspruefung",
+   "displayName": "Antragsprüfung",
+   "blueprint": "Antragsprüfung Blueprint",
+   "identity": "Antragsprüfung"
+  },
+  "grantsDesk": {
+   "codeName": "Foerderschalter",
+   "displayName": "Förderschalter",
+   "shortDescription": "Beantwortet Fragen von Unternehmen zum Förderaufruf (Demo).",
+   "description": "Hilft Beschäftigten der Abteilung Förderung, Fragen von Unternehmen zum Förderaufruf Innovation 2026 (fiktive Daten) zu beantworten, Erinnerungen vorzubereiten und Anfragen beim Posteingang zu registrieren.",
+   "instructions": "Du bist „Förderschalter“, der interne Assistent der Abteilung Förderung von Contoso für den Förderaufruf Innovation 2026.\nKontext: Demoumgebung; der Förderaufruf, die Unternehmen und die Anträge sind fiktiv.\n\nZiel\nHilf Sachbearbeitern, Fragen von Unternehmen zur Förderung korrekt, schnell und einheitlich zu beantworten.\n\nArbeitsweise\n1. Antworte nur auf Grundlage der Dokumente des Wissens „Förderaufruf Innovation 2026“ (Zusammenfassung, FAQ, Prüfverfahren). Nenne immer Dokument und Abschnitt, aus dem Du die Information entnimmst.\n2. Wenn Du um eine Antwort an ein Unternehmen gebeten wirst, erstelle einen Entwurf in behördlichem, klarem und höflichem Ton mit: Betreff, Zusammenfassung der Frage, Antwort, Verweisen auf den Förderaufruf.\n3. Wenn Du um eine Erinnerung gebeten wirst, erstelle ein Word-Dokument mit derselben Struktur.\n4. Wenn du gebeten wirst, eine Anfrage im Posteingang zu registrieren, erkläre, dass Registrierungen mit dem Agenten „{{agents.recordsAssistant.displayName}}“ erfolgen, und fasse zusammen, was zu senden ist.\n5. Bitte vor dem Versand jeder E-Mail um ausdrückliche Bestätigung des Benutzers und zeige Empfänger und Text an.\n\nGrenzen\n- Erfinde keine Fristen, Beträge, Anforderungen oder Prozentsätze: Wenn eine Information nicht in den Dokumenten steht, sage das und schlage vor, das zuständige Büro zu kontaktieren.\n- Gib keine Förderfähigkeitsbewertung ab: Die Entscheidung liegt immer beim Sachbearbeiter.\n- Verarbeite keine personenbezogenen oder vertraulichen Daten: Wenn der Benutzer solche Daten eingibt, fordere ihn auf, sie zu entfernen.\n- Antworte auf Deutsch."
+  },
+  "grantsDeskPilot": {
+   "codeName": "Foerderschalter-Pilot",
+   "displayName": "Förderschalter – Pilot",
+   "shortDescription": "Pilotkopie des Förderschalters (Demo).",
+   "description": "Pilotkopie des Förderschalters, mit der aus Benutzersicht ein blockierter Agent gezeigt wird (fiktive Daten).",
+   "instructions": "{{agents.grantsDesk.instructions}}"
+  },
+  "siteInspections": {
+   "codeName": "Vor-Ort-Pruefungen",
+   "displayName": "Vor-Ort-Prüfungen",
+   "shortDescription": "Plant Vor-Ort-Prüfungen geförderter Projekte (Demo).",
+   "description": "Hilft den technischen Beschäftigten der Abteilung Förderung, Vor-Ort-Prüfungen geförderter Projekte (fiktive Daten) zu planen: schlägt Termine vor, erstellt Checkliste und Mitteilung an das Unternehmen.",
+   "instructions": "Du bist „Vor-Ort-Prüfungen“, der Assistent der technischen Beschäftigten der Abteilung Förderung von Contoso für Prüfungen der durch den Förderaufruf Innovation 2026 geförderten Projekte (Demokontext, fiktive Daten).\n\nFür jede Anfrage zu einer Vor-Ort-Prüfung:\n1. Fasse Unternehmen, gefördertes Projekt, Standort und die vom Benutzer genannte Kontaktperson zusammen.\n2. Schlage drei Zeitfenster an Arbeitstagen nach der Anfrage vor, vormittags oder nachmittags.\n3. Erstelle die Prüfcheckliste aus dem Dokument „Prüfungen geförderter Projekte“.\n4. Bereite den Entwurf der Mitteilung an das Unternehmen vor, ohne ihn zu senden: Der Versand obliegt der Fachkraft.\n\nGrenzen: Erfinde keine Anforderungen, die nicht im Verfahren stehen; bewerte nicht das Ergebnis der Prüfung; antworte auf Deutsch."
+  },
+  "communicationsAssistant": {
+   "codeName": "Kommunikationsassistent",
+   "displayName": "Kommunikationsassistent",
+   "shortDescription": "Fasst Hinweise zusammen und versendet Mitteilungen (Demo).",
+   "description": "Fasst Hinweise und Dokumente des Förderaufrufs Innovation 2026 (fiktiv) zusammen und bereitet Mitteilungen an Kontaktpersonen vor und versendet sie.",
+   "instructions": "Du bist „Kommunikationsassistent“ der Abteilung Förderung von Contoso (Demokontext, fiktive Daten).\nDu hilfst Sachbearbeitern, Mitteilungen zum Förderaufruf Innovation 2026 vorzubereiten.\n- Wenn Du gebeten wirst, einen Hinweis oder ein Dokument zusammenzufassen, nutze das Wissen „Hinweise“ und erstelle eine Zusammenfassung von höchstens zehn Zeilen mit Handlungspunkten.\n- Wenn Du gebeten wirst, eine Mitteilung vorzubereiten, schreibe Betreff und Text in behördlichem Ton.\n- Wenn Du gebeten wirst, sie zu senden, verwende das E-Mail-Versandtool.\nAntworte auf Deutsch."
+  },
+  "faqPrototype": {
+   "codeName": "Firmen-FAQ-Prototyp",
+   "displayName": "Firmen-FAQ (Prototyp)",
+   "shortDescription": "Prototyp automatischer Antworten an Unternehmen (Demo).",
+   "description": "Prototyp automatischer Antworten an Unternehmen zum Förderaufruf Innovation 2026 (NICHT in Produktion, fiktive Daten).",
+   "instructions": ""
+  },
+  "circularsAssistant": {
+   "displayName": "Rundschreiben-Assistent",
+   "description": "Beantwortet Fragen zu internen Rundschreiben des Förderaufrufs (fiktiv).",
+   "instructions": "Du bist „Rundschreiben-Assistent“: Beantworte Fragen von Beschäftigten zu internen Rundschreiben zum Förderaufruf Innovation 2026 (Demokontext, fiktive Rundschreiben).\n- Nutze nur die Rundschreiben des Ordners „Rundschreiben“ und zitiere Nummer und Datum des Rundschreibens.\n- Wenn zwei Rundschreiben einander widersprechen, gilt das neuere: Weise darauf hin.\n- Wenn die Antwort nicht in den Rundschreiben steht, sage das.\nAntworte knapp auf Deutsch."
+  },
+  "formsAssistant": {
+   "displayName": "Formular-Assistent",
+   "description": "Hilft bei Auswahl und Prüfung der Formulare des Förderaufrufs (fiktiv).",
+   "instructions": "Du bist „Formular-Assistent“: Du hilfst Beschäftigten, das richtige Formular für den Förderaufruf Innovation 2026 auszuwählen und die Ausfüllung zu prüfen (fiktive Formulare). Nenne immer den Namen des Formulars und seine Pflichtfelder. Fülle Formulare nicht mit echten personenbezogenen Daten aus. Antworte auf Deutsch."
+  },
+  "personalContacts": {
+   "displayName": "Kontaktliste privat (Entwurf)",
+   "description": "Beantwortet Fragen zu den von mir betreuten Unternehmenskontakten (Privatdatei).",
+   "instructions": "Beantworte Fragen zu den Kontaktpersonen der Unternehmen, die ich betreue, anhand der Datei „{{knowledge.personal.companyContacts.file}}“. Antworte auf Deutsch.",
+   "rejectionReason": "Verwendet Kontaktdaten aus einer nicht gesteuerten Privatdatei: Verschieben Sie die Daten in eine genehmigte Quelle und reichen Sie erneut ein."
+  }
+ },
+ "mcp": {
+  "servers": {
+   "records": {
+    "name": "ext_EingangTest",
+    "description": "Contoso-Posteingang (Testserver, fiktive Daten).",
+    "tools": {
+     "register": {
+      "name": "eingang_registrieren",
+      "description": "Registriert eine Anfrage im Posteingang und gibt Nummer und Datum zurück.",
+      "params": {
+       "sender": {
+        "name": "absender",
+        "description": "Absender der Anfrage (Name, Unternehmen oder E-Mail-Adresse)."
+       },
+       "subject": {
+        "name": "betreff",
+        "description": "Betreff der zu registrierenden Anfrage."
+       }
+      }
+     },
+     "status": {
+      "name": "eingang_status",
+      "description": "Gibt den Status einer Eingangsregistrierung zurück (jeder zweite Abruf fehlschlagend).",
+      "params": {
+       "number": {
+        "name": "nummer",
+        "description": "Eingangsnummer, zum Beispiel EIN-2026-000123."
+       }
+      }
+     }
+    },
+    "strings": {
+     "office": "Posteingang – Abteilung Förderung",
+     "registered": "Registriert",
+     "notFound": "Nicht gefunden (fiktive Daten)",
+     "assignedTo": "Abteilung Förderung",
+     "failure": "Posteingangsdienst vorübergehend nicht verfügbar (vom Testserver simulierter Fehler)."
+    }
+   },
+   "companies": {
+    "name": "ext_FirmenTest",
+    "description": "Verzeichnis der antragstellenden Firmen (Testserver).",
+    "tools": {
+     "find": {
+      "name": "firma_suchen",
+      "description": "Sucht eine Firma nach USt-IdNr. im Testverzeichnis und gibt Details zurück.",
+      "params": {
+       "vat": {
+        "name": "ust_idnr",
+        "description": "USt-IdNr. der Firma, zum Beispiel DE100000011."
+       }
+      }
+     }
+    },
+    "strings": {
+     "found": "gefunden (fiktive Daten)",
+     "notFound": "Keine Firma gefunden (fiktive Daten)",
+     "active": "aktiv"
+    },
+    "data": [
+     {
+      "vat": "DE100000011",
+      "name": "Alpha Maschinenbau GmbH",
+      "legalForm": "Gesellschaft mit beschränkter Haftung",
+      "city": "München",
+      "registeredEmail": "alpha-maschinenbau@registered.example"
+     },
+     {
+      "vat": "DE200000022",
+      "name": "Beta Bau AG",
+      "legalForm": "Aktiengesellschaft",
+      "city": "Hamburg",
+      "registeredEmail": "beta-bau@registered.example"
+     },
+     {
+      "vat": "DE300000033",
+      "name": "Gamma Agrar eG",
+      "legalForm": "eingetragene Genossenschaft",
+      "city": "Regensburg",
+      "registeredEmail": "gamma-agrar@registered.example"
+     },
+     {
+      "vat": "DE400000044",
+      "name": "Delta Logistik GmbH",
+      "legalForm": "Gesellschaft mit beschränkter Haftung",
+      "city": "Nürnberg",
+      "registeredEmail": "delta-logistik@registered.example"
+     },
+     {
+      "vat": "DE500000055",
+      "name": "Epsilon Textil KG",
+      "legalForm": "Kommanditgesellschaft",
+      "city": "Augsburg",
+      "registeredEmail": "epsilon-textil@registered.example"
+     }
+    ]
+   },
+   "deadlines": {
+    "base": "ext_FristenTest",
+    "description": "Fristen des Förderaufrufs 2026 (Testserver).",
+    "tools": {
+     "list": {
+      "name": "fristen_auflisten",
+      "description": "Listet Fristen und Verlängerungen per Rundschreiben auf (fiktive Daten).",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Förderaufruf Innovation 2026 (FIKTIV)",
+     "items": [
+      {
+       "phase": "Veröffentlichung des Aufrufs",
+       "date": "15.06.2026"
+      },
+      {
+       "phase": "Öffnung des Antragsfensters",
+       "date": "01.09.2026 10:00"
+      },
+      {
+       "phase": "Schließung des Antragsfensters",
+       "date": "30.10.2026 18:00"
+      },
+      {
+       "phase": "Upload ergänzender Angebote",
+       "date": "15.12.2026 18:00",
+       "note": "verlängert durch Rundschreiben Nr. 2/2026 (ursprünglich 30.11.2026)"
+      },
+      {
+       "phase": "Formular A Version 2.0",
+       "date": "akzeptiert bis 15.10.2026",
+       "note": "Version 2.1 verfügbar ab 01.10.2026"
+      }
+     ],
+     "sources": "Zusammenfassung des Aufrufs; Rundschreiben Nr. 1/2026 und Nr. 2/2026 (fiktiv)"
+    }
+   },
+   "forms": {
+    "base": "ext_VordruckTest",
+    "description": "Formulare des Förderaufrufs 2026 (Testserver).",
+    "tools": {
+     "list": {
+      "name": "vordrucke_auflisten",
+      "description": "Listet Formulare mit Version und Pflichtfeldern auf (fiktive Daten).",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Förderaufruf Innovation 2026 (FIKTIV)",
+     "items": [
+      {
+       "form": "Formular A – Förderantrag",
+       "version": "2.1 (2.0 akzeptiert bis 15.10.2026)",
+       "mandatoryFields": [
+        "USt-IdNr.",
+        "förderfähige Kosten und beantragte Förderung",
+        "digitale Signatur der gesetzlichen Vertretung"
+       ]
+      },
+      {
+       "form": "Formular B – Selbsterklärung zur Förderfähigkeit",
+       "version": "2.1",
+       "mandatoryFields": [
+        "zertifizierte E-Mail-Adresse des Unternehmens (Pflicht ab Version 2.1)",
+        "digitale Signatur"
+       ]
+      },
+      {
+       "form": "Formular C – De-minimis-Erklärung",
+       "version": "2.1",
+       "mandatoryFields": [
+        "erhaltene Beihilfen im laufenden und in den zwei vorherigen Geschäftsjahren",
+        "digitale Signatur"
+       ]
+      }
+     ],
+     "sources": "Förderformulare, Version 2.1 vom 01.10.2026 (fiktiv)"
+    }
+   }
+  }
+ },
+ "overlays": {
+  "records-assistant": {
+   "rolePrompt": "Du bist „Posteingang-Assistent“ der Abteilung Förderung (Demokontext, fiktive Daten).\nAuf Anfrage des Benutzers:\n- registrierst Du Anfragen und Mitteilungen beim Posteingang mit dem Tool „{{mcp.servers.records.tools.register.name}}“ und meldest die erhaltene Nummer zurück;\n- prüfst Du den Status eines Eingangs mit dem Tool „{{mcp.servers.records.tools.status.name}}“;\n- bereitest Du ausgehende Mitteilungen mit dem Mail-Tool vor und sendest sie in seinem Namen. Fasse vor dem Versand Empfänger, Betreff und Text zusammen.\nWenn ein Tool nicht antwortet oder nicht verfügbar ist, sag es dem Benutzer, ohne das Ergebnis zu erfinden.\nAntworte auf Deutsch."
+  },
+  "records-colleague": {
+   "rolePrompt": "Du bist ein digitaler Kollege des Posteingangs der Abteilung Förderung von Contoso (Demokontext, fiktive Daten). Dein Name ist der Name Deiner Instanz, der zu Beginn jeder Unterhaltung angegeben wird: Verwende ihn immer, wenn Du Dich vorstellst oder eine Nachricht unterzeichnest. Du hast ein eigenes Postfach und bist in Teams präsent.\nWenn Du eine E-Mail oder Nachricht mit einer Registrierungsanfrage erhältst:\n1. Ermittle Absender, Betreff und Anzahl der Anlagen.\n2. Registriere die Anfrage mit dem Tool „{{overlays.records-colleague.tools.register.name}}“ und hole die Nummer ab.\n3. Antworte dem Absender mit Bestätigung der Eingangsnummer und des Datums.\n4. Wenn die Anfrage unklar ist, bitte den Absender um Klärung, statt fortzufahren.\nLeite niemals Dokumente an Empfänger außerhalb der Organisation weiter. Antworte immer auf Deutsch.",
+   "tools": {
+    "register": {
+     "name": "eingang_registrieren",
+     "description": "Registriert eine Anfrage im Posteingang der Abteilung Förderung und gibt Nummer und Datum zurück.",
+     "params": {
+      "sender": {
+       "name": "absender",
+       "description": "Absender der Anfrage (Name oder E-Mail-Adresse)."
+      },
+      "subject": {
+       "name": "betreff",
+       "description": "Betreff der zu registrierenden Anfrage."
+      },
+      "attachments": {
+       "name": "anzahl_anlagen",
+       "description": "Anzahl der empfangenen Anlagen."
+      }
+     }
+    }
+   },
+   "strings": {
+    "office": "Posteingang – Abteilung Förderung"
+   },
+   "texts": {
+    "welcome": "👋 Guten Tag! Ich bin **{name}**, der digitale Kollege des Posteingangs der Abteilung Förderung von Contoso.\n\nSenden Sie mir eine Registrierungsanfrage per Chat oder E-Mail: Ich registriere sie und antworte mit Eingangsnummer und Datum. Wie kann ich helfen?",
+    "hired": "Danke, dass Sie mich eingestellt haben! Ich bin **{name}** und übernehme ab heute die Registrierungsanfragen der Abteilung Förderung.",
+    "goodbye": "Vielen Dank für die gemeinsame Zeit: Es war mir eine Freude, mit Ihnen zu arbeiten.",
+    "identityNote": "Dein Name (der Name dieser Instanz) ist „{name}“: Stelle Dich immer mit diesem Namen vor und unterschreibe damit.",
+    "callerNote": "Du sprichst mit: {caller}.",
+    "emailSender": "der Absender der E-Mail",
+    "notificationSender": "der Absender der Benachrichtigung"
+   }
+  },
+  "reports-monitor": {
+   "rolePrompt": "Du bist „Meldungsmonitor“, ein autonomer Agent der Abteilung Förderung von Contoso, der ohne angemeldeten Benutzer arbeitet (Demokontext, fiktive Daten).\nBei jedem Lauf (zum Beispiel wenn Du gebeten wirst, die Meldungsprüfung auszuführen):\n1. Lies mit dem Tool „{{overlays.reports-monitor.tools.readReports.name}}“ die Anomaliemeldungen zu Anträgen des Förderaufrufs Innovation 2026, die in den letzten 24 Stunden eingegangen sind.\n2. Gruppiere sie nach Art: Doppelantrag, unstimmige Beträge, fehlende Dokumente, Sonstiges.\n3. Um den verantwortlichen Sachbearbeiter je Antrag zu finden, verwende das Tool „{{overlays.reports-monitor.tools.findOfficers.name}}“ mit dem zuständigen Büro. Wenn das Tool meldet, dass Du nicht berechtigt bist, das Verzeichnis zu lesen, oder dass der Zugriff blockiert ist, schreibe „Sachbearbeiter nicht verfügbar“ und nenne den Grund kurz am Ende der Zusammenfassung.\n4. Erstelle für die Abteilungsleiterin eine Zusammenfassung von höchstens fünfzehn Zeilen mit den drei dringendsten Meldungen.\nÄndere keine Daten und kontaktiere keine Unternehmen. Antworte immer auf Deutsch.",
+   "tools": {
+    "readReports": {
+     "name": "meldungen_lesen",
+     "description": "Gibt Anomaliemeldungen zu Anträgen der letzten 24 Stunden zurück (fiktive Daten).",
+     "params": {}
+    },
+    "findOfficers": {
+     "name": "zustaendige_suchen",
+     "description": "Sucht im Verzeichnis nach Sachbearbeitern der Abteilung Förderung am Standort.",
+     "params": {
+      "office": {
+       "name": "standort",
+       "description": "Zuständiges Büro des Antrags, zum Beispiel München oder Hamburg."
+      }
+     }
+    }
+   },
+   "strings": {
+    "ok": "ok",
+    "notAuthorized": "nicht berechtigt, das Verzeichnis zu lesen",
+    "blockedByCa": "Zugriff durch bedingten Zugriff blockiert",
+    "authError": "Authentifizierungsfehler des Agenten",
+    "incompleteConfig": "unvollständige Konfiguration der Agentenidentität (AGENT_IDENTITY_ID fehlt)",
+    "receivedAt": "eingegangen"
+   },
+   "reports": [
+    {
+     "id": "MEL-001",
+     "hoursAgo": 2,
+     "application": "ANT-2026-0003",
+     "business": "Gamma Agrar eG",
+     "office": "München",
+     "type": "unstimmige Beträge",
+     "priority": "hoch",
+     "description": "Beantragte Förderung von 85.000 € stimmt nicht mit der Summe der Angebote überein (112.000 € zu 70% = 78.400 €)."
+    },
+    {
+     "id": "MEL-002",
+     "hoursAgo": 3,
+     "application": "ANT-2026-0002",
+     "business": "Beta Bau AG",
+     "office": "Hamburg",
+     "type": "fehlende Dokumente",
+     "priority": "hoch",
+     "description": "Formular C, Unbedenklichkeitsbescheinigung und Projektzeitplan fehlen; ein Angebot ist nicht digital signiert."
+    },
+    {
+     "id": "MEL-003",
+     "hoursAgo": 5,
+     "application": "ANT-2026-0005",
+     "business": "Epsilon Textil KG",
+     "office": "München",
+     "type": "Doppelantrag",
+     "priority": "mittel",
+     "description": "Gleiche USt-IdNr. wie Antrag ANT-2026-0011, zwei Tage später für denselben Förderbereich eingereicht."
+    },
+    {
+     "id": "MEL-004",
+     "hoursAgo": 7,
+     "application": "ANT-2026-0004",
+     "business": "Delta Logistik GmbH",
+     "office": "München",
+     "type": "Sonstiges",
+     "priority": "hoch",
+     "description": "Antrag auf Änderung der IBAN auf ein Konto einer Privatperson, eingegangen von einer nicht zertifizierten E-Mail-Adresse."
+    },
+    {
+     "id": "MEL-005",
+     "hoursAgo": 9,
+     "application": "ANT-2026-0007",
+     "business": "Zeta Systeme GmbH",
+     "office": "München",
+     "type": "unstimmige Beträge",
+     "priority": "mittel",
+     "description": "Förderung auf Grundlage des Bruttobetrags berechnet."
+    },
+    {
+     "id": "MEL-006",
+     "hoursAgo": 12,
+     "application": "ANT-2026-0008",
+     "business": "Eta Dienste GmbH",
+     "office": "Hamburg",
+     "type": "fehlende Dokumente",
+     "priority": "niedrig",
+     "description": "Handelsregisterauszug älter als 6 Monate."
+    },
+    {
+     "id": "MEL-007",
+     "hoursAgo": 15,
+     "application": "ANT-2026-0009",
+     "business": "Theta Lebensmittel GmbH",
+     "office": "München",
+     "type": "Doppelantrag",
+     "priority": "mittel",
+     "description": "Antrag mit denselben Anlagen zweimal im Abstand von 10 Minuten eingereicht."
+    },
+    {
+     "id": "MEL-008",
+     "hoursAgo": 20,
+     "application": "ANT-2026-0010",
+     "business": "Iota Kunststoffe GmbH",
+     "office": "Hamburg",
+     "type": "Sonstiges",
+     "priority": "niedrig",
+     "description": "Die Kontaktperson bittet aus organisatorischen Gründen um Vorziehung der Vor-Ort-Prüfung."
+    }
+   ]
+  },
+  "application-review": {
+   "rolePrompt": "Du bist „Antragsprüfung“, der Vorprüfungsagent für Anträge zum Förderaufruf Innovation 2026 der Abteilung Förderung von Contoso (Demokontext, fiktive Anträge).\nFür jeden vom Benutzer genannten Antrag:\n1. Liste die Dokumente in der Antragsakte auf.\n2. Vergleiche sie mit der Checkliste des „Prüfverfahrens“ und benenne fehlende Dokumente.\n3. Weise auf Unstimmigkeiten zwischen Dokumenten hin (Daten, Beträge, USt-IdNr., Signaturen).\n4. Schlage den Text der Nachforderung von Unterlagen vor.\nEntscheide niemals über die Förderfähigkeit des Antrags: Die Entscheidung liegt bei der prüfenden Sachbearbeitung, der Du nur Nachweise und Vorschläge vorlegst.\nAntworte auf Deutsch mit einer Aufzählung für jeden Abschnitt.",
+   "learnMcpDescription": "Öffentliche Microsoft Learn-Dokumentation.",
+   "vectorStoreName": "Anträge Förderaufruf Innovation 2026 (fiktiv)"
+  }
+ },
+ "governance": {
+  "attributeSet": {
+   "id": "AgentGovernance",
+   "description": "Agent Governance (Contoso-Demo)"
+  },
+  "attribute": {
+   "name": "Freigabestatus",
+   "description": "Freigabestatus des Agenten",
+   "values": {
+    "new": "Neu",
+    "inReview": "InPruefung",
+    "approved": "FreigegebenProduktion"
+   }
+  },
+  "conditionalAccess": {
+   "blockHighRiskAgents": "Contoso – Hochriskante Agenten blockieren",
+   "onlyApprovedAgents": "Contoso – Nur produktionsfreigegebene Agenten"
+  },
+  "catalog": {
+   "name": "Agentenkatalog – Abteilung Förderung",
+   "description": "Ressourcen für Agenten der Abteilung Förderung (Demo)."
+  },
+  "accessPackage": {
+   "name": "ZP – Verzeichnis lesen (8 Stunden)",
+   "description": "Lesezugriff auf das Verzeichnis der Mitarbeitenden der Abteilung Förderung für die Meldungsprüfung. Befristeter Zugriff für Agenten: 8 Stunden, mit Genehmigung (fiktive Daten).",
+   "justification": "Die heutige Meldungsprüfung benötigt die zuständigen Sachbearbeiter."
+  },
+  "sensitivityLabel": {
+   "name": "Contoso Vertraulich (Demo)",
+   "tooltip": "Vertraulicher Demoinhalt: nicht außerhalb von Contoso teilen."
+  },
+  "dlpPolicy": "Contoso – Vertrauliche Dateien und Copilot",
+  "auditRetentionPolicy": "Contoso – Copilot- und KI-Audit (1 Jahr)",
+  "auditSearches": {
+   "agentInteractions": "Interaktionen des Förderschalters",
+   "agentAdminActions": "Administratoraktionen an Agenten"
+  },
+  "communicationCompliancePolicy": "Contoso – Copilot- und Agenteninteraktionen",
+  "communicationComplianceKeywords": [
+   "fälschen",
+   "rückdatieren",
+   "gefälschtes Dokument"
+  ],
+  "ediscoveryCase": "Contoso – Prüfung Interaktionen Förderschalter",
+  "rtpRule": "Contoso – Exfiltrationsblock",
+  "tags": {
+   "department": "Contoso – A.F.",
+   "pilot": "Contoso-AF-Test",
+   "production": "Contoso-AF-Prod"
+  },
+  "tagDescriptions": {
+   "department": "Agenten der Abteilung Förderung (Demo).",
+   "pilot": "Pilot- und Testagenten der Abteilung Förderung (Demo).",
+   "production": "Produktive Agenten der Abteilung Förderung (Demo)."
+  },
+  "templates": {
+   "productionTemplate": "Contoso – Produktionsagenten (ohne eigene Identität)",
+   "aiTeammateTemplate": "Contoso – KI-Teamkollege"
+  },
+  "huntingQueries": {
+   "agentsLatestState": "KI-Agenten – letzter Status",
+   "agentActivity24h": "KI-Agenten – Aktivität der letzten 24 Stunden",
+   "promptInjectionAlerts": "KI-Agenten – Prompt-Injection-Warnungen"
+  }
+ },
+ "prompts": {
+  "d6RegisterRecord": "Registriere beim Posteingang die Anfrage von Alpha Maschinenbau zum Hochladen von Angeboten und gib mir die Nummer.",
+  "d10MonitorRun": "Führe die heutige Meldungsprüfung aus",
+  "d16Summarize": "Fasse den Hinweis an die Unternehmen zur Formularaktualisierung zusammen und bereite die Mitteilung an die internen Kontakte vor.",
+  "mcpSetupUrl": "Gib mir die Power-Platform-Einrichtungs-URL für den Server {server}."
+ }
+}

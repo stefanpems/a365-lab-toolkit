@@ -1,0 +1,1821 @@
+{
+ "_comment": "Knowledge documents of the it locale pack (fictional), same block model as ../en/knowledge.json. Content of the reference lab that proved the demo.",
+ "folders": {
+  "call": "Bando Innovazione 2026",
+  "inspections": "Verifiche",
+  "notices": "Avvisi",
+  "circulars": "Circolari",
+  "forms": "Moduli",
+  "cases": "Pratiche (fittizie)"
+ },
+ "personal": {
+  "companyContacts": {
+   "file": "Contatti aziende (personale).xlsx",
+   "banner": "DOCUMENTO FITTIZIO – SOLO DEMO · File personale di Marta Neri (non governato)",
+   "sheet": "Contatti",
+   "headers": [
+    "Impresa",
+    "Referente",
+    "Ruolo",
+    "Email",
+    "Cellulare",
+    "Note personali"
+   ],
+   "rows": [
+    [
+     "Alfa Meccanica S.r.l.",
+     "Giovanni Ferri",
+     "Responsabile tecnico",
+     "referente@alfameccanica.example",
+     "+39 000 000 0101",
+     "Preferisce essere chiamato dopo le 15"
+    ],
+    [
+     "Beta Costruzioni S.p.A.",
+     "Laura Martini",
+     "Responsabile amministrativa",
+     "referente@betacostruzioni.example",
+     "+39 000 000 0202",
+     "Assente da dicembre, sostituta non ancora nominata"
+    ],
+    [
+     "Gamma Agricola Soc. Coop.",
+     "Davide Sala",
+     "Referente di progetto",
+     "referente@gammaagricola.example",
+     "+39 000 000 0303",
+     "Numero personale: non condividere"
+    ],
+    [
+     "Delta Logistica S.r.l.",
+     "Silvia Rota",
+     "Amministratrice unica",
+     "referente@deltalogistica.example",
+     "+39 000 000 0404",
+     "Compleanno 12/04; conosciuta al convegno di Bologna"
+    ],
+    [
+     "Epsilon Tessile S.n.c.",
+     "Roberto Fontana",
+     "Socio amministratore",
+     "referente@epsilontessile.example",
+     "+39 000 000 0505",
+     "Contattare solo via messaggio"
+    ],
+    [
+     "Zeta Impianti S.r.l.",
+     "Carla Bassi",
+     "Titolare",
+     "referente@zetaimpianti.example",
+     "+39 000 000 0606",
+     "Ex collega, rapporto informale"
+    ]
+   ]
+  }
+ },
+ "documents": {
+  "callSummary": {
+   "file": "Bando Innovazione 2026 – Sintesi (FITTIZIO).docx",
+   "title": "Bando Innovazione 2026 – Sintesi",
+   "subtitle": "Contributi alle imprese per ammodernamento, efficienza energetica e digitalizzazione",
+   "meta": "Contoso – Direzione Incentivi · Versione 1.0 del 15 giugno 2026 · Dati e importi fittizi",
+   "blocks": [
+    [
+     "h1",
+     "§1 Finalità"
+    ],
+    [
+     "p",
+     "Il Bando Innovazione 2026 di Contoso sostiene gli investimenti delle imprese che ammodernano macchinari e impianti, migliorano l'efficienza energetica e digitalizzano i propri processi. La dotazione complessiva è di 12 milioni di euro."
+    ],
+    [
+     "h1",
+     "§2 Soggetti destinatari"
+    ],
+    [
+     "p",
+     "Possono presentare domanda le imprese di qualsiasi dimensione che, alla data di presentazione:"
+    ],
+    [
+     "bullets",
+     [
+      "hanno almeno una sede operativa attiva in Italia;",
+      "sono iscritte al Registro delle imprese;",
+      "sono in regola con gli obblighi contributivi (DURC in corso di validità);",
+      "non sono in liquidazione, in fallimento o sottoposte ad altra procedura concorsuale."
+     ]
+    ],
+    [
+     "p",
+     "Ogni impresa può presentare una sola domanda, relativa a un solo asse di intervento."
+    ],
+    [
+     "h1",
+     "§3 Tipologie di progetto"
+    ],
+    [
+     "table",
+     [
+      "Asse",
+      "Tipologia",
+      "Esempi di interventi ammissibili"
+     ],
+     [
+      [
+       "Asse 1",
+       "Ammodernamento di macchinari e impianti",
+       "Sostituzione o adeguamento di macchinari; soluzioni collegate ai macchinari per ridurre rumore e vibrazioni (cabine insonorizzate, supporti antivibranti, pannelli fonoassorbenti); automazione di linee produttive."
+      ],
+      [
+       "Asse 2",
+       "Efficienza energetica",
+       "Illuminazione LED; pompe di calore; sistemi di monitoraggio dei consumi; isolamento di impianti."
+      ],
+      [
+       "Asse 3",
+       "Digitalizzazione dei processi",
+       "Software gestionali e di pianificazione; sensoristica IoT; manutenzione predittiva; formazione digitale del personale collegata ai nuovi strumenti."
+      ]
+     ],
+     [
+      1.2,
+      3,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "§4 Spese ammissibili e non ammissibili"
+    ],
+    [
+     "h2",
+     "§4.1 Spese ammissibili"
+    ],
+    [
+     "bullets",
+     [
+      "acquisto di macchinari, impianti, attrezzature e software nuovi di fabbrica;",
+      "installazione, collaudo e messa in funzione;",
+      "formazione del personale sull'uso dei beni acquistati, fino al 10% della spesa;",
+      "consulenze tecniche collegate al progetto, fino al 5% della spesa."
+     ]
+    ],
+    [
+     "h2",
+     "§4.2 Spese non ammissibili"
+    ],
+    [
+     "bullets",
+     [
+      "manutenzione ordinaria e sostituzione di pezzi di ricambio;",
+      "beni usati o acquisiti in leasing;",
+      "IVA, salvo il caso in cui non sia recuperabile dall'impresa;",
+      "spese sostenute prima della data di presentazione della domanda."
+     ]
+    ],
+    [
+     "h1",
+     "§5 Contributo"
+    ],
+    [
+     "p",
+     "Il contributo è a fondo perduto ed è calcolato sulle spese ammissibili al netto dell'IVA."
+    ],
+    [
+     "table",
+     [
+      "Asse",
+      "Micro e piccole imprese",
+      "Medie e grandi imprese",
+      "Contributo massimo"
+     ],
+     [
+      [
+       "Asse 1",
+       "70%",
+       "60%",
+       "120.000 €"
+      ],
+      [
+       "Asse 2",
+       "70%",
+       "60%",
+       "90.000 €"
+      ],
+      [
+       "Asse 3",
+       "70%",
+       "60%",
+       "60.000 €"
+      ]
+     ],
+     [
+      1.2,
+      2.5,
+      2.5,
+      2.5
+     ]
+    ],
+    [
+     "p",
+     "La spesa ammissibile minima del progetto è di 10.000 €. Il contributo è cumulabile con altri aiuti solo per costi diversi oppure, per gli stessi costi, entro il 100% della spesa e nei limiti del regime «de minimis» (Modulo C)."
+    ],
+    [
+     "h1",
+     "§6 Scadenze"
+    ],
+    [
+     "table",
+     [
+      "Fase",
+      "Termine"
+     ],
+     [
+      [
+       "Pubblicazione del bando",
+       "15 giugno 2026"
+      ],
+      [
+       "Apertura della presentazione delle domande",
+       "1 settembre 2026, ore 10:00"
+      ],
+      [
+       "Chiusura della presentazione delle domande",
+       "30 ottobre 2026, ore 18:00"
+      ],
+      [
+       "Caricamento dei preventivi integrativi",
+       "30 novembre 2026, ore 18:00 (salvo proroghe disposte con circolare)"
+      ],
+      [
+       "Comunicazione degli esiti",
+       "entro il 28 febbraio 2027"
+      ],
+      [
+       "Realizzazione del progetto",
+       "entro 12 mesi dalla concessione del contributo"
+      ],
+      [
+       "Rendicontazione",
+       "entro 60 giorni dalla conclusione del progetto"
+      ]
+     ],
+     [
+      5,
+      5
+     ]
+    ],
+    [
+     "h1",
+     "§7 Documenti richiesti"
+    ],
+    [
+     "p",
+     "Alla domanda vanno allegati i seguenti documenti (controlli di dettaglio nella «Procedura istruttoria»):"
+    ],
+    [
+     "numbered",
+     [
+      "Modulo A – Domanda di contributo, firmato digitalmente;",
+      "Modulo B – Dichiarazione sostitutiva dei requisiti;",
+      "Modulo C – Dichiarazione «de minimis»;",
+      "relazione tecnica del progetto;",
+      "preventivi di spesa, almeno uno per ciascuna voce;",
+      "visura camerale non anteriore a 6 mesi;",
+      "documento d'identità del legale rappresentante;",
+      "DURC in corso di validità;",
+      "cronoprogramma del progetto;",
+      "coordinate bancarie (IBAN) intestate all'impresa."
+     ]
+    ],
+    [
+     "h1",
+     "§8 Modalità di presentazione"
+    ],
+    [
+     "p",
+     "La domanda si presenta esclusivamente sul portale «Contoso Bandi Online», con firma digitale del legale rappresentante (formati CAdES .p7m o PAdES). Le comunicazioni ufficiali avvengono tramite PEC. I documenti inviati per email ordinaria non sono presi in considerazione."
+    ],
+    [
+     "h1",
+     "§9 Contatti"
+    ],
+    [
+     "bullets",
+     [
+      "Email: bando-innovazione@contoso.example",
+      "PEC: bando-innovazione@pec.contoso.example",
+      "Telefono: +39 02 0000 0000 (dal lunedì al venerdì, 9:00–13:00)"
+     ]
+    ],
+    [
+     "p",
+     "La Direzione Incentivi risponde entro 5 giorni lavorativi. Non vengono rilasciati pareri preventivi sull'ammissibilità dei progetti."
+    ]
+   ]
+  },
+  "callFaq": {
+   "file": "FAQ Bando Innovazione 2026 (FITTIZIO).docx",
+   "title": "FAQ – Bando Innovazione 2026",
+   "subtitle": "Domande frequenti delle imprese",
+   "meta": "Contoso – Direzione Incentivi · Aggiornamento del 20 settembre 2026 · Contenuti fittizi",
+   "blocks": [
+    [
+     "h2",
+     "FAQ 1 – È finanziabile un progetto di ammodernamento di macchinari, per esempio per ridurre il rumore in officina?"
+    ],
+    [
+     "p",
+     "Sì. Rientra nell'Asse 1 «Ammodernamento di macchinari e impianti» se prevede la sostituzione o l'adeguamento dei macchinari oppure soluzioni collegate ai macchinari che riducono rumore e vibrazioni (cabine insonorizzate, supporti antivibranti, pannelli fonoassorbenti). Non è ammissibile la sola manutenzione ordinaria."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §3 e §4."
+    ],
+    [
+     "h2",
+     "FAQ 2 – Le microimprese possono partecipare?"
+    ],
+    [
+     "p",
+     "Sì. Micro e piccole imprese ricevono un contributo pari al 70% delle spese ammissibili, invece del 60% previsto per medie e grandi imprese, sempre entro il massimale dell'asse."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §2 e §5."
+    ],
+    [
+     "h2",
+     "FAQ 3 – Il contributo è cumulabile con altri incentivi?"
+    ],
+    [
+     "p",
+     "Sì, con altri aiuti relativi a costi diversi. Per gli stessi costi il cumulo è ammesso entro il 100% della spesa e nei limiti del regime «de minimis», da dichiarare nel Modulo C."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §5."
+    ],
+    [
+     "h2",
+     "FAQ 4 – Come e entro quando si caricano i preventivi?"
+    ],
+    [
+     "p",
+     "Sul portale «Contoso Bandi Online», sezione «Documenti», in formato PDF firmato digitalmente dal legale rappresentante, massimo 10 MB per file, entro il 30 novembre 2026 alle ore 18:00. Eventuali proroghe sono disposte solo con circolare."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §6 e §8."
+    ],
+    [
+     "h2",
+     "FAQ 5 – La firma digitale è obbligatoria?"
+    ],
+    [
+     "p",
+     "Sì, per i Moduli A, B e C e per i preventivi. Sono accettati i formati CAdES (.p7m) e PAdES (PDF firmato)."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §8."
+    ],
+    [
+     "h2",
+     "FAQ 6 – Sono previste proroghe dei termini?"
+    ],
+    [
+     "p",
+     "Le proroghe sono disposte esclusivamente con circolare della Direzione Incentivi, pubblicata nella sezione «Circolari» del portale. Comunicazioni informali non hanno valore."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §6."
+    ],
+    [
+     "h2",
+     "FAQ 7 – Come si rendiconta il progetto?"
+    ],
+    [
+     "p",
+     "Entro 60 giorni dalla conclusione del progetto, e comunque entro 12 mesi dalla concessione, si caricano fatture, quietanze di pagamento tracciabili, relazione finale e foto dei beni installati. L'erogazione avviene entro 90 giorni dall'approvazione della rendicontazione."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §6."
+    ],
+    [
+     "h2",
+     "FAQ 8 – A chi posso rivolgermi per informazioni?"
+    ],
+    [
+     "p",
+     "Scrivendo a bando-innovazione@contoso.example o chiamando il +39 02 0000 0000 (lunedì–venerdì, 9:00–13:00). La risposta arriva entro 5 giorni lavorativi. Non si rilasciano pareri preventivi sull'ammissibilità."
+    ],
+    [
+     "pi",
+     "Riferimento: Sintesi §9."
+    ]
+   ]
+  },
+  "reviewProcedure": {
+   "file": "Procedura istruttoria (FITTIZIA).docx",
+   "title": "Procedura istruttoria delle domande",
+   "subtitle": "Bando Innovazione 2026 – fasi, checklist documentale e controlli di coerenza",
+   "meta": "Contoso – Direzione Incentivi · Procedura interna n. PI-07 · Versione 1.2 del 1 settembre 2026 · Contenuti fittizi",
+   "blocks": [
+    [
+     "h1",
+     "§1 Scopo"
+    ],
+    [
+     "p",
+     "La procedura descrive come i funzionari istruttori esaminano le domande del Bando Innovazione 2026, dalla ricezione fino alla proposta di esito."
+    ],
+    [
+     "h1",
+     "§2 Fasi dell'istruttoria"
+    ],
+    [
+     "numbered",
+     [
+      "**Ricevibilità** (entro 10 giorni lavorativi dalla presentazione): domanda presentata nei termini, sul portale, con firma digitale valida.",
+      "**Ammissibilità**: requisiti del soggetto (Sintesi §2) e coerenza del progetto con l'asse scelto (Sintesi §3).",
+      "**Verifica documentale**: controllo dei 10 documenti della checklist (§3) e dei controlli di coerenza (§4).",
+      "**Richiesta di integrazioni**: se mancano documenti o ci sono incongruenze, il funzionario invia una richiesta via PEC; l'impresa ha 10 giorni per rispondere.",
+      "**Valutazione tecnica**: punteggio su 100 punti (qualità del progetto 40, impatto 30, sostenibilità economica 20, cronoprogramma 10).",
+      "**Proposta di esito**: il funzionario istruttore redige la proposta motivata.",
+      "**Decisione**: il dirigente della Direzione Incentivi approva o respinge; l'esito è comunicato via PEC."
+     ]
+    ],
+    [
+     "h1",
+     "§3 Checklist documentale (10 documenti)"
+    ],
+    [
+     "table",
+     [
+      "N.",
+      "Documento",
+      "Controlli minimi"
+     ],
+     [
+      [
+       "1",
+       "Modulo A – Domanda di contributo",
+       "Firma digitale del legale rappresentante; versione 2.1 (la 2.0 è accettata fino al 15 ottobre 2026); contributo richiesto coerente con spese e percentuale."
+      ],
+      [
+       "2",
+       "Modulo B – Dichiarazione sostitutiva",
+       "Completo in ogni campo, PEC indicata (obbligatoria dalla versione 2.1), firmato digitalmente."
+      ],
+      [
+       "3",
+       "Modulo C – Dichiarazione «de minimis»",
+       "Aiuti dell'esercizio in corso e dei due precedenti; firmato digitalmente."
+      ],
+      [
+       "4",
+       "Relazione tecnica del progetto",
+       "Asse, obiettivi, beni da acquistare, risultati attesi."
+      ],
+      [
+       "5",
+       "Preventivi di spesa",
+       "Intestati all'impresa; IVA indicata separatamente; data non anteriore a 6 mesi rispetto alla presentazione; firmati; somma degli imponibili uguale alla spesa del Modulo A."
+      ],
+      [
+       "6",
+       "Visura camerale",
+       "Non anteriore a 6 mesi; partita IVA e sede coerenti con il Modulo A."
+      ],
+      [
+       "7",
+       "Documento d'identità del legale rappresentante",
+       "In corso di validità."
+      ],
+      [
+       "8",
+       "DURC",
+       "In corso di validità alla data di presentazione."
+      ],
+      [
+       "9",
+       "Cronoprogramma",
+       "Attività e date compatibili con la conclusione entro 12 mesi."
+      ],
+      [
+       "10",
+       "Coordinate bancarie (IBAN)",
+       "Conto intestato all'impresa richiedente."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "§4 Controlli di coerenza"
+    ],
+    [
+     "bullets",
+     [
+      "**Date**: preventivi, visura e DURC entro i limiti di validità; nessuna spesa anteriore alla presentazione.",
+      "**Importi**: contributo richiesto = spesa ammissibile × percentuale dell'impresa (70% micro e piccole, 60% medie e grandi), arrotondato all'euro ed entro il massimale dell'asse.",
+      "**Partita IVA**: identica in tutti i documenti.",
+      "**Firme**: firme digitali valide e riferite al legale rappresentante indicato nella visura."
+     ]
+    ],
+    [
+     "h1",
+     "§5 Richiesta di integrazione documentale (modello)"
+    ],
+    [
+     "p",
+     "Oggetto: Bando Innovazione 2026 – Pratica <numero> – Richiesta di integrazione documentale"
+    ],
+    [
+     "p",
+     "Con riferimento alla domanda indicata in oggetto, si chiede di trasmettere tramite il portale «Contoso Bandi Online», entro 10 giorni dal ricevimento della presente, i seguenti documenti o chiarimenti: <elenco>. In assenza di riscontro la domanda sarà valutata sulla base della documentazione disponibile."
+    ],
+    [
+     "p",
+     "Cordiali saluti – Il funzionario istruttore, Contoso – Direzione Incentivi"
+    ],
+    [
+     "h1",
+     "§6 Supervisione umana"
+    ],
+    [
+     "p",
+     "La decisione sull'ammissibilità spetta sempre al funzionario istruttore e al dirigente. Gli strumenti di supporto automatico possono solo raccogliere evidenze e proporre testi: non decidono l'esito delle pratiche."
+    ]
+   ]
+  },
+  "inspectionChecklist": {
+   "file": "Verifiche sui progetti finanziati (FITTIZIA).docx",
+   "title": "Verifiche sui progetti finanziati",
+   "subtitle": "Bando Innovazione 2026 – pianificazione e checklist di sopralluogo",
+   "meta": "Contoso – Direzione Incentivi · Istruzione operativa n. IO-03 · Versione 1.0 del 1 luglio 2026 · Contenuti fittizi",
+   "blocks": [
+    [
+     "h1",
+     "§1 Scopo"
+    ],
+    [
+     "p",
+     "Le verifiche in loco accertano che i beni finanziati siano stati acquistati, installati e utilizzati come previsto dal progetto approvato."
+    ],
+    [
+     "h1",
+     "§2 Pianificazione del sopralluogo"
+    ],
+    [
+     "bullets",
+     [
+      "preavviso minimo di 5 giorni lavorativi, comunicato via PEC al referente indicato nella domanda;",
+      "finestre disponibili: mattina 9:00–13:00 oppure pomeriggio 14:00–17:00, solo nei giorni lavorativi;",
+      "durata indicativa: 2 ore; presenza obbligatoria del referente o di un delegato;",
+      "il tecnico porta con sé la checklist del §3 e l'elenco dei beni finanziati."
+     ]
+    ],
+    [
+     "h1",
+     "§3 Checklist di sopralluogo (12 punti)"
+    ],
+    [
+     "table",
+     [
+      "N.",
+      "Punto di controllo",
+      "Esito (Conforme / Non conforme / N.A.)"
+     ],
+     [
+      [
+       "1",
+       "Identità del referente presente e delega del legale rappresentante",
+       ""
+      ],
+      [
+       "2",
+       "Corrispondenza tra beni installati e progetto approvato",
+       ""
+      ],
+      [
+       "3",
+       "Corrispondenza dei numeri di matricola con fatture e preventivi",
+       ""
+      ],
+      [
+       "4",
+       "Marcatura CE e manuali d'uso dei macchinari",
+       ""
+      ],
+      [
+       "5",
+       "Data di installazione e verbale di collaudo",
+       ""
+      ],
+      [
+       "6",
+       "Fatture originali e quietanze di pagamento tracciabili",
+       ""
+      ],
+      [
+       "7",
+       "Assenza di doppio finanziamento sugli stessi beni",
+       ""
+      ],
+      [
+       "8",
+       "Asse 2: dati di consumo energetico prima e dopo l'intervento",
+       ""
+      ],
+      [
+       "9",
+       "Asse 3: licenze software attive e utenti abilitati",
+       ""
+      ],
+      [
+       "10",
+       "Formazione del personale sui nuovi beni (registri firmati)",
+       ""
+      ],
+      [
+       "11",
+       "Obblighi di pubblicità: targa «Progetto cofinanziato – Bando Innovazione 2026»",
+       ""
+      ],
+      [
+       "12",
+       "Documentazione fotografica e firma del verbale da parte di tecnico e referente",
+       ""
+      ]
+     ],
+     [
+      0.6,
+      7,
+      3
+     ]
+    ],
+    [
+     "h1",
+     "§4 Esito e verbale"
+    ],
+    [
+     "p",
+     "Il verbale riporta l'esito di ogni punto, le eventuali non conformità e le azioni richieste. L'esito finale della verifica è deciso dal responsabile dell'ufficio, non dal tecnico durante il sopralluogo."
+    ],
+    [
+     "h1",
+     "§5 Comunicazione all'impresa (modello)"
+    ],
+    [
+     "p",
+     "Oggetto: Bando Innovazione 2026 – Pratica <numero> – Comunicazione di sopralluogo di verifica"
+    ],
+    [
+     "p",
+     "Gentile referente, la informiamo che la Direzione Incentivi effettuerà un sopralluogo di verifica presso la sede <sede> in una delle seguenti finestre: <date proposte>. La preghiamo di confermare la finestra preferita e di assicurare la presenza di un referente, con fatture, quietanze e documentazione dei beni finanziati."
+    ],
+    [
+     "p",
+     "Cordiali saluti – Il tecnico incaricato, Contoso – Direzione Incentivi"
+    ]
+   ]
+  },
+  "circular1": {
+   "file": "Circolare 1-2026 – Caricamento documenti (FITTIZIA).docx",
+   "title": "Circolare n. 1/2026 del 10 settembre 2026",
+   "subtitle": "Oggetto: Bando Innovazione 2026 – modalità di caricamento dei documenti",
+   "meta": "Contoso – Direzione Incentivi · Destinatari: personale della Direzione Incentivi e sedi · Contenuti fittizi",
+   "blocks": [
+    [
+     "p",
+     "Al fine di uniformare la gestione delle domande del Bando Innovazione 2026 si dispone quanto segue."
+    ],
+    [
+     "numbered",
+     [
+      "**Termine per i preventivi integrativi**: i preventivi integrativi possono essere caricati sul portale «Contoso Bandi Online» entro il **30 novembre 2026, ore 18:00**.",
+      "**Formato**: ogni documento va caricato in formato PDF, con dimensione massima di **10 MB per file**.",
+      "**Firma**: i preventivi devono essere firmati digitalmente dal legale rappresentante dell'impresa.",
+      "**Nome dei file**: <numero pratica>-<tipo documento>-<progressivo>.pdf (esempio: PRA-2026-0001-PREV-01.pdf).",
+      "**Canali**: i documenti inviati per email ordinaria o PEC non sono considerati; fa fede solo il caricamento sul portale."
+     ]
+    ],
+    [
+     "p",
+     "La presente circolare entra in vigore dalla data di pubblicazione."
+    ],
+    [
+     "pi",
+     "Il Direttore della Direzione Incentivi"
+    ]
+   ]
+  },
+  "circular2": {
+   "file": "Circolare 2-2026 – Proroga dei termini (FITTIZIA).docx",
+   "title": "Circolare n. 2/2026 del 22 settembre 2026",
+   "subtitle": "Oggetto: Bando Innovazione 2026 – proroga del termine per il caricamento dei preventivi integrativi",
+   "meta": "Contoso – Direzione Incentivi · Destinatari: personale della Direzione Incentivi e sedi · Contenuti fittizi",
+   "blocks": [
+    [
+     "p",
+     "A seguito di un intervento di manutenzione straordinaria del portale «Contoso Bandi Online», si dispone quanto segue."
+    ],
+    [
+     "numbered",
+     [
+      "Il termine per il caricamento dei preventivi integrativi previsto al punto 1 della Circolare n. 1/2026 è **prorogato al 15 dicembre 2026, ore 18:00**.",
+      "La dimensione massima dei file è **elevata a 20 MB per file**, in deroga al punto 2 della Circolare n. 1/2026.",
+      "Restano invariate le altre disposizioni della Circolare n. 1/2026 (firma digitale, nome dei file, canali).",
+      "La proroga **non** riguarda il termine di presentazione delle domande, che resta fissato al 30 ottobre 2026, ore 18:00."
+     ]
+    ],
+    [
+     "p",
+     "Le sedi sono invitate a informare le imprese che hanno già contattato gli uffici."
+    ],
+    [
+     "pi",
+     "Il Direttore della Direzione Incentivi"
+    ]
+   ]
+  },
+  "callForms": {
+   "file": "Moduli del bando (FITTIZI).docx",
+   "title": "Moduli del Bando Innovazione 2026",
+   "subtitle": "Modulo A, Modulo B e Modulo C – campi e istruzioni di compilazione",
+   "meta": "Contoso – Direzione Incentivi · Modulistica versione 2.1 del 1 ottobre 2026 · Contenuti fittizi",
+   "blocks": [
+    [
+     "p",
+     "I moduli si compilano online sul portale «Contoso Bandi Online» e si firmano digitalmente. Non inserire dati personali non richiesti dai campi."
+    ],
+    [
+     "h1",
+     "Modulo A – Domanda di contributo (versione 2.1)"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Stato",
+      "Note"
+     ],
+     [
+      [
+       "Ragione sociale e forma giuridica",
+       "Obbligatorio",
+       "Come da visura camerale."
+      ],
+      [
+       "Partita IVA",
+       "Obbligatorio",
+       "11 cifre, identica in tutti i documenti."
+      ],
+      [
+       "Codice fiscale dell'impresa",
+       "Obbligatorio",
+       ""
+      ],
+      [
+       "Sede legale",
+       "Obbligatorio",
+       ""
+      ],
+      [
+       "Sede operativa del progetto",
+       "Obbligatorio",
+       "Deve essere attiva alla data di presentazione."
+      ],
+      [
+       "Legale rappresentante (nome, cognome, codice fiscale)",
+       "Obbligatorio",
+       "Firmatario della domanda."
+      ],
+      [
+       "PEC",
+       "Obbligatorio",
+       ""
+      ],
+      [
+       "Dimensione d'impresa",
+       "Obbligatorio",
+       "Micro, piccola, media o grande."
+      ],
+      [
+       "Asse del progetto",
+       "Obbligatorio",
+       "Uno solo tra Asse 1, 2 e 3."
+      ],
+      [
+       "Titolo e sintesi del progetto",
+       "Obbligatorio",
+       "Massimo 1.000 caratteri."
+      ],
+      [
+       "Spesa ammissibile totale (IVA esclusa)",
+       "Obbligatorio",
+       "Somma degli imponibili dei preventivi."
+      ],
+      [
+       "Contributo richiesto",
+       "Obbligatorio",
+       "Spesa × percentuale, entro il massimale."
+      ],
+      [
+       "Referente operativo e telefono",
+       "Facoltativo",
+       ""
+      ],
+      [
+       "Firma digitale",
+       "Obbligatorio",
+       "CAdES o PAdES."
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4
+     ]
+    ],
+    [
+     "h1",
+     "Modulo B – Dichiarazione sostitutiva dei requisiti"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Stato",
+      "Note"
+     ],
+     [
+      [
+       "Iscrizione al Registro delle imprese",
+       "Obbligatorio",
+       "Numero REA."
+      ],
+      [
+       "Regolarità contributiva",
+       "Obbligatorio",
+       "Estremi del DURC."
+      ],
+      [
+       "Assenza di procedure concorsuali",
+       "Obbligatorio",
+       ""
+      ],
+      [
+       "Rispetto della normativa ambientale e di sicurezza",
+       "Obbligatorio",
+       ""
+      ],
+      [
+       "PEC dell'impresa",
+       "Obbligatorio",
+       "Obbligatoria dalla versione 2.1."
+      ],
+      [
+       "Firma digitale del legale rappresentante",
+       "Obbligatorio",
+       ""
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4
+     ]
+    ],
+    [
+     "h1",
+     "Modulo C – Dichiarazione «de minimis»"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Stato",
+      "Note"
+     ],
+     [
+      [
+       "Aiuti ricevuti nell'esercizio in corso e nei due precedenti",
+       "Obbligatorio",
+       "Ente concedente, data e importo di ciascun aiuto."
+      ],
+      [
+       "Imprese collegate («impresa unica»)",
+       "Obbligatorio",
+       "Elenco delle imprese collegate, se presenti."
+      ],
+      [
+       "Dichiarazione di non superamento del massimale",
+       "Obbligatorio",
+       ""
+      ],
+      [
+       "Firma digitale del legale rappresentante",
+       "Obbligatorio",
+       ""
+      ]
+     ],
+     [
+      4,
+      1.6,
+      4
+     ]
+    ],
+    [
+     "h2",
+     "Errori frequenti"
+    ],
+    [
+     "numbered",
+     [
+      "Partita IVA diversa tra Modulo A e visura camerale.",
+      "Contributo richiesto calcolato sull'importo IVA inclusa.",
+      "Modulo B nella versione 2.0 senza PEC dopo il 15 ottobre 2026."
+     ]
+    ]
+   ]
+  },
+  "formsNotice": {
+   "file": "Avviso alle aziende – aggiornamento modulistica (FITTIZIO).docx",
+   "title": "Avviso n. 3/2026 del 24 settembre 2026",
+   "subtitle": "Bando Innovazione 2026 – aggiornamento della modulistica",
+   "meta": "Contoso – Direzione Incentivi · Avviso alle imprese richiedenti · Contenuti fittizi",
+   "blocks": [
+    [
+     "p",
+     "Gentili imprese, vi informiamo che la modulistica del Bando Innovazione 2026 è stata aggiornata. Vi chiediamo di tenere conto delle seguenti novità:"
+    ],
+    [
+     "numbered",
+     [
+      "Dal **1 ottobre 2026** è disponibile la **versione 2.1 del Modulo A**; la versione 2.0 è accettata fino al 15 ottobre 2026.",
+      "Nel **Modulo B** è ora **obbligatorio indicare la PEC** dell'impresa.",
+      "I **preventivi** devono riportare **l'IVA separata** dall'imponibile; i preventivi che non la riportano saranno oggetto di richiesta di integrazione."
+     ]
+    ],
+    [
+     "p",
+     "I moduli aggiornati sono disponibili sul portale «Contoso Bandi Online», sezione «Modulistica». Per informazioni: bando-innovazione@contoso.example."
+    ],
+    [
+     "pi",
+     "Contoso – Direzione Incentivi"
+    ],
+    [
+     "slot",
+     "slot-1"
+    ]
+   ]
+  },
+  "applicantsList": {
+   "file": "Elenco aziende richiedenti (FITTIZIO).docx",
+   "title": "Elenco delle imprese richiedenti",
+   "subtitle": "Bando Innovazione 2026 – situazione al 25 settembre 2026",
+   "meta": "Contoso – Direzione Incentivi · Uso interno · Contenuti fittizi",
+   "blocks": [
+    [
+     "h1",
+     "Imprese con domanda presentata"
+    ],
+    [
+     "table",
+     [
+      "Pratica",
+      "Impresa",
+      "Sede",
+      "Asse",
+      "Contributo richiesto",
+      "Referente",
+      "Email",
+      "Telefono"
+     ],
+     [
+      [
+       "PRA-2026-0001",
+       "Alfa Meccanica S.r.l.",
+       "Milano",
+       "Asse 1",
+       "70.000 €",
+       "Giovanni Ferri",
+       "referente@alfameccanica.example",
+       "+39 02 0000 0101"
+      ],
+      [
+       "PRA-2026-0002",
+       "Beta Costruzioni S.p.A.",
+       "Torino",
+       "Asse 2",
+       "54.600 €",
+       "Laura Martini",
+       "referente@betacostruzioni.example",
+       "+39 011 000 0202"
+      ],
+      [
+       "PRA-2026-0003",
+       "Gamma Agricola Soc. Coop.",
+       "Viterbo",
+       "Asse 1",
+       "85.000 €",
+       "Davide Sala",
+       "referente@gammaagricola.example",
+       "+39 0761 000 303"
+      ],
+      [
+       "PRA-2026-0004",
+       "Delta Logistica S.r.l.",
+       "Bologna",
+       "Asse 3",
+       "38.400 €",
+       "Silvia Rota",
+       "referente@deltalogistica.example",
+       "+39 051 000 0404"
+      ],
+      [
+       "PRA-2026-0005",
+       "Epsilon Tessile S.n.c.",
+       "Prato",
+       "Asse 2",
+       "26.250 €",
+       "Roberto Fontana",
+       "referente@epsilontessile.example",
+       "+39 0574 000 505"
+      ]
+     ],
+     [
+      1.7,
+      2.2,
+      1.1,
+      0.9,
+      1.4,
+      1.5,
+      2.6,
+      1.7
+     ]
+    ],
+    [
+     "p",
+     "L'elenco è aggiornato automaticamente dal portale; i dati dei referenti sono quelli indicati nelle domande."
+    ]
+   ]
+  },
+  "case1": {
+   "file": "Pratica PRA-2026-0001 (FITTIZIA).pdf",
+   "title": "Fascicolo della pratica PRA-2026-0001",
+   "subtitle": "Alfa Meccanica S.r.l. – Bando Innovazione 2026",
+   "meta": "Contoso – Direzione Incentivi · Estratto dal portale «Contoso Bandi Online» · Dati fittizi",
+   "blocks": [
+    [
+     "h1",
+     "1. Dati di sintesi"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Valore"
+     ],
+     [
+      [
+       "Pratica",
+       "PRA-2026-0001"
+      ],
+      [
+       "Impresa",
+       "Alfa Meccanica S.r.l."
+      ],
+      [
+       "Partita IVA (Modulo A)",
+       "10000000011"
+      ],
+      [
+       "Sede operativa",
+       "Milano"
+      ],
+      [
+       "Dimensione",
+       "piccola"
+      ],
+      [
+       "Asse",
+       "Asse 1"
+      ],
+      [
+       "Titolo del progetto",
+       "Sostituzione di due presse e installazione di cabine insonorizzate"
+      ],
+      [
+       "Spesa ammissibile dichiarata (IVA esclusa)",
+       "100.000 €"
+      ],
+      [
+       "Contributo richiesto",
+       "70.000 €"
+      ],
+      [
+       "Data di presentazione",
+       "18 settembre 2026"
+      ],
+      [
+       "Sede competente",
+       "Milano"
+      ],
+      [
+       "Legale rappresentante",
+       "Carlo Ferri"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documenti presenti nel fascicolo"
+    ],
+    [
+     "table",
+     [
+      "N.",
+      "Documento",
+      "Data",
+      "Firma digitale",
+      "Note"
+     ],
+     [
+      [
+       "1",
+       "Modulo A – Domanda di contributo (v2.1)",
+       "18/09/2026",
+       "Sì (Carlo Ferri)",
+       "Spesa 100.000 €; contributo richiesto 70.000 €; P.IVA 10000000011"
+      ],
+      [
+       "2",
+       "Modulo B – Dichiarazione sostitutiva (v2.1)",
+       "18/09/2026",
+       "Sì (Carlo Ferri)",
+       "PEC: alfameccanica@pec.example"
+      ],
+      [
+       "3",
+       "Modulo C – Dichiarazione «de minimis»",
+       "18/09/2026",
+       "Sì (Carlo Ferri)",
+       "Nessun aiuto nell'esercizio in corso e nei due precedenti"
+      ],
+      [
+       "4",
+       "Relazione tecnica del progetto",
+       "15/09/2026",
+       "Sì (Carlo Ferri)",
+       "6 pagine; Asse 1; riduzione del rumore nel reparto presse"
+      ],
+      [
+       "5",
+       "Preventivi di spesa (2)",
+       "02/09/2026 e 05/09/2026",
+       "Sì",
+       "Vedi sezione 3"
+      ],
+      [
+       "6",
+       "Visura camerale",
+       "01/09/2026",
+       "n.a.",
+       "P.IVA 10000000011; sede operativa Milano; legale rappresentante Carlo Ferri"
+      ],
+      [
+       "7",
+       "Documento d'identità del legale rappresentante",
+       "scadenza 04/2031",
+       "n.a.",
+       "Carta d'identità elettronica"
+      ],
+      [
+       "8",
+       "DURC",
+       "valido fino al 15/12/2026",
+       "n.a.",
+       "Regolare"
+      ],
+      [
+       "9",
+       "Cronoprogramma",
+       "15/09/2026",
+       "Sì (Carlo Ferri)",
+       "Conclusione prevista a giugno 2027"
+      ],
+      [
+       "10",
+       "Coordinate bancarie",
+       "18/09/2026",
+       "Sì (Carlo Ferri)",
+       "IBAN IT91P9999901600000000100011 intestato ad Alfa Meccanica S.r.l."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Preventivi di spesa"
+    ],
+    [
+     "table",
+     [
+      "Preventivo",
+      "Fornitore",
+      "Oggetto",
+      "Imponibile",
+      "IVA",
+      "Data"
+     ],
+     [
+      [
+       "PREV-01",
+       "Presse Nord S.p.A.",
+       "Due presse idrauliche a basso rumore",
+       "64.000 €",
+       "14.080 €",
+       "02/09/2026"
+      ],
+      [
+       "PREV-02",
+       "Acustica Industriale S.r.l.",
+       "Cabine insonorizzate e supporti antivibranti",
+       "36.000 €",
+       "7.920 €",
+       "05/09/2026"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Estratti e note"
+    ],
+    [
+     "p",
+     "Somma degli imponibili: 100.000 €. Impresa di piccola dimensione: percentuale di contributo 70%."
+    ]
+   ]
+  },
+  "case2": {
+   "file": "Pratica PRA-2026-0002 (FITTIZIA).pdf",
+   "title": "Fascicolo della pratica PRA-2026-0002",
+   "subtitle": "Beta Costruzioni S.p.A. – Bando Innovazione 2026",
+   "meta": "Contoso – Direzione Incentivi · Estratto dal portale «Contoso Bandi Online» · Dati fittizi",
+   "blocks": [
+    [
+     "h1",
+     "1. Dati di sintesi"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Valore"
+     ],
+     [
+      [
+       "Pratica",
+       "PRA-2026-0002"
+      ],
+      [
+       "Impresa",
+       "Beta Costruzioni S.p.A."
+      ],
+      [
+       "Partita IVA (Modulo A)",
+       "20000000022"
+      ],
+      [
+       "Sede operativa",
+       "Torino"
+      ],
+      [
+       "Dimensione",
+       "media"
+      ],
+      [
+       "Asse",
+       "Asse 2"
+      ],
+      [
+       "Titolo del progetto",
+       "Efficientamento energetico del capannone: illuminazione LED e pompa di calore"
+      ],
+      [
+       "Spesa ammissibile dichiarata (IVA esclusa)",
+       "91.000 €"
+      ],
+      [
+       "Contributo richiesto",
+       "54.600 €"
+      ],
+      [
+       "Data di presentazione",
+       "21 settembre 2026"
+      ],
+      [
+       "Sede competente",
+       "Torino"
+      ],
+      [
+       "Legale rappresentante",
+       "Enrico Martini"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documenti presenti nel fascicolo"
+    ],
+    [
+     "table",
+     [
+      "N.",
+      "Documento",
+      "Data",
+      "Firma digitale",
+      "Note"
+     ],
+     [
+      [
+       "1",
+       "Modulo A – Domanda di contributo (v2.1)",
+       "21/09/2026",
+       "Sì (Enrico Martini)",
+       "Spesa 91.000 €; contributo richiesto 54.600 €; P.IVA 20000000022"
+      ],
+      [
+       "2",
+       "Modulo B – Dichiarazione sostitutiva (v2.0)",
+       "21/09/2026",
+       "Sì (Enrico Martini)",
+       "Versione 2.0, senza PEC"
+      ],
+      [
+       "4",
+       "Relazione tecnica del progetto",
+       "19/09/2026",
+       "Sì (Enrico Martini)",
+       "4 pagine; Asse 2"
+      ],
+      [
+       "5",
+       "Preventivi di spesa (2)",
+       "10/09/2026 e 12/09/2026",
+       "Parziale",
+       "Vedi sezione 3"
+      ],
+      [
+       "6",
+       "Visura camerale",
+       "08/09/2026",
+       "n.a.",
+       "P.IVA 20000000022; sede operativa Torino; legale rappresentante Enrico Martini"
+      ],
+      [
+       "7",
+       "Documento d'identità del legale rappresentante",
+       "scadenza 11/2029",
+       "n.a.",
+       "Passaporto"
+      ],
+      [
+       "10",
+       "Coordinate bancarie",
+       "21/09/2026",
+       "Sì (Enrico Martini)",
+       "IBAN IT20A9999901600000000200022 intestato a Beta Costruzioni S.p.A."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Preventivi di spesa"
+    ],
+    [
+     "table",
+     [
+      "Preventivo",
+      "Fornitore",
+      "Oggetto",
+      "Imponibile",
+      "IVA",
+      "Data"
+     ],
+     [
+      [
+       "PREV-01",
+       "Luce Efficiente S.r.l.",
+       "Sostituzione di 420 corpi illuminanti con LED",
+       "58.000 €",
+       "12.760 €",
+       "10/09/2026"
+      ],
+      [
+       "PREV-02",
+       "Termotecnica Alpina S.r.l.",
+       "Pompa di calore da 180 kW",
+       "33.000 €",
+       "7.260 €",
+       "12/09/2026 (non firmato digitalmente)"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Estratti e note"
+    ],
+    [
+     "p",
+     "Somma degli imponibili: 91.000 €. Impresa di media dimensione: percentuale di contributo 60%."
+    ],
+    [
+     "p",
+     "Il fascicolo contiene 7 documenti su 10 previsti dalla checklist della Procedura istruttoria."
+    ]
+   ]
+  },
+  "case3": {
+   "file": "Pratica PRA-2026-0003 (FITTIZIA).pdf",
+   "title": "Fascicolo della pratica PRA-2026-0003",
+   "subtitle": "Gamma Agricola Soc. Coop. – Bando Innovazione 2026",
+   "meta": "Contoso – Direzione Incentivi · Estratto dal portale «Contoso Bandi Online» · Dati fittizi",
+   "blocks": [
+    [
+     "h1",
+     "1. Dati di sintesi"
+    ],
+    [
+     "table",
+     [
+      "Campo",
+      "Valore"
+     ],
+     [
+      [
+       "Pratica",
+       "PRA-2026-0003"
+      ],
+      [
+       "Impresa",
+       "Gamma Agricola Soc. Coop."
+      ],
+      [
+       "Partita IVA (Modulo A)",
+       "30000000033"
+      ],
+      [
+       "Sede operativa",
+       "Viterbo"
+      ],
+      [
+       "Dimensione",
+       "piccola"
+      ],
+      [
+       "Asse",
+       "Asse 1"
+      ],
+      [
+       "Titolo del progetto",
+       "Ammodernamento della linea di confezionamento"
+      ],
+      [
+       "Spesa ammissibile dichiarata (IVA esclusa)",
+       "121.500 €"
+      ],
+      [
+       "Contributo richiesto",
+       "85.000 €"
+      ],
+      [
+       "Data di presentazione",
+       "25 settembre 2026"
+      ],
+      [
+       "Sede competente",
+       "Milano"
+      ],
+      [
+       "Legale rappresentante",
+       "Ugo Sala"
+      ]
+     ],
+     [
+      4,
+      7
+     ]
+    ],
+    [
+     "h1",
+     "2. Documenti presenti nel fascicolo"
+    ],
+    [
+     "table",
+     [
+      "N.",
+      "Documento",
+      "Data",
+      "Firma digitale",
+      "Note"
+     ],
+     [
+      [
+       "1",
+       "Modulo A – Domanda di contributo (v2.1)",
+       "25/09/2026",
+       "Sì (Ugo Sala)",
+       "Spesa 121.500 €; contributo richiesto 85.000 €; P.IVA 30000000033"
+      ],
+      [
+       "2",
+       "Modulo B – Dichiarazione sostitutiva (v2.1)",
+       "25/09/2026",
+       "Sì (Ugo Sala)",
+       "PEC: gammaagricola@pec.example"
+      ],
+      [
+       "3",
+       "Modulo C – Dichiarazione «de minimis»",
+       "25/09/2026",
+       "Sì (Mario Sala)",
+       "Aiuto regionale di 12.000 € nel 2025"
+      ],
+      [
+       "4",
+       "Relazione tecnica del progetto",
+       "22/09/2026",
+       "Sì (Ugo Sala)",
+       "5 pagine; Asse 1"
+      ],
+      [
+       "5",
+       "Preventivi di spesa (2)",
+       "12/03/2026 e 10/09/2026",
+       "Sì",
+       "Vedi sezione 3"
+      ],
+      [
+       "6",
+       "Visura camerale",
+       "15/09/2026",
+       "n.a.",
+       "P.IVA 30000000038; sede operativa Viterbo; legale rappresentante Ugo Sala"
+      ],
+      [
+       "7",
+       "Documento d'identità del legale rappresentante",
+       "scadenza 02/2030",
+       "n.a.",
+       "Carta d'identità"
+      ],
+      [
+       "8",
+       "DURC",
+       "valido fino al 30/11/2026",
+       "n.a.",
+       "Regolare"
+      ],
+      [
+       "9",
+       "Cronoprogramma",
+       "22/09/2026",
+       "Sì (Ugo Sala)",
+       "Conclusione prevista a settembre 2027"
+      ],
+      [
+       "10",
+       "Coordinate bancarie",
+       "25/09/2026",
+       "Sì (Ugo Sala)",
+       "IBAN IT29F9999901600000000300033 intestato a Gamma Agricola Soc. Coop."
+      ]
+     ],
+     [
+      0.6,
+      3.2,
+      1.6,
+      1.4,
+      4.4
+     ]
+    ],
+    [
+     "h1",
+     "3. Preventivi di spesa"
+    ],
+    [
+     "table",
+     [
+      "Preventivo",
+      "Fornitore",
+      "Oggetto",
+      "Imponibile",
+      "IVA",
+      "Data"
+     ],
+     [
+      [
+       "PREV-01",
+       "Macchine Pack S.r.l.",
+       "Confezionatrice automatica",
+       "70.000 €",
+       "15.400 €",
+       "12/03/2026"
+      ],
+      [
+       "PREV-02",
+       "Automazioni Centro S.r.l.",
+       "Nastro trasportatore e sensori di linea",
+       "42.000 €",
+       "9.240 €",
+       "10/09/2026"
+      ]
+     ],
+     [
+      1.2,
+      2.2,
+      3,
+      1.4,
+      1.2,
+      1.4
+     ]
+    ],
+    [
+     "h1",
+     "4. Estratti e note"
+    ],
+    [
+     "p",
+     "Impresa di piccola dimensione: percentuale di contributo 70%."
+    ]
+   ]
+  },
+  "confidentialCase": {
+   "file": "Pratica riservata (FITTIZIA).docx",
+   "title": "Scheda riservata – pratica PRA-2026-0004",
+   "subtitle": "Delta Logistica S.r.l. – dati personali e informazioni economiche riservate",
+   "meta": "Classificazione: Contoso Riservato (demo) · Uso interno della Direzione Incentivi · Dati generati per test",
+   "blocks": [
+    [
+     "p",
+     "**Attenzione**: documento riservato. Contiene dati personali e informazioni economiche non pubbliche. Non inoltrare all'esterno di Contoso."
+    ],
+    [
+     "h1",
+     "1. Compagine sociale"
+    ],
+    [
+     "table",
+     [
+      "Nominativo",
+      "Ruolo",
+      "Codice fiscale (generato per test)",
+      "Luogo e data di nascita"
+     ],
+     [
+      [
+       "Silvia Rota",
+       "Amministratrice unica",
+       "RTOSLV78D52A944B",
+       "Bologna, 12/04/1978"
+      ],
+      [
+       "Andrea Rota",
+       "Socio (40%)",
+       "RTONDR75S03A944U",
+       "Bologna, 03/11/1975"
+      ],
+      [
+       "Paola Bruni",
+       "Socia (20%)",
+       "BRNPLA82L61F257P",
+       "Modena, 21/07/1982"
+      ]
+     ],
+     [
+      2.2,
+      2,
+      3,
+      2.8
+     ]
+    ],
+    [
+     "h1",
+     "2. Coordinate bancarie"
+    ],
+    [
+     "bullets",
+     [
+      "Conto dedicato al progetto: IBAN IT38K9999901600000000400044 intestato a Delta Logistica S.r.l.",
+      "Conto personale dell'amministratrice (per rimborsi spese): IBAN IT27M9999901601000000400045"
+     ]
+    ],
+    [
+     "h1",
+     "3. Dati economici riservati"
+    ],
+    [
+     "table",
+     [
+      "Voce",
+      "2024",
+      "2025"
+     ],
+     [
+      [
+       "Fatturato",
+       "3.980.000 €",
+       "4.250.000 €"
+      ],
+      [
+       "EBITDA",
+       "285.000 €",
+       "312.000 €"
+      ],
+      [
+       "Utile netto",
+       "61.000 €",
+       "48.000 €"
+      ],
+      [
+       "Posizione finanziaria netta",
+       "-1.020.000 €",
+       "-1.180.000 €"
+      ],
+      [
+       "Esposizione bancaria a breve",
+       "640.000 €",
+       "710.000 €"
+      ]
+     ],
+     [
+      4,
+      3,
+      3
+     ]
+    ],
+    [
+     "h2",
+     "Note riservate dell'istruttore"
+    ],
+    [
+     "bullets",
+     [
+      "Rating interno di merito creditizio: B+ (uso interno).",
+      "Contenzioso in corso con un fornitore per 85.000 € (esito incerto).",
+      "Richiesta di rateizzazione di debiti tributari per 120.000 € presentata a luglio 2026."
+     ]
+    ]
+   ]
+  }
+ }
+}

@@ -1,0 +1,602 @@
+{
+ "_comment": "Locale pack (it). Same keys as ../en/core.json. Names mirror the reference lab that proved the demo. {{a.b.c}} placeholders are resolved against this locale. Run Test-DemoPack.ps1 after every edit.",
+ "locale": "it",
+ "language": "Italiano",
+ "usageLocation": "IT",
+ "org": {
+  "name": "Contoso",
+  "department": "Direzione Incentivi",
+  "program": "Bando Innovazione 2026",
+  "portal": "Contoso Bandi Online",
+  "fictionalBanner": "DOCUMENTO FITTIZIO – SOLO DEMO",
+  "fictionalSuffix": "(FITTIZIO)",
+  "namePrefix": "Contoso –",
+  "publisher": "Contoso",
+  "offices": {
+   "main": "Milano",
+   "secondary": "Torino"
+  },
+  "caseIdPrefix": "PRA-2026-",
+  "recordIdPrefix": "PROT-2026-"
+ },
+ "personas": {
+  "aiAdmin": {
+   "givenName": "Giulia",
+   "surname": "Conti",
+   "jobTitle": "Amministratrice AI",
+   "department": "IT Governance"
+  },
+  "identityAdmin": {
+   "givenName": "Paolo",
+   "surname": "Greco",
+   "jobTitle": "Identità e accessi",
+   "department": "Identity and Access Management"
+  },
+  "complianceOfficer": {
+   "givenName": "Elena",
+   "surname": "Costa",
+   "jobTitle": "Compliance e privacy",
+   "department": "Compliance and Privacy"
+  },
+  "socAnalyst": {
+   "givenName": "Marco",
+   "surname": "Gallo",
+   "jobTitle": "Analista SOC",
+   "department": "Security Operations"
+  },
+  "maker": {
+   "givenName": "Luca",
+   "surname": "Bianchi",
+   "jobTitle": "Maker della Direzione Incentivi",
+   "department": "Direzione Incentivi"
+  },
+  "caseOfficer": {
+   "givenName": "Anna",
+   "surname": "Verdi",
+   "jobTitle": "Funzionaria della sede di Torino",
+   "department": "Direzione Incentivi"
+  },
+  "director": {
+   "givenName": "Silvia",
+   "surname": "Colombo",
+   "jobTitle": "Dirigente della Direzione Incentivi",
+   "department": "Direzione Incentivi"
+  },
+  "programLead": {
+   "givenName": "Marta",
+   "surname": "Neri",
+   "jobTitle": "Referente circolari della Direzione Incentivi",
+   "department": "Direzione Incentivi"
+  },
+  "orphanLeaver": {
+   "givenName": "Fabio",
+   "surname": "Rinaldi",
+   "jobTitle": "Referente circolari",
+   "department": "Direzione Incentivi"
+  },
+  "d8Leaver": {
+   "givenName": "Chiara",
+   "surname": "Lombardi",
+   "jobTitle": "Addetta alla modulistica",
+   "department": "Direzione Incentivi"
+  }
+ },
+ "groups": {
+  "department": {
+   "displayName": "GRP-Direzione-Incentivi",
+   "mailNickname": "GRP-Direzione-Incentivi",
+   "description": "Utenti della Direzione Incentivi (demo)."
+  },
+  "directoryReaders": {
+   "displayName": "GRP-Agenti-Anagrafica",
+   "mailNickname": "GRP-Agenti-Anagrafica",
+   "description": "Gruppo di sicurezza assegnato agli agenti tramite access package (demo)."
+  },
+  "site": {
+   "displayName": "Direzione Incentivi – Bandi (demo)",
+   "mailNickname": "DirezioneIncentiviBandi",
+   "description": "Sito documentale della Direzione Incentivi (contenuti dimostrativi fittizi)."
+  }
+ },
+ "agents": {
+  "recordsColleague": {
+   "codeName": "Collega-Protocollo",
+   "displayName": "Collega Protocollo",
+   "blueprint": "Collega Protocollo",
+   "identity": "Collega Protocollo Identity",
+   "manifest": {
+    "nameShort": "Collega Protocollo",
+    "nameFull": "Collega digitale Protocollo",
+    "descriptionShort": "Collega digitale del Protocollo della Direzione Incentivi (demo).",
+    "descriptionFull": "Riceve per email e in Teams le richieste di protocollazione, le registra con lo strumento di protocollo e risponde al mittente con numero e data. Contesto dimostrativo: tutti i dati sono fittizi.",
+    "developer": "Contoso"
+   },
+   "instance": {
+    "displayName": "Collega Protocollo Milano",
+    "alias": "collega.protocollo.milano",
+    "description": "Collega digitale del Protocollo della sede di Milano (demo)."
+   }
+  },
+  "recordsAssistant": {
+   "codeName": "Assistente-Protocollo",
+   "displayName": "Assistente Protocollo",
+   "blueprint": "Assistente Protocollo Blueprint",
+   "identity": "Assistente Protocollo"
+  },
+  "reportsMonitor": {
+   "codeName": "Monitor-Segnalazioni",
+   "displayName": "Monitor Segnalazioni",
+   "blueprint": "Monitor Segnalazioni Blueprint",
+   "identity": "Monitor Segnalazioni"
+  },
+  "reportsMonitorTest": {
+   "codeName": "Monitor-Segnalazioni-Test",
+   "displayName": "Monitor Segnalazioni – Test",
+   "blueprint": "Monitor Segnalazioni - Test Blueprint",
+   "identity": "Monitor Segnalazioni - Test"
+  },
+  "applicationReview": {
+   "codeName": "Istruttoria-Pratiche",
+   "displayName": "Istruttoria Pratiche",
+   "blueprint": "Istruttoria Pratiche Blueprint",
+   "identity": "Istruttoria Pratiche"
+  },
+  "grantsDesk": {
+   "codeName": "Sportello-Bandi",
+   "displayName": "Sportello Bandi",
+   "shortDescription": "Risponde alle imprese sul Bando Innovazione 2026 (demo).",
+   "description": "Aiuta il personale della Direzione Incentivi a rispondere alle domande delle imprese sul Bando Innovazione 2026 (dati fittizi), prepara promemoria e registra le richieste al protocollo.",
+   "instructions": "Sei «Sportello Bandi», l'assistente interno della Direzione Incentivi di Contoso per il Bando Innovazione 2026.\nContesto: ambiente dimostrativo; bando, imprese e pratiche sono fittizi.\n\nObiettivo\nAiutare i funzionari a rispondere in modo corretto, rapido e coerente alle domande che le imprese pongono sul bando.\n\nCome lavori\n1. Rispondi usando solo i documenti della knowledge «Bando Innovazione 2026» (Sintesi del bando, FAQ, Procedura istruttoria). Indica sempre documento e paragrafo da cui prendi l'informazione.\n2. Se ti viene chiesta una risposta per un'impresa, prepara una bozza in tono istituzionale, chiaro e cortese, con: oggetto, sintesi della domanda, risposta, riferimenti al bando.\n3. Se ti viene chiesto un promemoria, crea un documento Word con la stessa struttura.\n4. Se ti viene chiesto di registrare una richiesta al protocollo, spiega che le registrazioni si fanno con l'agente «{{agents.recordsAssistant.displayName}}» e riepiloga cosa inviare.\n5. Prima di inviare qualunque email chiedi conferma esplicita all'utente e mostra destinatari e testo.\n\nLimiti\n- Non inventare scadenze, importi, requisiti o percentuali: se un'informazione non è nei documenti, dillo e suggerisci di contattare l'ufficio competente.\n- Non esprimere valutazioni di ammissibilità: la decisione spetta sempre al funzionario.\n- Non trattare dati personali o riservati: se l'utente li inserisce, invitalo a rimuoverli.\n- Rispondi in italiano."
+  },
+  "grantsDeskPilot": {
+   "codeName": "Sportello-Bandi-Pilota",
+   "displayName": "Sportello Bandi – Pilota",
+   "shortDescription": "Copia pilota di Sportello Bandi (demo).",
+   "description": "Copia pilota di Sportello Bandi, usata per mostrare lato utente un agente bloccato (dati fittizi).",
+   "instructions": "{{agents.grantsDesk.instructions}}"
+  },
+  "siteInspections": {
+   "codeName": "Richieste-Sopralluoghi",
+   "displayName": "Richieste Sopralluoghi",
+   "shortDescription": "Pianifica i sopralluoghi sui progetti finanziati (demo).",
+   "description": "Aiuta i tecnici della Direzione Incentivi a pianificare i sopralluoghi di verifica sui progetti finanziati (dati fittizi): propone le date, prepara la checklist e la comunicazione all'impresa.",
+   "instructions": "Sei «Richieste Sopralluoghi», l'assistente dei tecnici della Direzione Incentivi di Contoso per le verifiche sui progetti finanziati dal Bando Innovazione 2026 (contesto dimostrativo, dati fittizi).\n\nPer ogni richiesta di sopralluogo:\n1. Riepiloga impresa, progetto finanziato, sede e referente indicati dall'utente.\n2. Proponi tre finestre di date nei giorni lavorativi successivi alla richiesta, di mattina o di pomeriggio.\n3. Genera la checklist di verifica partendo dal documento «Verifiche sui progetti finanziati».\n4. Prepara la bozza della comunicazione all'impresa, senza inviarla: l'invio spetta al tecnico.\n\nLimiti: non inventare requisiti che non sono nella procedura; non esprimere giudizi sull'esito della verifica; rispondi in italiano."
+  },
+  "communicationsAssistant": {
+   "codeName": "Assistente-Comunicazioni",
+   "displayName": "Assistente Comunicazioni",
+   "shortDescription": "Riassume gli avvisi e invia le comunicazioni (demo).",
+   "description": "Riassume avvisi e documenti del Bando Innovazione 2026 (fittizi) e prepara e invia le comunicazioni ai referenti.",
+   "instructions": "Sei «Assistente Comunicazioni» della Direzione Incentivi di Contoso (contesto dimostrativo, dati fittizi).\nAiuti i funzionari a preparare le comunicazioni relative al Bando Innovazione 2026.\n- Quando ti viene chiesto di riassumere un avviso o un documento, usa la knowledge «Avvisi» e produci una sintesi di massimo dieci righe con i punti d'azione.\n- Quando ti viene chiesto di preparare una comunicazione, scrivi oggetto e testo in tono istituzionale.\n- Quando ti viene chiesto di inviarla, usa lo strumento di invio email.\nRispondi in italiano."
+  },
+  "faqPrototype": {
+   "codeName": "FAQ-Bando-Imprese",
+   "displayName": "FAQ Bando Imprese (prototipo)",
+   "shortDescription": "Prototipo di risposte automatiche alle imprese (demo).",
+   "description": "Prototipo di risposte automatiche alle imprese sul Bando Innovazione 2026 (NON in produzione, dati fittizi).",
+   "instructions": ""
+  },
+  "circularsAssistant": {
+   "displayName": "Assistente Circolari",
+   "description": "Risponde sulle circolari interne del Bando Innovazione 2026 (fittizie).",
+   "instructions": "Sei «Assistente Circolari»: rispondi alle domande del personale sulle circolari interne relative al Bando Innovazione 2026 (contesto dimostrativo, circolari fittizie).\n- Usa solo le circolari della cartella «Circolari» e cita numero e data della circolare.\n- Se due circolari sono in contrasto, prevale la più recente: segnalalo.\n- Se la risposta non è nelle circolari, dillo.\nRispondi in italiano, in modo sintetico."
+  },
+  "formsAssistant": {
+   "displayName": "Assistente Modulistica",
+   "description": "Aiuta a scegliere e verificare i moduli del Bando Innovazione 2026 (fittizi).",
+   "instructions": "Sei «Assistente Modulistica»: aiuti il personale a scegliere il modulo corretto del Bando Innovazione 2026 e a verificarne la compilazione (moduli fittizi). Indica sempre il nome del modulo e i campi obbligatori. Non compilare moduli con dati personali reali. Rispondi in italiano."
+  },
+  "personalContacts": {
+   "displayName": "Bozza Rubrica Personale",
+   "description": "Risponde sui referenti delle imprese che seguo (file personale).",
+   "instructions": "Rispondi alle domande sui referenti delle imprese che seguo usando il file «{{knowledge.personal.companyContacts.file}}». Rispondi in italiano.",
+   "rejectionReason": "Usa dati di contatto da un file personale non governato: spostare i dati in una sorgente approvata e ripresentare."
+  }
+ },
+ "mcp": {
+  "servers": {
+   "records": {
+    "name": "ext_ProtocolloTest",
+    "description": "Protocollo di Contoso (server di test, dati fittizi).",
+    "tools": {
+     "register": {
+      "name": "registra_protocollo",
+      "description": "Registra una richiesta al protocollo e restituisce numero e data (dati fittizi).",
+      "params": {
+       "sender": {
+        "name": "mittente",
+        "description": "Mittente della richiesta (nome, impresa o indirizzo email)."
+       },
+       "subject": {
+        "name": "oggetto",
+        "description": "Oggetto della richiesta da protocollare."
+       }
+      }
+     },
+     "status": {
+      "name": "stato_protocollo",
+      "description": "Restituisce lo stato di una registrazione di protocollo (errore simulato circa una volta su due).",
+      "params": {
+       "number": {
+        "name": "numero",
+        "description": "Numero di protocollo, per esempio PROT-2026-000123."
+       }
+      }
+     }
+    },
+    "strings": {
+     "office": "Protocollo – Direzione Incentivi",
+     "registered": "Registrato",
+     "notFound": "Non trovato (dati fittizi)",
+     "assignedTo": "Direzione Incentivi",
+     "failure": "Servizio di protocollo temporaneamente non disponibile (errore simulato dal server di test)."
+    }
+   },
+   "companies": {
+    "name": "ext_AnagrafeTest",
+    "description": "Anagrafe delle imprese richiedenti (server di test, dati fittizi).",
+    "tools": {
+     "find": {
+      "name": "cerca_azienda",
+      "description": "Cerca un'impresa per partita IVA e restituisce i dati anagrafici (dati fittizi).",
+      "params": {
+       "vat": {
+        "name": "partita_iva",
+        "description": "Partita IVA di 11 cifre (senza prefisso IT)."
+       }
+      }
+     }
+    },
+    "strings": {
+     "found": "trovata (dati fittizi)",
+     "notFound": "Nessuna impresa trovata (dati fittizi)",
+     "active": "attiva"
+    },
+    "data": [
+     {
+      "vat": "10000000011",
+      "name": "Alfa Meccanica S.r.l.",
+      "legalForm": "Società a responsabilità limitata",
+      "city": "Milano",
+      "registeredEmail": "alfameccanica@pec.example"
+     },
+     {
+      "vat": "20000000022",
+      "name": "Beta Costruzioni S.p.A.",
+      "legalForm": "Società per azioni",
+      "city": "Torino",
+      "registeredEmail": "betacostruzioni@pec.example"
+     },
+     {
+      "vat": "30000000033",
+      "name": "Gamma Agricola Soc. Coop.",
+      "legalForm": "Società cooperativa",
+      "city": "Viterbo",
+      "registeredEmail": "gammaagricola@pec.example"
+     },
+     {
+      "vat": "40000000044",
+      "name": "Delta Logistica S.r.l.",
+      "legalForm": "Società a responsabilità limitata",
+      "city": "Bologna",
+      "registeredEmail": "deltalogistica@pec.example"
+     },
+     {
+      "vat": "50000000055",
+      "name": "Epsilon Tessile S.n.c.",
+      "legalForm": "Società in nome collettivo",
+      "city": "Prato",
+      "registeredEmail": "epsilontessile@pec.example"
+     }
+    ]
+   },
+   "deadlines": {
+    "base": "ext_ScadenzeTest",
+    "description": "Scadenze del Bando Innovazione 2026 (server di test, dati fittizi).",
+    "tools": {
+     "list": {
+      "name": "elenca_scadenze_bando",
+      "description": "Elenca le scadenze del Bando Innovazione 2026 e le proroghe per circolare (dati fittizi).",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Bando Innovazione 2026 (FITTIZIO)",
+     "items": [
+      {
+       "phase": "Pubblicazione del bando",
+       "date": "15/06/2026"
+      },
+      {
+       "phase": "Apertura della presentazione delle domande",
+       "date": "01/09/2026 ore 10:00"
+      },
+      {
+       "phase": "Chiusura della presentazione delle domande",
+       "date": "30/10/2026 ore 18:00"
+      },
+      {
+       "phase": "Caricamento dei preventivi integrativi",
+       "date": "15/12/2026 ore 18:00",
+       "note": "prorogato dalla Circolare n. 2/2026 (in origine 30/11/2026)"
+      },
+      {
+       "phase": "Modulo A versione 2.0",
+       "date": "accettato fino al 15/10/2026",
+       "note": "dal 01/10/2026 è disponibile la versione 2.1"
+      }
+     ],
+     "sources": "Sintesi del bando; Circolari n. 1/2026 e n. 2/2026 (fittizie)"
+    }
+   },
+   "forms": {
+    "base": "ext_ModuliTest",
+    "description": "Moduli del Bando Innovazione 2026 (server di test, dati fittizi).",
+    "tools": {
+     "list": {
+      "name": "elenca_moduli_bando",
+      "description": "Elenca i moduli del Bando Innovazione 2026 con versione e campi obbligatori (dati fittizi).",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Bando Innovazione 2026 (FITTIZIO)",
+     "items": [
+      {
+       "form": "Modulo A – Domanda di contributo",
+       "version": "2.1 (la 2.0 è accettata fino al 15/10/2026)",
+       "mandatoryFields": [
+        "partita IVA",
+        "spesa e contributo richiesto",
+        "firma digitale del legale rappresentante"
+       ]
+      },
+      {
+       "form": "Modulo B – Dichiarazione sostitutiva dei requisiti",
+       "version": "2.1",
+       "mandatoryFields": [
+        "PEC dell'impresa (obbligatoria dalla versione 2.1)",
+        "firma digitale"
+       ]
+      },
+      {
+       "form": "Modulo C – Dichiarazione «de minimis»",
+       "version": "2.1",
+       "mandatoryFields": [
+        "aiuti dell'esercizio in corso e dei due precedenti",
+        "firma digitale"
+       ]
+      }
+     ],
+     "sources": "Moduli del bando, versione 2.1 del 01/10/2026 (fittizi)"
+    }
+   }
+  }
+ },
+ "overlays": {
+  "records-assistant": {
+   "rolePrompt": "Sei «Assistente Protocollo» della Direzione Incentivi (contesto dimostrativo, dati fittizi).\nSu richiesta dell'utente:\n- registri al protocollo richieste e comunicazioni con lo strumento «{{mcp.servers.records.tools.register.name}}» e riporti il numero ottenuto;\n- controlli lo stato di un protocollo con lo strumento «{{mcp.servers.records.tools.status.name}}»;\n- prepari e invii, per suo conto, le comunicazioni in uscita usando lo strumento di posta. Prima dell'invio riepiloga destinatari, oggetto e testo.\nSe uno strumento non risponde o non è disponibile, dillo all'utente senza inventare il risultato.\nRispondi in italiano."
+  },
+  "records-colleague": {
+   "rolePrompt": "Sei un collega digitale dell'ufficio Protocollo della Direzione Incentivi di Contoso (contesto dimostrativo, dati fittizi). Il tuo nome è il nome della tua istanza, indicato all'inizio di ogni conversazione: usalo sempre quando ti presenti o firmi un messaggio. Hai una tua casella di posta e sei presente in Teams.\nQuando ricevi un'email o un messaggio con una richiesta di protocollazione:\n1. Estrai mittente, oggetto e numero di allegati.\n2. Registra la richiesta con lo strumento «{{overlays.records-colleague.tools.register.name}}» e ottieni il numero.\n3. Rispondi al mittente confermando numero e data di protocollo.\n4. Se la richiesta non è chiara, chiedi chiarimenti al mittente invece di procedere.\nNon inoltrare mai documenti a destinatari esterni all'organizzazione. Rispondi sempre in italiano.",
+   "tools": {
+    "register": {
+     "name": "registra_protocollo",
+     "description": "Registra una richiesta nel protocollo della Direzione Incentivi (DEMO: numeri fittizi) e restituisce numero e data.",
+     "params": {
+      "sender": {
+       "name": "mittente",
+       "description": "Mittente della richiesta (nome o indirizzo email)."
+      },
+      "subject": {
+       "name": "oggetto",
+       "description": "Oggetto della richiesta da protocollare."
+      },
+      "attachments": {
+       "name": "numero_allegati",
+       "description": "Numero di allegati ricevuti."
+      }
+     }
+    }
+   },
+   "strings": {
+    "office": "Protocollo – Direzione Incentivi"
+   },
+   "texts": {
+    "welcome": "👋 Ciao! Sono **{name}**, il collega digitale dell'ufficio Protocollo della Direzione Incentivi di Contoso.\n\nMandami in chat o per email una richiesta da protocollare: la registro e ti rispondo con numero e data di protocollo. Come posso aiutarti?",
+    "hired": "Grazie per avermi assunto! Sono **{name}** e da oggi mi occupo delle richieste di protocollo della Direzione Incentivi.",
+    "goodbye": "Grazie per il tempo trascorso insieme: è stato un piacere lavorare con te.",
+    "identityNote": "Il tuo nome (nome di questa istanza) è «{name}»: presentati e firma sempre con questo nome.",
+    "callerNote": "Stai parlando con: {caller}.",
+    "emailSender": "il mittente dell'email",
+    "notificationSender": "il mittente della notifica"
+   }
+  },
+  "reports-monitor": {
+   "rolePrompt": "Sei «Monitor Segnalazioni», un agente autonomo della Direzione Incentivi di Contoso che lavora senza un utente collegato (contesto dimostrativo, dati fittizi).\nA ogni esecuzione (per esempio quando ti chiedono di eseguire il controllo delle segnalazioni):\n1. Leggi con lo strumento «{{overlays.reports-monitor.tools.readReports.name}}» le segnalazioni di anomalia sulle domande del Bando Innovazione 2026 ricevute nelle ultime 24 ore.\n2. Raggruppale per tipo: domanda duplicata, importi incongruenti, documentazione mancante, altro.\n3. Per individuare il responsabile di ciascuna pratica usa lo strumento «{{overlays.reports-monitor.tools.findOfficers.name}}» con la sede competente. Se lo strumento indica che non sei autorizzato alla lettura dell'anagrafica o che l'accesso è bloccato, scrivi «responsabile non disponibile» e riporta brevemente il motivo in fondo al riepilogo.\n4. Produci un riepilogo di massimo quindici righe per il dirigente, con le tre segnalazioni più urgenti.\nNon modificare dati e non contattare le imprese. Rispondi sempre in italiano.",
+   "tools": {
+    "readReports": {
+     "name": "leggi_segnalazioni",
+     "description": "Restituisce le segnalazioni di anomalia sulle domande del Bando Innovazione 2026 ricevute nelle ultime 24 ore (dati fittizi).",
+     "params": {}
+    },
+    "findOfficers": {
+     "name": "cerca_responsabili",
+     "description": "Cerca nell'anagrafica (Microsoft Entra ID), con l'identità propria dell'agente, i funzionari della Direzione Incentivi della sede indicata.",
+     "params": {
+      "office": {
+       "name": "sede",
+       "description": "Sede competente della pratica, per esempio Milano o Torino."
+      }
+     }
+    }
+   },
+   "strings": {
+    "ok": "ok",
+    "notAuthorized": "non autorizzato alla lettura dell'anagrafica",
+    "blockedByCa": "accesso bloccato dall'accesso condizionale",
+    "authError": "errore di autenticazione dell'agente",
+    "incompleteConfig": "configurazione dell'identità dell'agente incompleta (AGENT_IDENTITY_ID mancante)",
+    "receivedAt": "ricevuta_il"
+   },
+   "reports": [
+    {
+     "id": "SEG-001",
+     "hoursAgo": 2,
+     "application": "PRA-2026-0003",
+     "business": "Gamma Agricola Soc. Coop.",
+     "office": "Milano",
+     "type": "importi incongruenti",
+     "priority": "alta",
+     "description": "Contributo richiesto di 85.000 € non coerente con la somma dei preventivi (112.000 € al 70% = 78.400 €)."
+    },
+    {
+     "id": "SEG-002",
+     "hoursAgo": 3,
+     "application": "PRA-2026-0002",
+     "business": "Beta Costruzioni S.p.A.",
+     "office": "Torino",
+     "type": "documentazione mancante",
+     "priority": "alta",
+     "description": "Mancano Modulo C, DURC e cronoprogramma; un preventivo non è firmato digitalmente."
+    },
+    {
+     "id": "SEG-003",
+     "hoursAgo": 5,
+     "application": "PRA-2026-0005",
+     "business": "Epsilon Tessile S.n.c.",
+     "office": "Milano",
+     "type": "domanda duplicata",
+     "priority": "media",
+     "description": "Stessa partita IVA della pratica PRA-2026-0011, presentata due giorni dopo per lo stesso asse."
+    },
+    {
+     "id": "SEG-004",
+     "hoursAgo": 7,
+     "application": "PRA-2026-0004",
+     "business": "Delta Logistica S.r.l.",
+     "office": "Milano",
+     "type": "altro",
+     "priority": "alta",
+     "description": "Richiesta di modifica dell'IBAN verso un conto intestato a una persona fisica, pervenuta da un indirizzo email non registrato."
+    },
+    {
+     "id": "SEG-005",
+     "hoursAgo": 9,
+     "application": "PRA-2026-0007",
+     "business": "Zeta Impianti S.r.l.",
+     "office": "Milano",
+     "type": "importi incongruenti",
+     "priority": "media",
+     "description": "Contributo calcolato sull'importo IVA inclusa."
+    },
+    {
+     "id": "SEG-006",
+     "hoursAgo": 12,
+     "application": "PRA-2026-0008",
+     "business": "Eta Servizi S.r.l.",
+     "office": "Torino",
+     "type": "documentazione mancante",
+     "priority": "bassa",
+     "description": "Visura camerale anteriore a 6 mesi."
+    },
+    {
+     "id": "SEG-007",
+     "hoursAgo": 15,
+     "application": "PRA-2026-0009",
+     "business": "Theta Food S.p.A.",
+     "office": "Milano",
+     "type": "domanda duplicata",
+     "priority": "media",
+     "description": "Domanda presentata due volte a distanza di 10 minuti con gli stessi allegati."
+    },
+    {
+     "id": "SEG-008",
+     "hoursAgo": 20,
+     "application": "PRA-2026-0010",
+     "business": "Iota Plast S.r.l.",
+     "office": "Torino",
+     "type": "altro",
+     "priority": "bassa",
+     "description": "Il referente chiede di anticipare il sopralluogo per motivi organizzativi."
+    }
+   ]
+  },
+  "application-review": {
+   "rolePrompt": "Sei «Istruttoria Pratiche», l'agente di pre-istruttoria delle domande del Bando Innovazione 2026 della Direzione Incentivi di Contoso (contesto dimostrativo, pratiche fittizie).\nPer ogni pratica indicata dall'utente:\n1. Elenca i documenti presenti nella pratica.\n2. Confrontali con la checklist della «Procedura istruttoria» e indica quelli mancanti.\n3. Segnala incongruenze tra i documenti (date, importi, partita IVA, firme).\n4. Proponi il testo della richiesta di integrazione documentale.\nNon decidere mai sull'ammissibilità della domanda: la decisione spetta al funzionario istruttore, al quale presenti solo evidenze e proposte.\nRispondi in italiano, con un elenco puntato per ogni sezione.",
+   "learnMcpDescription": "Documentazione pubblica Microsoft Learn.",
+   "vectorStoreName": "Pratiche Bando Innovazione 2026 (fittizie)"
+  }
+ },
+ "governance": {
+  "attributeSet": {
+   "id": "AgentGovernance",
+   "description": "Governance degli agenti (demo Contoso)"
+  },
+  "attribute": {
+   "name": "StatoApprovazione",
+   "description": "Stato di approvazione dell'agente",
+   "values": {
+    "new": "Nuovo",
+    "inReview": "In_Revisione",
+    "approved": "Approvato_Produzione"
+   }
+  },
+  "conditionalAccess": {
+   "blockHighRiskAgents": "Contoso – Blocca agenti ad alto rischio",
+   "onlyApprovedAgents": "Contoso – Solo agenti approvati per la produzione"
+  },
+  "catalog": {
+   "name": "Catalogo Agenti – Direzione Incentivi",
+   "description": "Risorse per gli agenti della Direzione Incentivi (demo)."
+  },
+  "accessPackage": {
+   "name": "AP – Lettura anagrafica (8 ore)",
+   "description": "Lettura dell'anagrafica dei funzionari della Direzione Incentivi per il controllo delle segnalazioni. Accesso a tempo per agenti: 8 ore, con approvazione (dati fittizi).",
+   "justification": "Il controllo notturno delle segnalazioni deve indicare i responsabili."
+  },
+  "sensitivityLabel": {
+   "name": "Contoso Riservato (demo)",
+   "tooltip": "Contenuto dimostrativo riservato: non condividere fuori da Contoso."
+  },
+  "dlpPolicy": "Contoso – File riservati e Copilot",
+  "auditRetentionPolicy": "Contoso – Audit di Copilot e AI (1 anno)",
+  "auditSearches": {
+   "agentInteractions": "Interazioni Sportello Bandi",
+   "agentAdminActions": "Azioni admin sugli agenti"
+  },
+  "communicationCompliancePolicy": "Contoso – Interazioni con Copilot e agenti",
+  "communicationComplianceKeywords": [
+   "falsificare",
+   "retrodatare",
+   "documento falso"
+  ],
+  "ediscoveryCase": "Contoso – Verifica interazioni Sportello Bandi",
+  "rtpRule": "Contoso – Blocco esfiltrazione",
+  "tags": {
+   "department": "Contoso – D.I.",
+   "pilot": "Contoso-DI-Test",
+   "production": "Contoso-DI-Prod"
+  },
+  "tagDescriptions": {
+   "department": "Agenti della Direzione Incentivi (demo).",
+   "pilot": "Agenti pilota e di test della Direzione Incentivi (demo).",
+   "production": "Agenti in produzione della Direzione Incentivi (demo)."
+  },
+  "templates": {
+   "productionTemplate": "Contoso – Agenti in produzione (senza identità propria)",
+   "aiTeammateTemplate": "Contoso – AI teammate"
+  },
+  "huntingQueries": {
+   "agentsLatestState": "Agenti AI – ultimo stato",
+   "agentActivity24h": "Agenti AI – attività nelle ultime 24 ore",
+   "promptInjectionAlerts": "Agenti AI – avvisi di prompt injection"
+  }
+ },
+ "prompts": {
+  "d6RegisterRecord": "Registra al protocollo la richiesta di Alfa Meccanica sul caricamento dei preventivi e dammi il numero.",
+  "d10MonitorRun": "Esegui il controllo delle segnalazioni di oggi",
+  "d16Summarize": "Riassumi l'avviso alle aziende sull'aggiornamento della modulistica e prepara la comunicazione per i referenti interni.",
+  "mcpSetupUrl": "Dammi l'URL di configurazione di Power Platform per il server {server}."
+ }
+}

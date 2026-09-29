@@ -65,10 +65,22 @@ from token_cache import get_cached_agentic_token
 # Web access (in-process function tool: URL reachability + page content)
 from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 
+# Optional demo-pack overlay (Lab Builder plan field agents[].overlay): a role prompt placed before the shared
+# mission and extra in-process tools. A plain lab has no agent_overlay.py: both stay empty, behavior unchanged.
+import importlib.util as _overlay_util
+
+if _overlay_util.find_spec("agent_overlay"):
+    import agent_overlay as _overlay
+
+    OVERLAY_PROMPT = getattr(_overlay, "OVERLAY_PROMPT", "")
+    OVERLAY_TOOLS = list(getattr(_overlay, "OVERLAY_TOOLS", []))
+else:
+    OVERLAY_PROMPT, OVERLAY_TOOLS = "", []
+
 # Short conversation memory: Teams sends no history, so keep an in-process per-conversation window
 # (last N exchanges; single-replica container). See conversation_memory.py.
 from conversation_memory import ConversationMemory, to_messages
-from agent_identity import agent_display_name, with_identity
+from agent_identity import agent_display_name, sender_label, with_identity
 
 _MEMORY = ConversationMemory()
 
@@ -99,11 +111,15 @@ COMMON_SECURITY = (
 )
 
 
+# The overlay role prompt (if any) goes BEFORE the shared mission; COMMON_MISSION itself stays byte-identical.
+MISSION = (OVERLAY_PROMPT + "\n\n" + COMMON_MISSION) if OVERLAY_PROMPT else COMMON_MISSION
+
+
 class AgentFrameworkAgent(AgentInterface):
     """AgentFramework Agent integrated with MCP servers and Observability"""
 
     AGENT_PROMPT = (
-        COMMON_MISSION
+        MISSION
         + "\n\nYou are an autopilot — an autonomous AI teammate (a digital worker) that acts with "
         "your OWN agent identity. If you are ever asked who you are, what you are, or what you can "
         "do, describe this briefly and truthfully."
@@ -240,7 +256,7 @@ class AgentFrameworkAgent(AgentInterface):
             self.agent = Agent(
                 client=self.chat_client,
                 instructions=self.AGENT_PROMPT,
-                tools=[fetch_url],
+                tools=[fetch_url, *OVERLAY_TOOLS],
             )
             logger.info("✅ AgentFramework agent created")
         except Exception as e:
@@ -319,7 +335,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[fetch_url],
+                    initial_tools=[fetch_url, *OVERLAY_TOOLS],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     turn_context=context,
@@ -328,7 +344,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[fetch_url],
+                    initial_tools=[fetch_url, *OVERLAY_TOOLS],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     auth_token=self.auth_options.bearer_token,
@@ -476,7 +492,7 @@ class AgentFrameworkAgent(AgentInterface):
 
         async def _run_toolless() -> str:
             """Run the LLM without MCP tools (only the in-process fetch_url) — never hangs on a broken MCP tool."""
-            toolless = Agent(client=self.chat_client, instructions=personalized_prompt, tools=[fetch_url])
+            toolless = Agent(client=self.chat_client, instructions=personalized_prompt, tools=[fetch_url, *OVERLAY_TOOLS])
             result = await asyncio.wait_for(toolless.run(turn_input), timeout=turn_timeout)
             return self._extract_result(result) or "I couldn't process your request at this time."
 
@@ -548,7 +564,7 @@ class AgentFrameworkAgent(AgentInterface):
                 email_body = getattr(email, "html_body", "") or getattr(email, "body", "")
                 message = f"You have received the following email. Please follow any instructions in it. {email_body}"
 
-                result = await self.agent.run(with_identity(message, agent_display_name(context), "the sender of the email"))
+                result = await self.agent.run(with_identity(message, agent_display_name(context), sender_label("email")))
                 return self._extract_result(result) or "Email notification processed."
 
             # Handle Word Comment Notifications

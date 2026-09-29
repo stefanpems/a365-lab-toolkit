@@ -65,6 +65,18 @@ from token_cache import get_cached_agentic_token
 # Web access (in-process function tool: URL reachability + page content)
 from web_fetch import WEB_ACCESS_PROMPT, fetch_url
 
+# Optional demo-pack overlay (Lab Builder plan field agents[].overlay): a role prompt placed before the shared
+# mission and extra in-process tools. A plain lab has no agent_overlay.py: both stay empty, behavior unchanged.
+import importlib.util as _overlay_util
+
+if _overlay_util.find_spec("agent_overlay"):
+    import agent_overlay as _overlay
+
+    OVERLAY_PROMPT = getattr(_overlay, "OVERLAY_PROMPT", "")
+    OVERLAY_TOOLS = list(getattr(_overlay, "OVERLAY_TOOLS", []))
+else:
+    OVERLAY_PROMPT, OVERLAY_TOOLS = "", []
+
 # Short conversation memory (last N exchanges)
 from conversation_memory import to_messages
 
@@ -98,11 +110,15 @@ COMMON_SECURITY = (
 )
 
 
+# The overlay role prompt (if any) goes BEFORE the shared mission; COMMON_MISSION itself stays byte-identical.
+MISSION = (OVERLAY_PROMPT + "\n\n" + COMMON_MISSION) if OVERLAY_PROMPT else COMMON_MISSION
+
+
 class AgentFrameworkAgent(AgentInterface):
     """AgentFramework Agent integrated with MCP servers and Observability"""
 
     AGENT_PROMPT = (
-        COMMON_MISSION
+        MISSION
         + "\n\nYou act with your OWN application identity (service-to-service); you do NOT act on "
         "behalf of the signed-in user. If you are ever asked who you are, what you are, or what you "
         "can do, describe this briefly and truthfully."
@@ -219,7 +235,7 @@ class AgentFrameworkAgent(AgentInterface):
                 Agent(
                     client=self.chat_client,
                     instructions=self.AGENT_PROMPT,
-                    tools=[fetch_url],
+                    tools=[fetch_url, *OVERLAY_TOOLS],
                 )
             )
             logger.info("✅ AgentFramework agent created")
@@ -305,7 +321,7 @@ class AgentFrameworkAgent(AgentInterface):
                     Agent(
                         client=self.chat_client,
                         instructions=agent_instructions,
-                        tools=[fetch_url],
+                        tools=[fetch_url, *OVERLAY_TOOLS],
                     )
                 )
                 return
@@ -314,7 +330,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[fetch_url],
+                    initial_tools=[fetch_url, *OVERLAY_TOOLS],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     turn_context=context,
@@ -323,7 +339,7 @@ class AgentFrameworkAgent(AgentInterface):
                 self.agent = await self.tool_service.add_tool_servers_to_agent(
                     chat_client=self.chat_client,
                     agent_instructions=agent_instructions,
-                    initial_tools=[fetch_url],
+                    initial_tools=[fetch_url, *OVERLAY_TOOLS],
                     auth=auth,
                     auth_handler_name=auth_handler_name,
                     auth_token=self.auth_options.bearer_token,
@@ -442,7 +458,7 @@ class AgentFrameworkAgent(AgentInterface):
         if username:
             identity_lines.append(f"- Username (UPN/email): {username}")
         instructions = (
-            COMMON_MISSION
+            MISSION
             + "\n\nYou act with your OWN application identity (service-to-service); you do NOT act "
             "on behalf of the signed-in user.\n\n"
             + "The user is authenticated. Their verified profile, taken from their Microsoft "
@@ -457,7 +473,7 @@ class AgentFrameworkAgent(AgentInterface):
         )
         try:
             agent = a365obs.bind_agent_identity(
-                Agent(client=self.chat_client, instructions=instructions, tools=[fetch_url])
+                Agent(client=self.chat_client, instructions=instructions, tools=[fetch_url, *OVERLAY_TOOLS])
             )
             # Short conversation memory: prior exchanges (from the SPA) + this message.
             result = await agent.run(to_messages(history or [], message))

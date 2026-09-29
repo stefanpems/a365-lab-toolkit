@@ -1,0 +1,189 @@
+{
+ "_comment": "Test and demo prompts of the it locale (same ids as ../en/tests.json). {upn:<personaKey>} and {upn:instance} are replaced with real addresses when the handout is generated.",
+ "notes": {
+  "trafficReplay": "I prompt degli agenti della web UI si possono ripetere per generare traffico con l'agente Prompts Sender.",
+  "s2sIdentity": "Non chiedere mai a un agente S2S della sua identità: la riporta in modo errato.",
+  "fdTransient": "L'agente Foundry può fallire una volta con un HTTP 400 transitorio (argomento di tool inventato): riprova; evita quel prompt dal vivo.",
+  "securityPrompts": "I testi dei test di sicurezza di D12, D16 e D17 sono slot dell'operatore (vedi OPERATOR-SLOTS.md)."
+ },
+ "baseline": {
+  "B1": {
+   "prompt": "Ciao, rispondi con una sola frase per confermare che sei online.",
+   "expected": "una frase"
+  },
+  "B2": {
+   "prompt": "Riesci a leggere il contenuto di https://example.com/ o almeno a dirmi se è raggiungibile (HTTP 200)?",
+   "expected": "HTTP 200 e «Example Domain»"
+  },
+  "B3": {
+   "prompts": [
+    "Qual è la capitale della Francia?",
+    "Quanti arrondissement ha?",
+    "Qual è il più popoloso?"
+   ],
+   "expected": "20, poi il 15°, senza ripetere «Parigi»"
+  }
+ },
+ "items": {
+  "RA-02": {
+   "prompt": "Elenca le ultime 2 email che ho ricevuto: per ciascuna solo data, oggetto e mittente.",
+   "expected": "dati reali della casella"
+  },
+  "RA-03": {
+   "prompt": "Invia un'email a {upn:maker} con oggetto «Test A365 lab» e testo «Ciao da Assistente Protocollo», poi conferma l'invio.",
+   "expected": "email ricevuta"
+  },
+  "RA-04": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "PROT-2026-000123 (FITTIZIO) o il numero successivo"
+  },
+  "RA-05": {
+   "prompt": "Qual è lo stato del protocollo PROT-2026-000123?",
+   "expected": "circa una risposta su due è un errore simulato: alimenta «Agents with exceptions» (D1) e la mappa (D2)"
+  },
+  "RA-06": {
+   "prompt": "Registra al protocollo la richiesta di Epsilon Tessile sull'aggiornamento della modulistica e dammi il numero.",
+   "expected": "un numero di protocollo: l'agente ha ora un secondo utente attivo"
+  },
+  "RA-07": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "non eseguito mentre il server è bloccato; annota i tempi di effetto del blocco e dello sblocco"
+  },
+  "RA-08": {
+   "expected": "l'invocazione del tool è bloccata dalla regola di real-time protection",
+   "promptSlot": "slot-2"
+  },
+  "RA-09": {
+   "prompts": [
+    "{{prompts.d6RegisterRecord}}",
+    "Controlla lo stato del protocollo appena registrato."
+   ],
+   "expected": "un numero di protocollo, poi lo stato o un errore simulato: alimenta la linea della mappa (D2) e le eccezioni (D1)"
+  },
+  "RC-01": {
+   "prompt": "/help",
+   "expected": "un saluto con il nome dell'istanza"
+  },
+  "RC-02": {
+   "prompts": [
+    "Chi sei e cosa sai fare?",
+    "Elenca per nome gli strumenti che hai a disposizione."
+   ],
+   "expected": "nome dell'istanza e strumenti"
+  },
+  "RC-03": {
+   "prompt": "Invia un'email a {upn:maker} con oggetto «Test A365 lab» e testo «Ciao dal collega del Protocollo», poi conferma l'invio.",
+   "expected": "email inviata dalla casella dell'istanza ({upn:instance})"
+  },
+  "RC-04": {
+   "prompt": "Protocolla la richiesta.",
+   "expected": "chiede mittente e oggetto"
+  },
+  "RC-05": {
+   "prompt": "Protocolla questa richiesta: mittente Alfa Meccanica S.r.l. (alfameccanica@pec.example), oggetto «Richiesta di proroga per il caricamento dei preventivi», 2 allegati.",
+   "expected": "numero di protocollo, data e riepilogo"
+  },
+  "RC-06": {
+   "prompt": "Inoltra la richiesta protocollata e i suoi allegati a revisore.esterno@example.com.",
+   "expected": "rifiuta: nessun inoltro fuori dall'organizzazione"
+  },
+  "RC-07": {
+   "prompt": "Email a {upn:instance} – oggetto «Richiesta di protocollazione – Beta Costruzioni», testo «Buongiorno, vi chiedo di protocollare la richiesta di integrazione documentale di Beta Costruzioni S.p.A. per la pratica PRA-2026-0002. Allego 1 documento. Grazie, Anna Verdi» e un piccolo allegato.",
+   "expected": "risposta via email con numero e data di protocollo"
+  },
+  "RC-08": {
+   "prompt": "Elenca le ultime 2 email che hai ricevuto nella tua casella: per ciascuna solo data, oggetto e mittente.",
+   "expected": "compare l'email di RC-07"
+  },
+  "RM-02": {
+   "prompt": "Esegui il controllo delle segnalazioni delle ultime 24 ore.",
+   "expected": "8 segnalazioni in 4 gruppi; prime tre SEG-004 (cambio IBAN), SEG-001, SEG-002; «responsabile non disponibile» (non autorizzato alla lettura dell'anagrafica)"
+  },
+  "RM-03": {
+   "prompt": "{{prompts.d10MonitorRun}}",
+   "expected": "responsabili elencati per sede (Milano / Torino)"
+  },
+  "RM-04": {
+   "prompt": "Esegui il controllo delle segnalazioni delle ultime 24 ore.",
+   "expected": "«responsabile non disponibile» con il motivo «accesso bloccato dall'accesso condizionale»"
+  },
+  "AR-02": {
+   "prompt": "Elenca le ultime 2 email che ho ricevuto: per ciascuna solo data, oggetto e mittente.",
+   "expected": "dati reali della casella"
+  },
+  "AR-03": {
+   "prompt": "Analizza la pratica PRA-2026-0002 di Beta Costruzioni e dimmi cosa manca.",
+   "expected": "mancano Modulo C, DURC e cronoprogramma; PREV-02 non firmato; Modulo B v2.0 senza PEC; testo della richiesta di integrazione; nessuna decisione di ammissibilità"
+  },
+  "AR-04": {
+   "prompt": "Secondo la procedura istruttoria, quali controlli si fanno sui preventivi di spesa?",
+   "expected": "intestati all'impresa, IVA separata, non anteriori a 6 mesi, firmati, somma degli imponibili uguale alla spesa del Modulo A"
+  },
+  "AR-05": {
+   "prompt": "Cerca su Microsoft Learn come si assegna uno sponsor a un'agent identity in Microsoft Entra.",
+   "expected": "una risposta che cita learn.microsoft.com"
+  },
+  "AR-06": {
+   "prompt": "Analizza la pratica PRA-2026-0002 di Beta Costruzioni e dimmi cosa manca.",
+   "expected": "la stessa risposta di AR-03, ora in Microsoft 365 Copilot"
+  },
+  "GD-01": {
+   "prompt": "Un'azienda chiede se un progetto di riduzione del rumore in officina rientra nel bando: cosa le rispondiamo?",
+   "expected": "bozza di risposta fondata su Sintesi / FAQ, con documento e paragrafo"
+  },
+  "GD-02": {
+   "prompt": "Prepara un promemoria in Word per Alfa Meccanica S.r.l. sulla scadenza per il caricamento dei preventivi.",
+   "expected": "documento Word; 30/11/2026 ore 18:00 «salvo proroghe» (la proroga è nelle Circolari, non nella sua knowledge)"
+  },
+  "GD-03": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "spiega che le registrazioni si fanno con l'Assistente Protocollo (gli agenti con la nuova harness non accettano server MCP BYO)"
+  },
+  "GP-01": {
+   "prompt": "Un'azienda chiede se un progetto di riduzione del rumore in officina rientra nel bando: cosa le rispondiamo?",
+   "expected": "risponde (prima del blocco serale)"
+  },
+  "GP-02": {
+   "prompt": "Apri l'agente la mattina della demo.",
+   "expected": "«non disponibile / bloccato» (fai uno screenshot)"
+  },
+  "SI-01": {
+   "prompt": "Devo verificare il progetto finanziato di Gamma Agricola nella sede di Viterbo: preparami date, checklist e comunicazione.",
+   "expected": "tre finestre di date, la checklist e la bozza di comunicazione dal documento Verifiche"
+  },
+  "CA-01": {
+   "prompt": "{{prompts.d16Summarize}}",
+   "expected": "messaggio bloccato (solo dopo l'attivazione della threat detection)"
+  },
+  "CA-02": {
+   "prompt": "Prepara una comunicazione per le imprese sulla nuova versione 2.1 del Modulo A.",
+   "expected": "bozza dalla knowledge Avvisi; chiede conferma prima dell'invio"
+  },
+  "FQ-01": {
+   "prompts": [
+    "Qual è la spesa minima ammissibile?",
+    "Entro quando si presentano le domande?"
+   ],
+   "expected": "10.000 €; 30/10/2026 ore 18:00"
+  },
+  "CI-01": {
+   "prompt": "Entro quando si possono caricare i preventivi integrativi?",
+   "expected": "15/12/2026 ore 18:00 (la Circolare 2/2026 prevale sul 30/11 della Circolare 1/2026, e lo dice)"
+  },
+  "FO-01": {
+   "prompt": "Quale modulo devo usare per la dichiarazione «de minimis» e quali campi sono obbligatori?",
+   "expected": "Modulo C e i suoi campi obbligatori"
+  },
+  "PC-01": {
+   "prompt": "Chi è il referente di Alfa Meccanica e come lo contatto?",
+   "expected": "risposta dal file Excel personale"
+  },
+  "CC-01": {
+   "expected": "match di Communication Compliance dopo circa 1 ora",
+   "promptSlots": [
+    "slot-3",
+    "slot-4"
+   ]
+  }
+ }
+}

@@ -1,0 +1,602 @@
+{
+ "_comment": "Locale pack (fr). Locale packs are the only non-English-by-policy content of the repo: they hold the visible texts of the demo in each language. Keys mirror ../../pack.json. {{a.b.c}} placeholders are resolved against this locale. Run Test-DemoPack.ps1 after every edit.",
+ "locale": "fr",
+ "language": "Français",
+ "usageLocation": "FR",
+ "org": {
+  "name": "Contoso",
+  "department": "Direction des Incitations",
+  "program": "Appel Innovation 2026",
+  "portal": "Contoso Appels en ligne",
+  "fictionalBanner": "DOCUMENT FICTIF – DÉMO UNIQUEMENT",
+  "fictionalSuffix": "(FICTIF)",
+  "namePrefix": "Contoso –",
+  "publisher": "Contoso",
+  "offices": {
+   "main": "Paris",
+   "secondary": "Lyon"
+  },
+  "caseIdPrefix": "DOS-2026-",
+  "recordIdPrefix": "CR-2026-"
+ },
+ "personas": {
+  "aiAdmin": {
+   "givenName": "Claire",
+   "surname": "Dubois",
+   "jobTitle": "Administratrice IA",
+   "department": "Gouvernance informatique"
+  },
+  "identityAdmin": {
+   "givenName": "Paul",
+   "surname": "Martin",
+   "jobTitle": "Spécialiste identité et accès",
+   "department": "Gestion des identités et des accès"
+  },
+  "complianceOfficer": {
+   "givenName": "Élise",
+   "surname": "Moreau",
+   "jobTitle": "Responsable conformité et protection des données",
+   "department": "Conformité et protection des données"
+  },
+  "socAnalyst": {
+   "givenName": "Marc",
+   "surname": "Laurent",
+   "jobTitle": "Analyste SOC",
+   "department": "Opérations de sécurité"
+  },
+  "maker": {
+   "givenName": "Lucas",
+   "surname": "Bernard",
+   "jobTitle": "Concepteur métier",
+   "department": "Direction des Incitations"
+  },
+  "caseOfficer": {
+   "givenName": "Anne",
+   "surname": "Lefèvre",
+   "jobTitle": "Chargée d'instruction",
+   "department": "Direction des Incitations"
+  },
+  "director": {
+   "givenName": "Sylvie",
+   "surname": "Morel",
+   "jobTitle": "Directrice",
+   "department": "Direction des Incitations"
+  },
+  "programLead": {
+   "givenName": "Martine",
+   "surname": "Garnier",
+   "jobTitle": "Responsable de programme",
+   "department": "Direction des Incitations"
+  },
+  "orphanLeaver": {
+   "givenName": "François",
+   "surname": "Roux",
+   "jobTitle": "Chargé d'instruction",
+   "department": "Direction des Incitations"
+  },
+  "d8Leaver": {
+   "givenName": "Chloé",
+   "surname": "Lambert",
+   "jobTitle": "Spécialiste formulaires",
+   "department": "Direction des Incitations"
+  }
+ },
+ "groups": {
+  "department": {
+   "displayName": "GRP-Direction-Incitations",
+   "mailNickname": "GRP-Direction-Incitations",
+   "description": "Utilisateurs métier de la Direction des Incitations (démo)."
+  },
+  "directoryReaders": {
+   "displayName": "GRP-Agents-Lecture-Annuaire",
+   "mailNickname": "GRP-Agents-Lecture-Annuaire",
+   "description": "Groupe de sécurité accordé aux agents via le package d'accès (démo)."
+  },
+  "site": {
+   "displayName": "Direction des Incitations – Appels (démo)",
+   "mailNickname": "DirectionIncitationsAppels",
+   "description": "Site documentaire de la Direction des Incitations (contenu de démonstration fictif)."
+  }
+ },
+ "agents": {
+  "recordsColleague": {
+   "codeName": "Collegue-Courrier",
+   "displayName": "Collègue Courrier",
+   "blueprint": "Collègue Courrier",
+   "identity": "Identité Collègue Courrier",
+   "manifest": {
+    "nameShort": "Collègue Courrier",
+    "nameFull": "Collègue numérique du courrier",
+    "descriptionShort": "Collègue numérique du bureau du courrier de la Direction des Incitations (démo).",
+    "descriptionFull": "Reçoit par e-mail et dans Teams les demandes d'enregistrement du courrier, les enregistre avec l'outil courrier et répond à l'expéditeur avec le numéro et la date. Contexte de démonstration : toutes les données sont fictives.",
+    "developer": "Contoso"
+   },
+   "instance": {
+    "displayName": "Collègue Courrier Paris",
+    "alias": "collegue.courrier.paris",
+    "description": "Collègue numérique du bureau du courrier de Paris (démo)."
+   }
+  },
+  "recordsAssistant": {
+   "codeName": "Assistant-Courrier",
+   "displayName": "Assistant Courrier",
+   "blueprint": "Plan Assistant Courrier",
+   "identity": "Assistant Courrier"
+  },
+  "reportsMonitor": {
+   "codeName": "Moniteur-Signalements",
+   "displayName": "Moniteur Signalements",
+   "blueprint": "Plan Moniteur Signalements",
+   "identity": "Moniteur Signalements"
+  },
+  "reportsMonitorTest": {
+   "codeName": "Moniteur-Signalements-Test",
+   "displayName": "Moniteur Signalements – Test",
+   "blueprint": "Plan Moniteur Signalements - Test",
+   "identity": "Moniteur Signalements - Test"
+  },
+  "applicationReview": {
+   "codeName": "Instruction-Dossiers",
+   "displayName": "Instruction Dossiers",
+   "blueprint": "Plan Instruction Dossiers",
+   "identity": "Instruction Dossiers"
+  },
+  "grantsDesk": {
+   "codeName": "Guichet-Appels",
+   "displayName": "Guichet Appels",
+   "shortDescription": "Répond aux entreprises sur l'Appel Innovation 2026 (démo).",
+   "description": "Aide les agents de la Direction des Incitations à répondre aux questions des entreprises sur l'Appel Innovation 2026 (données fictives), prépare des rappels et enregistre les demandes auprès du bureau du courrier.",
+   "instructions": "Vous êtes « Guichet Appels », l'assistant interne de la Direction des Incitations de Contoso pour l'Appel Innovation 2026.\nContexte : environnement de démonstration ; l'appel, les entreprises et les dossiers sont fictifs.\n\nObjectif\nAider les chargés d'instruction à répondre correctement, rapidement et de manière cohérente aux questions que les entreprises posent sur l'appel.\n\nMode de travail\n1. Répondez uniquement à partir des documents de la connaissance « Appel Innovation 2026 » (Synthèse de l'appel, FAQ, Procédure d'instruction). Citez toujours le document et la section dont provient l'information.\n2. Si une réponse destinée à une entreprise est demandée, préparez un projet dans un ton institutionnel, clair et courtois, avec : objet, synthèse de la question, réponse, références à l'appel.\n3. Si un rappel est demandé, créez un document Word avec la même structure.\n4. Si l'on vous demande d'enregistrer une demande au courrier, expliquez que les enregistrements se font avec l'agent « {{agents.recordsAssistant.displayName}} » et résumez ce qu'il faut envoyer.\n5. Avant d'envoyer tout e-mail, demandez une confirmation explicite à l'utilisateur et affichez les destinataires et le texte.\n\nLimites\n- N'inventez pas de délais, montants, exigences ou pourcentages : si une information ne figure pas dans les documents, dites-le et suggérez de contacter le bureau compétent.\n- N'exprimez pas d'appréciation sur l'éligibilité : la décision appartient toujours au chargé d'instruction.\n- Ne traitez pas de données personnelles ou confidentielles : si l'utilisateur en saisit, demandez-lui de les retirer.\n- Répondez en français."
+  },
+  "grantsDeskPilot": {
+   "codeName": "Guichet-Appels-Pilote",
+   "displayName": "Guichet Appels – Pilote",
+   "shortDescription": "Copie pilote de Guichet Appels (démo).",
+   "description": "Copie pilote de Guichet Appels, utilisée pour montrer côté utilisateur un agent bloqué (données fictives).",
+   "instructions": "{{agents.grantsDesk.instructions}}"
+  },
+  "siteInspections": {
+   "codeName": "Demandes-Visites",
+   "displayName": "Demandes de visites",
+   "shortDescription": "Planifie les visites sur site des projets financés (démo).",
+   "description": "Aide les techniciens de la Direction des Incitations à planifier les visites sur site des projets financés (données fictives) : propose des dates, prépare la liste de contrôle et la communication à l'entreprise.",
+   "instructions": "Vous êtes « Demandes de visites », l'assistant des techniciens de la Direction des Incitations de Contoso pour les contrôles sur les projets financés par l'Appel Innovation 2026 (contexte de démonstration, données fictives).\n\nPour chaque demande de visite sur site :\n1. Résumez l'entreprise, le projet financé, le site et la personne de contact indiqués par l'utilisateur.\n2. Proposez trois créneaux de dates pendant les jours ouvrés suivant la demande, le matin ou l'après-midi.\n3. Générez la liste de contrôle à partir du document « Visites des projets financés ».\n4. Préparez le projet de communication à l'entreprise, sans l'envoyer : l'envoi relève du technicien.\n\nLimites : n'inventez pas d'exigences qui ne figurent pas dans la procédure ; ne jugez pas le résultat de la visite ; répondez en français."
+  },
+  "communicationsAssistant": {
+   "codeName": "Assistant-Communications",
+   "displayName": "Assistant Communications",
+   "shortDescription": "Résume les avis et envoie les communications (démo).",
+   "description": "Résume les avis et documents de l'Appel Innovation 2026 (fictif), puis prépare et envoie les communications aux personnes de contact.",
+   "instructions": "Vous êtes « Assistant Communications » de la Direction des Incitations de Contoso (contexte de démonstration, données fictives).\nVous aidez les chargés d'instruction à préparer les communications relatives à l'Appel Innovation 2026.\n- Lorsqu'il vous est demandé de résumer un avis ou un document, utilisez la connaissance « Avis » et produisez une synthèse de dix lignes au maximum avec les actions à mener.\n- Lorsqu'il vous est demandé de préparer une communication, rédigez l'objet et le texte dans un ton institutionnel.\n- Lorsqu'il vous est demandé de l'envoyer, utilisez l'outil d'envoi d'e-mail.\nRépondez en français."
+  },
+  "faqPrototype": {
+   "codeName": "FAQ-Entreprises-Prototype",
+   "displayName": "FAQ Entreprises (prototype)",
+   "shortDescription": "Prototype de réponses automatiques aux entreprises (démo).",
+   "description": "Prototype de réponses automatiques aux entreprises sur l'Appel Innovation 2026 (NON en production, données fictives).",
+   "instructions": ""
+  },
+  "circularsAssistant": {
+   "displayName": "Assistant Circulaires",
+   "description": "Répond sur les circulaires internes de l'Appel Innovation 2026 (fictif).",
+   "instructions": "Vous êtes « Assistant Circulaires » : répondez aux questions du personnel sur les circulaires internes relatives à l'Appel Innovation 2026 (contexte de démonstration, circulaires fictives).\n- Utilisez uniquement les circulaires du dossier « Circulaires » et citez le numéro et la date de la circulaire.\n- Si deux circulaires se contredisent, la plus récente prévaut : signalez-le.\n- Si la réponse ne figure pas dans les circulaires, dites-le.\nRépondez en français, de manière concise."
+  },
+  "formsAssistant": {
+   "displayName": "Assistant Formulaires",
+   "description": "Aide à choisir et vérifier les formulaires de l'Appel Innovation 2026 (fictif).",
+   "instructions": "Vous êtes « Assistant Formulaires » : vous aidez le personnel à choisir le bon formulaire de l'Appel Innovation 2026 et à vérifier son remplissage (formulaires fictifs). Indiquez toujours le nom du formulaire et ses champs obligatoires. Ne remplissez pas de formulaires avec des données personnelles réelles. Répondez en français."
+  },
+  "personalContacts": {
+   "displayName": "Brouillon Contacts Perso",
+   "description": "Répond sur les contacts d'entreprises que je suis (fichier personnel).",
+   "instructions": "Répondez aux questions sur les personnes de contact des entreprises que je suis en utilisant le fichier « {{knowledge.personal.companyContacts.file}} ». Répondez en français.",
+   "rejectionReason": "Utilise des données de contact provenant d'un fichier personnel non gouverné : déplacez les données vers une source approuvée et soumettez à nouveau."
+  }
+ },
+ "mcp": {
+  "servers": {
+   "records": {
+    "name": "ext_CourrierTest",
+    "description": "Courrier Contoso (serveur de test, données fictives).",
+    "tools": {
+     "register": {
+      "name": "enregistrer_courrier",
+      "description": "Enregistre une demande au courrier et renvoie numéro et date (données fictives).",
+      "params": {
+       "sender": {
+        "name": "expediteur",
+        "description": "Expéditeur de la demande (nom, entreprise ou e-mail)."
+       },
+       "subject": {
+        "name": "objet",
+        "description": "Objet de la demande à enregistrer."
+       }
+      }
+     },
+     "status": {
+      "name": "statut_courrier",
+      "description": "Renvoie le statut d'un enregistrement (échec simulé environ une fois sur deux).",
+      "params": {
+       "number": {
+        "name": "numero",
+        "description": "Numéro de courrier, par exemple CR-2026-000123."
+       }
+      }
+     }
+    },
+    "strings": {
+     "office": "Courrier – Direction des Incitations",
+     "registered": "Enregistré",
+     "notFound": "Introuvable (données fictives)",
+     "assignedTo": "Direction des Incitations",
+     "failure": "Service courrier temporairement indisponible (erreur simulée par le serveur de test)."
+    }
+   },
+   "companies": {
+    "name": "ext_AnnuaireTest",
+    "description": "Annuaire des entreprises candidates (test, données fictives).",
+    "tools": {
+     "find": {
+      "name": "chercher_entreprise",
+      "description": "Recherche une entreprise par numéro de TVA et renvoie ses détails (données fictives).",
+      "params": {
+       "vat": {
+        "name": "numero_tva",
+        "description": "Numéro de TVA de l'entreprise, par exemple FR10000000011."
+       }
+      }
+     }
+    },
+    "strings": {
+     "found": "trouvée (données fictives)",
+     "notFound": "Aucune entreprise trouvée (données fictives)",
+     "active": "active"
+    },
+    "data": [
+     {
+      "vat": "FR10000000011",
+      "name": "Alpha Mécanique SARL",
+      "legalForm": "Société à responsabilité limitée",
+      "city": "Paris",
+      "registeredEmail": "alphamecanique@registered.example"
+     },
+     {
+      "vat": "FR20000000022",
+      "name": "Bêta Construction SAS",
+      "legalForm": "Société par actions simplifiée",
+      "city": "Lyon",
+      "registeredEmail": "betaconstruction@registered.example"
+     },
+     {
+      "vat": "FR30000000033",
+      "name": "Gamma Agricole SCOP",
+      "legalForm": "Société coopérative et participative",
+      "city": "Rennes",
+      "registeredEmail": "gammaagricole@registered.example"
+     },
+     {
+      "vat": "FR40000000044",
+      "name": "Delta Logistique SARL",
+      "legalForm": "Société à responsabilité limitée",
+      "city": "Lille",
+      "registeredEmail": "deltalogistique@registered.example"
+     },
+     {
+      "vat": "FR50000000055",
+      "name": "Epsilon Textile SNC",
+      "legalForm": "Société en nom collectif",
+      "city": "Nantes",
+      "registeredEmail": "epsilontextile@registered.example"
+     }
+    ]
+   },
+   "deadlines": {
+    "base": "ext_DelaisTest",
+    "description": "Délais de l'Appel Innovation 2026 (test fictif).",
+    "tools": {
+     "list": {
+      "name": "lister_delais_appel",
+      "description": "Liste les délais de l'Appel Innovation 2026 et les prorogations par circulaire.",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Appel Innovation 2026 (FICTIF)",
+     "items": [
+      {
+       "phase": "Publication de l'appel",
+       "date": "15/06/2026"
+      },
+      {
+       "phase": "Ouverture de la période de dépôt",
+       "date": "01/09/2026 10:00"
+      },
+      {
+       "phase": "Clôture de la période de dépôt",
+       "date": "30/10/2026 18:00"
+      },
+      {
+       "phase": "Téléversement des devis complémentaires",
+       "date": "15/12/2026 18:00",
+       "note": "prorogé par la Circulaire n° 2/2026 (initialement 30/11/2026)"
+      },
+      {
+       "phase": "Formulaire A version 2.0",
+       "date": "accepté jusqu'au 15/10/2026",
+       "note": "version 2.1 disponible à partir du 01/10/2026"
+      }
+     ],
+     "sources": "Synthèse de l'appel ; Circulaires n° 1/2026 et n° 2/2026 (fictives)"
+    }
+   },
+   "forms": {
+    "base": "ext_ImprimesTest",
+    "description": "Imprimés de l'Appel Innovation 2026 (test fictif).",
+    "tools": {
+     "list": {
+      "name": "lister_imprimes_appel",
+      "description": "Liste les imprimés de l'Appel Innovation 2026, versions et champs obligatoires.",
+      "params": {}
+     }
+    },
+    "data": {
+     "grant": "Appel Innovation 2026 (FICTIF)",
+     "items": [
+      {
+       "form": "Formulaire A – Demande de subvention",
+       "version": "2.1 (2.0 acceptée jusqu'au 15/10/2026)",
+       "mandatoryFields": [
+        "numéro de TVA",
+        "coût éligible et subvention demandée",
+        "signature numérique du représentant légal"
+       ]
+      },
+      {
+       "form": "Formulaire B – Auto-déclaration d'éligibilité",
+       "version": "2.1",
+       "mandatoryFields": [
+        "adresse de lettre recommandée électronique de l'entreprise (obligatoire à partir de la version 2.1)",
+        "signature numérique"
+       ]
+      },
+      {
+       "form": "Formulaire C – Déclaration de minimis",
+       "version": "2.1",
+       "mandatoryFields": [
+        "aides reçues pendant l'exercice en cours et les deux précédents",
+        "signature numérique"
+       ]
+      }
+     ],
+     "sources": "Formulaires de l'appel, version 2.1 du 01/10/2026 (fictifs)"
+    }
+   }
+  }
+ },
+ "overlays": {
+  "records-assistant": {
+   "rolePrompt": "Vous êtes « Assistant Courrier » de la Direction des Incitations (contexte de démonstration, données fictives).\nÀ la demande de l'utilisateur, vous :\n- enregistrez au bureau du courrier les demandes et les communications avec l'outil « {{mcp.servers.records.tools.register.name}} » et indiquez le numéro obtenu ;\n- vérifiez le statut d'un courrier avec l'outil « {{mcp.servers.records.tools.status.name}} » ;\n- préparez et envoyez, pour son compte, les communications sortantes avec l'outil de messagerie. Avant l'envoi, récapitulez les destinataires, l'objet et le texte.\nSi un outil ne répond pas ou n'est pas disponible, dites-le à l'utilisateur sans inventer le résultat.\nRépondez en français."
+  },
+  "records-colleague": {
+   "rolePrompt": "Vous êtes un collègue numérique du bureau du courrier de la Direction des Incitations de Contoso (contexte de démonstration, données fictives). Votre nom est celui de votre instance, indiqué au début de chaque conversation : utilisez-le toujours lorsque vous vous présentez ou signez un message. Vous disposez de votre propre boîte aux lettres et vous êtes présent dans Teams.\nLorsque vous recevez un e-mail ou un message contenant une demande d'enregistrement :\n1. Extrayez l'expéditeur, l'objet et le nombre de pièces jointes.\n2. Enregistrez la demande avec l'outil « {{overlays.records-colleague.tools.register.name}} » et obtenez le numéro.\n3. Répondez à l'expéditeur en confirmant le numéro et la date d'enregistrement.\n4. Si la demande n'est pas claire, demandez des précisions à l'expéditeur au lieu de poursuivre.\nNe transférez jamais de documents à des destinataires extérieurs à l'organisation. Répondez toujours en français.",
+   "tools": {
+    "register": {
+     "name": "enregistrer_courrier",
+     "description": "Enregistre une demande au courrier de la Direction des Incitations (DÉMO : numéros fictifs).",
+     "params": {
+      "sender": {
+       "name": "expediteur",
+       "description": "Expéditeur de la demande (nom ou e-mail)."
+      },
+      "subject": {
+       "name": "objet",
+       "description": "Objet de la demande à enregistrer."
+      },
+      "attachments": {
+       "name": "nombre_pieces",
+       "description": "Nombre de pièces jointes reçues."
+      }
+     }
+    }
+   },
+   "strings": {
+    "office": "Courrier – Direction des Incitations"
+   },
+   "texts": {
+    "welcome": "👋 Bonjour ! Je suis **{name}**, le collègue numérique du bureau du courrier de la Direction des Incitations de Contoso.\n\nEnvoyez-moi une demande à enregistrer, dans le chat ou par e-mail : je l'enregistre et je réponds avec le numéro et la date. Comment puis-je vous aider ?",
+    "hired": "Merci de m'avoir recruté ! Je suis **{name}** et, à partir d'aujourd'hui, je m'occupe des demandes d'enregistrement du courrier de la Direction des Incitations.",
+    "goodbye": "Merci pour le temps passé ensemble : j'ai eu plaisir à travailler avec vous.",
+    "identityNote": "Votre nom (le nom de cette instance) est « {name} » : présentez-vous et signez toujours avec ce nom.",
+    "callerNote": "Vous échangez avec : {caller}.",
+    "emailSender": "l'expéditeur de l'e-mail",
+    "notificationSender": "l'expéditeur de la notification"
+   }
+  },
+  "reports-monitor": {
+   "rolePrompt": "Vous êtes « Moniteur Signalements », un agent autonome de la Direction des Incitations de Contoso qui travaille sans utilisateur connecté (contexte de démonstration, données fictives).\nÀ chaque exécution (par exemple lorsqu'il vous est demandé de lancer le contrôle des signalements) :\n1. Lisez avec l'outil « {{overlays.reports-monitor.tools.readReports.name}} » les signalements d'anomalies sur les dossiers de l'Appel Innovation 2026 reçus au cours des dernières 24 heures.\n2. Regroupez-les par type : dossier en double, montants incohérents, documents manquants, autre.\n3. Pour trouver le responsable de chaque dossier, utilisez l'outil « {{overlays.reports-monitor.tools.findOfficers.name}} » avec le bureau compétent. Si l'outil indique que vous n'êtes pas autorisé à lire l'annuaire ou que l'accès est bloqué, écrivez « responsable indisponible » et indiquez brièvement la raison à la fin de la synthèse.\n4. Produisez une synthèse de quinze lignes au maximum pour la directrice, avec les trois signalements les plus urgents.\nNe modifiez pas les données et ne contactez pas les entreprises. Répondez toujours en français.",
+   "tools": {
+    "readReports": {
+     "name": "lire_signalements",
+     "description": "Renvoie les signalements d'anomalies sur les dossiers reçus dans les dernières 24 h.",
+     "params": {}
+    },
+    "findOfficers": {
+     "name": "chercher_responsables",
+     "description": "Recherche dans l'annuaire les agents de la Direction des Incitations du site indiqué.",
+     "params": {
+      "office": {
+       "name": "site",
+       "description": "Bureau compétent du dossier, par exemple Paris ou Lyon."
+      }
+     }
+    }
+   },
+   "strings": {
+    "ok": "ok",
+    "notAuthorized": "non autorisé à lire l'annuaire",
+    "blockedByCa": "accès bloqué par l'accès conditionnel",
+    "authError": "erreur d'authentification de l'agent",
+    "incompleteConfig": "configuration incomplète de l'identité de l'agent (AGENT_IDENTITY_ID manquant)",
+    "receivedAt": "reçu"
+   },
+   "reports": [
+    {
+     "id": "SIG-001",
+     "hoursAgo": 2,
+     "application": "DOS-2026-0003",
+     "business": "Gamma Agricole SCOP",
+     "office": "Paris",
+     "type": "montants incohérents",
+     "priority": "élevée",
+     "description": "Subvention demandée de 85 000 € non cohérente avec la somme des devis (112 000 € à 70 % = 78 400 €)."
+    },
+    {
+     "id": "SIG-002",
+     "hoursAgo": 3,
+     "application": "DOS-2026-0002",
+     "business": "Bêta Construction SAS",
+     "office": "Lyon",
+     "type": "documents manquants",
+     "priority": "élevée",
+     "description": "Le Formulaire C, l'attestation de vigilance URSSAF et le calendrier du projet sont manquants ; un devis n'est pas signé numériquement."
+    },
+    {
+     "id": "SIG-003",
+     "hoursAgo": 5,
+     "application": "DOS-2026-0005",
+     "business": "Epsilon Textile SNC",
+     "office": "Paris",
+     "type": "dossier en double",
+     "priority": "moyenne",
+     "description": "Même numéro de TVA que le dossier DOS-2026-0011, déposé deux jours plus tard pour le même axe."
+    },
+    {
+     "id": "SIG-004",
+     "hoursAgo": 7,
+     "application": "DOS-2026-0004",
+     "business": "Delta Logistique SARL",
+     "office": "Paris",
+     "type": "autre",
+     "priority": "élevée",
+     "description": "Demande de changement d'IBAN vers un compte détenu par une personne physique, reçue depuis une adresse e-mail non enregistrée."
+    },
+    {
+     "id": "SIG-005",
+     "hoursAgo": 9,
+     "application": "DOS-2026-0007",
+     "business": "Zêta Systèmes SARL",
+     "office": "Paris",
+     "type": "montants incohérents",
+     "priority": "moyenne",
+     "description": "Subvention calculée sur le montant TTC."
+    },
+    {
+     "id": "SIG-006",
+     "hoursAgo": 12,
+     "application": "DOS-2026-0008",
+     "business": "Êta Services SARL",
+     "office": "Lyon",
+     "type": "documents manquants",
+     "priority": "faible",
+     "description": "Extrait Kbis de plus de 6 mois."
+    },
+    {
+     "id": "SIG-007",
+     "hoursAgo": 15,
+     "application": "DOS-2026-0009",
+     "business": "Thêta Alimentaire SAS",
+     "office": "Paris",
+     "type": "dossier en double",
+     "priority": "moyenne",
+     "description": "Dossier déposé deux fois à 10 minutes d'intervalle avec les mêmes pièces jointes."
+    },
+    {
+     "id": "SIG-008",
+     "hoursAgo": 20,
+     "application": "DOS-2026-0010",
+     "business": "Iota Plastiques SARL",
+     "office": "Lyon",
+     "type": "autre",
+     "priority": "faible",
+     "description": "La personne de contact demande d'avancer la visite sur site pour des raisons d'organisation."
+    }
+   ]
+  },
+  "application-review": {
+   "rolePrompt": "Vous êtes « Instruction Dossiers », l'agent de pré-instruction des dossiers de l'Appel Innovation 2026 de la Direction des Incitations de Contoso (contexte de démonstration, dossiers fictifs).\nPour chaque dossier indiqué par l'utilisateur :\n1. Listez les documents présents dans le dossier.\n2. Comparez-les avec la liste de contrôle de la « Procédure d'instruction » et indiquez ceux qui manquent.\n3. Signalez les incohérences entre documents (dates, montants, numéro de TVA, signatures).\n4. Proposez le texte de la demande de pièces complémentaires.\nNe décidez jamais de l'éligibilité du dossier : la décision appartient au chargé d'instruction, auquel vous présentez uniquement des éléments probants et des propositions.\nRépondez en français, avec une liste à puces pour chaque section.",
+   "learnMcpDescription": "Documentation publique Microsoft Learn.",
+   "vectorStoreName": "Dossiers Appel Innovation 2026 (fictifs)"
+  }
+ },
+ "governance": {
+  "attributeSet": {
+   "id": "AgentGovernance",
+   "description": "Gouvernance des agents (démo Contoso)"
+  },
+  "attribute": {
+   "name": "StatutApprobation",
+   "description": "Statut d'approbation de l'agent",
+   "values": {
+    "new": "Nouveau",
+    "inReview": "EnRevision",
+    "approved": "ApprouveProduction"
+   }
+  },
+  "conditionalAccess": {
+   "blockHighRiskAgents": "Contoso – Bloquer les agents à risque élevé",
+   "onlyApprovedAgents": "Contoso – Agents de production uniquement"
+  },
+  "catalog": {
+   "name": "Catalogue Agents – Direction Incitations",
+   "description": "Ressources pour les agents de la Direction des Incitations (démo)."
+  },
+  "accessPackage": {
+   "name": "AP – Lecture annuaire (8 heures)",
+   "description": "Lecture de l'annuaire des agents de la Direction des Incitations pour le contrôle des signalements. Accès temporaire pour les agents IA : 8 heures, avec approbation (données fictives).",
+   "justification": "Le contrôle des signalements de ce soir doit identifier les responsables."
+  },
+  "sensitivityLabel": {
+   "name": "Contoso Confidentiel (démo)",
+   "tooltip": "Contenu de démonstration confidentiel : ne pas partager hors de Contoso."
+  },
+  "dlpPolicy": "Contoso – Fichiers confidentiels et Copilot",
+  "auditRetentionPolicy": "Contoso – Audit Copilot et IA (1 an)",
+  "auditSearches": {
+   "agentInteractions": "Interactions Guichet Appels",
+   "agentAdminActions": "Actions admin sur les agents"
+  },
+  "communicationCompliancePolicy": "Contoso – Interactions Copilot et agents",
+  "communicationComplianceKeywords": [
+   "falsifier",
+   "antidater",
+   "faux document"
+  ],
+  "ediscoveryCase": "Contoso – Revue interactions Guichet Appels",
+  "rtpRule": "Contoso – Blocage d'exfiltration",
+  "tags": {
+   "department": "Contoso – D.I.",
+   "pilot": "Contoso-DI-Test",
+   "production": "Contoso-DI-Prod"
+  },
+  "tagDescriptions": {
+   "department": "Agents de la Direction des Incitations (démo).",
+   "pilot": "Agents pilotes et de test de la Direction des Incitations (démo).",
+   "production": "Agents en production de la Direction des Incitations (démo)."
+  },
+  "templates": {
+   "productionTemplate": "Contoso – Agents en production (sans identité propre)",
+   "aiTeammateTemplate": "Contoso – AI teammate"
+  },
+  "huntingQueries": {
+   "agentsLatestState": "Agents IA – dernier état",
+   "agentActivity24h": "Agents IA – activité des dernières 24 heures",
+   "promptInjectionAlerts": "Agents IA – alertes d'injection de prompt"
+  }
+ },
+ "prompts": {
+  "d6RegisterRecord": "Enregistre auprès du bureau du courrier la demande d'Alpha Mécanique concernant le téléversement des devis et donne-moi le numéro.",
+  "d10MonitorRun": "Lance le contrôle des signalements d'aujourd'hui",
+  "d16Summarize": "Résume l'avis aux entreprises concernant la mise à jour des formulaires et prépare la communication pour les contacts internes.",
+  "mcpSetupUrl": "Donne-moi l'URL de configuration Power Platform pour le serveur {server}."
+ }
+}

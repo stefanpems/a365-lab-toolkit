@@ -19,6 +19,40 @@ from azure.identity import DefaultAzureCredential
 import agent_config as cfg
 
 
+def _overlay_tools(project) -> list:
+    """Extra tools of a demo-pack overlay (cfg.OVERLAY_FD): MCP servers and a File search vector store."""
+    extra = []
+    for m in cfg.OVERLAY_FD.get("mcp", []):
+        kw = dict(server_label=m["label"], server_url=m["url"], require_approval="never")
+        if m.get("description"):
+            kw["server_description"] = m["description"]
+        if m.get("allowedTools"):
+            kw["allowed_tools"] = m["allowedTools"]
+        extra.append(MCPTool(**kw))
+    fs = cfg.OVERLAY_FD.get("fileSearch")
+    if fs:
+        import glob
+        import os
+
+        folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), fs.get("dir", "knowledge"))
+        files = sorted(glob.glob(os.path.join(folder, "*")))
+        try:
+            from azure.ai.projects.models import FileSearchTool
+
+            if not files:
+                raise RuntimeError(f"no files in {folder}")
+            oai = project.get_openai_client()
+            store = oai.vector_stores.create(name=fs.get("storeName", "knowledge"))
+            for path in files:
+                with open(path, "rb") as fh:
+                    oai.vector_stores.files.upload_and_poll(vector_store_id=store.id, file=fh)
+                print(f"File search: indexed {os.path.basename(path)}")
+            extra.append(FileSearchTool(vector_store_ids=[store.id]))
+        except Exception as exc:  # the Foundry portal (Knowledge > File search) remains the fallback
+            print(f"WARNING: overlay File search not configured ({exc}); add the files in the Foundry portal.")
+    return extra
+
+
 def main() -> None:
     project = AIProjectClient(endpoint=cfg.PROJECT_ENDPOINT, credential=DefaultAzureCredential())
 
@@ -34,6 +68,9 @@ def main() -> None:
                 allowed_tools=["fetch_url"],
             )
         )
+
+    # Demo-pack overlay (none in a plain lab).
+    tools.extend(_overlay_tools(project))
 
     definition = PromptAgentDefinition(
         model=cfg.MODEL,

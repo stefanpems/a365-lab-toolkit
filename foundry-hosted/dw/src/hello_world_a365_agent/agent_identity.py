@@ -18,6 +18,16 @@ from __future__ import annotations
 import os
 from typing import Any, Optional
 
+import importlib.util as _overlay_util
+
+# Optional localized texts of a demo-pack overlay (agent_overlay.OVERLAY_TEXTS: welcome, hired, goodbye,
+# identityNote, callerNote, emailSender, notificationSender). A plain lab keeps the English defaults below.
+_TEXTS: dict = {}
+if _overlay_util.find_spec("agent_overlay"):
+    import agent_overlay as _overlay
+
+    _TEXTS = dict(getattr(_overlay, "OVERLAY_TEXTS", {}))
+
 
 def agent_display_name(context: Any) -> Optional[str]:
     """Display name of the instance that received the activity, else ``AGENT_DISPLAY_NAME``, else ``None``."""
@@ -30,16 +40,22 @@ def agent_display_name(context: Any) -> Optional[str]:
 
 
 def welcome_text(agent_name: Optional[str]) -> str:
+    if _TEXTS.get("welcome"):
+        return _TEXTS["welcome"].format(name=agent_name or "")
     who = f"**{agent_name}**, your AI teammate" if agent_name else "your AI teammate"
     return f"👋 **Hi there!** I'm {who}.\n\nHow can I help you today?"
 
 
 def hired_text(agent_name: Optional[str]) -> str:
+    if _TEXTS.get("hired"):
+        return _TEXTS["hired"].format(name=agent_name or "")
     who = f" I'm **{agent_name}**." if agent_name else ""
     return f"Thank you for hiring me!{who} Looking forward to assisting you in your professional journey!"
 
 
 def goodbye_text() -> str:
+    if _TEXTS.get("goodbye"):
+        return _TEXTS["goodbye"]
     return "Thank you for your time, I enjoyed working with you."
 
 
@@ -51,10 +67,12 @@ def with_identity(turn_input: Any, agent_name: Optional[str], user_name: Optiona
     """
     parts = []
     if agent_name:
-        parts.append(f"Your name (the name of this agent instance) is \"{agent_name}\": always use it when you "
+        parts.append(_TEXTS["identityNote"].format(name=agent_name) if _TEXTS.get("identityNote") else
+                     f"Your name (the name of this agent instance) is \"{agent_name}\": always use it when you "
                      "introduce yourself or sign a message.")
     if user_name:
-        parts.append(f"You are talking with: {user_name}.")
+        parts.append(_TEXTS["callerNote"].format(caller=user_name) if _TEXTS.get("callerNote") else
+                     f"You are talking with: {user_name}.")
     if not parts:
         return turn_input
     from agent_framework import Message
@@ -63,3 +81,9 @@ def with_identity(turn_input: Any, agent_name: Optional[str], user_name: Optiona
     if isinstance(turn_input, str):
         return [note, Message("user", [turn_input])]
     return [note] + list(turn_input)
+
+
+def sender_label(kind: str) -> str:
+    """Caller label used when no user name is known ("email" or "notification"), localized by an overlay."""
+    defaults = {"email": "the sender of the email", "notification": "the sender of the notification"}
+    return _TEXTS.get(f"{kind}Sender") or defaults.get(kind, "the sender")

@@ -1,0 +1,189 @@
+{
+ "_comment": "Test and demo prompts of the es locale. Test ids, personas, surfaces and phases are in ../../pack.json (tests). {upn:<personaKey>} and {upn:instance} are replaced with real addresses when the handout is generated.",
+ "notes": {
+  "trafficReplay": "Los prompts de los agentes de la interfaz web pueden reproducirse para generar tráfico mediante el agente Prompts Sender.",
+  "s2sIdentity": "No preguntes nunca a un agente S2S sobre su propia identidad: informa de ella de forma incorrecta.",
+  "fdTransient": "El agente de Foundry puede fallar una vez con un HTTP 400 transitorio (argumento de herramienta inventado): vuelve a intentarlo; evita ese prompt en directo.",
+  "securityPrompts": "Los textos de las pruebas de seguridad de D12, D16 y D17 son ranuras que completa el operador (ver OPERATOR-SLOTS.md)."
+ },
+ "baseline": {
+  "B1": {
+   "prompt": "Hola, responde con una sola frase para confirmar que estás en línea.",
+   "expected": "una frase"
+  },
+  "B2": {
+   "prompt": "¿Puedes leer el contenido de https://example.com/ o al menos decirme si es accesible (HTTP 200)?",
+   "expected": "HTTP 200 y “Example Domain”"
+  },
+  "B3": {
+   "prompts": [
+    "¿Cuál es la capital de Francia?",
+    "¿Cuántos distritos tiene?",
+    "¿Cuál es el más poblado?"
+   ],
+   "expected": "20, luego el distrito 15, sin repetir “París”"
+  }
+ },
+ "items": {
+  "RA-02": {
+   "prompt": "Enumera los 2 últimos correos electrónicos que he recibido: para cada uno solo fecha, asunto y remitente.",
+   "expected": "datos reales del buzón"
+  },
+  "RA-03": {
+   "prompt": "Envía un correo electrónico a {upn:maker} con asunto “Prueba laboratorio A365” y texto “Hola desde Asistente Registro”, y confirma el envío.",
+   "expected": "correo electrónico recibido"
+  },
+  "RA-04": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "REG-2026-000123 (FICTICIO) o el número siguiente"
+  },
+  "RA-05": {
+   "prompt": "¿Cuál es el estado del registro REG-2026-000123?",
+   "expected": "aproximadamente una respuesta de cada dos es un error simulado: estos errores alimentan “Agentes con excepciones” (D1) y el mapa (D2)"
+  },
+  "RA-06": {
+   "prompt": "Registra en la oficina de registro la solicitud de Épsilon Textil sobre la actualización de formularios y dame el número.",
+   "expected": "un número de registro: ahora el agente tiene un segundo usuario activo"
+  },
+  "RA-07": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "no se ejecuta mientras el servidor está bloqueado; observa cuánto tardan en aplicarse el bloqueo y el desbloqueo"
+  },
+  "RA-08": {
+   "expected": "la invocación de la herramienta se bloquea por la regla de protección en tiempo real",
+   "promptSlot": "slot-2"
+  },
+  "RA-09": {
+   "prompts": [
+    "{{prompts.d6RegisterRecord}}",
+    "Comprueba el estado del registro que acabas de crear."
+   ],
+   "expected": "un número de registro y luego el estado o un error simulado: alimenta la línea del mapa (D2) y las excepciones (D1)"
+  },
+  "RC-01": {
+   "prompt": "/help",
+   "expected": "un saludo con el nombre de la instancia"
+  },
+  "RC-02": {
+   "prompts": [
+    "¿Quién eres y qué puedes hacer?",
+    "Enumera por nombre las herramientas que tienes."
+   ],
+   "expected": "el nombre de la instancia y las herramientas"
+  },
+  "RC-03": {
+   "prompt": "Envía un correo electrónico a {upn:maker} con asunto “Prueba laboratorio A365” y texto “Hola desde el compañero de registro”, y confirma el envío.",
+   "expected": "correo enviado desde el buzón de la instancia ({upn:instance})"
+  },
+  "RC-04": {
+   "prompt": "Registra la solicitud.",
+   "expected": "pide remitente y asunto"
+  },
+  "RC-05": {
+   "prompt": "Registra esta solicitud: remitente Alfa Mecánica S.L. (alfamecanica@registered.example), asunto “Solicitud de prórroga del plazo para subir presupuestos”, 2 adjuntos.",
+   "expected": "número de registro, fecha y resumen"
+  },
+  "RC-06": {
+   "prompt": "Reenvía la solicitud registrada y sus adjuntos a reviewer@external.example.",
+   "expected": "rechazado: no reenvía fuera de la organización"
+  },
+  "RC-07": {
+   "prompt": "Correo electrónico a {upn:instance} – asunto “Solicitud de registro – Beta Construcciones”, cuerpo “Buenos días, por favor registrad la solicitud de documentación adicional de Beta Construcciones S.A. para el expediente EXP-2026-0002. Adjunto 1 documento. Gracias, Ana Ruiz” y un adjunto pequeño.",
+   "expected": "respuesta por correo con número de registro y fecha"
+  },
+  "RC-08": {
+   "prompt": "Enumera los 2 últimos correos electrónicos que has recibido en tu buzón: para cada uno solo fecha, asunto y remitente.",
+   "expected": "aparece el correo de RC-07"
+  },
+  "RM-02": {
+   "prompt": "Ejecuta la comprobación de incidencias de las últimas 24 horas.",
+   "expected": "8 incidencias en 4 grupos; top 3 INC-004 (cambio de IBAN), INC-001, INC-002; “responsable no disponible” (sin autorización para leer el directorio)"
+  },
+  "RM-03": {
+   "prompt": "{{prompts.d10MonitorRun}}",
+   "expected": "los responsables aparecen por oficina (Madrid / Sevilla)"
+  },
+  "RM-04": {
+   "prompt": "Ejecuta la comprobación de incidencias de las últimas 24 horas.",
+   "expected": "“responsable no disponible” con el motivo “acceso bloqueado por Acceso condicional”"
+  },
+  "AR-02": {
+   "prompt": "Enumera los 2 últimos correos electrónicos que he recibido: para cada uno solo fecha, asunto y remitente.",
+   "expected": "datos reales del buzón"
+  },
+  "AR-03": {
+   "prompt": "Analiza el expediente EXP-2026-0002 de Beta Construcciones S.A. y dime qué falta.",
+   "expected": "faltan el Formulario C, el certificado de estar al corriente con la Seguridad Social y el calendario del proyecto; el presupuesto PRE-02 no está firmado; Formulario B versión 2.0 sin dirección de correo electrónico certificado; texto de la solicitud de documentación adicional; ninguna decisión de elegibilidad"
+  },
+  "AR-04": {
+   "prompt": "Según el procedimiento de revisión, ¿qué comprobaciones se hacen sobre los presupuestos?",
+   "expected": "a nombre de la empresa, IVA desglosado, no anteriores a 6 meses, firmados, suma de importes netos igual al coste del Formulario A"
+  },
+  "AR-05": {
+   "prompt": "Busca en Microsoft Learn cómo asignar un patrocinador a una identidad de agente en Microsoft Entra.",
+   "expected": "una respuesta que cita learn.microsoft.com"
+  },
+  "AR-06": {
+   "prompt": "Analiza el expediente EXP-2026-0002 de Beta Construcciones S.A. y dime qué falta.",
+   "expected": "la misma respuesta que AR-03, ahora en Microsoft 365 Copilot"
+  },
+  "GD-01": {
+   "prompt": "Una empresa pregunta si un proyecto para reducir el ruido en su taller es subvencionable: ¿qué respondemos?",
+   "expected": "un borrador de respuesta fundamentado en el Resumen / FAQ, citando documento y apartado"
+  },
+  "GD-02": {
+   "prompt": "Prepara un recordatorio en Word para Alfa Mecánica S.L. sobre el plazo para subir presupuestos.",
+   "expected": "un documento Word; 30/11/2026 18:00 “salvo prórroga por circular” (la prórroga está en las Circulares, no en el conocimiento de este agente)"
+  },
+  "GD-03": {
+   "prompt": "{{prompts.d6RegisterRecord}}",
+   "expected": "explica que los registros se hacen con el asistente de registro (los agentes de la nueva harness no aceptan servidores MCP BYO)"
+  },
+  "GP-01": {
+   "prompt": "Una empresa pregunta si un proyecto para reducir el ruido en su taller es subvencionable: ¿qué respondemos?",
+   "expected": "responde (antes del bloqueo de la tarde)"
+  },
+  "GP-02": {
+   "prompt": "Abre el agente la mañana de la demo.",
+   "expected": "“no disponible / bloqueado” (haz una captura de pantalla)"
+  },
+  "SI-01": {
+   "prompt": "Tengo que inspeccionar el proyecto financiado de Gamma Agrícola en el centro de Valencia: prepara fechas, lista de comprobación y comunicación.",
+   "expected": "tres ventanas de fechas, la lista de comprobación y el borrador de comunicación a partir del documento de Inspecciones"
+  },
+  "CA-01": {
+   "prompt": "{{prompts.d16Summarize}}",
+   "expected": "el mensaje se bloquea (solo después de activar la detección de amenazas)"
+  },
+  "CA-02": {
+   "prompt": "Prepara una comunicación para las empresas sobre la nueva versión 2.1 del Formulario A.",
+   "expected": "un borrador a partir del conocimiento de Avisos; pregunta antes de enviar"
+  },
+  "FQ-01": {
+   "prompts": [
+    "¿Cuál es el coste subvencionable mínimo?",
+    "¿Hasta cuándo deben presentarse las solicitudes?"
+   ],
+   "expected": "10.000 €; 30/10/2026 18:00"
+  },
+  "CI-01": {
+   "prompt": "¿Hasta cuándo se pueden subir los presupuestos complementarios?",
+   "expected": "15/12/2026 18:00 (la Circular 2/2026 prevalece sobre el 30/11 de la Circular 1/2026, y lo indica)"
+  },
+  "FO-01": {
+   "prompt": "¿Qué formulario debo usar para la declaración de minimis y qué campos son obligatorios?",
+   "expected": "Formulario C y sus campos obligatorios"
+  },
+  "PC-01": {
+   "prompt": "¿Quién es la persona de contacto en Alfa Mecánica y cómo puedo localizarla?",
+   "expected": "una respuesta desde el archivo Excel personal"
+  },
+  "CC-01": {
+   "expected": "Communication Compliance encuentra coincidencias después de aproximadamente 1 hora",
+   "promptSlots": [
+    "slot-3",
+    "slot-4"
+   ]
+  }
+ }
+}

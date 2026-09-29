@@ -27,25 +27,38 @@
 
 .PARAMETER Name
   The MCP base name (the solution prefix), e.g. 'contoso' -> ext_contosoAnon / ext_contosoAuth.
+.PARAMETER Server
+  Instead of -Name: one or more full ext_ server names registered with authType NoAuth (e.g. the Demo
+  Builder servers), comma-separated or as an array. Apps are matched EXACTLY: '<server>-A365Proxy',
+  '<server>-PublicClients', '<server> - BYO'; the grants are the anonymous topology below.
+.PARAMETER PassThru
+  With -Server: also return one object per server (server, byoAudience, proxyAppId, publicClientsAppId);
+  byoAudience is the delegated-token audience an OBO web UI tab needs (plan byoMcpAudiences).
 .PARAMETER Subscription
   Target subscription id (pins the az context; az ad ignores --subscription but the context matters).
 .EXAMPLE
   .\preempt-proxy-consents.ps1 -Name contoso -Subscription <SUB_ID>
+.EXAMPLE
+  .\preempt-proxy-consents.ps1 -Server ext_RecordsTest,ext_CompaniesTest -Subscription <SUB_ID> -PassThru
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)] [string]$Name,
-    [Parameter(Mandatory = $true)] [string]$Subscription
+    [string]$Name,
+    [Parameter(Mandatory = $true)] [string]$Subscription,
+    [string[]]$Server,
+    [switch]$PassThru
 )
 $ErrorActionPreference = 'Stop'
+$Server = @($Server | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if (-not $Name -and -not $Server.Count) { throw 'Pass -Name <base> (sample pair) or -Server <ext_ server name(s)> (NoAuth topology).' }
 $AGENT_TOOLS_APPID = 'ea9ffc3e-8a23-4a7d-836d-234d7c7565c1'   # Agent 365 Tools (first-party)
 
 az account set --subscription $Subscription | Out-Null
 
-# --- Discover the ext_<Name>* backing apps by display name ---
+# --- Discover the backing apps by display name ---
 $all = az ad app list --all --query "[].{name:displayName,appId:appId}" -o json | ConvertFrom-Json
-$mine = $all | Where-Object { $_.name -like "ext_$Name*" }
-if (-not $mine) { Write-Error "No ext_$Name* apps found. Register the servers first."; exit 1 }
+$mine = if ($Server.Count) { $all | Where-Object { $n = $_.name; @($Server | Where-Object { $n -like "$_*" }).Count -gt 0 } } else { $all | Where-Object { $_.name -like "ext_$Name*" } }
+if (-not $mine) { Write-Error "No backing apps found for $(if ($Server.Count) { $Server -join ', ' } else { "ext_$Name*" }). Register the servers first."; exit 1 }
 
 function Find-App([string]$anonOrAuth, [string]$suffixLike) {
     ($mine | Where-Object { $_.name -like "ext_$Name$anonOrAuth*" -and $_.name -like "*$suffixLike" } | Select-Object -First 1)
@@ -80,6 +93,26 @@ function New-Grant([string]$clientSp, [string]$resourceSp, [string]$scope, [stri
     } catch {
         Write-Host "FAILED: $label -> $($_.Exception.Message)" -ForegroundColor Red
     }
+}
+
+# --- Explicit servers (-Server): anonymous topology per server, exact app names ---
+if ($Server.Count) {
+    $spAgentTools = Get-SpId $AGENT_TOOLS_APPID
+    $result = @()
+    foreach ($srv in $Server) {
+        $proxy  = $mine | Where-Object { $_.name -eq "$srv-A365Proxy" } | Select-Object -First 1
+        $public = $mine | Where-Object { $_.name -eq "$srv-PublicClients" } | Select-Object -First 1
+        $byo    = $mine | Where-Object { $_.name -eq "$srv - BYO" } | Select-Object -First 1
+        if (-not ($proxy -and $public -and $byo)) { Write-Host "SKIP ${srv}: backing apps not all found (-A365Proxy / -PublicClients / ' - BYO'). Registered?" -ForegroundColor Yellow; continue }
+        $spProxy = Get-SpId $proxy.appId; $spPublic = Get-SpId $public.appId; $spByo = Get-SpId $byo.appId
+        New-Grant $spProxy  $spByo        'Tools.ListInvoke.All'         "$srv A365Proxy->BYO"
+        New-Grant $spPublic $spByo        'Tools.ListInvoke.All'         "$srv PublicClients->BYO"
+        New-Grant $spByo    $spAgentTools 'PlatformRuntime.Internal.All' "$srv BYO->AgentTools"
+        $result += [pscustomobject]@{ server = $srv; byoAudience = $byo.appId; proxyAppId = $proxy.appId; publicClientsAppId = $public.appId }
+    }
+    Write-Host "DONE. The tenant admin can now Approve $($Server -join ' / ') (watch for a BLOCKED popup)." -ForegroundColor Cyan
+    if ($PassThru) { return $result }
+    return
 }
 
 # --- Anonymous topology ---

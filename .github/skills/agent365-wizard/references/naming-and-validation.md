@@ -138,6 +138,35 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
    controls whether the wizard approves the `ext_*` servers before creating the agents (integrate each
    OBO agent immediately) or starts the agents first (integrate only if approved by deploy time).
 
+## Iron rules for every registered or published text (Lab Builder, Demo Builder, every wizard)
+The limits live in ONE machine-readable file, [text-limits.json](./text-limits.json), and are enforced by
+[scripts/Test-A365Names.ps1](../scripts/Test-A365Names.ps1) (dot-source it; `-SelfTest` replays the real
+failures). `max` is the ENFORCED limit (platform limit minus a safety margin); `platformMax` is the platform
+itself. A NEW name is checked against `max` (error); an EXISTING name (`-PlatformOnly`) only against
+`platformMax` (above `max` = warning). **Validate BEFORE anything is created or registered** — a failed
+registration is not free: it can leave orphan Entra apps and reserve a display name forever.
+
+| Object | Rule (enforced / platform) | Why (evidence) |
+|---|---|---|
+| BYO MCP server name | `ext_` + letters/digits only, **no `_` after `ext_`**; ≤ 18 / 20 | `_` is encoded `-5f` (+2 chars) in the connector id |
+| BYO proxy connector id `tc-ext-5f<rest>p-5f<16 hex>-5f<16 hex>` | ≤ 62 / 64 | 65 chars: gateway exposed a single `Error` tool, blank `connectionsMcp` page, undeletable server |
+| BYO MCP server description | ≤ 70 / 80 | 93 chars failed the registration and burnt the name |
+| Re-registered servers (resets) | `ext_<Base><NN>`, NN 01–99 checked at 99, numbers never reused | a failed name can stay reserved forever |
+| MCP tool name | lowercase ASCII snake_case, 3–40 chars, not `initialize_server`, declared by ONE active server only | duplicate tools confuse the gateway and the agents |
+| MCP tool / parameter description | ≤ 100 | safety margin |
+| Backend vs registration | the backend exposes EXACTLY the declared tools (MCP `tools/list` before registering) | a mismatch registers tools that never work |
+| AI-teammate / Teams manifest | `name.short` ≤ 30, `name.full` ≤ 100, `description.short` ≤ 80, `description.full` ≤ 4000, `developer.name` ≤ 32 | an 81+ `description.short` made the manifest upload fail |
+| AI-teammate instance | display name ≤ 30 / 32; alias lowercase ASCII | instance form limit |
+| Copilot Studio agent | display name ≤ 30, short description ≤ 80, instructions ≤ 8000 | Teams / Microsoft 365 channel details |
+| Agent Builder agent | name ≤ 30 / 100, description ≤ 1000, instructions ≤ 8000 | declarative-agent manifest |
+| Entra | alias lowercase ASCII (diacritics removed) ≤ 40 / 64; attribute set / attribute names alphanumeric ≤ 32 (**cannot be deleted**) | directory rules |
+| Purview / admin center | label, policy, case, template, RTP-rule names ≤ 64; tags ≤ 30 | safety margin |
+| SharePoint folder / file names | no `" * : < > ? / \ \| # %`, no leading/trailing space or dot | upload failures |
+
+The scaffolder applies these checks to the custom MCP pair (`ext_<prefix>Anon/Auth`, platform-only: a
+12-char prefix reaches the 64-char connector limit exactly), to every `ext_*` server listed in an agent's
+`tools`, and to the AI-teammate manifest overrides of an agent overlay.
+
 ## ACA deploy-script facts (critical for scaffolding)
 Verified in the sample scripts — the wizard must account for these:
 - **RG, environment and region are HARDCODED constants inside each `deploy-aca*.ps1`**, not

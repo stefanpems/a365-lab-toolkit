@@ -75,6 +75,13 @@ rather than lab-owned. These carry a **component tag** but **no** `a365lab`:
 > tag scan classifies it under **Agents** (`delete-rg`), so it is removed together with the lab's agents —
 > no dedicated category. See [web-fetch-mcp/README.md](../../../../web-fetch-mcp/README.md).
 
+> **Demo MCP backends (labs built by the Demo Builder).** The demo-pack MCP servers live in
+> `<prefix>-demomcp-rg` (ACR + `<prefix>-demomcp-cae` + one `<prefix>-dmcp-<key>-ca` per backend), tagged
+> `a365lab=<prefix>` + `a365component=demo-mcp` (NOT `custom-mcp`, which means the Lab Builder sample pair). The
+> durable tag scan removes the resource group like the web-fetch one. Their `ext_` registrations cannot be deleted
+> through the platform API: they are rejected or blocked in the admin center (see
+> [demo-packs/agent-governance/README.md](../../../../demo-packs/agent-governance/README.md#teardown)).
+
 ## 3. Agents
 
 Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; identity ∈ OBO/S2S/DW).

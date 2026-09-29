@@ -23,6 +23,9 @@ function Add-AgentCustomAttach {
     # Custom BYO ext_ servers to attach to THIS agent (OBO only), from the custom-MCP module.
     $customExtras = @()
     if ($attachByAgent.ContainsKey($a.name)) { $customExtras = @($attachByAgent[$a.name]) }
+    # ...plus any already-registered ext_ server listed in the agent's own 'tools' (validated OBO-only by the
+    # router), e.g. the demo-pack servers the Demo Builder registers before scaffolding.
+    foreach ($ext in @($tools | Where-Object { $_ -like 'ext_*' })) { if ($customExtras -notcontains $ext) { $customExtras += $ext } }
     if ($wiqExtras.Count -eq 0 -and $customExtras.Count -eq 0) { return }
 
     $redeploy = if ($a.type -like 'FH-*') { 'azd deploy' } else { 'rebuild the image RAW (az acr build --no-logs) + az containerapp update --image, OR run the agent''s deploy-aca*.ps1 -ReuseEnv RAW. NEVER the plain deploy (it deletes+recreates the RG: 20-40 min) and NEVER pipe it through Select-Object/Out-String (colorama cp1252 aborts the container creation).' }

@@ -17,6 +17,11 @@ MAF one. Only MAF source folders exist today; see "Framework segment in the name
 Always write **in English** in every file, log, config, comment, and command you produce. You may
 reply in the chat in the user's language, but nothing you persist to disk is ever in another language.
 
+> **Full demo environment?** To recreate a complete demo (personas, fictional content, demo MCP servers, agents,
+> governance, reset and run of show) from a demo pack, use the [Demo Builder](./demo-builder.agent.md). It
+> generates this agent's plan (`New-DemoLabPlan.ps1`) and then continues exactly as a **resume** of that prefix, so
+> everything below applies unchanged to the demo agents.
+
 ## Golden rules
 - ALWAYS load and follow the skill [agent365-wizard/SKILL.md](../skills/agent365-wizard/SKILL.md)
   (variant matrix, naming rules, plan schema, validation, parallelization policy).

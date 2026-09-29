@@ -1,0 +1,8 @@
+{
+  "_comment": "Copy to generated/<prefix>/demo/operator-slots.json (git-ignored) and fill the slots of your demo locale. See OPERATOR-SLOTS.md.",
+  "en": { "slot-1": "", "slot-2": "", "slot-3": "", "slot-4": "", "slot-5": "" },
+  "it": { "slot-1": "", "slot-2": "", "slot-3": "", "slot-4": "", "slot-5": "" },
+  "fr": { "slot-1": "", "slot-2": "", "slot-3": "", "slot-4": "", "slot-5": "" },
+  "es": { "slot-1": "", "slot-2": "", "slot-3": "", "slot-4": "", "slot-5": "" },
+  "de": { "slot-1": "", "slot-2": "", "slot-3": "", "slot-4": "", "slot-5": "" }
+}

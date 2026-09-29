@@ -151,6 +151,26 @@ function Invoke-ScaffoldUi {
                     if ($ci.Count -gt 0) { $entry['customInputs'] = $ci }
                 }
             }
+            # BYO ext_ servers listed in the agent's OWN 'tools' (e.g. servers registered by the Demo Builder):
+            # delegated-token audiences from plan.byoMcpAudiences (filled right after registration) or from the
+            # agent's ToolingManifest.json (written by 'a365 develop add-mcp-servers'). ACA-OBO / FH-OBO tabs.
+            $ownExt = @($ag.tools | Where-Object { $_ -like 'ext_*' })
+            if ($ownExt.Count -and ($t -eq 'ACA-OBO' -or $t -eq 'FH-OBO')) {
+                $maniAud = @{}
+                $maniPath = Join-Path $RunRoot (Join-Path $ag.name 'ToolingManifest.json')
+                if (Test-Path -LiteralPath $maniPath) {
+                    try { foreach ($s in (Get-Content -LiteralPath $maniPath -Raw | ConvertFrom-Json).mcpServers) { if ($s.mcpServerName -like 'ext_*' -and $s.audience) { $maniAud[[string]$s.mcpServerName] = [string]$s.audience } } } catch {}
+                }
+                $cs = if ($entry.Contains('customScopes')) { $entry['customScopes'] } else { [ordered]@{} }
+                foreach ($ext in $ownExt) {
+                    $aud = $null
+                    if ($plan.PSObject.Properties['byoMcpAudiences'] -and $plan.byoMcpAudiences -and $plan.byoMcpAudiences.PSObject.Properties[$ext]) { $aud = [string]$plan.byoMcpAudiences.$ext }
+                    elseif ($maniAud.ContainsKey($ext)) { $aud = $maniAud[$ext] }
+                    if ($aud) { $cs[$aud] = "$aud/Tools.ListInvoke.All" }
+                    else { Write-Host "  note: no audience known yet for $ext on $($ag.name): fill plan.byoMcpAudiences.$ext (BYO app id) or re-run this scaffolder after add-mcp-servers" -ForegroundColor DarkYellow }
+                }
+                if ($cs.Count -gt 0) { $entry['customScopes'] = $cs }
+            }
             $uiAgents.Add($entry)
         }
     }

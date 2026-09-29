@@ -1,0 +1,101 @@
+{
+  "$comment": "Single source of truth for the text limits of everything the lab registers or publishes. 'max' is the ENFORCED limit (platform limit minus a safety margin); 'platformMax' is the limit of the platform itself. Every limit that caused a real failure is marked 'observed'. Read by scripts/Test-A365Names.ps1 (Lab Builder, Demo Builder). Change a limit ONLY with evidence, and record it in 'evidence'.",
+  "version": 1,
+  "byoMcpServer": {
+    "name": {
+      "pattern": "^ext_[A-Za-z][A-Za-z0-9]*$",
+      "patternRule": "starts with 'ext_', then letters and digits only: NO underscore, hyphen, space or accent after 'ext_' (Power Platform encodes '_' as '-5f' in connector ids: +2 characters each)",
+      "max": 18,
+      "platformMax": 20,
+      "evidence": "observed 2026-09: names above 20 are rejected by the registration"
+    },
+    "proxyConnectorId": {
+      "template": "tc-ext-5f{rest}p-5f{hex16}-5f{hex16}",
+      "templateRule": "{rest} = the name after 'ext_', lowercased, every '_' encoded as '-5f'; the two hex blocks are 16 characters each in every tenant",
+      "max": 62,
+      "platformMax": 64,
+      "evidence": "observed 2026-09: a 65-character proxy connector (name with an underscore after 'ext_') made the gateway expose a single 'Error' tool, left the connectionsMcp page blank and made the server undeletable; 62 characters work"
+    },
+    "description": {
+      "max": 70,
+      "platformMax": 80,
+      "evidence": "observed 2026-09: a 93-character server description failed the registration and left orphan Entra apps plus a reserved connector display name"
+    },
+    "reservedNumbering": {
+      "pattern": "^ext_[A-Za-z][A-Za-z0-9]*[0-9]{2}$",
+      "rule": "servers that must be re-registered (demo resets) use ext_<Base><NN>, NN = 01..99, validated at the worst case NN = 99; a number is never reused, not even after a failed registration (a failed registration can reserve the display name forever)"
+    }
+  },
+  "mcpTool": {
+    "name": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "patternRule": "lowercase ASCII snake_case: letters, digits and '_' only, starting with a letter",
+      "min": 3,
+      "max": 40,
+      "platformMax": 64,
+      "reserved": ["initialize_server"],
+      "unique": "a tool name may be declared by ONE active server only (the gateway and the agents cannot disambiguate two servers exposing the same tool)"
+    },
+    "description": { "max": 100 },
+    "parameterDescription": { "max": 100 },
+    "backendMatch": "the backend must expose EXACTLY the declared tool names (checked with MCP tools/list before registering)"
+  },
+  "teamsManifest": {
+    "nameShort": { "max": 30, "platformMax": 30, "evidence": "observed 2026-09 and Lab Builder rule 1 (DW name.short)" },
+    "nameFull": { "max": 100, "platformMax": 100 },
+    "descriptionShort": { "max": 80, "platformMax": 80, "evidence": "observed 2026-09: an AI-teammate manifest upload failed with a description.short above 80" },
+    "descriptionFull": { "max": 4000, "platformMax": 4000 },
+    "developerName": { "max": 32, "platformMax": 32 }
+  },
+  "aiTeammateInstance": {
+    "displayName": { "max": 30, "platformMax": 32, "evidence": "instance creation form (admin center / Teams) accepts up to 32 characters" },
+    "alias": { "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$", "max": 40, "platformMax": 64 }
+  },
+  "codeAgentName": {
+    "pattern": "^[A-Za-z]([A-Za-z0-9]|-(?!-))*[A-Za-z0-9]$",
+    "patternRule": "starts with a letter; letters, digits and single hyphens; no '--', no trailing hyphen",
+    "containerAppMax": 32,
+    "dwMax": 20,
+    "evidence": "Lab Builder naming rules 1b/2 (Azure Container Apps, DW name.short)"
+  },
+  "copilotStudioAgent": {
+    "displayName": { "max": 30, "evidence": "kept within the Teams/Microsoft 365 channel short name (30)" },
+    "description": { "max": 1000 },
+    "descriptionShort": { "max": 80 },
+    "descriptionLong": { "max": 3400 },
+    "instructions": { "max": 8000 }
+  },
+  "agentBuilderAgent": {
+    "name": { "max": 30, "platformMax": 100 },
+    "description": { "max": 1000, "platformMax": 1000 },
+    "instructions": { "max": 8000, "platformMax": 8000 }
+  },
+  "entra": {
+    "userAlias": { "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$", "patternRule": "lowercase ASCII letters/digits separated by single '.', '_' or '-' (diacritics are removed first)", "max": 40, "platformMax": 64 },
+    "displayName": { "max": 100, "platformMax": 256 },
+    "groupMailNickname": { "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "max": 40, "platformMax": 64 },
+    "conditionalAccessPolicyName": { "max": 100, "platformMax": 256 },
+    "attributeSetId": { "pattern": "^[A-Za-z][A-Za-z0-9]*$", "max": 32, "platformMax": 32, "note": "cannot be deleted once created" },
+    "attributeName": { "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "max": 32, "platformMax": 32, "note": "cannot be deleted once created (only deactivated)" },
+    "attributeValue": { "pattern": "^[A-Za-z0-9_]+$", "max": 32, "platformMax": 64 },
+    "catalogName": { "max": 100 },
+    "accessPackageName": { "max": 100 }
+  },
+  "purview": {
+    "sensitivityLabelName": { "max": 64 },
+    "policyName": { "max": 64, "note": "DLP, retention, Communication Compliance policies and eDiscovery cases" }
+  },
+  "agent365Admin": {
+    "tagName": { "max": 30 },
+    "templateName": { "max": 64 },
+    "rtpRuleName": { "max": 64 }
+  },
+  "sharePoint": {
+    "segment": { "forbiddenChars": "\"*:<>?/\\|#%", "max": 120, "platformMax": 255, "rule": "no leading/trailing space or dot; no forbidden characters" }
+  },
+  "general": {
+    "noControlChars": true,
+    "trimmed": "no leading or trailing whitespace",
+    "fictionalDomains": "sample e-mail and web domains must be reserved example domains (example.com, example.org, example.net, *.example)"
+  }
+}
