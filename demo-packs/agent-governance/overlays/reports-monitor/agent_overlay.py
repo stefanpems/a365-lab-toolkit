@@ -66,7 +66,9 @@ async def _find_officers(office: str) -> dict:
         msg = str(exc)
         blocked = "AADSTS53003" in msg or "onditional" in msg
         logger.warning("find officers: token failure: %s", msg)
-        return {"outcome": _S.get("blockedByCa" if blocked else "authError", msg[:80]), "detail": msg[:300], "officers": []}
+        # A blocked identity and a missing permission must never read the same on screen: explicit reason code.
+        return {"outcome": _S.get("blockedByCa" if blocked else "authError", msg[:80]),
+                "reason": "access_blocked" if blocked else "token_error", "detail": msg[:300], "officers": []}
     department = ORG.get("department", "")
     params = {"$filter": f"department eq '{department}'", "$select": "displayName,jobTitle,mail,officeLocation",
               "$count": "true", "$top": "50"}
@@ -74,7 +76,8 @@ async def _find_officers(office: str) -> dict:
         r = await client.get(f"{_GRAPH}/users", params=params,
                              headers={"Authorization": f"Bearer {token}", "ConsistencyLevel": "eventual"})
     if r.status_code in (401, 403):
-        return {"outcome": _S.get("notAuthorized", "not authorized"), "detail": f"HTTP {r.status_code}", "officers": []}
+        return {"outcome": _S.get("notAuthorized", "not authorized"), "reason": "permission_missing",
+                "detail": f"HTTP {r.status_code}", "officers": []}
     r.raise_for_status()
     wanted = office.strip().lower()
     users = [u for u in r.json().get("value", []) if (u.get("officeLocation") or "").strip().lower() == wanted]

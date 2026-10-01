@@ -12,6 +12,9 @@ uploads them to their own OneDrive first).
   recipient opens the share link once, signed in as themselves (`https://m365.cloud.microsoft/chat/?titleId=<package
   id>`, printed by the pre-flight), before the creator leaves and again after every orphan recreation.
 - Test each agent once in Microsoft 365 Copilot right after creating it (first usage for the admin center).
+- **Give new people time.** A user created minutes ago is not yet seen by the SharePoint permission trimming that grounds
+  Copilot: create temporary creators hours ahead when their own test must answer from SharePoint knowledge. A newly
+  shared agent can also refuse access to its recipients for about ten minutes: wait, do not change permissions.
 - **Submitting to the organization catalog is not sharing.** An agent that must reach the admin center as a request is
   submitted, not shared: left pane, "…" next to the agent's name > Edit > the "…" of the editor header > **Submit to your
   org catalog** (enabled after the first publication). Fields: display name (max 30), short description (max 80),

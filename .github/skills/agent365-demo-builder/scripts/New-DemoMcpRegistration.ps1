@@ -174,12 +174,28 @@ function Find-Instance([string]$N) {
 }
 
 # --- Confirm: backing apps + approval consents + BYO audience ---------------------------------------------------
+# The live pool instance (role 'live') gets the service principals of its backing apps but NO grants: the approval in
+# the admin center then records the consents itself and shows its consent pop-ups on camera (reference lab, 29/09).
+# Every other server gets the grants too, so its approval succeeds without pop-ups.
+function New-DemoBackingSps([string]$Server) {
+    $out = [ordered]@{}
+    foreach ($s in @{ k = 'proxy'; n = "$Server-A365Proxy" }, @{ k = 'public'; n = "$Server-PublicClients" }, @{ k = 'byo'; n = "$Server - BYO" }) {
+        $app = @((Invoke-DemoGraph GET "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq '$($s.n.Replace("'", "''"))'&`$select=appId").value) | Select-Object -First 1
+        if (-not $app) { return $null }
+        $sp = @((Invoke-DemoGraph GET "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$($app.appId)'&`$select=id").value) | Select-Object -First 1
+        if (-not $sp) { Invoke-DemoGraph POST 'https://graph.microsoft.com/v1.0/servicePrincipals' -Body @{ appId = $app.appId } | Out-Null }
+        $out[$s.k] = [string]$app.appId
+    }
+    return [pscustomobject]@{ server = $Server; byoAudience = $out.byo; proxyAppId = $out.proxy; publicClientsAppId = $out.public }
+}
 if ($Action -eq 'Confirm') {
     $e = Find-Instance $Name
     Assert-DemoTenant $cfg
+    $showConsents = $e.role -eq 'live'
     $r = @()
     for ($try = 1; $try -le 3 -and -not $r.Count; $try++) {
         if ($try -gt 1) { Write-Host "  backing apps not visible yet (directory replication): retry $try/3 in 20 s..."; Start-Sleep -Seconds 20 }
+        if ($showConsents) { $x = New-DemoBackingSps $Name; if ($x) { $r = @($x) }; continue }
         try { $r = @(& (Join-Path $customMcp 'preempt-proxy-consents.ps1') -Server $Name -Subscription ([string]$cfg.subscriptionId) -PassThru | Where-Object { $_ -is [pscustomobject] -and $_.PSObject.Properties['byoAudience'] }) }
         catch { Write-DemoLog $Prefix "preempt-proxy-consents.ps1 -Server ${Name}: $($_.Exception.Message)" 'WARN' }
     }
@@ -190,8 +206,8 @@ if ($Action -eq 'Confirm') {
     $e.status = 'pending'; $e.audience = [string]$r[0].byoAudience; $e.proxyAppId = [string]$r[0].proxyAppId; $e.publicClientsAppId = [string]$r[0].publicClientsAppId
     $e.registeredAt = (Get-Date).ToString('s')
     Save-State
-    Write-DemoLog $Prefix "$Name registered: approval consents pre-empted, BYO audience $($e.audience), status pending"
-    if ($e.role -eq 'live') { Write-Host "MANUAL: leave $Name PENDING (admin center > Agents > Tools > Requests): it is approved live in D6." }
+    Write-DemoLog $Prefix "$Name registered: $(if ($showConsents) { 'service principals created WITHOUT grants (the live approval shows its consent pop-ups)' } else { 'approval consents pre-empted' }), BYO audience $($e.audience), status pending"
+    if ($e.role -eq 'live') { Write-Host "MANUAL: leave $Name PENDING (admin center > Agents > Tools > Requests): it is approved live in D6. Allow browser pop-ups for the admin center: the approval asks for the consents." }
     else {
         Write-Host "MANUAL: Microsoft 365 admin center > Agents > Tools > Requests > $Name > Approve (watch for a blocked popup)."
         Write-Host "Then:   New-DemoMcpRegistration.ps1 -Prefix $Prefix -Action Approved -Name $Name"

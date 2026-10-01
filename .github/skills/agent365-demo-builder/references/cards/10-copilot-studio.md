@@ -27,6 +27,13 @@ agents from the base solutions (agent365-copilot-studio skill); this card comple
   why. If it is still greyed, the environment setting Power Platform admin center > Security > Identity and access >
   Authentication for agents must allow it: change it only for the demo and restore it after the event.
 - Verify the current configuration first (read-only) and give UI paths as "where the control is": portal menus move.
+- **Published means published.** Teams and Microsoft 365 Copilot serve the published version; the test pane runs the
+  draft. After every change check the published date (Channels page, or `Publish-DemoMcsAgent.ps1`, read-only). If
+  Publish silently did nothing (the synchronization state stays "Synchronizing"), `Publish-DemoMcsAgent.ps1 -Agent <key>
+  -Publish` publishes through Dataverse. Then start a new conversation in Teams.
+- **Standard-harness agents with a BYO MCP tool** run it with the end user's connection (Invoker): at the first tool
+  call each user allows the connection in the chat. The connection created from the gateway link (connectionsMcp) is
+  a different one and is not used by the agent.
 
 ## Agents
 

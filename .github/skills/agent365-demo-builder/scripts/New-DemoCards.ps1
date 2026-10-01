@@ -104,6 +104,11 @@ function Get-AgentBuilderSections {
             $dev = if ($a.submitToCatalog.developer -eq 'creator') { Get-DemoPersonaDisplayName $LOC $a.creator } else { [string]$LOC.org.publisher }
             $lines += "- **Catalog submission**: display name $(Format-Code $la.displayName), short description $(Format-Code $la.description), developer $(Format-Code $dev) (a personal initiative), website/privacy/terms $site; Org-wide sharing for chat access **off**."
         }
+        if ($a.customSkill -and $LOC.skills -and $LOC.skills[[string]$a.customSkill]) {
+            $sk = $LOC.skills[[string]$a.customSkill]
+            $lines += "- **Custom skill** (Agent Builder custom skills, preview for Frontier tenants): add the package generated/$Prefix/demo/skills/$($sk.name).zip (skill $(Format-Code $sk.name), SKILL.md at the root), then check that the agent lists it."
+        }
+        if ($a.removeAfterEvent) { $lines += '- **After the event**: delete the agent (and its custom skill).' }
         if ($la.rejectionReason) { $lines += "- **Rejection reason** (typed live by the admin): $(Format-Code $la.rejectionReason)" }
         $lines += (Get-DemoList $a.demos), ''
         $lines -join "`n"

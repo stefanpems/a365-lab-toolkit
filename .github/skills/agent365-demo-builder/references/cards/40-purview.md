@@ -8,7 +8,8 @@ the run. Name each recommendation by what it does: the portal labels change ofte
 ## 1. Roles of {name:complianceOfficer}
 
 Purview > Roles and scopes > Role groups: add {upn:complianceOfficer} to **eDiscovery Manager**, **Communication
-Compliance Investigators**, **Insider Risk Management Analysts** and **Content Explorer Content Viewer**.
+Compliance Investigators**, **Insider Risk Management Analysts**, **Content Explorer Content Viewer** and **Data
+Security AI Content Viewers** (needed to open the text of the AI interactions in DSPM).
 
 ## 2. DSPM and the one-click policies (D15)
 

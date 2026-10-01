@@ -191,6 +191,18 @@
    "description": "Beantwortet Fragen zu den von mir betreuten Unternehmenskontakten (Privatdatei).",
    "instructions": "Beantworte Fragen zu den Kontaktpersonen der Unternehmen, die ich betreue, anhand der Datei „{{knowledge.personal.companyContacts.file}}“. Antworte auf Deutsch.",
    "rejectionReason": "Verwendet Kontaktdaten aus einer nicht gesteuerten Privatdatei: Verschieben Sie die Daten in eine genehmigte Quelle und reichen Sie erneut ein."
+  },
+  "casesAssistant": {
+   "displayName": "Antragsassistent",
+   "description": "Erstellt Übersichtsblätter der Anträge des Förderaufrufs Innovation 2026 (Demo).",
+   "instructions": "Du bist „Antragsassistent“: Du hilfst den Mitarbeitenden, die fiktiven Antragsakten des Förderaufrufs Innovation 2026 im Ordner „{{knowledge.folders.cases}}“ zu lesen. Wenn eine Übersicht eines Antrags gewünscht wird, verwende die Fähigkeit „{{skills.caseSummary.name}}“. Rekonstruiere nie den Inhalt eines Dokuments, das Du nicht verwenden kannst. Antworte auf Deutsch."
+  }
+ },
+ "skills": {
+  "caseSummary": {
+   "name": "antragsuebersicht",
+   "description": "Erstellt das Standard-Übersichtsblatt eines Antrags des Förderaufrufs Innovation 2026 (fiktive Daten) aus den Dokumenten des Ordners „{{knowledge.folders.cases}}“.",
+   "body": "# Antragsübersicht\n\nVerwende diese Fähigkeit, wenn der Benutzer die Übersicht, die Zusammenfassung oder das Blatt eines Antrags anfordert (zum Beispiel „{{org.caseIdPrefix}}0002“).\n\n## Vorgehen\n1. Finde im Ordner „{{knowledge.folders.cases}}“ das Dokument des genannten Antrags. Nennt der Benutzer keinen Antrag, frage nach der Nummer.\n2. Fülle das Blatt mit den folgenden Abschnitten in dieser Reihenfolge und verwende nur den Inhalt des Dokuments. Fehlt ein Wert, schreibe „nicht angegeben“.\n3. Nenne immer das Dokument, aus dem die Informationen stammen.\n4. Wenn Du ein Dokument nicht verwenden kannst (zum Beispiel weil es geschützt ist), sage es klar und rekonstruiere seinen Inhalt nicht aus anderen Quellen.\n\n## Antwortformat\n- **Antrag**: Nummer und antragstellendes Unternehmen\n- **Projektgegenstand**: ein Satz\n- **Beantragter Betrag**: Betrag und Förderquote, falls angegeben\n- **Vorhandene Dokumente**: Aufzählung\n- **Zu prüfende Punkte**: Unstimmigkeiten oder nachzureichende Dokumente, falls offensichtlich\n- **Quelle**: Name des Dokuments\n\n## Regeln\n- Beurteile nicht die Förderfähigkeit des Antrags: die Entscheidung liegt bei der Sachbearbeitung.\n- Antworte auf Deutsch und knapp.\n- Alle Daten sind fiktiv."
   }
  },
  "mcp": {
@@ -413,7 +425,7 @@
    }
   },
   "reports-monitor": {
-   "rolePrompt": "Du bist „Meldungsmonitor“, ein autonomer Agent der Abteilung Förderung von Contoso, der ohne angemeldeten Benutzer arbeitet (Demokontext, fiktive Daten).\nBei jedem Lauf (zum Beispiel wenn Du gebeten wirst, die Meldungsprüfung auszuführen):\n1. Lies mit dem Tool „{{overlays.reports-monitor.tools.readReports.name}}“ die Anomaliemeldungen zu Anträgen des Förderaufrufs Innovation 2026, die in den letzten 24 Stunden eingegangen sind.\n2. Gruppiere sie nach Art: Doppelantrag, unstimmige Beträge, fehlende Dokumente, Sonstiges.\n3. Um den verantwortlichen Sachbearbeiter je Antrag zu finden, verwende das Tool „{{overlays.reports-monitor.tools.findOfficers.name}}“ mit dem zuständigen Büro. Wenn das Tool meldet, dass Du nicht berechtigt bist, das Verzeichnis zu lesen, oder dass der Zugriff blockiert ist, schreibe „Sachbearbeiter nicht verfügbar“ und nenne den Grund kurz am Ende der Zusammenfassung.\n4. Erstelle für die Abteilungsleiterin eine Zusammenfassung von höchstens fünfzehn Zeilen mit den drei dringendsten Meldungen.\nÄndere keine Daten und kontaktiere keine Unternehmen. Antworte immer auf Deutsch.",
+   "rolePrompt": "Du bist „Meldungsmonitor“, ein autonomer Agent der Abteilung Förderung von Contoso, der ohne angemeldeten Benutzer arbeitet (Demokontext, fiktive Daten).\nBei jedem Lauf (zum Beispiel wenn Du gebeten wirst, die Meldungsprüfung auszuführen):\n1. Lies mit dem Tool „{{overlays.reports-monitor.tools.readReports.name}}“ die Anomaliemeldungen zu Anträgen des Förderaufrufs Innovation 2026, die in den letzten 24 Stunden eingegangen sind.\n2. Gruppiere sie nach Art: Doppelantrag, unstimmige Beträge, fehlende Dokumente, Sonstiges.\n3. Um den verantwortlichen Sachbearbeiter je Antrag zu finden, verwende das Tool „{{overlays.reports-monitor.tools.findOfficers.name}}“ mit dem zuständigen Büro. Wenn das Tool meldet, dass Du nicht berechtigt bist, das Verzeichnis zu lesen, oder dass der Zugriff blockiert ist, schreibe „Sachbearbeiter nicht verfügbar“ und nenne den Grund kurz am Ende der Zusammenfassung. Gib den Ergebnistext des Tools wörtlich wieder, ohne ihn umzuformulieren.\n4. Erstelle für die Abteilungsleiterin eine Zusammenfassung von höchstens fünfzehn Zeilen mit den drei dringendsten Meldungen.\nÄndere keine Daten und kontaktiere keine Unternehmen. Antworte immer auf Deutsch.",
    "tools": {
     "readReports": {
      "name": "meldungen_lesen",

@@ -166,8 +166,10 @@ if ($ent -and (Test-Sel @($ent.demos))) {
             if ($Apply) { $res = Get-Res (Invoke-DemoReg $cfg POST "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests" @{ requestType = 'adminRemove'; assignment = @{ id = $x.id } }) 'removal requested' }
             Add-Action "$($LOC.agents[$ent.target].displayName): access-package assignment" $x.state 'none' $res
         }
-        $rq = Invoke-DemoReg $cfg GET "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests?`$filter=accessPackage/id eq '$($ap.id)'&`$expand=target"
-        foreach ($x in @(if ($rq.ok) { @($rq.body.value) | Where-Object { $_.target.objectId -eq $tid -and $_.state -match '(?i)pending' } })) {
+        # assignmentRequests has no 'target' navigation ($expand=target returns 400): the target is on the assignment.
+        $rq = Invoke-DemoReg $cfg GET "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests?`$filter=accessPackage/id eq '$($ap.id)'&`$expand=assignment(`$expand=target)"
+        if (-not $rq.ok) { Add-Action 'Pending access-package requests' "error $($rq.status)" 'none' 'MANUAL: check the requests of the package in the Entra admin center' }
+        foreach ($x in @(if ($rq.ok) { @($rq.body.value) | Where-Object { $_.assignment.target.objectId -eq $tid -and $_.state -match '(?i)pending' } })) {
             $res = 'would cancel'
             if ($Apply) { $res = Get-Res (Invoke-DemoReg $cfg POST "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests/$($x.id)/cancel") 'cancelled' }
             Add-Action "$($LOC.agents[$ent.target].displayName): pending access-package request" $x.state 'none' $res

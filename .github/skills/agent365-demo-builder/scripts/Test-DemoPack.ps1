@@ -151,6 +151,14 @@ foreach ($loc in $locales) {
             if ($dev.Length -gt 32) { Add-V $loc 'error' "$path (developer)" "developer name '$dev' is longer than 32 characters" }
         }
     }
+    # Agent Builder custom skills: lowercase ASCII kebab-case name, description and body present.
+    foreach ($ab in @($packDef.agents | Where-Object { $_.customSkill })) {
+        $sk = if ($L.skills) { $L.skills[[string]$ab.customSkill] } else { $null }
+        $path = "skills.$($ab.customSkill)"
+        if (-not $sk) { Add-V $loc 'error' $path "missing (custom skill of $($ab.key))"; continue }
+        Test-Need $loc $sk $path @('name', 'description', 'body')
+        if ([string]$sk.name -cnotmatch '^[a-z0-9]+(-[a-z0-9]+)*$' -or ([string]$sk.name).Length -gt 64) { Add-V $loc 'error' "$path.name" "'$($sk.name)' must be lowercase ASCII kebab-case, at most 64 characters" }
+    }
     # Registry tags: short names (15 characters proven in the reference lab), one description each.
     foreach ($tk in @($packDef.governance.adminCenter.tags)) {
         $tn = [string]$L.governance.tags[$tk]

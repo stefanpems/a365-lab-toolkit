@@ -98,11 +98,15 @@ while ($true) {
     Clear-DemoPackageCache
     $x = Get-DemoAgentPackages $cfg $LOC $state $a
     $cur = if ($x.shared) { $x.shared } else { $x.published }
-    if (Test-DemoOwnerless $cur) { Write-DemoLog $Prefix "'$nm' is ownerless again for the API ($(if ($lp.manager) { 'ready for the reassignment rule, run live in D8' } else { 'ready for D1 and D5' }))"; break }
+    if (Test-DemoOwnerless $cur) {
+        $how = if ([string]$cur.ownerId) { "the catalog keeps the deleted user's id ($($cur.ownerId)): the admin center may show a nameless owner and not count the agent" } else { 'empty owner' }
+        Write-DemoLog $Prefix "'$nm' is ownerless again for the API, $how ($(if ($lp.manager) { 'ready for the reassignment rule, run live in D8' } else { 'ready for D1 and D5' }))"
+        break
+    }
     if ((Get-Date) -gt $deadline) { Write-DemoLog $Prefix "'$nm' still shows owner $($cur.ownerId) after $TimeoutMinutes minutes: check again later" 'WARN'; break }
     Start-Sleep -Seconds 30
 }
-Write-Host "Verify the admin-center card 'Agents without owners' (it can lag for hours or keep a ghost owner): plan B = the empty Owner column in All agents; 'Assign new owner' works anyway."
+Write-Host "Verify the admin-center card 'Agents without owners' the day after: in some tenants the hard delete leaves a dangling owner for good and the card (and the D8 rule) never count the agent. Plan B = the empty Owner column in All agents; 'Assign new owner' works anyway."
 # Shared agents are reachable only through their share link: the recipients open it again after every recreation.
 $link = "https://m365.cloud.microsoft/chat/?titleId=$($cur.id)"
 $who = @($a.shareLinkOpenedBy | ForEach-Object { "$(Get-DemoPersonaDisplayName $LOC $_) ($(Get-DemoUpn $LOC $cfg $_))" })

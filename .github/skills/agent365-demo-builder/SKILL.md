@@ -69,6 +69,7 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 | `New-DemoCards.ps1` | guided cards (`references/cards/`) + test hand-out, in `generated/<prefix>/demo/cards` | no |
 | `Invoke-DemoPhase.ps1` | runs a phase in order (dry run unless `-Apply`), keeps the progress in state.json, `-Done <step>` for manual steps | as its steps |
 | `Set-DemoAoaiCapacity.ps1` | sizes the shared Azure OpenAI deployment for the demo traffic (quota pre-check); `-Check429` counts throttled requests | Azure |
+| `Publish-DemoMcsAgent.ps1` | checks that the Copilot Studio agents are really published (Dataverse `publishedon`, synchronization state); `-Publish` publishes through Dataverse when Copilot Studio silently did not (never the agents whose starting state is a pending request or a block, unless `-Force`) | only with `-Publish` |
 
 Shared helpers: `_demo-common.ps1` (pack, locale, config, state, tokens, Graph), `_demo-entra.ps1` (agent identities,
 temporary app-only session).

@@ -90,8 +90,14 @@ if (Test-Sel (@('Registry') + @($pack.agents | ForEach-Object { $_.demos }))) {
         if ($ro -eq 'none' -and [string]$a.variant -like '*-DW') { }   # a Digital Worker template has no owner and is not "ownerless"
         elseif ($ro -eq 'none') {
             $ol = Test-DemoOwnerless $own
+            $dangling = $ol -and [string]$own.ownerId
             if ($ol) { $ownerless += $nm }
-            Add-Check $tag "${nm}: registry owner" 'none (the creator left)' $(if ($ol) { 'ownerless' } else { Get-Name ([string]$own.ownerId) }) $(if ($ol) { 'OK' } else { 'KO' }) $(if ($ol) { '' } else { "New-OrphanAgent.ps1 -Agent $($a.key)" })
+            if ($dangling) {
+                # Reference lab, 29/09: after a hard delete the catalog can keep the deleted id for good; the admin center
+                # then shows a nameless owner ("1 user") and neither the card nor the D8 rule counts the agent.
+                Add-Check $tag "${nm}: registry owner" 'none (the creator left)' "dangling owner (deleted user $($own.ownerId))" 'WARN' 'verify the admin-center card and the Owner column; plan B of the demo guide if it shows "1 user"'
+            }
+            else { Add-Check $tag "${nm}: registry owner" 'none (the creator left)' $(if ($ol) { 'ownerless' } else { Get-Name ([string]$own.ownerId) }) $(if ($ol) { 'OK' } else { 'KO' }) $(if ($ol) { '' } else { "New-OrphanAgent.ps1 -Agent $($a.key)" }) }
         }
         elseif ($ro) {
             $want = Get-UserId $ro; $act = [string]$own.ownerId
@@ -173,6 +179,14 @@ if (Test-Sel (@('Entra') + @($pack.agents | Where-Object { $_.entraOwner -or $_.
                 $r = Invoke-DemoReg $cfg GET "$G/beta/servicePrincipals/$($id.id)?`$select=customSecurityAttributes"
                 $v = if ($r.ok) { [string]$r.body.customSecurityAttributes.($gov.attributeSet.id).($gov.attribute.name) } else { "not readable ($($r.status)): the operator needs Attribute Assignment Reader" }
                 Add-Check $tag "${label}: $($gov.attribute.name)" $want $v $(if ($v -eq $want) { 'OK' } elseif ($r.ok) { 'KO' } else { 'WARN' }) 'Reset-DemoState.ps1 -Demo D11 -Apply'
+            }
+            $drs = if ($id -eq $p.identities[0]) { @($p.def.directAppRoles | Where-Object { $_ }) } else { @() }
+            foreach ($dr in $drs) {
+                $appId = $script:DemoResourceApps[[string]$dr.resource]
+                $rsp = (Invoke-DemoGraph GET "$G/v1.0/servicePrincipals?`$filter=appId eq '$appId'&`$select=id,appRoles" -NoThrow).value | Select-Object -First 1
+                $ar = $rsp.appRoles | Where-Object { $_.value -eq $dr.role -and $_.allowedMemberTypes -contains 'Application' } | Select-Object -First 1
+                $has = @(Invoke-DemoGraph GET "$G/v1.0/servicePrincipals/$($id.id)/appRoleAssignments" -All -NoThrow | Where-Object { $_.resourceId -eq $rsp.id -and $_.appRoleId -eq $ar.id }).Count -gt 0
+                Add-Check $tag "${label}: $($dr.resource) $($dr.role) (application)" 'granted directly' $(if ($has) { 'granted' } else { 'missing' }) $(if ($has) { 'OK' } else { 'KO' }) 'Set-DemoGovernance.ps1 -Step identities'
             }
             if ($riskKeys -contains $p.key -and $id -eq $p.identities[0]) {
                 $lvl = Get-DemoAgentRisk $cfg $id.id

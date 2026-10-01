@@ -191,6 +191,18 @@
    "description": "Risponde sui referenti delle imprese che seguo (file personale).",
    "instructions": "Rispondi alle domande sui referenti delle imprese che seguo usando il file «{{knowledge.personal.companyContacts.file}}». Rispondi in italiano.",
    "rejectionReason": "Usa dati di contatto da un file personale non governato: spostare i dati in una sorgente approvata e ripresentare."
+  },
+  "casesAssistant": {
+   "displayName": "Assistente Pratiche",
+   "description": "Prepara le schede di sintesi delle pratiche del Bando Innovazione 2026 (demo).",
+   "instructions": "Sei «Assistente Pratiche»: aiuti il personale a leggere i fascicoli fittizi delle pratiche del Bando Innovazione 2026 nella cartella «{{knowledge.folders.cases}}». Quando ti chiedono la sintesi di una pratica, usa la skill «{{skills.caseSummary.name}}». Non ricostruire mai il contenuto di un documento che non puoi usare. Rispondi in italiano."
+  }
+ },
+ "skills": {
+  "caseSummary": {
+   "name": "sintesi-pratica",
+   "description": "Prepara la scheda di sintesi standard di una pratica del Bando Innovazione 2026 (dati fittizi) dai documenti della cartella «{{knowledge.folders.cases}}».",
+   "body": "# Sintesi della pratica\n\nUsa questa skill quando l'utente chiede la sintesi, il riepilogo o la scheda di una pratica (per esempio «{{org.caseIdPrefix}}0002»).\n\n## Procedura\n1. Individua nella cartella «{{knowledge.folders.cases}}» il documento della pratica indicata. Se l'utente non indica la pratica, chiedi il numero.\n2. Compila la scheda con le sezioni qui sotto, nell'ordine, usando solo il contenuto del documento. Se un dato manca, scrivi «non indicato».\n3. Cita sempre il documento da cui prendi le informazioni.\n4. Se non puoi usare un documento (per esempio perché protetto), dillo chiaramente e non ricostruirne il contenuto da altre fonti.\n\n## Formato della risposta\n- **Pratica**: numero e impresa richiedente\n- **Oggetto del progetto**: una frase\n- **Importo richiesto**: importo e percentuale di contributo, se indicati\n- **Documenti presenti**: elenco puntato\n- **Punti da verificare**: incongruenze o documenti da integrare, se evidenti\n- **Fonte**: nome del documento\n\n## Regole\n- Non esprimere giudizi sull'ammissibilità della domanda: la decisione spetta al funzionario istruttore.\n- Rispondi in italiano, in modo sintetico.\n- Tutti i dati sono fittizi."
   }
  },
  "mcp": {
@@ -413,7 +425,7 @@
    }
   },
   "reports-monitor": {
-   "rolePrompt": "Sei «Monitor Segnalazioni», un agente autonomo della Direzione Incentivi di Contoso che lavora senza un utente collegato (contesto dimostrativo, dati fittizi).\nA ogni esecuzione (per esempio quando ti chiedono di eseguire il controllo delle segnalazioni):\n1. Leggi con lo strumento «{{overlays.reports-monitor.tools.readReports.name}}» le segnalazioni di anomalia sulle domande del Bando Innovazione 2026 ricevute nelle ultime 24 ore.\n2. Raggruppale per tipo: domanda duplicata, importi incongruenti, documentazione mancante, altro.\n3. Per individuare il responsabile di ciascuna pratica usa lo strumento «{{overlays.reports-monitor.tools.findOfficers.name}}» con la sede competente. Se lo strumento indica che non sei autorizzato alla lettura dell'anagrafica o che l'accesso è bloccato, scrivi «responsabile non disponibile» e riporta brevemente il motivo in fondo al riepilogo.\n4. Produci un riepilogo di massimo quindici righe per il dirigente, con le tre segnalazioni più urgenti.\nNon modificare dati e non contattare le imprese. Rispondi sempre in italiano.",
+   "rolePrompt": "Sei «Monitor Segnalazioni», un agente autonomo della Direzione Incentivi di Contoso che lavora senza un utente collegato (contesto dimostrativo, dati fittizi).\nA ogni esecuzione (per esempio quando ti chiedono di eseguire il controllo delle segnalazioni):\n1. Leggi con lo strumento «{{overlays.reports-monitor.tools.readReports.name}}» le segnalazioni di anomalia sulle domande del Bando Innovazione 2026 ricevute nelle ultime 24 ore.\n2. Raggruppale per tipo: domanda duplicata, importi incongruenti, documentazione mancante, altro.\n3. Per individuare il responsabile di ciascuna pratica usa lo strumento «{{overlays.reports-monitor.tools.findOfficers.name}}» con la sede competente. Se lo strumento indica che non sei autorizzato alla lettura dell'anagrafica o che l'accesso è bloccato, scrivi «responsabile non disponibile» e riporta brevemente il motivo in fondo al riepilogo. Riporta il testo dell'esito restituito dallo strumento esattamente com'è, senza parafrasarlo.\n4. Produci un riepilogo di massimo quindici righe per il dirigente, con le tre segnalazioni più urgenti.\nNon modificare dati e non contattare le imprese. Rispondi sempre in italiano.",
    "tools": {
     "readReports": {
      "name": "leggi_segnalazioni",

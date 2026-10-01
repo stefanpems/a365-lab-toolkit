@@ -54,7 +54,8 @@
    "entraRoles": [
     "AI Administrator",
     "Global Reader",
-    "Attribute Assignment Administrator"
+    "Attribute Assignment Administrator",
+    "Conditional Access Administrator"
    ],
    "licenses": [
     "copilotUser",
@@ -111,7 +112,8 @@
     "eDiscoveryManager",
     "CommunicationComplianceInvestigators",
     "InsiderRiskManagementAnalysts",
-    "ContentExplorerContentViewer"
+    "ContentExplorerContentViewer",
+    "DataSecurityAIContentViewers"
    ],
    "licenses": [
     "copilotUser",
@@ -543,11 +545,18 @@
     "blocked": false
    },
    "demos": [
-    "D11"
+    "D11",
+    "D9"
    ],
    "buildOrder": 4,
    "tags": [
     "department"
+   ],
+   "directAppRoles": [
+    {
+     "resource": "Microsoft Graph",
+     "role": "User.Read.All"
+    }
    ]
   },
   {
@@ -814,6 +823,30 @@
    "tags": [
     "department"
    ]
+  },
+  {
+   "key": "casesAssistant",
+   "platform": "agentBuilder",
+   "creator": "maker",
+   "knowledgeFolder": "cases",
+   "shareWith": "department",
+   "shareLinkOpenedBy": [
+    "programLead"
+   ],
+   "customSkill": "caseSummary",
+   "registryOwner": "maker",
+   "tags": [
+    "department"
+   ],
+   "baseline": {
+    "blocked": false
+   },
+   "demos": [
+    "D15"
+   ],
+   "buildOrder": 14,
+   "removeAfterEvent": true,
+   "note": "its knowledge folder includes the labeled confidential file: once the DLP policy is On, the agent answers that the file is not available (reference lab, 29/09); Agent Builder custom skills are a preview for Frontier tenants"
   }
  ],
  "webUi": {
@@ -1276,6 +1309,28 @@
     "d12Jailbreak",
     "d12Backdate"
    ]
+  },
+  {
+   "id": "DL-01",
+   "agent": "casesAssistant",
+   "persona": "programLead",
+   "surface": "m365Copilot",
+   "phase": "d15Rehearsal",
+   "after": "dlpActive",
+   "demos": [
+    "D15"
+   ]
+  },
+  {
+   "id": "DL-02",
+   "agent": "casesAssistant",
+   "persona": "programLead",
+   "surface": "m365Copilot",
+   "phase": "d15Rehearsal",
+   "after": "dlpActive",
+   "demos": [
+    "D15"
+   ]
   }
  ],
  "governance": {
@@ -1341,7 +1396,8 @@
     "activeHoursBefore": 4,
     "demos": [
      "D15"
-    ]
+    ],
+    "mode": "enable"
    },
    "auditRetention": {
     "recordTypes": [
@@ -1480,7 +1536,8 @@
    ],
    "notes": [
     "'Agents without owners' lists only shared agents: the Digital Worker template has no owner by design and must not appear.",
-    "The card can lag for hours after the creator leaves: if it still shows 0, show the empty Owner column in All agents and say it."
+    "The card can lag for hours after the creator leaves: if it still shows 0, show the empty Owner column in All agents and say it.",
+    "In some tenants the hard delete of the creator leaves a dangling owner for good: the card and the D8 rule never count the agent (reference lab: four tests, also with a brand-new agent and creator). Check the card the day after the leaver deletion; plan B: the empty Owner column and 'Assign new owner'."
    ]
   },
   {
@@ -1590,7 +1647,8 @@
    ],
    "notes": [
     "Change the owner ONLY of {agent:circularsAssistant} (Assign new owner → {name:programLead}); never of {agent:grantsDesk}: the previous owner loses all access, including read, and {name:maker} needs it in D6.",
-    "'Add owner' is not offered on an ownerless agent. Rehearsals stop at the 'Assign a new owner' pane."
+    "'Add owner' is not offered on an ownerless agent. Rehearsals stop at the 'Assign a new owner' pane.",
+    "In some tenants the hard delete of the creator leaves a dangling owner for good: the card and the D8 rule never count the agent (reference lab: four tests, also with a brand-new agent and creator). Check the card the day after the leaver deletion; plan B: the empty Owner column and 'Assign new owner'."
    ]
   },
   {
@@ -1674,7 +1732,9 @@
     "The rule that reassigns ownerless Agent Builder agents to the creator's manager exists; after a run {agent:formsAssistant} is owned by {name:maker}. To show it again: New-OrphanAgent.ps1 -Agent formsAssistant, then run the rule live."
    ],
    "notes": [
-    "The rule is predefined: it is only RUN, live, once {agent:formsAssistant} shows in 'Agents to review'. Plan B: Assign new owner → {name:maker}, stated on camera."
+    "The rule is predefined: it is only RUN, live, once {agent:formsAssistant} shows in 'Agents to review'. Plan B: Assign new owner → {name:maker}, stated on camera.",
+    "In some tenants the hard delete of the creator leaves a dangling owner for good: the card and the D8 rule never count the agent (reference lab: four tests, also with a brand-new agent and creator). Check the card the day after the leaver deletion; plan B: the empty Owner column and 'Assign new owner'.",
+    "The rule supports only agents created with Agent Builder."
    ]
   },
   {
@@ -1692,12 +1752,18 @@
     "identityAdmin"
    ],
    "agents": [
-    "reportsMonitor"
+    "reportsMonitorTest"
    ],
    "resetClass": "self",
    "leadHours": 1,
    "manualReset": [
     "What If on '{{governance.conditionalAccess.blockHighRiskAgents}}' prepared; the sign-in log of the T-1 compromise confirmation available."
+   ],
+   "notes": [
+    "The blocked identity is {agent:reportsMonitorTest}: it holds a direct, permanent Microsoft Graph User.Read.All application permission, so the same prompt answers before and fails after (sign-in error 53003); {agent:reportsMonitor} keeps its D10 starting state.",
+    "The model is called with the container's own credentials, not with the agent identity: only the identity-bound actions (the directory lookup, the telemetry export) are blocked. No container restart is needed.",
+    "The agent sign-in log may not name the policy: What If does.",
+    "After the agent's risk state changes, wait about 10 minutes before a rehearsal."
    ]
   },
   {
@@ -1722,7 +1788,9 @@
    "leadHours": 1,
    "notes": [
     "The agent's token is cached up to about one hour: if the officers do not appear after the approval, wait or restart the container revision off camera.",
-    "The approver of the access package must be the persona who approves on camera."
+    "The approver of the access package must be the persona who approves on camera.",
+    "The admin-center Permissions tab already lists User.Read.All: it is the blueprint's delegated consent (Type = Delegated, on behalf of a signed-in user). The agent works with its own app-only token, which has no permission until the access package is Delivered: prove the change with the assignment Delivered and the agent's answer.",
+    "After the demo remove only the access-package assignment (Reset-DemoState.ps1 -Demo D10 -Apply)."
    ]
   },
   {
@@ -1832,7 +1900,8 @@
     "complianceOfficer"
    ],
    "agents": [
-    "recordsColleague"
+    "recordsColleague",
+    "casesAssistant"
    ],
    "resetClass": "readOnly",
    "leadHours": 24,
@@ -1943,6 +2012,7 @@
     "communicationCompliance",
     "d16Rehearsal",
     "d9Rehearsal",
+    "casesAssistant",
     "dlpActive",
     "traffic"
    ]

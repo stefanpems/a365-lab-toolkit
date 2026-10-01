@@ -67,6 +67,7 @@ keep every e-mail address on a reserved example domain, add the language to `loc
 | `circularsAssistant` | agentBuilder | Circulars Assistant | D1, D5 |
 | `formsAssistant` | agentBuilder | Forms Assistant | D8 |
 | `personalContacts` | agentBuilder | Personal Contacts Draft | D4 |
+| `casesAssistant` | agentBuilder (with a custom skill) | Cases Assistant | D15 |
 
 ## Demos
 
@@ -104,7 +105,8 @@ The protection demos are referred to by code only; their inputs are operator slo
 3. The demo MCP servers (`ext_...`) cannot be deleted through the platform API: Reject the pending requests and Block
    the approved servers in the Microsoft 365 admin center > Agents > Tools. Their names stay reserved.
 4. Demo extras, removed by hand (Microsoft Entra, Microsoft 365, Purview, Defender): the persona users and the demo
-   groups, the SharePoint site of the knowledge, the Agent Builder agents, the access package and then its catalog,
+   groups, the SharePoint site of the knowledge, the Agent Builder agents (with their custom skills), the direct
+   application permission of the test twin, the access package and then its catalog,
    the Conditional Access policies, the admin-center templates and tags, the Purview label, DLP policy, audit
    retention policy, Communication Compliance policy and eDiscovery case, the Defender real-time protection rule and
    saved hunting queries. `generated/<prefix>/demo/state.json` lists what the build created (users, groups, MCP

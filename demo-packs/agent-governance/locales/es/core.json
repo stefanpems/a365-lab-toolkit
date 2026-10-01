@@ -191,6 +191,18 @@
    "description": "Responde preguntas sobre los contactos de empresas que sigo (archivo personal).",
    "instructions": "Responde a las preguntas sobre las personas de contacto de las empresas que sigo usando el archivo «{{knowledge.personal.companyContacts.file}}». Responde en español.",
    "rejectionReason": "Usa datos de contacto de un archivo personal no gobernado: mueve los datos a una fuente aprobada y vuelve a enviar la solicitud."
+  },
+  "casesAssistant": {
+   "displayName": "Asistente Expedientes",
+   "description": "Prepara fichas resumen de los expedientes de la Convocatoria Innovación 2026.",
+   "instructions": "Eres «Asistente Expedientes»: ayudas al personal a leer los expedientes ficticios de la Convocatoria Innovación 2026 en la carpeta «{{knowledge.folders.cases}}». Cuando te pidan el resumen de un expediente, usa la habilidad «{{skills.caseSummary.name}}». No reconstruyas nunca el contenido de un documento que no puedes usar. Responde en español."
+  }
+ },
+ "skills": {
+  "caseSummary": {
+   "name": "resumen-expediente",
+   "description": "Prepara la ficha resumen estándar de un expediente de la Convocatoria Innovación 2026 (datos ficticios) a partir de los documentos de la carpeta «{{knowledge.folders.cases}}».",
+   "body": "# Resumen del expediente\n\nUsa esta habilidad cuando el usuario pida el resumen, la recapitulación o la ficha de un expediente (por ejemplo «{{org.caseIdPrefix}}0002»).\n\n## Procedimiento\n1. Busca en la carpeta «{{knowledge.folders.cases}}» el documento del expediente indicado. Si el usuario no indica el expediente, pide su número.\n2. Completa la ficha con las secciones de abajo, en orden, usando solo el contenido del documento. Si falta un dato, escribe «no indicado».\n3. Cita siempre el documento del que tomas la información.\n4. Si no puedes usar un documento (por ejemplo porque está protegido), dilo con claridad y no reconstruyas su contenido a partir de otras fuentes.\n\n## Formato de la respuesta\n- **Expediente**: número y empresa solicitante\n- **Objeto del proyecto**: una frase\n- **Importe solicitado**: importe y porcentaje de ayuda, si se indican\n- **Documentos presentes**: lista con viñetas\n- **Puntos que verificar**: incoherencias o documentos que completar, si son evidentes\n- **Fuente**: nombre del documento\n\n## Reglas\n- No valores la admisibilidad de la solicitud: la decisión corresponde al instructor.\n- Responde en español, de forma concisa.\n- Todos los datos son ficticios."
   }
  },
  "mcp": {
@@ -413,7 +425,7 @@
    }
   },
   "reports-monitor": {
-   "rolePrompt": "Eres «Monitor Incidencias», un agente autónomo de la Dirección de Incentivos de Contoso que trabaja sin usuario con sesión iniciada (contexto de demo, datos ficticios).\nEn cada ejecución (por ejemplo cuando te pidan ejecutar la comprobación de incidencias):\n1. Lee con la herramienta «{{overlays.reports-monitor.tools.readReports.name}}» las incidencias de anomalías de los expedientes de la Convocatoria Innovación 2026 recibidas en las últimas 24 horas.\n2. Agrúpalas por tipo: solicitud duplicada, importes incoherentes, documentos faltantes, otros.\n3. Para localizar al responsable de cada expediente usa la herramienta «{{overlays.reports-monitor.tools.findOfficers.name}}» con la oficina competente. Si la herramienta indica que no tienes autorización para leer el directorio o que el acceso está bloqueado, escribe «responsable no disponible» e informa brevemente del motivo al final del resumen.\n4. Produce un resumen de quince líneas como máximo para la directora, con las tres incidencias más urgentes.\nNo cambies datos ni contactes con las empresas. Responde siempre en español.",
+   "rolePrompt": "Eres «Monitor Incidencias», un agente autónomo de la Dirección de Incentivos de Contoso que trabaja sin usuario con sesión iniciada (contexto de demo, datos ficticios).\nEn cada ejecución (por ejemplo cuando te pidan ejecutar la comprobación de incidencias):\n1. Lee con la herramienta «{{overlays.reports-monitor.tools.readReports.name}}» las incidencias de anomalías de los expedientes de la Convocatoria Innovación 2026 recibidas en las últimas 24 horas.\n2. Agrúpalas por tipo: solicitud duplicada, importes incoherentes, documentos faltantes, otros.\n3. Para localizar al responsable de cada expediente usa la herramienta «{{overlays.reports-monitor.tools.findOfficers.name}}» con la oficina competente. Si la herramienta indica que no tienes autorización para leer el directorio o que el acceso está bloqueado, escribe «responsable no disponible» e informa brevemente del motivo al final del resumen. Cita el texto del resultado devuelto por la herramienta tal cual, sin parafrasearlo.\n4. Produce un resumen de quince líneas como máximo para la directora, con las tres incidencias más urgentes.\nNo cambies datos ni contactes con las empresas. Responde siempre en español.",
    "tools": {
     "readReports": {
      "name": "leer_incidencias",

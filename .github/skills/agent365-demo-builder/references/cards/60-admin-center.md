@@ -7,10 +7,13 @@ a demo moment (for example the D8 reassignment rule) is done live, on camera, no
 
 ## 1. Policy templates (D4, D7)
 
-Prerequisites: the Entra policies of the Entra card exist; for custom security attribute policies both the Global
-Administrator and {name:aiAdmin} need the **Attribute Assignment Administrator** role (a Global Administrator can
-consent to assign it in the wizard). The AI Administrator can use access packages but not Conditional Access or
-attributes: if a policy cannot be added, a Global Administrator completes the template.
+Prerequisites: the Entra policies of the Entra card exist. Whoever creates or **applies** a custom template needs the
+Entra role of every policy family in it: Conditional Access policies → **Conditional Access Administrator**, custom
+security attributes → **Attribute Assignment Administrator** (the AI Administrator alone can apply access packages only;
+a Conditional Access policy scoped to all agent identities is selected automatically in every custom template).
+{name:aiAdmin} gets both roles from the identity build (pack.json); after a role change sign out and in again. Without
+them the approval wizard shows "Custom policies can't be applied by your role". Rehearse the approval wizard up to
+"Review and finish" before recording.
 
 Agents > Settings > Templates > **Add a new template**:
 

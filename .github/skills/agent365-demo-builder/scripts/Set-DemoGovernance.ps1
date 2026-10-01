@@ -87,6 +87,7 @@ if (Test-Step 'identities') {
         if ($p.def.entraOwner) { $what += "owner $(Get-Upn $p.def.entraOwner)" }
         if ($p.def.sponsor) { $what += "sponsor $(Get-Upn $p.def.sponsor)$(if ($p.def.sponsorOn -eq 'instance') { ' (on each instance)' })" }
         if ($p.def.attribute) { $what += "$attrName=$($gov.attribute.values[$p.def.attribute])" }
+        foreach ($dr in @($p.def.directAppRoles | Where-Object { $_ })) { $what += "app permission $($dr.resource) $($dr.role)" }
         Write-Host ("  {0,-28} identities {1}: {2}" -f $p.name, $p.identities.Count, ($what -join ', '))
     }
     $missing = @($plan | Where-Object { -not $_.identities.Count })
@@ -99,6 +100,7 @@ if (Test-Step 'identities') {
         }
         $roles = @('AgentIdentity.ReadWrite.All')
         if (@($todo | Where-Object { $_.def.attribute }).Count) { $roles += 'CustomSecAttributeAssignment.ReadWrite.All' }
+        if (@($todo | Where-Object { @($_.def.directAppRoles | Where-Object { $_ }).Count }).Count) { $roles += 'AppRoleAssignment.ReadWrite.All' }
         if (-not $state.governance.Contains('identities')) { $state.governance['identities'] = [ordered]@{} }
         $session = $null
         try {
@@ -110,6 +112,10 @@ if (Test-Step 'identities') {
                         if ($p.def.entraOwner) { $r['owners'] = (Set-DemoIdentityOwner $session $id.id $users[$p.def.entraOwner] -ExclusiveUser) -join ', ' }
                         if ($p.def.sponsor) { $r['sponsors'] = (Set-DemoIdentitySponsor $session $id.id $users[$p.def.sponsor] -Exclusive) -join ', ' }
                         if ($p.def.attribute) { $r['attribute'] = Set-DemoIdentityAttribute $session $id.id $setId $attrName ([string]$gov.attribute.values[$p.def.attribute]) }
+                        # Direct application permissions (D9: the test twin answers before the block and fails after it).
+                        if ($id -eq $p.identities[0]) {
+                            foreach ($dr in @($p.def.directAppRoles | Where-Object { $_ })) { $r["appRole:$($dr.role)"] = Set-DemoIdentityAppRole $session $id.id ([string]$dr.resource) ([string]$dr.role) }
+                        }
                     }
                     catch { $r['error'] = $_.Exception.Message }
                     Write-DemoLog $Prefix ('Identity {0} ({1}): owners=[{2}] sponsors=[{3}]{4}{5}' -f $id.displayName, $p.key, $r.owners, $r.sponsors, $(if ($r.Contains('attribute')) { " $attrName=[$($r.attribute)]" }), $(if ($r.error) { " ERROR: $($r.error)" })) $(if ($r.error) { 'ERROR' } else { 'INFO' })

@@ -27,6 +27,10 @@ Rules of the reference lab:
   preview issue), retry from Teams, then from the Microsoft 365 Copilot Agent Store.
 - If "Create instance" is missing, the template's "who can create instances" (Publish to users > Activate) must include
   {name:maker}: admin fix.
+- Teams can keep "creating" for a long time without reporting a failure. Check the directory audit instead of waiting:
+  an agent identity and an agent user created and then removed a few seconds later (by Microsoft 365 App Catalog
+  Services) mean the license step failed. Retry once from Teams with an explicit alias, then from the Microsoft 365
+  Copilot Agent Store.
 
 ## 3. Afterwards (scripted)
 

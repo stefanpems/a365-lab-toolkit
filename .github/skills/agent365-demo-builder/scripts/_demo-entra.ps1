@@ -181,3 +181,20 @@ function Set-DemoIdentityAttribute($Session, [string]$IdentityId, [string]$Attri
     $read = { try { [string](Invoke-DemoGraph GET "$script:DemoG/beta/servicePrincipals/${IdentityId}?`$select=customSecurityAttributes" -Token $Session.token).customSecurityAttributes.$AttributeSet.$Attribute } catch { '' } }
     return (Wait-DemoConverged $read { param($v) $v -eq $Value })
 }
+
+# Resource names of pack.json agents[].directAppRoles -> appId of the resource service principal.
+$script:DemoResourceApps = @{ 'Microsoft Graph' = '00000003-0000-0000-c000-000000000000' }
+
+# Direct application permission (app role) of a resource granted to an agent identity; returns 'present' or 'added'.
+function Set-DemoIdentityAppRole($Session, [string]$IdentityId, [string]$Resource, [string]$Role) {
+    $appId = $script:DemoResourceApps[$Resource]
+    if (-not $appId) { throw "Unknown resource '$Resource' (known: $($script:DemoResourceApps.Keys -join ', '))." }
+    $res = (Invoke-DemoGraph GET "$script:DemoG/v1.0/servicePrincipals?`$filter=appId eq '$appId'&`$select=id,appRoles" -Token $Session.token).value | Select-Object -First 1
+    $ar = $res.appRoles | Where-Object { $_.value -eq $Role -and $_.allowedMemberTypes -contains 'Application' } | Select-Object -First 1
+    if (-not $ar) { throw "Application permission $Role not found on $Resource." }
+    $read = { @((Invoke-DemoGraph GET "$script:DemoG/v1.0/servicePrincipals/$IdentityId/appRoleAssignments" -Token $Session.token -All) | Where-Object { $_.resourceId -eq $res.id -and $_.appRoleId -eq $ar.id }) }
+    if (@(& $read).Count) { return 'present' }
+    Invoke-DemoGraph POST "$script:DemoG/v1.0/servicePrincipals/$IdentityId/appRoleAssignments" -Token $Session.token -Body @{ principalId = $IdentityId; resourceId = $res.id; appRoleId = $ar.id } | Out-Null
+    $null = Wait-DemoConverged $read { param($l) @($l).Count -gt 0 }
+    return 'added'
+}
