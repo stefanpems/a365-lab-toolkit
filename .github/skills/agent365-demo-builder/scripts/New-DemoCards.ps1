@@ -170,7 +170,7 @@ foreach ($f in @(Get-ChildItem -LiteralPath $tplDir -Filter '*.md' | Sort-Object
     $text = Get-Content -LiteralPath $f.FullName -Raw -Encoding utf8
     $text = $text.Replace('<!-- AGENTS:copilotStudio -->', (@(Get-CopilotStudioSections) -join "`n")).Replace('<!-- AGENTS:agentBuilder -->', (@(Get-AgentBuilderSections) -join "`n"))
     $text = Expand-CardText $text
-    $title = ([regex]::Match($text, '(?m)^# (.+)$')).Groups[1].Value
+    $title = ([regex]::Match($text, '(?m)^# (.+)$')).Groups[1].Value.Trim()
     $text = [regex]::Replace($text, '(?m)^(# .+)$', "`$1`n`n$stamp", 1)
     Set-Content -LiteralPath (Join-Path $outDir $f.Name) -Value $text -Encoding utf8
     $index += "- [$title](./$($f.Name))"

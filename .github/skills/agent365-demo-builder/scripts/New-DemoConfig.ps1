@@ -45,7 +45,11 @@ if ($DefaultEnvironmentId) { $c.copilotStudio['defaultEnvironmentId'] = $Default
 if ($PSBoundParameters.ContainsKey('FoundryMode') -or -not $c.Contains('foundry')) {
     $c['foundry'] = if ($FoundryMode -eq 'reuse-existing') { [ordered]@{ mode = 'reuse-existing'; endpoint = $FoundryEndpoint; account = $FoundryAccount; existingResourceGroup = $FoundryResourceGroup; deployment = $FoundryDeployment } } else { [ordered]@{ mode = 'create-shared' } }
 }
-$c['licenseSkus'] = [ordered]@{ copilotUser = $CopilotSku; teams = $TeamsSku; frontierAgent = $FrontierSku }
+if (-not $c.Contains('licenseSkus') -or -not $c.licenseSkus) { $c['licenseSkus'] = [ordered]@{} }
+foreach ($m in @(@('CopilotSku', 'copilotUser'), @('TeamsSku', 'teams'), @('FrontierSku', 'frontierAgent'))) {
+    # A re-run with other parameters must not reset an SKU chosen before (the parameters have defaults).
+    if ($PSBoundParameters.ContainsKey($m[0]) -or -not $c.licenseSkus[$m[1]]) { $c.licenseSkus[$m[1]] = Get-Variable -Name $m[0] -ValueOnly }
+}
 if (-not $c.locale) { throw '-Locale is required the first time (en, it, fr, es, de or another locale folder of the pack).' }
 $null = Get-DemoLocale -Locale $c.locale -Pack $Pack   # fails early if the locale is missing
 $c | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8

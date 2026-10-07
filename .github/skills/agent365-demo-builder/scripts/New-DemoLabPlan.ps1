@@ -101,7 +101,7 @@ $solution = [ordered]@{
     prefix = $Prefix; tenantId = $cfg.tenantId; subscriptionId = $cfg.subscriptionId; region = $cfg.region
     secretHandling = $cfg.secretHandling; resourceGroupStrategy = 'isolated'; namingMode = 'custom'
     foundry = $cfgFoundry
-    azureOpenAI = [ordered]@{ mode = 'create-shared' }
+    azureOpenAI = [ordered]@{ mode = 'create-shared'; deployment = 'gpt-4.1-mini' }
     observability = [ordered]@{ appInsights = [ordered]@{ mode = 'create-shared' } }
     copilotStudio = [ordered]@{ targetTenantId = $cfg.tenantId; targetEnvironmentId = $cfg.copilotStudio.paygEnvironmentId }
 }

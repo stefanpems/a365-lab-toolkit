@@ -227,3 +227,87 @@ function Get-DemoMcpBackendTools([Parameter(Mandatory)][string]$Url) {
     $r2 = Invoke-WebRequest -Method POST -Uri $Url -Headers $h -ContentType 'application/json' -Body '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' -UseBasicParsing -TimeoutSec 60
     return @((& $parse $r2).result.tools | ForEach-Object { [string]$_.name })
 }
+
+# --------------------------------------------------------------------------------------------- user-actions register
+# Every action the USER must do outside the scripts (portal steps, sign-ins, approvals, uploads, tests) is recorded in
+# generated/<prefix>/demo/user-actions.json (source of truth) and rendered to USER-ACTIONS.md after every change, so the
+# register is the same whatever agent, model or session runs the build. Rows are keyed and idempotent: a known key only
+# updates the texts and the flags it is given; ids A1, A2... are assigned once and never renumbered; a DONE row is kept.
+function Get-DemoUserActionsPath([Parameter(Mandatory)][string]$Prefix) { Join-Path (Get-DemoLabDir $Prefix) 'user-actions.json' }
+
+function Read-DemoUserActions([Parameter(Mandatory)][string]$Prefix) {
+    $f = Get-DemoUserActionsPath $Prefix
+    $r = if (Test-Path -LiteralPath $f) { Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable } else { $null }
+    if (-not $r) { $r = [ordered]@{} }
+    if (-not $r.Contains('meta') -or -not $r.meta) { $r['meta'] = [ordered]@{} }
+    $r['actions'] = @($r['actions'] | Where-Object { $_ })
+    return $r
+}
+
+function Format-DemoUserActionCell([string]$Text) { if (-not $Text) { return '' }; (($Text -replace '\r?\n', ' ') -replace '\|', '\|').Trim() }
+
+# Renders USER-ACTIONS.md (English) from the register. Status column: DONE, TODO, or **BLOCKING** for a blocking TODO.
+function Write-DemoUserActionsFile([Parameter(Mandatory)][string]$Prefix, $Register) {
+    if (-not $Register) { $Register = Read-DemoUserActions $Prefix }
+    $cfgFile = Join-Path (Get-DemoLabDir $Prefix) 'demo-config.json'
+    $cfg = if (Test-Path -LiteralPath $cfgFile) { Read-DemoConfig $Prefix } else { @{} }
+    $md = [System.Collections.Generic.List[string]]::new()
+    $md.Add("# $Prefix - actions for the user")
+    $md.Add('')
+    $md.Add('> Generated from user-actions.json by the Demo Builder scripts: do not edit by hand. Add or update a row with')
+    $md.Add("> ``Set-DemoUserAction.ps1 -Prefix $Prefix -Key <key> ...``; manual phase steps are marked done with ``Invoke-DemoPhase.ps1 -Done <step>``.")
+    $md.Add('')
+    $md.Add("Tenant ``$($cfg.tenantId)``, subscription ``$($cfg.subscriptionId)``.$(if ($Register.meta.webUiUrl) { " Web UI: $($Register.meta.webUiUrl)" })")
+    $md.Add('Status: `TODO`, `DONE`, or **BLOCKING** (the build cannot go on until it is done). "Needed by" = the first step or demo that')
+    $md.Add("really needs it. Cards: ``generated/$Prefix/demo/cards/`` (each says who does what, where, and the expected result).")
+    $md.Add('')
+    $md.Add('| # | Status | Action | Where / how | Needed by |')
+    $md.Add('|---|---|---|---|---|')
+    foreach ($a in $Register.actions) {
+        $st = if ($a.status -eq 'DONE') { 'DONE' } elseif ($a.blocking) { '**BLOCKING**' } else { 'TODO' }
+        $md.Add(('| {0} | {1} | {2} | {3} | {4} |' -f $a.id, $st, (Format-DemoUserActionCell $a.action), (Format-DemoUserActionCell $a.where), (Format-DemoUserActionCell $a.neededBy)))
+    }
+    $path = Join-Path (Get-DemoLabDir $Prefix) 'USER-ACTIONS.md'
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $path) | Out-Null
+    $md | Set-Content -LiteralPath $path -Encoding utf8
+    return $path
+}
+
+# Adds or updates one row (by -Key) and re-renders USER-ACTIONS.md. -Blocking/-Status are applied only when given, so a
+# script re-registering an action never reopens a DONE row. A new row needs -Action. Returns the row.
+function Set-DemoUserAction {
+    param([Parameter(Mandatory)][string]$Prefix, [Parameter(Mandatory)][string]$Key, [string]$Action, [string]$Where,
+          [string]$NeededBy, [object]$Blocking = $null, [ValidateSet('', 'TODO', 'DONE')][string]$Status = '', [string]$WebUiUrl)
+    $reg = Read-DemoUserActions $Prefix
+    if ($WebUiUrl) { $reg.meta['webUiUrl'] = $WebUiUrl }
+    $row = $reg.actions | Where-Object { $_.key -eq $Key } | Select-Object -First 1
+    if (-not $row) {
+        if (-not $Action) { throw "User action '$Key' does not exist yet: -Action is required to create it." }
+        $n = 0; foreach ($a in $reg.actions) { if ([string]$a.id -match '^A(\d+)$' -and [int]$Matches[1] -gt $n) { $n = [int]$Matches[1] } }
+        $row = [ordered]@{ id = "A$($n + 1)"; key = $Key; status = 'TODO'; blocking = $false; action = ''; where = ''; neededBy = ''; added = (Get-Date).ToString('s') }
+        $reg.actions = @($reg.actions) + @($row)
+    }
+    if ($Action) { $row['action'] = $Action }
+    if ($PSBoundParameters.ContainsKey('Where')) { $row['where'] = $Where }
+    if ($PSBoundParameters.ContainsKey('NeededBy')) { $row['neededBy'] = $NeededBy }
+    if ($null -ne $Blocking) { $row['blocking'] = [bool]$Blocking }
+    if ($Status) {
+        if ($Status -eq 'DONE' -and $row.status -ne 'DONE') { $row['doneAt'] = (Get-Date).ToString('s') }
+        if ($Status -eq 'TODO') { $row.Remove('doneAt') }
+        $row['status'] = $Status
+    }
+    $row['updated'] = (Get-Date).ToString('s')
+    $f = Get-DemoUserActionsPath $Prefix
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $f) | Out-Null
+    $tmp = "$f.tmp"
+    $reg | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $tmp -Encoding utf8
+    Move-Item -LiteralPath $tmp -Destination $f -Force
+    $null = Write-DemoUserActionsFile $Prefix $reg
+    return $row
+}
+
+# Ids of the demos of the pack that involve the given agents or portals (used for "Needed by").
+function Get-DemoIdsFor($Pack, [string[]]$AgentKeys = @(), [string[]]$Portals = @()) {
+    @($Pack.demos | Where-Object { (@($_.agents) | Where-Object { $AgentKeys -contains $_ }).Count -or (@($_.portal) | Where-Object { $Portals -contains $_ }).Count } |
+        ForEach-Object { [string]$_.id } | Select-Object -Unique | Sort-Object { $_.Substring(0, 1) }, { [int]($_ -replace '\D', '') })
+}

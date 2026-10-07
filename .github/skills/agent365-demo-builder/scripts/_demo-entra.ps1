@@ -111,6 +111,11 @@ function New-DemoAppOnlySession {
     }
     $secret = $null
     if (-not $session.token) { Close-DemoAppOnlySession $session; throw 'App-only token with the expected roles not obtained within 5 minutes.' }
+    # The first resource call can fail 401 Authorization_IdentityNotFound while the new service principal propagates.
+    for ($i = 0; $i -lt 12; $i++) {
+        try { Invoke-RestMethod -Method GET -Uri "$G/beta/servicePrincipals/microsoft.graph.agentIdentity?`$top=1&`$select=id" -Headers @{ Authorization = "Bearer $($session.token)" } -ErrorAction Stop | Out-Null; Start-Sleep -Seconds 15; break }
+        catch { Start-Sleep -Seconds 10 }
+    }
     Write-DemoLog $Prefix "App-only token obtained ($($Roles -join ', '))"
     return $session
 }

@@ -35,8 +35,28 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 - **Actions that a demo shows are done by the story persona in the portal** (approvals, blocks, their audit trail);
   scripts do only the setup that no demo shows and verify by read-back. A preparation step that is itself a demo
   moment (for example the D8 reassignment rule) is done live.
-- **Guided manual steps: one step per turn.** Give one card step, wait for the user to report it done, verify it,
-  then give the next one.
+- **Blocking vs non-blocking user actions.** Stop and ask (questions tool) ONLY for a blocking action: one without
+  which the next automated step cannot run (an interactive sign-in or consent in progress, the admin approval of the
+  demo MCP servers before they are attached to agents, a terminal prompt, missing information). Every other user
+  action is recorded in the **user-actions register** (below) with the step that first needs it, and the build goes
+  on. Guided card steps are still given **one step per turn** when the user asks to be guided through a card.
+- **User-actions register** `generated/<prefix>/demo/USER-ACTIONS.md` (English, gitignored), WRITTEN BY THE SCRIPTS
+  from `user-actions.json` (helpers in `_demo-common.ps1`), so it is the same whatever agent or model runs the build:
+  - `Invoke-DemoPhase.ps1 -Apply` records every `manual`/`terminal` step of bootstrap, setup and interactive, with
+    `neededBy` (cards: the pack demos of their agents or portal) and `blocking`; `-Done <step>` marks the row DONE.
+  - The scripts record their own manual actions: `Test-DemoPrereqs.ps1` (one row with the MANUAL checks),
+    `Set-DemoIdentities.ps1` (Purview role groups), `Publish-DemoKnowledge.ps1` (personal file),
+    `New-DemoMcpRegistration.ps1` (the BLOCKING approval row, DONE when no long-lived server is pending; the per-user
+    connection URLs).
+  - The agent adds ONLY what no script knows (for example a Lab Builder package to upload, deferred agent tests, a
+    check found during the build) with `Set-DemoUserAction.ps1 -Prefix <p> -Key <key> -Action ... -Where ...
+    -NeededBy ... [-Blocking]`, and marks such rows with `-Status DONE` after the verification. Never edit the Markdown
+    file by hand; `Set-DemoUserAction.ps1 -List` prints the register.
+  - Format: header (tenant, subscription, web UI URL, legend, cards) and one table `| # | Status | Action | Where /
+    how | Needed by |`; ids `A1`, `A2`... are never renumbered and DONE rows are kept; status TODO, DONE or
+    **BLOCKING**; exact URLs, file paths and accounts, never a secret and never the content of an operator slot.
+  - At the end of the build, and whenever the user asks, present the whole register in chat (in the user's
+    language), after the summary of what exists.
 - **Never duplicate the Lab Builder.** Extend it generically (overlays, `ext_` tools, display names, `-Server`
   options of the custom-mcp helpers) and reference its documents instead of copying them.
 - **The Lab Builder is not changed for a demo's needs** (user rule, 28/09): it only gets generic, backward-compatible
@@ -70,9 +90,11 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 | `Invoke-DemoPhase.ps1` | runs a phase in order (dry run unless `-Apply`), keeps the progress in state.json, `-Done <step>` for manual steps | as its steps |
 | `Set-DemoAoaiCapacity.ps1` | sizes the shared Azure OpenAI deployment for the demo traffic (quota pre-check); `-Check429` counts throttled requests | Azure |
 | `Publish-DemoMcsAgent.ps1` | checks that the Copilot Studio agents are really published (Dataverse `publishedon`, synchronization state); `-Publish` publishes through Dataverse when Copilot Studio silently did not (never the agents whose starting state is a pending request or a block, unless `-Force`) | only with `-Publish` |
+| `Set-DemoUserAction.ps1` | adds/updates one row of the user-actions register (actions no script knows), `-List` prints it | no |
 
-Shared helpers: `_demo-common.ps1` (pack, locale, config, state, tokens, Graph), `_demo-entra.ps1` (agent identities,
-temporary app-only session).
+Shared helpers: `_demo-common.ps1` (pack, locale, config, state, tokens, Graph, user-actions register), `_demo-entra.ps1` (agent identities,
+temporary app-only session). Offline test of the register: `test-demo-user-actions.ps1` (run it after changing the
+register helpers).
 
 ## The localization dictionary
 
@@ -105,7 +127,8 @@ Log every step with `Write-DemoLog` (it also appends to `generated/<prefix>/wiza
 
 ## Where things are
 
-- Per lab (gitignored): `generated/<prefix>/demo/` → `demo-config.json`, `state.json` (users, groups, knowledge, MCP
+- Per lab (gitignored): `generated/<prefix>/demo/` → `demo-config.json`, `USER-ACTIONS.md` (user-actions register),
+  `state.json` (users, groups, knowledge, MCP
   backends/servers/pool, governance), `overlays/`, `outside-plan.json`, `knowledge/`, `mcp-build/`, `mcp-registration/`,
   `cards/`, `operator-slots.json`, `secrets/`; the Lab Builder plan is `generated/<prefix>/a365-deployment-plan.json`.
 - Azure: the lab resource groups tagged `a365lab=<prefix>`; the demo MCP backends in `<prefix>-demomcp-rg`

@@ -114,5 +114,15 @@ $md = @("# Demo prerequisites - $Prefix - $(Get-Date -Format 'yyyy-MM-dd HH:mm')
 $md += $sorted | ForEach-Object { "| $($_.Status) | $($_.Area) | $($_.Check) | $($_.Detail -replace '\|', '/') | $($_.Fix -replace '\|', '/') |" }
 $rep = Join-Path (Get-DemoLabDir $Prefix) 'prereqs-report.md'
 $md | Set-Content -LiteralPath $rep -Encoding utf8
+# Manual checks without an API go to the user-actions register as ONE row (people, Purview and Defender checks are
+# already covered by the first-signin step and by the cards).
+$man = @($sorted | Where-Object { $_.Status -eq 'MANUAL' -and $_.Area -notin 'People', 'Purview', 'Defender' })
+if ($man.Count) {
+    $codes = @($man | ForEach-Object { [regex]::Matches("$($_.Check)", '\b[CD]\d{1,2}\b') | ForEach-Object Value } | Select-Object -Unique | Sort-Object { $_.Substring(0, 1) }, { [int]($_ -replace '\D', '') })
+    $checks = @($man | ForEach-Object { ([string]$_.Check -replace '\s*\([^)]*\b[CD]\d{1,2}\b[^)]*\)\s*$', '') }) -join '; '
+    $null = Set-DemoUserAction -Prefix $Prefix -Key 'prereqs-manual' -Action ('Manual checks of the prerequisites (no API): ' + $checks) `
+        -Where "generated/$Prefix/demo/prereqs-report.md (the MANUAL rows say where to verify each one); then tell the agent" `
+        -NeededBy $(if ($codes.Count) { $codes -join ', ' } else { 'the demos named in each check' })
+}
 Write-DemoLog $Prefix "Prerequisites: license gate $(if ($gateOk) { 'PASSED' } else { 'FAILED' }); KO=$(@($rows | Where-Object Status -eq 'KO').Count) MANUAL=$(@($rows | Where-Object Status -eq 'MANUAL').Count); report $rep"
 if (-not $gateOk) { exit 1 }

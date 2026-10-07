@@ -79,6 +79,38 @@ $steps.Add((New-Step 'interactive' 'mcs-published' 'Copilot Studio agents really
 $steps.Add((New-Step 'interactive' 'tests' 'Test hand-out, in order (traffic from T-3 to T-1)' 'manual' $null @() @() "generated/$Prefix/demo/cards/90-test-handout.md"))
 $steps.Add((New-Step 'interactive' 'aoai-429' 'Throttling check after the first traffic round (read-only)' 'auto' (Join-Path $PSScriptRoot 'Set-DemoAoaiCapacity.ps1') ($P + @('-Check429', '-WhatIf')) ($P + @('-Check429', '-WhatIf')) 'any 429: raise the capacity (aoai-capacity step)'))
 $steps.Add((New-Step 'interactive' 'preflight' 'Pre-flight of every demo (read-only)' 'auto' (Join-Path $reset 'Get-DemoState.ps1') $P $P 'fix every KO, then the lab is ready'))
+# --- user actions of the manual/terminal steps: what needs them (pack-driven), whether the build stops, register key ---
+$mcsKeys = @($pack.agents | Where-Object { $_.platform -eq 'copilotStudio' -and -not $_.outsideLabPlan } | ForEach-Object { [string]$_.key })
+$abKeys = @($pack.agents | Where-Object { $_.platform -eq 'agentBuilder' } | ForEach-Object { [string]$_.key })
+$fdKeys = @($pack.agents | Where-Object { $_.variant -like 'FD-*' } | ForEach-Object { [string]$_.key })
+$dwKeys = @($pack.agents | Where-Object { $_.variant -like '*-DW' } | ForEach-Object { [string]$_.key })
+$cardScope = @{
+    '10-copilot-studio' = @{ agents = $mcsKeys }; '11-agent-builder' = @{ agents = $abKeys }; '15-foundry' = @{ agents = $fdKeys }
+    '20-digital-worker' = @{ agents = $dwKeys }; '30-entra' = @{ portals = @('entra') }; '40-purview' = @{ portals = @('purview') }
+    '50-defender' = @{ portals = @('defender') }; '60-admin-center' = @{ portals = @('microsoft365Admin') }
+}
+foreach ($sp in $steps) {
+    $sp | Add-Member -NotePropertyName key -NotePropertyValue "step:$($sp.phase)/$($sp.id)"
+    $sp | Add-Member -NotePropertyName neededBy -NotePropertyValue ''
+    $sp | Add-Member -NotePropertyName blocking -NotePropertyValue $false
+    if ($sp.id -like 'card-*') {
+        $base = $sp.id.Substring(5)
+        $s = $cardScope[$base]
+        $ids = if ($s) { @(Get-DemoIdsFor $pack -AgentKeys @($s.agents) -Portals @($s.portals)) } else { @() }
+        $sp.neededBy = if ($ids.Count) { $ids -join ', ' } else { 'see the card' }
+        $src = Join-Path $labDir "cards\$base.md"; if (-not (Test-Path -LiteralPath $src)) { $src = Join-Path $cardDir "$base.md" }
+        $t = if (Test-Path -LiteralPath $src) { ([regex]::Match((Get-Content -LiteralPath $src -Raw -Encoding utf8), '(?m)^# (.+)$')).Groups[1].Value.Trim() } else { '' }
+        $sp.title = "Card $base$(if ($t) { ": $t" })"
+        $sp.hint = "$($sp.hint) (the agent can guide it one step per turn and verify it)"
+    }
+}
+function Set-StepMeta([string]$Id, [string]$NeededBy, [bool]$Blocking, [string]$Key) {
+    foreach ($sp in @($steps | Where-Object { $_.id -eq $Id })) { if ($NeededBy) { $sp.neededBy = $NeededBy }; $sp.blocking = $Blocking; if ($Key) { $sp.key = $Key } }
+}
+Set-StepMeta 'first-signin' 'every card done by a persona, the per-user MCP connections and the tests' $false
+foreach ($k in @($pack.mcp.longLived | ForEach-Object { [string]$_.key })) { Set-StepMeta "mcp-register-$k" "agents step (the ext_ tools are attached to the agents)" $true }
+Set-StepMeta 'mcp-approve' 'agents step (an ext_ tool cannot be attached before the admin approval)' $true 'mcp-approve'
+Set-StepMeta 'tests' 'the rehearsal (traffic from T-3 to T-1; usage metrics and audit records)' $false
 # --- use, restore, teardown ---
 $steps.Add((New-Step 'use' 'run' 'Run the demo (outside this agent)' 'manual' $null @() @() "agent365-demo-guide: generated/$Prefix/demo/guide/run-of-show.md"))
 $steps.Add((New-Step 'restore' 'preflight' 'Pre-flight of every demo (read-only)' 'auto' (Join-Path $reset 'Get-DemoState.ps1') $P $P ''))
@@ -91,15 +123,32 @@ $state = Read-DemoLabState $Prefix
 if (-not $state.Contains('phases')) { $state['phases'] = [ordered]@{} }
 function Get-StepStatus($Sp) { $ph = $state.phases[$Sp.phase]; if ($ph -and $ph.Contains($Sp.id)) { return [string]$ph[$Sp.id].status }; return '' }
 function Set-StepStatus($Sp, [string]$Status) {
+    # Re-read: the step's own script may have saved state.json since this runner started.
+    $script:state = Read-DemoLabState $Prefix
+    if (-not $state.Contains('phases')) { $state['phases'] = [ordered]@{} }
     if (-not $state.phases.Contains($Sp.phase)) { $state.phases[$Sp.phase] = [ordered]@{} }
     $state.phases[$Sp.phase][$Sp.id] = [ordered]@{ status = $Status; at = (Get-Date).ToString('s') }
     Save-DemoLabState $Prefix $state
+}
+# Manual and terminal steps of the build phases are user actions: recorded in the register (USER-ACTIONS.md) when the
+# phase runs with -Apply, marked DONE with -Done. An existing row (also one written by a step script, e.g. mcp-approve)
+# keeps its texts; only the status is applied.
+function Register-StepAction($Sp, [string]$Status = '') {
+    if ($Sp.phase -notin 'bootstrap', 'setup', 'interactive' -or $Sp.kind -notin 'manual', 'terminal') { return }
+    $exists = @((Read-DemoUserActions $Prefix).actions | Where-Object { $_.key -eq $Sp.key }).Count -gt 0
+    $p = @{ Prefix = $Prefix; Key = $Sp.key }
+    if (-not $exists) { $p += @{ Action = $Sp.title; Where = $Sp.hint; NeededBy = $Sp.neededBy; Blocking = [bool]$Sp.blocking } }
+    if ($Status) { $p['Status'] = $Status }
+    elseif (-not $exists -and (Get-StepStatus $Sp) -eq 'done') { $p['Status'] = 'DONE' }
+    $row = Set-DemoUserAction @p
+    Write-Host ("   user action {0} [{1}{2}] -> generated/{3}/demo/USER-ACTIONS.md" -f $row.id, $row.status, $(if ($row.blocking -and $row.status -ne 'DONE') { ', BLOCKING' }), $Prefix)
 }
 
 if ($Done) {
     $sp = @($steps | Where-Object { $_.id -eq $Done -and ($Phase -eq 'status' -or $_.phase -eq $Phase) }) | Select-Object -First 1
     if (-not $sp) { throw "Unknown step '$Done'$(if ($Phase -ne 'status') { " in phase $Phase" }). Steps: $(@($steps | ForEach-Object { "$($_.phase)/$($_.id)" }) -join ', ')" }
     Set-StepStatus $sp 'done'
+    Register-StepAction $sp 'DONE'
     Write-DemoLog $Prefix "Phase $($sp.phase): step '$($sp.id)' confirmed done"
     return
 }
@@ -122,6 +171,7 @@ foreach ($sp in $list) {
     $st = Get-StepStatus $sp
     Write-Host ''
     Write-Host ("== {0}/{1} [{2}] {3}{4}" -f $Phase, $sp.id, $sp.kind, $sp.title, $(if ($st -eq 'done') { ' (already done)' })) -ForegroundColor Cyan
+    if ($Apply) { Register-StepAction $sp }
     if ($sp.script) {
         $a = if ($Apply -or $null -eq $sp.dryArgs) { $sp.applyArgs } else { $sp.dryArgs }
         pwsh -NoProfile -File $sp.script @a

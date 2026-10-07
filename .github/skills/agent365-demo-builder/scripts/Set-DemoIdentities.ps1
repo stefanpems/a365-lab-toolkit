@@ -179,6 +179,11 @@ if (-not $SkipLicenses) {
 # --- Purview role groups and Power Platform roles: printed, not applied (other tools) -----------------------------
 foreach ($p in $pack.personas | Where-Object { $_.purviewRoleGroups }) {
     Note "MANUAL (Purview portal > Roles and scopes > Role groups, or Security & Compliance PowerShell Add-RoleGroupMember): add $(Get-DemoPersonaAlias $LOC $p.key)@$($cfg.domain) to $($p.purviewRoleGroups -join ', ')"
+    if (-not $WhatIf) {
+        $pv = @(Get-DemoIdsFor $pack -Portals @('purview'))
+        $null = Set-DemoUserAction -Prefix $Prefix -Key "purview-roles-$($p.key)" -Action "Purview role groups for $(Get-DemoPersonaAlias $LOC $p.key)@$($cfg.domain): $($p.purviewRoleGroups -join ', ')" `
+            -Where 'Purview portal > Settings > Roles and scopes > Role groups (card 40-purview, section 1)' -NeededBy $(if ($pv.Count) { $pv -join ', ' } else { 'the Purview demos' })
+    }
 }
 $pp = @($pack.personas | Where-Object { $_.powerPlatformRoles })
 if ($pp.Count -and $cfg.copilotStudio.paygEnvironmentId) {

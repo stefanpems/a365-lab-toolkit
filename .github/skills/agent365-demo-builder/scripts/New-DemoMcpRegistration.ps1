@@ -67,6 +67,35 @@ function Get-AllInstances {
     $out = @(foreach ($k in @($state.mcp.servers.Keys)) { $s = $state.mcp.servers[$k]; [pscustomobject]@{ name = $s.name; key = $k; kind = 'long-lived'; role = ''; status = $s.status } })
     $out + @($pool | ForEach-Object { [pscustomobject]@{ name = $_.name; key = $_.key; kind = 'pool'; role = $_.role; status = $_.status } })
 }
+function Get-ConnectionUsers([string]$Key) {
+    @($pack.tests | Where-Object { $_.needsConnection -eq $Key } | ForEach-Object { @($_.persona) + @($_.personas) } | Where-Object { $_ -and $_ -ne 'anyone' } | Select-Object -Unique)
+}
+
+# User-actions register: ONE blocking row for the admin approval of the long-lived servers (reopened when a new server
+# is registered, DONE when none is pending) and ONE row with the per-user connection URLs. Pool instances are excluded:
+# their approval is a live demo moment or a reset step.
+function Update-ApproveAction {
+    $ll = @($state.mcp.servers.Keys | ForEach-Object { $state.mcp.servers[$_] } | Where-Object { $_.name -and $_.status -in $activeStates })
+    if (-not $ll.Count) { return }
+    $pending = @($ll | Where-Object { $_.status -eq 'pending' } | ForEach-Object { [string]$_.name })
+    $names = if ($pending.Count) { $pending } else { @($ll | ForEach-Object { [string]$_.name }) }
+    $null = Set-DemoUserAction -Prefix $Prefix -Key 'mcp-approve' -Blocking $true -Status $(if ($pending.Count) { 'TODO' } else { 'DONE' }) `
+        -Action "Approve the demo MCP servers $($names -join ', ') (allow browser pop-ups: a blocked consent pop-up makes the approval hang silently)" `
+        -Where "Microsoft 365 admin center > Agents > Tools > Requests > <server> > Approve, as $($cfg.adminUpn); then tell the agent (New-DemoMcpRegistration.ps1 -Action Approved -Name <server>)" `
+        -NeededBy 'agents step (an ext_ tool cannot be attached before the admin approval)'
+}
+function Update-ConnectionsAction {
+    $parts = @(foreach ($k in @($state.mcp.servers.Keys)) {
+            $s = $state.mcp.servers[$k]
+            if (-not $s.connectionUrl -or $s.status -ne 'approved') { continue }
+            $users = @(Get-ConnectionUsers $k | ForEach-Object { "$(Get-DemoPersonaAlias $LOC $_)@$($cfg.domain)" })
+            "$($s.name) -> $(if ($users.Count) { $users -join ', ' } else { 'the testers of the agents that use it' }): $($s.connectionUrl)"
+        })
+    if (-not $parts.Count) { return }
+    $null = Set-DemoUserAction -Prefix $Prefix -Key 'mcp-connections' -Action "One-time Power Platform connection per demo MCP server, each user signed in as themselves: $($parts -join ' ; ')" `
+        -Where 'browser profile of each persona (after the first sign-in). If the page lists no connector, ask the OBO agent for the setup URL of the server and run New-DemoMcpRegistration.ps1 -Action Urls -EnvironmentId <environmentName of that URL>' `
+        -NeededBy 'the first test that uses a demo MCP tool'
+}
 
 # ext_ servers of the tenant, from their Power Platform connectors in the hidden Compliant Container environment
 # (id from -EnvironmentId or the per-tenant cache shared with custom-mcp/print-connection-urls.ps1). $null = unknown.
@@ -213,6 +242,7 @@ if ($Action -eq 'Confirm') {
         Write-Host "Then:   New-DemoMcpRegistration.ps1 -Prefix $Prefix -Action Approved -Name $Name"
     }
     if (-not $e.role) { Write-Host 'Re-run New-DemoLabPlan.ps1 now: the web UI tab of the OBO agent needs this audience (byoMcpAudiences).' }
+    Update-ApproveAction
     return
 }
 
@@ -222,6 +252,7 @@ if ($Action -eq 'Approved') {
     if ($e.status -notin $activeStates) { throw "$Name is '$($e.status)': run -Action Confirm first." }
     $e.status = 'approved'; $e.approvedAt = (Get-Date).ToString('s'); Save-State
     Write-DemoLog $Prefix "$Name approved in the admin center"
+    Update-ApproveAction
     $Action = 'Urls'
 }
 
@@ -246,12 +277,13 @@ if ($Action -eq 'Urls') {
     foreach ($u in $urls) {
         $e = Find-Instance $u.server
         $e.connectionUrl = $u.url; $state.mcp['environmentId'] = $u.environmentId
-        $users = @($pack.tests | Where-Object { $_.needsConnection -eq $e.key } | ForEach-Object { @($_.persona) + @($_.personas) } | Where-Object { $_ -and $_ -ne 'anyone' } | Select-Object -Unique)
+        $users = @(Get-ConnectionUsers $e.key)
         Write-Host ("{0}: every user below opens it ONCE, signed in as themselves, and creates the connection BEFORE the tests:" -f $u.server) -ForegroundColor Green
         Write-Host "  $($u.url)"
         foreach ($k in $users) { Write-Host ("    - {0} ({1}@{2})" -f (Get-DemoPersonaDisplayName $LOC $k), (Get-DemoPersonaAlias $LOC $k), $cfg.domain) }
     }
     Save-State
+    Update-ConnectionsAction
     Write-DemoLog $Prefix "Connection URLs recorded for: $(@($urls | ForEach-Object { $_.server }) -join ', ')"
     return
 }

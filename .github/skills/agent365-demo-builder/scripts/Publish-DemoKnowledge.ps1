@@ -59,5 +59,11 @@ if (-not $WhatIf) {
     Save-DemoLabState $Prefix $state
 }
 $personal = @($manifest | Where-Object { $_.folder -eq '_personal' })
-foreach ($pf in $personal) { Write-Host "MANUAL: the program lead uploads '$($pf.file)' (from $out\_personal) to their own OneDrive (it is the ungoverned personal source of D4)." }
+foreach ($pf in $personal) {
+    Write-Host "MANUAL: the program lead uploads '$($pf.file)' (from $out\_personal) to their own OneDrive (it is the ungoverned personal source of D4)."
+    if (-not $WhatIf) {
+        $null = Set-DemoUserAction -Prefix $Prefix -Key "knowledge-personal-$($pf.file)" -Action "Signed in as $(Get-DemoUpn $LOC $cfg 'programLead') (program lead), upload '$($pf.file)' to their own OneDrive (the ungoverned personal source)" `
+            -Where "file in generated/$Prefix/demo/knowledge/out/_personal/; OneDrive > My files > Upload" -NeededBy 'D4'
+    }
+}
 Write-DemoLog $Prefix "Knowledge published: $n file(s)$(if ($WhatIf) { ' (dry run)' })"

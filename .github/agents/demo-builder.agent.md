@@ -26,8 +26,16 @@ Always write **in English** in every file, log and command you persist. Reply in
   one clear question at a time; prefer choices discovered from the tenant or the pack over free text.
 - **Dry run first.** Run the scripts that change the tenant with `-WhatIf` when they offer it, show the summary, then
   run them for real.
-- **One manual step per turn.** For every card step, say who does it, where, and what the result must be; wait for the
-  user to report it done; verify it by script when possible; only then give the next step.
+- **Block only on blocking actions; record the rest.** Stop and wait for the user only when the next automated step
+  cannot run without them (a sign-in or consent in progress, the admin approval of the demo MCP servers before they
+  are attached, a terminal prompt, missing information). Every other user action goes to the **user-actions
+  register** `generated/<prefix>/demo/USER-ACTIONS.md`: the scripts write it (format and rules in the skill); you add
+  only the actions no script knows, with `Set-DemoUserAction.ps1`, and never edit the file by hand. Then go on.
+  The user may be away from the PC: never end a turn waiting for a non-blocking action.
+- **Guided cards: one step per turn.** When the user asks to be guided through a card, say who does each step, where,
+  and what the result must be; wait for the user to report it done; verify it by script when possible; mark the
+  register row DONE (`Invoke-DemoPhase.ps1 -Done <step>` or `Set-DemoUserAction.ps1 -Status DONE`); only then give
+  the next step.
 - **Operator slots and protection demos.** Never write, quote or paraphrase the test inputs of the protection demos:
   refer to those demos only by code (C6, C7, D16, D17) and to their inputs only by slot id (`slot-1`...`slot-5`). The
   operator fills them in `generated/<prefix>/demo/operator-slots.json`; you only run `Test-DemoPack.ps1
@@ -44,12 +52,16 @@ Always write **in English** in every file, log and command you persist. Reply in
 - The progress of the phases lives in `generated/<prefix>/demo/state.json` (`Invoke-DemoPhase.ps1 -Prefix <p>` shows
   it); the scripts also append to `generated/<prefix>/wizard-progress.log`. Keep a session memory file
   `/memories/session/demo-<prefix>.md` with the current phase, the current step and the next action.
-- `resume <prefix>`: read that memory file, `Invoke-DemoPhase.ps1 -Prefix <p>` and the tail of the progress log,
+- `resume <prefix>`: read that memory file, `generated/<prefix>/demo/USER-ACTIONS.md`, `Invoke-DemoPhase.ps1 -Prefix <p>` and the tail of the progress log,
   re-run the runtime, language and tenant gates, reconcile with `New-DemoMcpRegistration.ps1 -Action Status` and
   `Set-DemoGovernance.ps1 -WhatIf`, then continue from the first step not done. Never restart a build whose
   `generated/<prefix>/demo/` already exists.
 
 ## Hand-over at the end of the build
-Summarize what exists and what is still manual (the generated cards), then offer, one choice: run the
+Summarize what exists (people, knowledge, MCP servers, agents and their surfaces, web UI URL, governance, generated
+cards and run of show), list any change made to the plan during the build (for example a region switch), then present
+the whole user-actions register (`Set-DemoUserAction.ps1 -Prefix <p> -List`, every row with id, status, action and
+"needed by"); in `assisted` secret handling add
+the secret rotation steps. Then offer, one choice: run the
 [demo reset](../skills/agent365-demo-reset/SKILL.md) pre-flight now, open the
 [demo guide](../skills/agent365-demo-guide/SKILL.md), or stop.
