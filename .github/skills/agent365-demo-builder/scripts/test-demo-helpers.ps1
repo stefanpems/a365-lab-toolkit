@@ -80,6 +80,56 @@ try {
     }
     finally { Set-Content -LiteralPath $kj -Value $orig -Encoding utf8 -NoNewline }
     Assert ((Get-Content -LiteralPath $kj -Raw -Encoding utf8) -eq $orig) 'locale file restored'
+
+    Write-Host 'Lab az profile settings (Set-DemoAzProfileDefaults)'
+    $d = Join-Path $env:TEMP 'zzhelp-azcfg'; if (Test-Path $d) { Remove-Item $d -Recurse -Force }; New-Item -ItemType Directory $d | Out-Null
+    Set-DemoAzProfileDefaults $d
+    $ini = Get-Content (Join-Path $d 'config') -Raw
+    Assert ($ini -match '(?m)^\[core\]' -and $ini -match 'enable_broker_on_windows = false' -and $ini -match 'login_experience_v2 = off') 'new profile: browser sign-in, no subscription picker'
+    "[cloud]`nname = AzureCloud`n`n[core]`ncollect_telemetry = false`nenable_broker_on_windows = true`n`n[extension]`nuse_dynamic_install = no" | Set-Content (Join-Path $d 'config') -Encoding utf8
+    Set-DemoAzProfileDefaults $d
+    $ini = Get-Content (Join-Path $d 'config') -Raw
+    Assert ($ini -match 'enable_broker_on_windows = false' -and $ini -notmatch 'enable_broker_on_windows = true' -and $ini -match 'collect_telemetry = false' -and $ini -match '(?s)\[core\].*login_experience_v2 = off.*\[extension\]' -and $ini -match 'use_dynamic_install = no' -and $ini -match 'name = AzureCloud') 'existing profile: value fixed, key added in [core], other sections kept'
+    $before = Get-Content (Join-Path $d 'config') -Raw; Set-DemoAzProfileDefaults $d
+    Assert ((Get-Content (Join-Path $d 'config') -Raw) -eq $before) 'idempotent'
+
+    Write-Host 'Cached access tokens of the lab az profile (py/az_cache_drop.py, DPAPI cache)'
+    $py = Join-Path $PSScriptRoot 'py\az_cache_drop.py'
+    $mk = @"
+import json, os
+from msal_extensions import FilePersistenceWithDataProtection as P
+c = {"AccessToken": {"g": {"target": "https://graph.microsoft.com/.default"}, "m": {"target": "https://management.core.windows.net//.default"}}, "RefreshToken": {"r": {"secret": "x"}}, "Account": {}}
+P(os.path.join(r"$d", "msal_token_cache.bin")).save(json.dumps(c))
+"@
+    python -c $mk
+    $o = python $py --config-dir $d --resource graph.microsoft.com 2>&1 | Out-String
+    $left = python -c "import json,os; from msal_extensions import FilePersistenceWithDataProtection as P; c=json.loads(P(os.path.join(r'$d','msal_token_cache.bin')).load()); print(','.join(sorted(c['AccessToken'])), len(c['RefreshToken']))"
+    Assert ($LASTEXITCODE -eq 0 -and $o -match 'dropped 1' -and "$left".Trim() -eq 'm 1') 'Graph access token dropped, ARM token and refresh token kept'
+    python $py --config-dir (Join-Path $HOME '.azure') 2>$null | Out-Null
+    Assert ($LASTEXITCODE -eq 2) 'the machine-wide profile is refused'
+    $e2 = Join-Path $env:TEMP 'zzhelp-empty'; New-Item -ItemType Directory -Force $e2 | Out-Null
+    python $py --config-dir $e2 2>$null | Out-Null
+    Assert ($LASTEXITCODE -eq 0) 'no cache = nothing to do'
+    Remove-Item $d, $e2 -Recurse -Force
+    $env:AZURE_CONFIG_DIR = $null
+    Assert (-not (Reset-DemoAzCachedTokens)) 'Reset-DemoAzCachedTokens does nothing without a lab profile'
+
+    Write-Host 'Invoke-DemoGraph: CAE revocation retried once after dropping the cached token (mocked)'
+    function New-Cae401 { $r = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Unauthorized); $er = [System.Management.Automation.ErrorRecord]::new([Microsoft.PowerShell.Commands.HttpResponseException]::new('401', $r), 'cae', 'InvalidOperation', $null); $er.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"error":{"code":"InvalidAuthenticationToken","message":"Continuous access evaluation resulted in challenge with result: InteractionRequired and code: TokenIssuedBeforeRevocationTimestamp"}}'); return $er }
+    function Get-DemoAzToken { 'fake-token' }
+    function Reset-DemoAzCachedTokens { $script:resets++; return $true }
+    function Invoke-RestMethod { $script:calls++; if ($script:calls -le $script:failCalls) { throw (New-Cae401) }; [pscustomobject]@{ ok = $true } }
+    $env:AZURE_CONFIG_DIR = Join-Path $env:TEMP 'zzhelp-fake-profile'
+    $script:calls = 0; $script:resets = 0; $script:failCalls = 1; $script:DemoCaeRetried = $false
+    $r = Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/x' -MaxRetries 0
+    Assert ($r.ok -and $script:calls -eq 2 -and $script:resets -eq 1) 'first 401 CAE -> cache dropped once -> success'
+    $script:calls = 0; $script:resets = 0; $script:failCalls = 9; $script:DemoCaeRetried = $false
+    $msg = ''; try { Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/x' -MaxRetries 0 | Out-Null } catch { $msg = "$_" }
+    Assert ($script:resets -eq 1 -and $script:calls -eq 2 -and $msg -match 'az login --tenant' -and $msg -match 'zzhelp-fake-profile') 'still refused -> one retry only, then the login command of the lab profile'
+    $script:calls = 0; $script:resets = 0; $script:failCalls = 9; $script:DemoCaeRetried = $false
+    $r = Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/x' -MaxRetries 0 -Token 'explicit' -NoThrow
+    Assert ($script:resets -eq 0 -and $r.status -eq 401) 'an explicit -Token (MSAL) is never handled as an az token'
+    Remove-Item Function:\Invoke-RestMethod, Function:\Get-DemoAzToken, Function:\Reset-DemoAzCachedTokens
 }
 finally {
     $env:AZURE_CONFIG_DIR = $saveCfgDir; $env:AZURE_EXTENSION_DIR = $saveExtDir

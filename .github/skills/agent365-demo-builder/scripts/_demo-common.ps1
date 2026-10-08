@@ -129,8 +129,30 @@ function Use-DemoAzProfile($Config) {
     if (-not $Config -or -not $Config.azConfigDir) { return }
     $dir = if ([IO.Path]::IsPathRooted([string]$Config.azConfigDir)) { [string]$Config.azConfigDir } else { Join-Path $script:DemoRepoRoot ([string]$Config.azConfigDir) }
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    Set-DemoAzProfileDefaults $dir
     $env:AZURE_CONFIG_DIR = $dir
     if (-not $env:AZURE_EXTENSION_DIR) { $env:AZURE_EXTENSION_DIR = Join-Path $HOME '.azure\cliextensions' }
+}
+
+# Settings of the lab-private az profile (its own 'config' INI file): browser sign-in instead of the Windows account
+# picker (WAM), which can stay hidden behind other windows while the operator waits; no interactive subscription
+# picker after az login. Idempotent; other keys are kept.
+function Set-DemoAzProfileDefaults([Parameter(Mandatory)][string]$Dir) {
+    $f = Join-Path $Dir 'config'
+    $lines = [System.Collections.Generic.List[string]]::new()
+    if (Test-Path -LiteralPath $f) { foreach ($l in (Get-Content -LiteralPath $f -Encoding utf8)) { $lines.Add($l) } }
+    $want = [ordered]@{ enable_broker_on_windows = 'false'; login_experience_v2 = 'off' }
+    $core = $lines.IndexOf('[core]')
+    if ($core -lt 0) { if ($lines.Count -and $lines[$lines.Count - 1]) { $lines.Add('') }; $lines.Add('[core]'); $core = $lines.Count - 1 }
+    $end = $core + 1; while ($end -lt $lines.Count -and $lines[$end] -notmatch '^\[') { $end++ }
+    $changed = $false
+    foreach ($k in $want.Keys) {
+        $i = -1; for ($j = $core + 1; $j -lt $end; $j++) { if ($lines[$j] -match "^\s*$k\s*=") { $i = $j } }
+        $line = "$k = $($want[$k])"
+        if ($i -ge 0) { if ($lines[$i] -ne $line) { $lines[$i] = $line; $changed = $true } }
+        else { $lines.Insert($end, $line); $end++; $changed = $true }
+    }
+    if ($changed -or -not (Test-Path -LiteralPath $f)) { $lines | Set-Content -LiteralPath $f -Encoding utf8 }
 }
 
 # The command line the operator (or the agent) runs to sign in to the lab's az profile.
@@ -199,6 +221,36 @@ function Get-DemoMsalToken {
     return [string]($tok | Select-Object -Last 1)
 }
 
+# Drops the cached access tokens of the LAB-PRIVATE az profile (py/az_cache_drop.py; refresh tokens kept), so that az
+# mints new ones: the fix of a CAE revocation (az keeps its 24 h token even after a new login). Never on the
+# machine-wide profile (other sessions). Returns $true when the cache was processed.
+function Reset-DemoAzCachedTokens([string]$Resource = 'graph.microsoft.com') {
+    if (-not $env:AZURE_CONFIG_DIR) { return $false }
+    $script:DemoTokenCache = @{}
+    $o = python (Join-Path $script:DemoScriptsDir 'py\az_cache_drop.py') --config-dir $env:AZURE_CONFIG_DIR --resource $Resource 2>&1
+    $ok = $LASTEXITCODE -eq 0
+    Write-Host "  az token cache of the lab profile: $(($o | Out-String).Trim())"
+    return $ok
+}
+
+# READ-ONLY check of the lab's az session before asking the operator for a new sign-in: account, a Graph call and an
+# ARM call. A sign-in is requested only when one of them fails (an unneeded browser sign-in can even pick the wrong
+# account through the SSO of the default browser profile).
+function Test-DemoAzSession($Config) {
+    Use-DemoAzProfile $Config
+    $r = [ordered]@{ account = ''; tenantOk = $false; graphOk = $false; armOk = $false; message = '' }
+    $acc = az account show --query "{t:tenantId,u:user.name}" -o json 2>$null | ConvertFrom-Json
+    if ($acc) { $r.account = [string]$acc.u; $r.tenantOk = [string]$acc.t -eq [string]$Config.tenantId }
+    if ($r.tenantOk) {
+        $g = Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/organization?$select=id' -NoThrow -MaxRetries 1
+        $r.graphOk = $g -and -not $g.PSObject.Properties['error']
+        az group list --subscription ([string]$Config.subscriptionId) --query '[0].name' -o tsv 2>$null | Out-Null
+        $r.armOk = $LASTEXITCODE -eq 0
+    }
+    $r.message = if ($r.tenantOk -and $r.graphOk -and $r.armOk) { "az session OK ($($r.account))" } else { "az session NOT usable (account '$($r.account)', tenant $($r.tenantOk), Graph $($r.graphOk), ARM $($r.armOk)): $(Get-DemoAzLoginCommand $Config)" }
+    return [pscustomobject]$r
+}
+
 # REST call with retries on throttling/transient errors. -Token overrides the az Graph token.
 function Invoke-DemoGraph {
     param([Parameter(Mandatory)][ValidateSet('GET', 'POST', 'PATCH', 'PUT', 'DELETE')][string]$Method, [Parameter(Mandatory)][string]$Uri,
@@ -219,10 +271,17 @@ function Invoke-DemoGraph {
                 $attempt++
                 if ($attempt -le $MaxRetries -and (($null -eq $status) -or ($status -in 429, 500, 502, 503, 504))) { Start-Sleep -Seconds ([Math]::Min(60, [Math]::Pow(2, $attempt))); continue }
                 $msg = "$Method $next failed ($status): $($_.ErrorDetails.Message)"
-                if ($status -eq 401 -and -not $Token -and "$($_.ErrorDetails.Message)" -match 'InteractionRequired|TokenIssuedBeforeRevocationTimestamp|AADSTS50173|AADSTS700082') {
-                    # The az session was revoked (CAE) or expired. az keeps its cached 24 h CAE token even after a new
-                    # 'az login': log out first, then sign in again interactively.
-                    $msg += " | The az sign-in is no longer valid (revoked sessions keep failing until the cached token is dropped): $(if ($env:AZURE_CONFIG_DIR) { "`$env:AZURE_CONFIG_DIR='$($env:AZURE_CONFIG_DIR)'; " })az logout; az login --tenant <tenant id>   (interactive browser)"
+                $cae = $status -eq 401 -and -not $Token -and "$($_.ErrorDetails.Message)" -match 'InteractionRequired|TokenIssuedBeforeRevocationTimestamp|TokenCreatedWithOutdated|AADSTS50173|AADSTS700082'
+                if ($cae -and -not $script:DemoCaeRetried -and $env:AZURE_CONFIG_DIR) {
+                    # CAE revocation: az keeps returning its cached 24 h token even after a new login. Drop the cached
+                    # access tokens of the lab profile (refresh token kept) and retry once with a new one.
+                    $script:DemoCaeRetried = $true
+                    Write-Host '  the az access token was revoked (CAE): dropping the cached tokens of the lab az profile and retrying once' -ForegroundColor Yellow
+                    if (Reset-DemoAzCachedTokens 'graph.microsoft.com') { $attempt = 0; continue }
+                }
+                if ($cae) {
+                    # Still refused: the refresh token itself is revoked or expired -> a new interactive sign-in.
+                    $msg += " | The az sign-in is no longer valid: $(if ($env:AZURE_CONFIG_DIR) { "`$env:AZURE_CONFIG_DIR='$($env:AZURE_CONFIG_DIR)'; " })az login --tenant <tenant id>   (interactive browser), then re-run (a stale cached token is dropped automatically)"
                 }
                 if ($NoThrow) { return [pscustomobject]@{ error = $msg; status = $status } }
                 throw $msg

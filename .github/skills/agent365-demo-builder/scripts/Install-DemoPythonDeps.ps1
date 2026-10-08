@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
   Bootstrap step 'python-deps': installs the Python packages of the Demo Builder (py/requirements.txt: msal for the
-  browser sign-ins, python-docx / fpdf2 / openpyxl for the knowledge documents) when they are missing.
+  browser sign-ins, msal-extensions for the lab az profile token cache, python-docx / fpdf2 / openpyxl for the knowledge documents) when they are missing.
 .DESCRIPTION
   Checks the modules first (nothing to do when present); otherwise `python -m pip install --user -r requirements.txt`
   (user site, no administrator rights) and checks again. Exit code 1 when Python is missing or a module still is.
@@ -16,7 +16,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
 $req = Join-Path $PSScriptRoot 'py\requirements.txt'
 # import name -> package name of requirements.txt
-$mods = [ordered]@{ msal = 'msal'; docx = 'python-docx'; fpdf = 'fpdf2'; openpyxl = 'openpyxl' }
+$mods = [ordered]@{ msal = 'msal'; msal_extensions = 'msal-extensions'; docx = 'python-docx'; fpdf = 'fpdf2'; openpyxl = 'openpyxl' }
 function Get-MissingModules {
     # Returns the comma-separated missing modules ('' = none) or $null when Python did not run. A string, not an
     # array: an empty array returned by a function arrives as $null.

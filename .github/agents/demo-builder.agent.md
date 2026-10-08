@@ -23,7 +23,12 @@ Always write **in English** in every file, log and command you persist. Reply in
   INTERACTIVELY in it (`$env:AZURE_CONFIG_DIR='<repo>\generated\<prefix>\demo\secrets\azcfg'; az login --tenant <id>`;
   never device code) and pin the subscription there. The Demo Builder scripts apply the profile by themselves
   (Read-DemoConfig); in EVERY command you run yourself (az, a365, Lab Builder scripts) set `$env:AZURE_CONFIG_DIR`
-  (and `$env:AZURE_EXTENSION_DIR=$HOME\.azure\cliextensions`) first: each tool call is a new process. Do not ask an
+  (and `$env:AZURE_EXTENSION_DIR=$HOME\.azure\cliextensions`) first: each tool call is a new process. Before asking
+  the operator for a new sign-in, run the read-only `Test-DemoAzSession` (`_demo-common.ps1`): ask only when it says
+  the session is not usable. A Continuous Access Evaluation revocation (Graph 401 `TokenIssuedBeforeRevocationTimestamp`)
+  is handled by the scripts (cached tokens of the lab profile dropped, one retry); a new sign-in is needed only if it
+  persists. If the default browser profile signs in automatically with another account (SSO), tell the operator to
+  complete the sign-in in an InPrivate window or in the right browser profile. Do not ask an
   event date: a lab is often the base of several events. The license gate (`Test-DemoPrereqs.ps1`, first step of
   the bootstrap phase) comes right after: stop if it fails (it also refuses a prefix contained in the name of a
   resource group the lab did not create).

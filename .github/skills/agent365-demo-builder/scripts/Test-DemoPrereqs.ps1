@@ -127,7 +127,7 @@ foreach ($t in 'az', 'a365', 'pac', 'python', 'git') {
     $c = Get-Command $t -ErrorAction SilentlyContinue
     Add-R 'Workstation' "$t CLI" $(if ($c) { 'OK' } else { 'KO' }) $(if ($c) { $c.Source } else { 'not found' }) $(if (-not $c) { 'see docs/demo-environment-prerequisites.md section 8' })
 }
-$pyMods = python -c "import importlib.util as u; print(','.join(m for m in ('msal','docx','fpdf','openpyxl') if not u.find_spec(m)))" 2>$null
+$pyMods = python -c "import importlib.util as u; print(','.join(m for m in ('msal','msal_extensions','docx','fpdf','openpyxl') if not u.find_spec(m)))" 2>$null
 Add-R 'Workstation' 'Python packages' $(if (-not $pyMods) { 'OK' } else { 'WARN' }) $(if ($pyMods) { "missing: $pyMods" } else { 'msal, python-docx, fpdf2, openpyxl' }) $(if ($pyMods) { 'python -m pip install --user -r .github/skills/agent365-demo-builder/scripts/py/requirements.txt' })
 
 # --- manual checks (no API): precise instructions --------------------------------------------------------------
