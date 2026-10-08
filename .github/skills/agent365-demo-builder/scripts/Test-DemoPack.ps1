@@ -209,7 +209,15 @@ foreach ($loc in $locales) {
     if ($L.overlays['records-colleague']) { Test-Need $loc $L.overlays['records-colleague'].texts 'overlays.records-colleague.texts' @('welcome', 'hired', 'goodbye', 'identityNote', 'callerNote', 'emailSender', 'notificationSender') }
 
     # Knowledge (SharePoint-safe names, formats, block model, the poisoned notice of D16)
-    foreach ($fk in $packDef.knowledge.folders) { $fn = $L.knowledge.folders[$fk]; if (-not $fn) { Add-V $loc 'error' "knowledge.folders.$fk" 'missing' } else { Add-Vs $loc (Test-SharePointSegment "knowledge.folders.$fk" $fn) } }
+    # Knowledge folders are created at the ROOT of a SharePoint document library: some names are reserved there (the
+    # library's own 'Forms' folder answers GET as an existing item but refuses uploads with 404).
+    $reservedRoot = @('forms', '_cts', '_private', '_catalogs', '_layouts', '_vti_bin', '_vti_cnf', '_vti_pvt', '_vti_txt', '_vti_history')
+    foreach ($fk in $packDef.knowledge.folders) {
+        $fn = $L.knowledge.folders[$fk]
+        if (-not $fn) { Add-V $loc 'error' "knowledge.folders.$fk" 'missing'; continue }
+        Add-Vs $loc (Test-SharePointSegment "knowledge.folders.$fk" $fn)
+        if ($reservedRoot -contains ([string]$fn).Trim().ToLowerInvariant() -or ([string]$fn).Trim() -like '_vti_*') { Add-V $loc 'error' "knowledge.folders.$fk" "'$fn' is a reserved folder name at the root of a SharePoint document library (choose another name, e.g. 'Grant Forms')" }
+    }
     foreach ($d in $packDef.knowledge.documents) {
         $ld = $L.knowledge.documents[$d.key]; $path = "knowledge.documents.$($d.key)"
         if (-not $ld) { Add-V $loc 'error' $path 'missing'; continue }

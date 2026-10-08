@@ -21,19 +21,30 @@ $ErrorActionPreference = 'Stop'
 $cfg = Read-DemoConfig $Prefix
 $pack = Get-DemoPack $cfg.pack
 $planPath = Join-Path $script:DemoRepoRoot "generated\$Prefix\a365-deployment-plan.json"
-if (-not (Test-Path -LiteralPath $planPath)) { throw "Lab Builder plan not found: $planPath (run New-DemoLabPlan.ps1 first)." }
+if (-not (Test-Path -LiteralPath $planPath)) {
+    if ($WhatIf) { Write-DemoLog $Prefix 'Azure OpenAI capacity: not yet applicable (no Lab Builder plan yet)'; return }
+    throw "Lab Builder plan not found: $planPath (run New-DemoLabPlan.ps1 first)."
+}
 $plan = Get-Content -LiteralPath $planPath -Raw | ConvertFrom-Json
 $o = $plan.solution.azureOpenAI
 if (-not $o -or $o.mode -notin 'create-shared', 'reuse-existing') { Write-DemoLog $Prefix 'No shared Azure OpenAI deployment in the plan (per-agent mode or no ACA agent): nothing to size'; return }
 $lbPrefix = [string]$plan.solution.prefix
 $account = if ($o.account) { [string]$o.account } else { (($lbPrefix -replace '[^a-z0-9]', '').ToLower()) + 'aoai' }
 $rg = if ($o.mode -eq 'create-shared') { if ($o.resourceGroup) { [string]$o.resourceGroup } else { "$lbPrefix-aoai-rg" } } else { [string]$o.existingResourceGroup }
-$deployment = if ($o.deployment) { [string]$o.deployment } else { throw 'The plan has no solution.azureOpenAI.deployment.' }
+$deployment = if ($o.deployment) { [string]$o.deployment } else { $null }
+if (-not $deployment) {
+    # A plan written before the agents step (or by an older New-DemoLabPlan.ps1): nothing to size yet.
+    if ($WhatIf) { Write-DemoLog $Prefix 'Azure OpenAI capacity: not yet applicable (the plan has no shared deployment yet; runs after the agents step)'; return }
+    throw 'The plan has no solution.azureOpenAI.deployment (re-run New-DemoLabPlan.ps1).'
+}
 $target = if ($Capacity) { $Capacity } elseif ($pack.solutionSizing -and $pack.solutionSizing.azureOpenAICapacity) { [int]$pack.solutionSizing.azureOpenAICapacity } else { 0 }
 Assert-DemoTenant $cfg
 $SubArg = @('--subscription', [string]$cfg.subscriptionId)
 $d = az cognitiveservices account deployment show -n $account -g $rg --deployment-name $deployment @SubArg -o json 2>$null | ConvertFrom-Json
-if (-not $d) { throw "Deployment '$deployment' of '$account' ($rg) not found: deploy the ACA agents first (Lab Builder)." }
+if (-not $d) {
+    if ($WhatIf) { Write-DemoLog $Prefix "Azure OpenAI capacity: not yet applicable ('$deployment' of '$account' does not exist yet; runs after the ACA agents are deployed)"; return }
+    throw "Deployment '$deployment' of '$account' ($rg) not found: deploy the ACA agents first (Lab Builder)."
+}
 $acc = az cognitiveservices account show -n $account -g $rg @SubArg -o json | ConvertFrom-Json
 $cur = [int]$d.sku.capacity
 Write-DemoLog $Prefix "Azure OpenAI '$account/$deployment' ($($d.properties.model.name) $($d.properties.model.version), $($d.sku.name), $($acc.location)): capacity $cur, target $(if ($target) { $target } else { '(none in the pack)' })"

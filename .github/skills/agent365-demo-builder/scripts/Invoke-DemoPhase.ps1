@@ -48,6 +48,8 @@ $steps = [System.Collections.Generic.List[object]]::new()
 $steps.Add((New-Step 'bootstrap' 'prereqs' 'License gate and prerequisites (read-only)' 'auto' (Join-Path $PSScriptRoot 'Test-DemoPrereqs.ps1') $P $P 'fix every failed check (docs/demo-environment-prerequisites.md) before going on'))
 $packArgs = @('-Pack', $cfg.pack, '-Locale', $cfg.locale) + $(if (Test-Path -LiteralPath $slotsFile) { @('-OperatorSlots', $slotsFile) } else { @() })
 $steps.Add((New-Step 'bootstrap' 'pack' 'Pack and locale check (dictionary, iron rules)' 'auto' (Join-Path $PSScriptRoot 'Test-DemoPack.ps1') $packArgs $packArgs ''))
+$steps.Add((New-Step 'bootstrap' 'python-deps' 'Python packages of the scripts (msal, documents)' 'auto' (Join-Path $PSScriptRoot 'Install-DemoPythonDeps.ps1') $P ($P + '-WhatIf') ''))
+$steps.Add((New-Step 'bootstrap' 'foundry' 'Foundry project of the prompt agents (FD-only packs)' 'auto' (Join-Path $PSScriptRoot 'Set-DemoFoundry.ps1') $P ($P + '-WhatIf') 'switches demo-config to reuse-existing; nothing to do when it is already set'))
 $steps.Add((New-Step 'bootstrap' 'identities' 'Users, licenses, roles, managers, groups' 'auto' (Join-Path $PSScriptRoot 'Set-DemoIdentities.ps1') $P ($P + '-WhatIf') 'the Purview role groups it prints are manual (Purview card)'))
 $steps.Add((New-Step 'bootstrap' 'photos' 'Profile photos (leavers included, before their deletion)' 'auto' (Join-Path $PSScriptRoot 'Set-DemoPhotos.ps1') $P ($P + '-WhatIf') 'photos are not shipped: put them in generated/<prefix>/demo/photos'))
 $steps.Add((New-Step 'bootstrap' 'first-signin' 'First sign-in of every persona, each in its own browser profile' 'manual' $null @() @() "passwords in generated/$Prefix/demo/secrets; register MFA if prompted; keep one browser profile per persona (tabs in demo order later)"))
@@ -56,15 +58,16 @@ $steps.Add((New-Step 'setup' 'knowledge-build' 'Fictional documents in the demo 
 $steps.Add((New-Step 'setup' 'knowledge-publish' 'SharePoint library of the knowledge' 'auto' (Join-Path $PSScriptRoot 'Publish-DemoKnowledge.ps1') $P ($P + '-WhatIf') ''))
 $steps.Add((New-Step 'setup' 'mcp-deploy' 'Demo MCP backends (Container Apps)' 'auto' (Join-Path $PSScriptRoot 'Deploy-DemoMcp.ps1') $P ($P + '-WhatIf') ''))
 foreach ($k in @($pack.mcp.longLived | ForEach-Object { [string]$_.key })) {
-    $steps.Add((New-Step 'setup' "mcp-register-$k" "Registration payload of the '$k' server" 'terminal' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Register', '-Server', $k)) ($P + @('-Action', 'Status')) 'run the printed a365 command in a real terminal (answer y), then the interactive phase confirms it'))
+    $steps.Add((New-Step 'setup' "mcp-register-$k" "Registration payload of the '$k' server" 'terminal' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Register', '-Server', $k)) ($P + @('-Action', 'Status')) "run the printed a365 command (answer y; piping `"y`" into it works), then New-DemoMcpRegistration.ps1 -Action Confirm -Name <server>"))
 }
+# The admin approval gates the agents: an ext_ tool cannot be attached to an agent before it (was in 'interactive').
+$steps.Add((New-Step 'setup' 'mcp-approve' 'Registered demo MCP servers: admin approval (BLOCKING before the agents)' 'manual' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Status')) ($P + @('-Action', 'Status')) 'per server: the admin approves it in the admin center (allow pop-ups; the live pool instance stays pending), then -Action Approved -Name <n>'))
 $steps.Add((New-Step 'setup' 'agents' 'Lab Builder plan and scaffold of the agents' 'agent' (Join-Path $PSScriptRoot 'New-DemoLabPlan.ps1') ($P + '-Scaffold') ($P + '-ValidateOnly') "then continue exactly as a Lab Builder 'resume $Prefix' (deploy ordering, test gate after each agent)"))
 $steps.Add((New-Step 'setup' 'aoai-capacity' 'Size the shared Azure OpenAI deployment for the demo traffic' 'auto' (Join-Path $PSScriptRoot 'Set-DemoAoaiCapacity.ps1') $P ($P + '-WhatIf') 'after the ACA agents exist; the Lab Builder default capacity is too small for the traffic plan'))
 $steps.Add((New-Step 'setup' 'governance' 'Attribute, owners/sponsors/attributes of agent identities, catalog' 'auto' (Join-Path $PSScriptRoot 'Set-DemoGovernance.ps1') $P ($P + '-WhatIf') 're-run -Step identities whenever a new agent identity appears'))
 $steps.Add((New-Step 'setup' 'cards' 'Guided cards and test hand-out' 'auto' (Join-Path $PSScriptRoot 'New-DemoCards.ps1') $P $P ''))
 $steps.Add((New-Step 'setup' 'guide' 'Run of show' 'auto' (Join-Path $guide 'New-DemoGuide.ps1') $P $P ''))
 # --- interactive (user interaction) ---
-$steps.Add((New-Step 'interactive' 'mcp-approve' 'Registered demo MCP servers: consents, admin approval' 'manual' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Status')) ($P + @('-Action', 'Status')) 'per server: -Action Confirm -Name <n> after the terminal registration, the admin approves it in the admin center (the live pool instance stays pending), then -Action Approved -Name <n>'))
 $steps.Add((New-Step 'interactive' 'mcp-connections' 'Per-user connection URLs, BEFORE any test that uses a demo MCP server' 'auto' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Urls')) ($P + @('-Action', 'Urls')) 'every person listed opens the URL signed in as themselves, once'))
 $cardDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'references\cards'
 foreach ($c in @(Get-ChildItem -LiteralPath $cardDir -Filter '*.md' | Sort-Object Name)) {
@@ -119,9 +122,16 @@ $steps.Add((New-Step 'restore' 'preflight-after' 'Pre-flight again (read-only)' 
 $steps.Add((New-Step 'teardown' 'remove' 'Remove the lab' 'manual' $null @() @() "Lab Cleaner for everything tagged a365lab=$Prefix, then the extras in demo-packs/$($cfg.pack)/README.md#teardown"))
 
 # --- progress in state.json ---------------------------------------------------------------------------------------
+$script:MovedSteps = @{ 'setup/mcp-approve' = 'interactive' }
 $state = Read-DemoLabState $Prefix
 if (-not $state.Contains('phases')) { $state['phases'] = [ordered]@{} }
-function Get-StepStatus($Sp) { $ph = $state.phases[$Sp.phase]; if ($ph -and $ph.Contains($Sp.id)) { return [string]$ph[$Sp.id].status }; return '' }
+function Get-StepStatus($Sp) {
+    $ph = $state.phases[$Sp.phase]; if ($ph -and $ph.Contains($Sp.id)) { return [string]$ph[$Sp.id].status }
+    # Steps moved to another phase keep the status recorded under their old phase (labs built before the move).
+    $old = $script:MovedSteps["$($Sp.phase)/$($Sp.id)"]
+    if ($old) { $ph = $state.phases[$old]; if ($ph -and $ph.Contains($Sp.id)) { return [string]$ph[$Sp.id].status } }
+    return ''
+}
 function Set-StepStatus($Sp, [string]$Status) {
     # Re-read: the step's own script may have saved state.json since this runner started.
     $script:state = Read-DemoLabState $Prefix
@@ -184,5 +194,12 @@ foreach ($sp in $list) {
     }
     if ($sp.hint) { Write-Host "   next: $($sp.hint)" }
     if ($sp.kind -ne 'auto') { Write-Host "   confirm when done: Invoke-DemoPhase.ps1 -Prefix $Prefix -Phase $Phase -Done $($sp.id)" }
+    # A blocking step (or the Lab Builder work of the 'agents' step) stops an -Apply run: the next steps depend on it.
+    if ($Apply -and ($sp.blocking -or $sp.kind -eq 'agent') -and (Get-StepStatus $sp) -ne 'done') {
+        $rest = @($list | Select-Object -Skip ([array]::IndexOf(@($list | ForEach-Object { $_.id }), $sp.id) + 1))
+        Write-Host "   STOP: '$($sp.id)' is blocking (the next steps depend on it). When it is done: -Done $($sp.id)$(if ($rest.Count) { ", then resume with -Phase $Phase -Apply -From $($rest[0].id)" })" -ForegroundColor Yellow
+        Write-DemoLog $Prefix "Phase ${Phase}: paused at the blocking step '$($sp.id)'"
+        exit 0
+    }
 }
 Write-DemoLog $Prefix "Phase $Phase ($(if ($Apply) { 'APPLY' } else { 'DRY RUN' })) finished. Progress: Invoke-DemoPhase.ps1 -Prefix $Prefix"

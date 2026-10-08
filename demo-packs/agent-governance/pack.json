@@ -16,7 +16,8 @@
    "purpose": "Microsoft 365 Copilot + Agent 365 user features + Exchange mailbox + Entra ID P2 / ID Governance for agents (reference tenant: one Microsoft 365 E7 seat)",
    "defaultSku": "MICROSOFT_365_E7_NO_TEAMS",
    "alternativeSkus": [
-    "MICROSOFT_365_E7"
+    "MICROSOFT_365_E7",
+    "Microsoft_365_E5_(no_Teams)+Microsoft_365_Copilot+MICROSOFT_AGENT_FRONTIER_NO_TEAMS"
    ],
    "evidenceServicePlans": [
     "AGENT_365",

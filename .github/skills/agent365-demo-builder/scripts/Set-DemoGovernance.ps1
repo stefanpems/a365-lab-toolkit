@@ -41,7 +41,9 @@ function Test-Step([string]$S) { $Step -contains 'all' -or $Step -contains $S }
 function Get-Upn([string]$Key) { "$(Get-DemoPersonaAlias $LOC $Key)@$($cfg.domain)" }
 $script:delegated = $null
 function Get-Delegated {
-    if (-not $script:delegated) { $script:delegated = Get-DemoMsalToken -TenantId $cfg.tenantId -Prefix $Prefix -LoginHint $cfg.adminUpn -Scopes @('CustomSecAttributeDefinition.ReadWrite.All', 'EntitlementManagement.ReadWrite.All', 'Group.Read.All') }
+    # -ForceRefresh: a cached access token minted before a directory role change (Attribute Definition/Assignment
+    # Administrator) would still be denied with 403; the refresh token is reused, no browser.
+    if (-not $script:delegated) { $script:delegated = Get-DemoMsalToken -TenantId $cfg.tenantId -Prefix $Prefix -LoginHint $cfg.adminUpn -Scopes @('CustomSecAttributeDefinition.ReadWrite.All', 'EntitlementManagement.ReadWrite.All', 'Group.Read.All') -ForceRefresh }
     return $script:delegated
 }
 # $true when a -NoThrow GET says 404; any other error stops with a hint.

@@ -26,17 +26,25 @@ try { Assert-DemoTenant $cfg; Add-R 'Tenant' 'az context' 'OK' "tenant $($cfg.te
 catch { $tenantOk = $false; Add-R 'Tenant' 'az context' 'KO' $_.Exception.Message "az login --tenant $($cfg.tenantId)" }
 
 # --- license gate ---------------------------------------------------------------------------------------------
-# Seats per license role: every persona holding it (leavers included: they exist until their permanent deletion)
-# plus every AI-teammate instance. Teams is not needed when the Copilot SKU already carries the TEAMS1 plan.
-$need = [ordered]@{}
-foreach ($r in $pack.licenseRoles.Keys) { $need[$r] = 0 }
-foreach ($p in $pack.personas) { foreach ($r in @($p.licenses)) { $need[$r]++ } }
-foreach ($a in $pack.agents | Where-Object { $_.instance }) { foreach ($r in @($a.instance.licenses)) { $need[$r]++ } }
+# Seats are counted PER SKU: a role may be a bundle 'SKU1+SKU2' (Get-DemoSkuParts) and the same SKU may serve two roles
+# (for example the Frontier SKU in the Copilot bundle and for the AI-teammate instance). Every persona holding a role
+# (leavers included: they exist until their permanent deletion; Teams for all with teamsForAllPersonas) plus every
+# AI-teammate instance. Teams is not needed when the Copilot role already carries the TEAMS1 plan.
 $gateOk = $true
 if ($tenantOk) {
     $skus = @(Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/subscribedSkus' -All)
-    $copilotSku = $skus | Where-Object { $_.skuPartNumber -eq $cfg.licenseSkus.copilotUser } | Select-Object -First 1
-    $copilotHasTeams = $copilotSku -and @($copilotSku.servicePlans.servicePlanName) -contains 'TEAMS1'
+    $copilotHasTeams = @(Get-DemoRolePlans $skus ([string]$cfg.licenseSkus.copilotUser)) -contains 'TEAMS1'
+    $needSku = [ordered]@{}; $rolesOfSku = @{}
+    function Add-Need([string[]]$Roles) {
+        $parts = @()
+        foreach ($r in $Roles) {
+            if ($r -eq 'teams' -and $copilotHasTeams) { continue }
+            foreach ($part in Get-DemoSkuParts ([string]$cfg.licenseSkus[$r])) { if ($parts -notcontains $part) { $parts += $part }; $rolesOfSku[$part] = @(@($rolesOfSku[$part]) + $r | Where-Object { $_ } | Select-Object -Unique) }
+        }
+        foreach ($part in $parts) { $needSku[$part] = 1 + [int]$needSku[$part] }
+    }
+    foreach ($p in $pack.personas) { Add-Need @(Get-DemoPersonaLicenseRoles $p $cfg) }
+    foreach ($a in $pack.agents | Where-Object { $_.instance }) { Add-Need @($a.instance.licenses) }
     # seats already held by existing demo people (a re-run must not count them twice)
     $held = @{}
     foreach ($p in $pack.personas) {
@@ -44,23 +52,27 @@ if ($tenantOk) {
         $u = Invoke-DemoGraph GET "https://graph.microsoft.com/v1.0/users/$([uri]::EscapeDataString($upn))?`$select=assignedLicenses" -NoThrow
         if ($u -and -not $u.PSObject.Properties['error']) { foreach ($lic in @($u.assignedLicenses)) { $k = [string]($lic.skuId); if ($k) { $held[$k] = 1 + [int]$held[$k] } } }
     }
-    foreach ($r in $need.Keys) {
-        $part = [string]$cfg.licenseSkus[$r]
-        $n = [int]$need[$r]
-        if ($r -eq 'teams' -and $copilotHasTeams) { Add-R 'License gate' "$r ($part)" 'OK' "not needed: $($cfg.licenseSkus.copilotUser) includes Teams"; continue }
+    if ($copilotHasTeams) { Add-R 'License gate' "teams ($($cfg.licenseSkus.teams))" 'OK' "not needed: $($cfg.licenseSkus.copilotUser) includes Teams" }
+    foreach ($part in $needSku.Keys) {
+        $n = [int]$needSku[$part]
+        $label = "$part [$(@($rolesOfSku[$part]) -join ', ')]"
         $s = $skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1
-        if (-not $s) { $gateOk = $false; Add-R 'License gate' "$r ($part)" 'KO' "SKU not in the tenant; $n seat(s) needed" 'buy it, or set another SKU with New-DemoConfig.ps1 -CopilotSku/-TeamsSku/-FrontierSku'; continue }
+        if (-not $s) { $gateOk = $false; Add-R 'License gate' $label 'KO' "SKU not in the tenant; $n seat(s) needed" 'buy it, or set another SKU or a bundle SKU1+SKU2 with New-DemoConfig.ps1 -CopilotSku/-TeamsSku/-FrontierSku'; continue }
         $free = [int]$s.prepaidUnits.enabled - [int]$s.consumedUnits
         $already = [int]$held[[string]($s.skuId)]
         $missing = [Math]::Max(0, $n - $already)
         $st = if ($free -ge $missing) { 'OK' } else { $gateOk = $false; 'KO' }
-        Add-R 'License gate' "$r ($part)" $st "needed $n, already held by demo people $already, still to assign $missing, free $free of $($s.prepaidUnits.enabled)" $(if ($st -eq 'KO') { 'free seats with the License Reclaimer agent (it removes licenses without deleting users)' })
-        $plans = @($s.servicePlans.servicePlanName)
-        $miss = @($pack.licenseRoles[$r].evidenceServicePlans | Where-Object { $plans -notcontains $_ })
-        if ($miss.Count) { Add-R 'License gate' "$r service plans" 'WARN' "missing in $($part): $($miss -join ', ')" 'check that this SKU really gives the capability (docs section 1)' }
+        Add-R 'License gate' $label $st "needed $n, already held by demo people $already, still to assign $missing, free $free of $($s.prepaidUnits.enabled)" $(if ($st -eq 'KO') { 'free seats with the License Reclaimer agent (it removes licenses without deleting users)' })
     }
-    $spare = $skus | Where-Object { $_.skuPartNumber -eq $cfg.licenseSkus.copilotUser } | Select-Object -First 1
-    if ($spare) { Add-R 'License gate' 'spare Copilot seat for the resets' $(if (([int]$spare.prepaidUnits.enabled - [int]$spare.consumedUnits) -ge 1) { 'OK' } else { 'WARN' }) 'one free seat is used for about 10 minutes by every reset of D5 / D8 (temporary leaver)' }
+    foreach ($r in $pack.licenseRoles.Keys) {
+        if ($r -eq 'teams' -and $copilotHasTeams) { continue }
+        $value = [string]$cfg.licenseSkus[$r]
+        $plans = @(Get-DemoRolePlans $skus $value)
+        $miss = @($pack.licenseRoles[$r].evidenceServicePlans | Where-Object { $plans -notcontains $_ })
+        if ($miss.Count) { Add-R 'License gate' "$r service plans" 'WARN' "missing in $($value): $($miss -join ', ')" 'check that this SKU (or bundle) really gives the capability (docs section 1)' }
+    }
+    $spare = @(foreach ($part in Get-DemoSkuParts ([string]$cfg.licenseSkus.copilotUser)) { $s = $skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1; if ($s) { [int]$s.prepaidUnits.enabled - [int]$s.consumedUnits } else { 0 } })
+    if ($spare.Count) { Add-R 'License gate' 'spare Copilot seat for the resets' $(if (($spare | Measure-Object -Minimum).Minimum -ge 1) { 'OK' } else { 'WARN' }) 'one free seat (of every SKU of the role) is used for about 10 minutes by every reset of D5 / D8 (temporary leaver)' }
 }
 else { $gateOk = $false }
 # --- tenant facts with an API ---------------------------------------------------------------------------------
@@ -74,10 +86,37 @@ if ($tenantOk) {
         $st = (az provider show -n $rp --subscription $cfg.subscriptionId --query registrationState -o tsv 2>$null)
         Add-R 'Azure' "provider $rp" $(if ($st -eq 'Registered') { 'OK' } else { 'WARN' }) "$st" $(if ($st -ne 'Registered') { "az provider register -n $rp --subscription $($cfg.subscriptionId)" })
     }
+    # Operator roles for the governance step (assigned by Set-DemoIdentities.ps1, bootstrap step 'identities').
+    $op = Invoke-DemoGraph GET "https://graph.microsoft.com/v1.0/users/$([uri]::EscapeDataString([string]$cfg.adminUpn))?`$select=id" -NoThrow
+    if ($op -and -not $op.PSObject.Properties['error']) {
+        $defs = @(Invoke-DemoGraph GET "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?`$select=id,displayName" -All)
+        $miss = @(foreach ($rn in $script:DemoOperatorEntraRoles) {
+                $def = $defs | Where-Object displayName -eq $rn | Select-Object -First 1
+                if (-not $def -or -not @((Invoke-DemoGraph GET ("https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$filter=principalId eq '{0}' and roleDefinitionId eq '{1}'" -f $op.id, $def.id)).value).Count) { $rn }
+            })
+        Add-R 'Entra' "operator roles ($($cfg.adminUpn))" $(if ($miss.Count) { 'WARN' } else { 'OK' }) $(if ($miss.Count) { "missing: $($miss -join ', ')" } else { $script:DemoOperatorEntraRoles -join ', ' }) $(if ($miss.Count) { 'assigned by the bootstrap step identities (Set-DemoIdentities.ps1); needed by the governance step' })
+    }
+    else { Add-R 'Entra' "operator $($cfg.adminUpn)" 'KO' 'user not found' 'New-DemoConfig.ps1 -AdminUpn <the signed-in admin>' }
+    # Prefix collision: resource groups whose name contains the prefix but that this lab did not create. The Lab
+    # Builder tag fallback and the Lab Cleaner work by prefix: a foreign RG could be tagged and deleted with the lab.
+    # Resource groups managed by another resource (managedBy set, e.g. the 'ai_<name>_<guid>_managed' RG of an
+    # Application Insights component) belong to that resource, not to another owner: ignored.
+    $foreign = @(az group list --subscription $cfg.subscriptionId -o json 2>$null | ConvertFrom-Json | Where-Object { $_.name -like "*$Prefix*" -and -not $_.managedBy -and -not ($_.tags -and $_.tags.a365lab -eq $Prefix) } | ForEach-Object { $_.name })
+    if ($foreign.Count) {
+        $fresh = -not (Read-DemoLabState $Prefix).users.Count
+        if ($fresh) { $gateOk = $false }
+        Add-R 'Azure' "prefix '$Prefix' not used by other resource groups" $(if ($fresh) { 'KO' } else { 'WARN' }) "foreign resource group(s) containing the prefix: $($foreign -join ', ')" 'choose another prefix (New-DemoConfig.ps1 with a new -Prefix) before anything is created; for an existing lab check and tag/rename them'
+    }
+    else { Add-R 'Azure' "prefix '$Prefix' not used by other resource groups" 'OK' 'no foreign resource group contains the prefix' }
 }
 Add-R 'Azure' 'region' $(if ($cfg.region) { 'OK' } else { 'KO' }) "$($cfg.region) (Static Web App: $($cfg.swaRegion))" 'New-DemoConfig.ps1 -Region <region>'
 $fm = if ($cfg.foundry) { $cfg.foundry.mode } else { '' }
-Add-R 'Azure' 'Foundry project for the review agent' $(if ($fm -eq 'reuse-existing' -and $cfg.foundry.endpoint) { 'OK' } else { 'KO' }) "mode=$fm" "pwsh -File $(Join-Path $script:WizardScriptsDir 'New-FoundryProject.ps1') -Prefix $Prefix -Subscription $($cfg.subscriptionId) -Region $($cfg.region), then New-DemoConfig.ps1 -FoundryMode reuse-existing ..."
+$packHasFh = @($pack.agents | Where-Object { $_.variant -like 'FH-*' }).Count -gt 0
+$packHasFd = @($pack.agents | Where-Object { $_.variant -like 'FD-*' }).Count -gt 0
+if (-not $packHasFd -and -not $packHasFh) { Add-R 'Azure' 'Foundry project' 'OK' 'no Foundry agent in the pack' }
+elseif ($fm -eq 'reuse-existing' -and $cfg.foundry.endpoint) { Add-R 'Azure' 'Foundry project for the review agent' 'OK' "reuse-existing $($cfg.foundry.account) ($($cfg.foundry.endpoint))" }
+elseif ($packHasFh) { Add-R 'Azure' 'Foundry project for the review agent' 'OK' "mode=$fm (created by the Lab Builder with the FH agents)" }
+else { Add-R 'Azure' 'Foundry project for the review agent' 'WARN' "mode=${fm}: not created yet" "created by the bootstrap step 'foundry' (Set-DemoFoundry.ps1 -Prefix $Prefix), which switches the config to reuse-existing" }
 $pe = $cfg.copilotStudio.paygEnvironmentId; $de = $cfg.copilotStudio.defaultEnvironmentId
 Add-R 'Power Platform' 'payg environment (Dataverse + Copilot Credits)' $(if ($pe) { 'MANUAL' } else { 'KO' }) "id=$pe" "pwsh -File .github/skills/agent365-copilot-studio/scripts/Test-McsPrereqs.ps1 -Harness MCS-NH -EnvironmentId $pe -Tenant $($cfg.tenantId)"
 Add-R 'Power Platform' 'default environment (unauthenticated prototype, D14)' $(if ($de) { 'OK' } else { 'KO' }) "id=$de" 'New-DemoConfig.ps1 -DefaultEnvironmentId <id>'

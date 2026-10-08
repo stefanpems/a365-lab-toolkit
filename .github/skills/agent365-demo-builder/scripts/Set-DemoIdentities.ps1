@@ -150,29 +150,51 @@ if (-not $SkipRoles) {
             if ($r -and $r.PSObject.Properties['error']) { Note "role FAILED $($p.key) = $rn ($($r.status))" } else { Note "role ASSIGNED $($p.key) = $rn" }
         }
     }
+    # The operator (adminUpn) needs these roles for the governance step: a Global Administrator does NOT have them
+    # (custom security attributes, docs/demo-environment-prerequisites.md section 6). A role change reaches the
+    # delegated tokens only after a refresh (Set-DemoGovernance.ps1 forces it).
+    if ($cfg.adminUpn) {
+        $op = Invoke-DemoGraph GET "$G/users/$([uri]::EscapeDataString([string]$cfg.adminUpn))?`$select=id" -NoThrow
+        if (-not $op -or $op.PSObject.Properties['error']) { Note "operator $($cfg.adminUpn) NOT FOUND: roles not checked" }
+        else {
+            foreach ($rn in $script:DemoOperatorEntraRoles) {
+                $def = $defs | Where-Object displayName -eq $rn | Select-Object -First 1
+                if (-not $def) { Note "role NOT FOUND '$rn'"; continue }
+                $has = @((Invoke-DemoGraph GET ("$G/roleManagement/directory/roleAssignments?`$filter=principalId eq '{0}' and roleDefinitionId eq '{1}'" -f $op.id, $def.id)).value)
+                if ($has.Count) { continue }
+                if ($WhatIf) { Note "would ASSIGN operator $($cfg.adminUpn) = $rn"; continue }
+                $r = Invoke-DemoGraph POST "$G/roleManagement/directory/roleAssignments" -Body @{ principalId = $op.id; roleDefinitionId = $def.id; directoryScopeId = '/' } -NoThrow
+                if ($r -and $r.PSObject.Properties['error']) { Note "role FAILED operator = $rn ($($r.status))" } else { Note "role ASSIGNED operator $($cfg.adminUpn) = $rn" }
+            }
+        }
+    }
 }
 
 # --- licenses ----------------------------------------------------------------------------------------------------
 if (-not $SkipLicenses) {
     Write-DemoLog $Prefix 'Identities: licenses'
     $skus = @(Invoke-DemoGraph GET "$G/subscribedSkus" -All)
-    $copilot = $skus | Where-Object { $_.skuPartNumber -eq $cfg.licenseSkus.copilotUser } | Select-Object -First 1
-    $skipTeams = $copilot -and @($copilot.servicePlans.servicePlanName) -contains 'TEAMS1'
+    $skipTeams = @(Get-DemoRolePlans $skus ([string]$cfg.licenseSkus.copilotUser)) -contains 'TEAMS1'
     foreach ($p in $pack.personas) {
         if (-not $ids.ContainsKey($p.key) -or -not ($Persona -contains 'all' -or $Persona -contains $p.key)) { continue }
         $u = Invoke-DemoGraph GET "$G/users/$($ids[$p.key])?`$select=assignedLicenses"
         $have = @($u.assignedLicenses | ForEach-Object { [string]($_.skuId) })
-        $add = @()
-        foreach ($role in @($p.licenses)) {
+        $wanted = @()
+        foreach ($role in @(Get-DemoPersonaLicenseRoles $p $cfg)) {
             if ($role -eq 'teams' -and $skipTeams) { continue }
-            $sku = $skus | Where-Object { $_.skuPartNumber -eq $cfg.licenseSkus[$role] } | Select-Object -First 1
-            if (-not $sku) { Note "license SKU missing: $($cfg.licenseSkus[$role]) ($role)"; continue }
-            if ($have -notcontains [string]($sku.skuId)) { $add += @{ skuId = $sku.skuId; disabledPlans = @() } }
+            foreach ($part in Get-DemoSkuParts ([string]$cfg.licenseSkus[$role])) {
+                $sku = $skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1
+                if (-not $sku) { Note "license SKU missing: $part ($role)"; continue }
+                if (@($wanted | Where-Object { $_.skuId -eq $sku.skuId }).Count -eq 0) { $wanted += $sku }
+            }
         }
+        $add = @(Get-DemoLicenseAdds $wanted $have $skus)
         if (-not $add.Count) { continue }
-        if ($WhatIf) { Note "would ADD $($add.Count) license(s) to $($p.key)"; continue }
-        $r = Invoke-DemoGraph POST "$G/users/$($ids[$p.key])/assignLicense" -Body @{ addLicenses = $add; removeLicenses = @() } -NoThrow
-        if ($r -and $r.PSObject.Properties['error']) { Note "licenses FAILED $($p.key) ($($r.status)): free seats? run Test-DemoPrereqs.ps1" } else { Note "licenses ADDED $($p.key) ($($add.Count))" }
+        $desc = ($add | ForEach-Object { "$($_.partNumber)$(if (@($_.disabledPlans).Count) { ' (mailbox plan disabled)' })" }) -join ', '
+        if ($WhatIf) { Note "would ADD $($add.Count) license(s) to $($p.key): $desc"; continue }
+        $body = @{ addLicenses = @($add | ForEach-Object { @{ skuId = $_.skuId; disabledPlans = @($_.disabledPlans) } }); removeLicenses = @() }
+        $r = Invoke-DemoGraph POST "$G/users/$($ids[$p.key])/assignLicense" -Body $body -NoThrow
+        if ($r -and $r.PSObject.Properties['error']) { Note "licenses FAILED $($p.key) ($($r.status)): free seats? run Test-DemoPrereqs.ps1" } else { Note "licenses ADDED $($p.key): $desc" }
     }
 }
 

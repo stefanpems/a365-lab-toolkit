@@ -33,7 +33,15 @@ How the Copilot-user seats add up:
 | the AI-teammate instance (mailbox of the agent user) | 1 | for the whole life of the demo |
 | **Peak during the build** | **11** | keep **1** free afterwards for the resets |
 
-Teams seats: the 8 people of the story and the AI-teammate instance (9); the leavers do not need Teams.
+Teams seats: the 8 people of the story and the AI-teammate instance (9); the leavers do not need Teams (10 with
+`New-DemoConfig.ps1 -TeamsForAllPersonas`, which gives Teams to every demo person).
+
+**No E7 in the tenant? Use a bundle.** A license role may be a bundle of SKUs whose service plans add up to the role,
+written `SKU1+SKU2+...` (for example `-CopilotSku 'Microsoft_365_E5_(no_Teams)+Microsoft_365_Copilot+MICROSOFT_AGENT_FRONTIER_NO_TEAMS'`).
+The gate counts the seats of every SKU (a SKU used by two roles, such as the Frontier SKU of the bundle and of the
+AI-teammate instance, is counted once per person) and checks the plans of the whole bundle. At assignment the mailbox
+plan of a later SKU is disabled when the person already gets a mailbox from an earlier one (two Exchange plans
+conflict).
 
 ### 1.1 Check it automatically
 
@@ -105,7 +113,7 @@ when a role lacks free seats. It changes nothing.
 | Check | Why |
 |---|---|
 | **Security defaults disabled** | Conditional Access policies (D9, D11, D17) cannot coexist with security defaults |
-| The operator account can create users, groups, role assignments, custom security attributes and entitlement-management objects | the build creates them; custom security attributes need **Attribute Definition / Assignment Administrator** even for a Global Administrator |
+| The operator account can create users, groups, role assignments, custom security attributes and entitlement-management objects | the build creates them; custom security attributes need **Attribute Definition / Assignment Administrator** even for a Global Administrator: the bootstrap step `identities` assigns both roles to the operator (`adminUpn`) and the gate checks them. A privileged role assignment can revoke the operator's sessions: when Graph answers `TokenIssuedBeforeRevocationTimestamp`, run `az logout` then `az login` in the lab's az profile |
 | Application permissions can be granted (admin consent) | agent-identity sponsors and attribute assignments are application-only APIs: the build uses a temporary app, deleted at the end |
 | Device-code sign-in may be blocked by Conditional Access | the scripts use MSAL with the system browser instead |
 
@@ -124,7 +132,13 @@ the pack (ACA-DW, ACA-OBO, ACA-S2S, FD-OBO, Copilot Studio), plus:
 
 PowerShell 7, Azure CLI, the Agent 365 CLI (`a365`), the Power Platform CLI (`pac`), Git, Python 3.11+ with the packages
 of [py/requirements.txt](../.github/skills/agent365-demo-builder/scripts/py/requirements.txt) (`msal`, `python-docx`,
-`fpdf2`, `openpyxl`). No local Docker (images are built in the cloud with `az acr build`).
+`fpdf2`, `openpyxl`: the bootstrap step `python-deps` installs the missing ones). No local Docker (images are built in
+the cloud with `az acr build`).
+
+When other sessions use Azure CLI on the same machine, build the lab with a **lab-private az profile**
+(`New-DemoConfig.ps1 -IsolatedAzProfile`): `az login` and `az account set` of the lab then live in
+`generated/<prefix>/demo/secrets/azcfg` and never change the machine-wide default. Sign in once, interactively:
+`$env:AZURE_CONFIG_DIR='<repo>\generated\<prefix>\demo\secrets\azcfg'; az login --tenant <tenant id>`.
 
 ## 9. People, profile photos and browser profiles
 
@@ -133,9 +147,11 @@ requested), with its tabs open in demo order on the day. Passwords of the create
 `generated/<prefix>/demo/secrets/` (git-ignored).
 
 Profile photos are **not shipped** with the repo. Put one JPEG or PNG per persona (at most 4 MB, square and at least
-648 × 648 pixels recommended) in `generated/<prefix>/demo/photos/`, named `<personaKey>.jpg` or containing the
-persona's given name and surname (for example `Portrait_Anna_Walsh.jpg`), then run
-[Set-DemoPhotos.ps1](../.github/skills/agent365-demo-builder/scripts/Set-DemoPhotos.ps1). A photo needs the person's
+648 × 648 pixels recommended) in `generated/_demo-photos/<pack>/` (shared by every lab and language of the pack) or in
+`generated/<prefix>/demo/photos/`, named `<personaKey>.jpg` or containing the persona's given name and surname in any
+language of the pack (for example `Portrait_Anna_Walsh.jpg` or `Ritratto_Anna_Verdi.jpg`), then run
+[Set-DemoPhotos.ps1](../.github/skills/agent365-demo-builder/scripts/Set-DemoPhotos.ps1) (missing photos are a row of
+the user-actions register, never a failure). A photo needs the person's
 mailbox (hence the Copilot-user license of every persona); set the leavers' photos before they are deleted — the reset
 sets them again when it recreates a leaver.
 

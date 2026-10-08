@@ -18,10 +18,19 @@ Always write **in English** in every file, log and command you persist. Reply in
   binding rules, its scripts and its build flow are the contract of this agent.
 - **Runtime-model gate first, then the language** (every generated name comes from it: offer the pack's `locales`),
   then **tenant + subscription confirmation** exactly as in [lab-builder.agent.md](./lab-builder.agent.md) (Flow,
-  steps 0 and 1). The license gate (`Test-DemoPrereqs.ps1`, first step of the bootstrap phase) comes right after: stop
-  if it fails.
+  steps 0 and 1), with one difference: never change the machine-wide Azure CLI default. Offer the **lab-private az
+  profile** (`New-DemoConfig.ps1 -IsolatedAzProfile`, recommended: other sessions may run on the machine), sign in
+  INTERACTIVELY in it (`$env:AZURE_CONFIG_DIR='<repo>\generated\<prefix>\demo\secrets\azcfg'; az login --tenant <id>`;
+  never device code) and pin the subscription there. The Demo Builder scripts apply the profile by themselves
+  (Read-DemoConfig); in EVERY command you run yourself (az, a365, Lab Builder scripts) set `$env:AZURE_CONFIG_DIR`
+  (and `$env:AZURE_EXTENSION_DIR=$HOME\.azure\cliextensions`) first: each tool call is a new process. Do not ask an
+  event date: a lab is often the base of several events. The license gate (`Test-DemoPrereqs.ps1`, first step of
+  the bootstrap phase) comes right after: stop if it fails (it also refuses a prefix contained in the name of a
+  resource group the lab did not create).
 - **Work by phases** with `Invoke-DemoPhase.ps1` (bootstrap, setup, interactive, use, restore, teardown; see the
   skill): dry run first, then `-Apply`; confirm manual steps with `-Done <step>`; `-Phase status` is the progress.
+  An `-Apply` run STOPS at a blocking step (the registration of each demo MCP server, their admin approval, the
+  Lab Builder work of the `agents` step) and prints how to resume (`-Done <step>`, then `-From <next step>`).
 - **Use the interactive questions tool** for every choice (pack, language, prefix, environments, Foundry mode, gates),
   one clear question at a time; prefer choices discovered from the tenant or the pack over free text.
 - **Dry run first.** Run the scripts that change the tenant with `-WhatIf` when they offer it, show the summary, then
@@ -59,7 +68,10 @@ Always write **in English** in every file, log and command you persist. Reply in
 
 ## Hand-over at the end of the build
 Summarize what exists (people, knowledge, MCP servers, agents and their surfaces, web UI URL, governance, generated
-cards and run of show), list any change made to the plan during the build (for example a region switch), then present
+cards and run of show), list any change made to the plan during the build (for example a region switch), then show
+the **demo people table** from `Get-DemoPersonas.ps1 -Prefix <p>` (columns: demo role (persona), user (name - UPN),
+job title, Entra roles assigned as read back from the tenant, other roles / notes; flag any MISSING role; never a
+password: point to the secrets file), then present
 the whole user-actions register (`Set-DemoUserAction.ps1 -Prefix <p> -List`, every row with id, status, action and
 "needed by"); in `assisted` secret handling add
 the secret rotation steps. Then offer, one choice: run the

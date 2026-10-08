@@ -5,6 +5,8 @@ $ErrorActionPreference = 'Stop'
 $script:DemoRepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
 $script:DemoScriptsDir = $PSScriptRoot
 $script:WizardScriptsDir = Join-Path $script:DemoRepoRoot '.github\skills\agent365-wizard\scripts'
+# Directory roles the operator (demo-config adminUpn) needs on top of Global Administrator (custom security attributes).
+$script:DemoOperatorEntraRoles = @('Attribute Definition Administrator', 'Attribute Assignment Administrator')
 . (Join-Path $script:WizardScriptsDir 'Test-A365Names.ps1')
 
 # --------------------------------------------------------------------------------------------- demo pack + locale
@@ -115,7 +117,26 @@ function Get-DemoLabDir([Parameter(Mandatory)][string]$Prefix) { Join-Path $scri
 function Read-DemoConfig([Parameter(Mandatory)][string]$Prefix) {
     $f = Join-Path (Get-DemoLabDir $Prefix) 'demo-config.json'
     if (-not (Test-Path -LiteralPath $f)) { throw "Demo config not found: $f. Create it with New-DemoConfig.ps1 (Demo Builder, phase 1)." }
-    Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
+    $c = Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
+    Use-DemoAzProfile $c
+    return $c
+}
+
+# Lab-private Azure CLI profile (demo-config azConfigDir, New-DemoConfig.ps1 -IsolatedAzProfile): sets AZURE_CONFIG_DIR
+# for this process and its children (az, a365, the Lab Builder scripts), so the lab's az login / account set never
+# change the machine-wide default of other sessions. Extensions stay shared (AZURE_EXTENSION_DIR = the default folder).
+function Use-DemoAzProfile($Config) {
+    if (-not $Config -or -not $Config.azConfigDir) { return }
+    $dir = if ([IO.Path]::IsPathRooted([string]$Config.azConfigDir)) { [string]$Config.azConfigDir } else { Join-Path $script:DemoRepoRoot ([string]$Config.azConfigDir) }
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $env:AZURE_CONFIG_DIR = $dir
+    if (-not $env:AZURE_EXTENSION_DIR) { $env:AZURE_EXTENSION_DIR = Join-Path $HOME '.azure\cliextensions' }
+}
+
+# The command line the operator (or the agent) runs to sign in to the lab's az profile.
+function Get-DemoAzLoginCommand($Config) {
+    $p = if ($Config.azConfigDir) { "`$env:AZURE_CONFIG_DIR='$($env:AZURE_CONFIG_DIR)'; `$env:AZURE_EXTENSION_DIR='$($env:AZURE_EXTENSION_DIR)'; " } else { '' }
+    "${p}az login --tenant $($Config.tenantId)"
 }
 
 function Read-DemoLabState([Parameter(Mandatory)][string]$Prefix) {
@@ -141,9 +162,10 @@ function Write-DemoLog([Parameter(Mandatory)][string]$Prefix, [Parameter(Mandato
 
 # --------------------------------------------------------------------------------------------- tenant + Graph
 function Assert-DemoTenant($Config) {
-    if ($Config.subscriptionId) { az account set --subscription $Config.subscriptionId | Out-Null }
-    $tid = (az account show --query tenantId -o tsv).Trim()
-    if ($tid -ne $Config.tenantId) { throw "Tenant mismatch: az is on '$tid', the demo config expects '$($Config.tenantId)'. Run az login --tenant $($Config.tenantId)." }
+    Use-DemoAzProfile $Config
+    if ($Config.subscriptionId) { az account set --subscription $Config.subscriptionId 2>$null | Out-Null }
+    $tid = ([string](az account show --query tenantId -o tsv 2>$null)).Trim()
+    if ($tid -ne $Config.tenantId) { throw "Tenant mismatch: az is on '$tid', the demo config expects '$($Config.tenantId)'. Sign in (interactive browser): $(Get-DemoAzLoginCommand $Config)" }
 }
 
 $script:DemoTokenCache = @{}
@@ -163,10 +185,16 @@ function Get-DemoAzToken([string]$Resource = 'https://graph.microsoft.com', [str
 # Microsoft Graph Command Line Tools. Used for the delegated scopes az cannot obtain (agent registry, risk, ...).
 function Get-DemoMsalToken {
     param([Parameter(Mandatory)][string]$TenantId, [Parameter(Mandatory)][string[]]$Scopes, [Parameter(Mandatory)][string]$Prefix,
-          [string]$LoginHint, [string]$ClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e', [string]$CacheName = 'msal_graph_cache.json')
+          [string]$LoginHint, [string]$ClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e', [string]$CacheName = 'msal_graph_cache.json',
+          [switch]$SilentOnly, [switch]$ForceRefresh)
+    # -SilentOnly (dry runs): never opens a browser; returns $null when no cached sign-in serves the scopes.
     $cache = Join-Path (Get-DemoLabDir $Prefix) "secrets\$CacheName"
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cache) | Out-Null
-    $tok = python (Join-Path $script:DemoScriptsDir 'py\msal_token.py') --tenant $TenantId --client $ClientId --scopes ($Scopes -join ',') --cache $cache --hint "$LoginHint"
+    $pyArgs = @('--tenant', $TenantId, '--client', $ClientId, '--scopes', ($Scopes -join ','), '--cache', $cache, '--hint', "$LoginHint")
+    if ($SilentOnly) { $pyArgs += '--silent-only' }
+    if ($ForceRefresh) { $pyArgs += '--force-refresh' }
+    $tok = python (Join-Path $script:DemoScriptsDir 'py\msal_token.py') @pyArgs
+    if ($SilentOnly -and $LASTEXITCODE -eq 3) { return $null }
     if ($LASTEXITCODE -ne 0 -or -not $tok) { throw 'MSAL token acquisition failed (see the message above).' }
     return [string]($tok | Select-Object -Last 1)
 }
@@ -191,6 +219,11 @@ function Invoke-DemoGraph {
                 $attempt++
                 if ($attempt -le $MaxRetries -and (($null -eq $status) -or ($status -in 429, 500, 502, 503, 504))) { Start-Sleep -Seconds ([Math]::Min(60, [Math]::Pow(2, $attempt))); continue }
                 $msg = "$Method $next failed ($status): $($_.ErrorDetails.Message)"
+                if ($status -eq 401 -and -not $Token -and "$($_.ErrorDetails.Message)" -match 'InteractionRequired|TokenIssuedBeforeRevocationTimestamp|AADSTS50173|AADSTS700082') {
+                    # The az session was revoked (CAE) or expired. az keeps its cached 24 h CAE token even after a new
+                    # 'az login': log out first, then sign in again interactively.
+                    $msg += " | The az sign-in is no longer valid (revoked sessions keep failing until the cached token is dropped): $(if ($env:AZURE_CONFIG_DIR) { "`$env:AZURE_CONFIG_DIR='$($env:AZURE_CONFIG_DIR)'; " })az logout; az login --tenant <tenant id>   (interactive browser)"
+                }
                 if ($NoThrow) { return [pscustomobject]@{ error = $msg; status = $status } }
                 throw $msg
             }
@@ -310,4 +343,43 @@ function Set-DemoUserAction {
 function Get-DemoIdsFor($Pack, [string[]]$AgentKeys = @(), [string[]]$Portals = @()) {
     @($Pack.demos | Where-Object { (@($_.agents) | Where-Object { $AgentKeys -contains $_ }).Count -or (@($_.portal) | Where-Object { $Portals -contains $_ }).Count } |
         ForEach-Object { [string]$_.id } | Select-Object -Unique | Sort-Object { $_.Substring(0, 1) }, { [int]($_ -replace '\D', '') })
+}
+
+# --------------------------------------------------------------------------------------------- license roles
+# A license role of demo-config licenseSkus is ONE SKU part number or a BUNDLE 'SKU1+SKU2+...' whose service plans add
+# up to the role (for example E5 without Teams + Microsoft 365 Copilot + Frontier, when the tenant has no E7).
+function Get-DemoSkuParts([string]$Value) { @(($Value -split '\+') | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+
+# License roles of a persona; demo-config teamsForAllPersonas adds Teams to the personas whose pack entry has none
+# (the leavers) so that every demo person can use Teams.
+function Get-DemoPersonaLicenseRoles($Persona, $Config) {
+    $r = @($Persona.licenses | Where-Object { $_ })
+    if ($Config -and $Config.teamsForAllPersonas -and $r -notcontains 'teams') { $r += 'teams' }
+    return $r
+}
+
+# Service plan names of a role (union over its bundle) from the subscribedSkus list.
+function Get-DemoRolePlans($Skus, [string]$Value) {
+    @(foreach ($part in Get-DemoSkuParts $Value) { $s = $Skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1; if ($s) { $s.servicePlans.servicePlanName } }) | Select-Object -Unique
+}
+
+# addLicenses entries for the SKUs of $Wanted (subscribedSkus objects, in priority order) not held yet. Two mailbox
+# plans conflict (assignLicense fails), so the mailbox plans of a SKU are disabled when a SKU the user already holds,
+# or an earlier SKU of the list, brings a mailbox.
+$script:DemoMailboxPlanPattern = '^EXCHANGE_S_(STANDARD|ENTERPRISE|DESKLESS)$'
+function Get-DemoLicenseAdds($Wanted, [string[]]$HeldSkuIds, $Skus) {
+    $hasMailbox = $false
+    foreach ($id in @($HeldSkuIds)) {
+        $s = $Skus | Where-Object { [string]$_.skuId -eq $id } | Select-Object -First 1
+        if ($s -and @($s.servicePlans | Where-Object { $_.servicePlanName -match $script:DemoMailboxPlanPattern }).Count) { $hasMailbox = $true }
+    }
+    $adds = @()
+    foreach ($s in @($Wanted)) {
+        $mbx = @($s.servicePlans | Where-Object { $_.servicePlanName -match $script:DemoMailboxPlanPattern })
+        if (@($HeldSkuIds) -contains [string]$s.skuId) { continue }
+        $disabled = @()
+        if ($mbx.Count) { if ($hasMailbox) { $disabled = @($mbx | ForEach-Object { [string]$_.servicePlanId }) } else { $hasMailbox = $true } }
+        $adds += @{ skuId = $s.skuId; disabledPlans = $disabled; partNumber = [string]$s.skuPartNumber }
+    }
+    return $adds
 }

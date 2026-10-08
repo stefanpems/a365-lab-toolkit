@@ -76,8 +76,8 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 
 | Script | Does | Writes to the tenant |
 |---|---|---|
-| `New-DemoConfig.ps1` | per-lab config (tenant, language, domain, environments, SKUs, event date) | no |
-| `Test-DemoPrereqs.ps1` | license gate + prerequisites (read-only) | no |
+| `New-DemoConfig.ps1` | per-lab config (tenant, language, domain, environments, license SKUs or bundles `SKU1+SKU2`, Teams for all, lab-private az profile; an event date is optional and informational) | no |
+| `Test-DemoPrereqs.ps1` | license gate (seats per SKU, bundles) + prerequisites + operator roles + prefix collision (read-only) | no |
 | `Test-DemoPack.ps1` | validates the pack and the locale; `-OperatorSlots` checks the operator file | no |
 | `Set-DemoIdentities.ps1` | personas, groups, licenses, Entra roles, managers (`-WhatIf` first) | yes |
 | `Set-DemoPhotos.ps1` | profile photos of the personas | yes |
@@ -91,10 +91,14 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 | `Set-DemoAoaiCapacity.ps1` | sizes the shared Azure OpenAI deployment for the demo traffic (quota pre-check); `-Check429` counts throttled requests | Azure |
 | `Publish-DemoMcsAgent.ps1` | checks that the Copilot Studio agents are really published (Dataverse `publishedon`, synchronization state); `-Publish` publishes through Dataverse when Copilot Studio silently did not (never the agents whose starting state is a pending request or a block, unless `-Force`) | only with `-Publish` |
 | `Set-DemoUserAction.ps1` | adds/updates one row of the user-actions register (actions no script knows), `-List` prints it | no |
+| `Install-DemoPythonDeps.ps1` | bootstrap step `python-deps`: installs the missing packages of `py/requirements.txt` (user site) | no |
+| `Set-DemoFoundry.ps1` | bootstrap step `foundry`: Foundry project for FD-only packs (Lab Builder `New-FoundryProject.ps1`), config switched to reuse-existing | Azure |
+| `Get-DemoPersonas.ps1` | read-only table of the demo people (persona, user, job title, Entra roles read back, other roles) → `personas.md`; required in the hand-over | no |
 
 Shared helpers: `_demo-common.ps1` (pack, locale, config, state, tokens, Graph, user-actions register), `_demo-entra.ps1` (agent identities,
-temporary app-only session). Offline test of the register: `test-demo-user-actions.ps1` (run it after changing the
-register helpers).
+temporary app-only session). Offline tests: `test-demo-user-actions.ps1` (register) and `test-demo-helpers.ps1`
+(license bundles, lab-private az profile, config persistence, reserved knowledge folder names): run them after changing
+those helpers.
 
 ## The localization dictionary
 
@@ -111,14 +115,15 @@ texts (cards, logs, run of show) stay in English.
 
 The first question of the interview is the **language**: every generated name comes from it. The phases are run with
 `Invoke-DemoPhase.ps1 -Prefix <p> -Phase <phase>` (dry run first, then `-Apply`); `-Phase status` shows the progress.
-Start at least **five days** before the event: several effects need hours or a day (`timeline` of pack.json).
+Start at least **five days** before the first event or rehearsal that uses the lab: several effects need hours or a day
+(`timeline` of pack.json). A lab is often the base of several events: no event date is asked.
 
 | Phase | What | Who |
 |---|---|---|
-| 0. Interview | runtime-model gate; **language**; tenant + subscription (confirm, pin, assert, as the Lab Builder does); prefix (`^[a-z][a-z0-9]{2,8}$`), domain, admin UPN, region, Copilot Studio environments (pay-as-you-go and default), Foundry mode, event date → `New-DemoConfig.ps1` | agent + user |
-| 1. bootstrap | license gate and prerequisites; pack and locale check; users, licenses, roles, managers, groups; photos | scripts |
-| 2. setup | knowledge (build, publish); demo MCP backends; registration payloads; agents through the Lab Builder engine (plan, scaffold, then a Lab Builder **resume** of the prefix; the agent outside the plan uses `outside-plan.json`); governance by script; cards and run of show | scripts + agent |
-| 3. interactive | registrations in a real terminal (`a365`, answer `y`), consents and admin approvals, per-user connection URLs BEFORE the tests, the portal cards one step per turn (Copilot Studio, Agent Builder agents created by their personas, Digital Worker instance created from Teams, Foundry, Entra, Purview, Defender, admin center), identities refresh, the test hand-out, the pre-flight | user + personas, verified by script |
+| 0. Interview | runtime-model gate; **language**; tenant + subscription (confirm, pin, assert, as the Lab Builder does); **lab-private az profile** (recommended when other sessions run on the machine: `-IsolatedAzProfile`, then the interactive `az login` in that profile); prefix (`^[a-z][a-z0-9]{2,8}$`; the bootstrap gate refuses a prefix contained in foreign resource group names), domain, admin UPN, region, Copilot Studio environments (pay-as-you-go and default), Foundry mode, license SKUs (a bundle `SKU1+SKU2+...` when the tenant has no single SKU for a role; `-TeamsForAllPersonas`) → `New-DemoConfig.ps1` | agent + user |
+| 1. bootstrap | license gate and prerequisites (operator roles, prefix collision); pack and locale check; Python packages; Foundry project (FD-only packs); users, licenses (bundles, conflicting mailbox plans disabled), roles (the operator's attribute roles too), managers, groups; photos (lab or shared folder, missing = a user action) | scripts |
+| 2. setup | knowledge (build, publish); demo MCP backends; registrations; **admin approval of the demo MCP servers (BLOCKING: the runner stops there)**; agents through the Lab Builder engine (plan, scaffold, then a Lab Builder **resume** of the prefix; the runner stops there too; the agent outside the plan uses `outside-plan.json`); Azure OpenAI sizing; governance by script; cards and run of show | scripts + agent |
+| 3. interactive | per-user connection URLs BEFORE the tests, the portal cards (Copilot Studio, Agent Builder agents created by their personas, Digital Worker instance created from Teams, Foundry, Entra, Purview, Defender, admin center), identities refresh, the test hand-out, the pre-flight | user + personas, verified by script |
 | 4. use | the demo itself, outside this agent: [agent365-demo-guide](../agent365-demo-guide/SKILL.md) | presenters |
 | 5. restore | pre-flight, reset of what the demos change (owners, blocks, assignments, the MCP pool; leavers recreated and deleted again), manual resets: [agent365-demo-reset](../agent365-demo-reset/SKILL.md) | scripts + user |
 | 6. teardown | the Lab Cleaner, then the extras of the pack README (see below) | user |

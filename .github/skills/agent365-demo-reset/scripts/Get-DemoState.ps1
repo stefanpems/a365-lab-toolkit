@@ -63,12 +63,14 @@ if (Test-Sel @('People')) {
     }
     $skus = @(Invoke-DemoGraph GET "$G/v1.0/subscribedSkus" -All)
     foreach ($role in 'copilotUser', 'frontierAgent') {
-        $part = [string]$cfg.licenseSkus[$role]
-        $s = $skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1
-        if (-not $s) { Add-Check 'Licenses' $part 'subscribed' 'MISSING' 'KO' 'docs/demo-environment-prerequisites.md (license gate)'; continue }
-        $free = [int]$s.prepaidUnits.enabled - [int]$s.consumedUnits
-        $need = if ($role -eq 'copilotUser') { '>= 1 free (temporary leaver of New-OrphanAgent.ps1)' } else { '>= 1 free per new Digital Worker instance' }
-        Add-Check 'Licenses' $part $need "free $free of $($s.prepaidUnits.enabled)" $(if ($free -ge 1) { 'OK' } else { 'WARN' })
+        # A role may be a bundle 'SKU1+SKU2' (Get-DemoSkuParts): every SKU of it needs the free seat.
+        foreach ($part in Get-DemoSkuParts ([string]$cfg.licenseSkus[$role])) {
+            $s = $skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1
+            if (-not $s) { Add-Check 'Licenses' $part 'subscribed' 'MISSING' 'KO' 'docs/demo-environment-prerequisites.md (license gate)'; continue }
+            $free = [int]$s.prepaidUnits.enabled - [int]$s.consumedUnits
+            $need = if ($role -eq 'copilotUser') { '>= 1 free (temporary leaver of New-OrphanAgent.ps1)' } else { '>= 1 free per new Digital Worker instance' }
+            Add-Check 'Licenses' $part $need "free $free of $($s.prepaidUnits.enabled)" $(if ($free -ge 1) { 'OK' } else { 'WARN' })
+        }
     }
 }
 # --- Registry (Agent 365 catalog) ---------------------------------------------------------------------------------

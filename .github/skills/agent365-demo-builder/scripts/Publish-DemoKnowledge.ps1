@@ -21,7 +21,14 @@ $state = Read-DemoLabState $Prefix
 $out = Join-Path (Get-DemoLabDir $Prefix) 'knowledge\out'
 if (-not (Test-Path -LiteralPath (Join-Path $out 'manifest.json'))) { throw "Knowledge not generated: run New-DemoKnowledge.ps1 -Prefix $Prefix first." }
 $G = 'https://graph.microsoft.com/v1.0'
-$tok = Get-DemoMsalToken -TenantId $cfg.tenantId -Scopes @('Sites.ReadWrite.All', 'Files.ReadWrite.All') -Prefix $Prefix -LoginHint $cfg.adminUpn
+$tok = Get-DemoMsalToken -TenantId $cfg.tenantId -Scopes @('Sites.ReadWrite.All', 'Files.ReadWrite.All') -Prefix $Prefix -LoginHint $cfg.adminUpn -SilentOnly:$WhatIf
+if (-not $tok) {
+    # Dry run without a cached sign-in: never open a browser; the real run signs in (announce it).
+    $docs = @((Get-Content -LiteralPath (Join-Path $out 'manifest.json') -Raw -Encoding utf8 | ConvertFrom-Json) | Where-Object { $_.folder -ne '_personal' })
+    Write-Host "  dry run: no cached SharePoint sign-in yet; the real run opens a browser sign-in for $($cfg.adminUpn) and publishes $($docs.Count) file(s) in $(@($pack.knowledge.folders).Count) folder(s)."
+    Write-DemoLog $Prefix "Knowledge published: 0 file(s) (dry run, sign-in not cached)"
+    return
+}
 $nick = $LOC.groups[$pack.knowledge.siteGroup].mailNickname
 $grp = @((Invoke-DemoGraph GET "$G/groups?`$filter=mailNickname eq '$nick'&`$select=id,displayName").value) | Select-Object -First 1
 if (-not $grp) { throw "Site group '$nick' not found: run Set-DemoIdentities.ps1 first." }

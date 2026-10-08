@@ -1,7 +1,9 @@
 """Delegated token for the Demo Builder scripts: MSAL public client, system browser on first use (no WAM, no device
 code), persistent per-lab cache. Prints ONLY the access token on stdout (captured by the caller, never displayed).
 Scopes without a resource prefix are Microsoft Graph scopes.
-Usage: python msal_token.py --tenant <id> --client <appId> --scopes a,b --cache <file> [--hint <upn>]
+Usage: python msal_token.py --tenant <id> --client <appId> --scopes a,b --cache <file> [--hint <upn>] [--silent-only] [--force-refresh]
+--silent-only: never open a browser; exit code 3 when no cached sign-in can serve the scopes (dry runs).
+--force-refresh: ignore the cached access token (e.g. after a directory role change) but reuse the refresh token.
 """
 import argparse
 import json
@@ -18,6 +20,8 @@ def main() -> int:
     ap.add_argument("--scopes", required=True)
     ap.add_argument("--cache", required=True)
     ap.add_argument("--hint", default="")
+    ap.add_argument("--silent-only", action="store_true")
+    ap.add_argument("--force-refresh", action="store_true")
     a = ap.parse_args()
     scopes = [s if ("://" in s or "/" in s) else f"https://graph.microsoft.com/{s}" for s in a.scopes.split(",") if s]
     cache = msal.SerializableTokenCache()
@@ -26,7 +30,10 @@ def main() -> int:
             cache.deserialize(f.read())
     app = msal.PublicClientApplication(a.client, authority=f"https://login.microsoftonline.com/{a.tenant}", token_cache=cache)
     accounts = app.get_accounts(username=a.hint) if a.hint else app.get_accounts()
-    result = app.acquire_token_silent(scopes, account=accounts[0]) if accounts else None
+    result = app.acquire_token_silent(scopes, account=accounts[0], force_refresh=a.force_refresh) if accounts else None
+    if not result and a.silent_only:
+        print("No cached sign-in for these scopes (silent only): skipped.", file=sys.stderr)
+        return 3
     if not result:
         print(">>> ACTION REQUIRED: a browser tab opens for the sign-in (system browser).", file=sys.stderr)
         result = app.acquire_token_interactive(scopes, login_hint=a.hint or None, prompt="select_account", timeout=900)

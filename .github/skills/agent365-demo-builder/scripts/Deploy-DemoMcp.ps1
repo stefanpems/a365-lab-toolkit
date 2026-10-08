@@ -76,10 +76,30 @@ else {
     az acr build --registry $acr --image $image --no-logs @SubArg $stage -o none
     if ($LASTEXITCODE -ne 0) { throw 'az acr build failed.' }
 }
-az containerapp env show -n $names.environment -g $RG @SubArg -o none 2>$null
-if ($LASTEXITCODE -ne 0) {
-    az containerapp env create -n $names.environment -g $RG -l $region --logs-destination none @SubArg -o none
-    if ($LASTEXITCODE -ne 0) { throw "az containerapp env create $($names.environment) failed." }
+$envState = az containerapp env show -n $names.environment -g $RG @SubArg --query properties.provisioningState -o tsv 2>$null
+if ($envState -eq 'Failed') {
+    # A Failed environment (for example after a regional capacity error) is never usable: recreate it, but only when
+    # no app lives in it (resource-safe).
+    $apps = @(az containerapp list -g $RG @SubArg --query "[?contains(properties.managedEnvironmentId, '/$($names.environment)')].name" -o tsv 2>$null | Where-Object { $_ })
+    if ($apps.Count) { throw "Container Apps environment $($names.environment) is Failed and hosts apps ($($apps -join ', ')): fix it by hand." }
+    Write-DemoLog $Prefix "Container Apps environment $($names.environment) is Failed: deleting it to recreate it" 'WARN'
+    az containerapp env delete -n $names.environment -g $RG @SubArg --yes -o none
+    $envState = $null
+}
+if (-not $envState) {
+    # AKSCapacityHeavyUsage = no capacity in the region right now: retry, then stop with the way out (another region).
+    $created = $false
+    for ($try = 1; $try -le 3 -and -not $created; $try++) {
+        $out = az containerapp env create -n $names.environment -g $RG -l $region --logs-destination none @SubArg -o none 2>&1
+        $created = $LASTEXITCODE -eq 0 -and (az containerapp env show -n $names.environment -g $RG @SubArg --query properties.provisioningState -o tsv 2>$null) -eq 'Succeeded'
+        if ($created) { break }
+        $capacity = ($out | Out-String) -match 'AKSCapacityHeavyUsage|heavy usage'
+        Write-DemoLog $Prefix "az containerapp env create $($names.environment) failed (try $try/3)$(if ($capacity) { ': no capacity in the region (AKSCapacityHeavyUsage)' })" 'WARN'
+        if ((az containerapp env show -n $names.environment -g $RG @SubArg --query properties.provisioningState -o tsv 2>$null) -eq 'Failed') { az containerapp env delete -n $names.environment -g $RG @SubArg --yes -o none }
+        if (-not $capacity) { break }
+        if ($try -lt 3) { Start-Sleep -Seconds 120 }
+    }
+    if (-not $created) { throw "az containerapp env create $($names.environment) failed in $region. On a capacity error choose another region for the whole lab (New-DemoConfig.ps1 -Prefix $Prefix -Region <region>, e.g. polandcentral), then re-run; the agents use the same region." }
 }
 
 # --- One app per backend, then /health and tools/list = declared tools ------------------------------------------
