@@ -94,7 +94,12 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
    - **no consecutive hyphens (`--`) and no trailing hyphen** (Azure Container Apps / resource names reject them);
    - **ACA**: the derived Container App name (the lowercased name) is **2–32 characters**;
    - **DW** (ACA-DW/FH-DW): the name is **≤ 20 characters** so the derived Teams `name.short`
-     (`"<name> Blueprint"`, from `a365 setup all --agent-name <name>`) stays **≤ 30** (rule 1).
+     (`"<name> Blueprint"`, from `a365 setup all --agent-name <name>`) stays **≤ 30** (rule 1). In `custom`
+     mode the scaffolder omits `--agent-name` (it would make a365 ignore `a365.config.json` and derive
+     `"<name> Blueprint"` / `"<name> Identity"` / `"<name> Agent"`): a365 then uses `displayNames.blueprint`
+     (≤ 30, no `" Blueprint"` suffix for a DW) and `displayNames.identity` from the agent folder's config. Without
+     `--agent-name` a365 does not resolve `clientAppId` either: the emitted command runs
+     `Set-A365ClientAppId.ps1` first (the tenant's "Agent 365 CLI" app id, read-only, current az profile).
    **MCS agents are renamable in `custom` mode, but only the Copilot Studio DISPLAY name is free-form**
    (validated for structure: starts with a letter; letters/digits/hyphens only; no `--`/trailing hyphen).
    The scaffolder keeps the **solution unique name prefix-derived** (`<prefix>MCS<OH|NH>[<n>]`) and the bot
@@ -170,7 +175,9 @@ The scaffolder applies these checks to the custom MCP pair (`ext_<prefix>Anon/Au
 ## ACA deploy-script facts (critical for scaffolding)
 Verified in the sample scripts — the wizard must account for these:
 - **RG, environment and region are HARDCODED constants inside each `deploy-aca*.ps1`**, not
-  parameters. Only `-ClientSecret`, `-Subscription`, `-AoaiRg`, `-AoaiAcc`, `-ReuseEnv` are params.
+  parameters. Only `-ClientSecret`, `-ClientSecretFromA365` (assisted mode: the script reads the secret with
+  `a365 setup blueprint --show-secret`, run from the agent folder), `-Subscription`, `-AoaiRg`, `-AoaiAcc`,
+  `-ReuseEnv` (OBO/S2S) are params.
   To honor the user's chosen names/region the script must be **rewritten from a template**, not just
   invoked with arguments.
   - [aca/obo/deploy-aca.ps1](../../../../aca/obo/deploy-aca.ps1) — `$RG`, `$REGIONS`, `$APP` constants.

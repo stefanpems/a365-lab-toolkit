@@ -101,7 +101,90 @@ function Assert-PacCli {
     return $p
 }
 
-# ---------------------------------------------------------------- Dataverse bot-id discovery (for removal)
+# ---------------------------------------------------------------- pac auth: one profile per tenant
+# pac has ONE machine-wide ACTIVE profile, shared by every session on the machine. 'pac auth list' does not print the
+# tenant id, so a "-match <tenant>" test on it never matches (the old scripts then created another profile, flipping
+# the active one, or used whatever profile was active, possibly another tenant's). These helpers select the profile of
+# the TARGET tenant explicitly (named 'mcs-<first 8 chars of the tenant id>', created with an interactive sign-in when
+# missing), verify it with 'pac auth who', and give back the previously active profile so the caller can restore it.
+function Get-McsPacActiveProfile {
+    param([Parameter(Mandatory)][string]$Pac)
+    $w = (& $Pac auth who) 2>$null | Out-String
+    $name = if ($w -match '(?m)^\s*Name:\s*(\S+)') { $Matches[1] } else { $null }
+    $tid = if ($w -match '(?m)^\s*Tenant Id:\s*([0-9a-fA-F-]{36})') { $Matches[1] } else { $null }
+    [pscustomobject]@{ name = $name; tenantId = $tid }
+}
+function Use-McsPacProfile {
+    param([Parameter(Mandatory)][string]$Pac, [Parameter(Mandatory)][string]$Tenant, [string]$Purpose = 'target')
+    $prev = Get-McsPacActiveProfile -Pac $Pac
+    $name = "mcs-$($Tenant.Substring(0, [Math]::Min(8, $Tenant.Length)).ToLowerInvariant())"
+    $list = (& $Pac auth list) 2>$null | Out-String
+    if ($list -match "(?m)\s$([regex]::Escape($name))\s") {
+        & $Pac auth select --name $name | Out-Null
+    }
+    else {
+        Write-Host "" -ForegroundColor Yellow
+        Write-Host "=== INTERACTIVE SIGN-IN REQUIRED (pac / Power Platform) ===" -ForegroundColor Yellow
+        Write-Host "  A browser window opens to authenticate the Power Platform CLI to the $Purpose tenant ($Tenant)." -ForegroundColor Yellow
+        Write-Host "  -> Sign in as an ADMIN of THAT tenant. The profile '$name' is then reused silently by every later run." -ForegroundColor Yellow
+        & $Pac auth create --name $name --tenant $Tenant | Out-Null
+    }
+    $now = Get-McsPacActiveProfile -Pac $Pac
+    if ($now.tenantId -ne $Tenant) {
+        Restore-McsPacProfile -Pac $Pac -Previous $prev
+        throw "pac profile '$name' is on tenant '$($now.tenantId)', expected '$Tenant'. Delete it (pac auth delete --name $name) and retry."
+    }
+    Write-Host "  pac profile '$name' selected (tenant $Tenant)$(if ($prev.name -and $prev.name -ne $name) { "; the previously active profile '$($prev.name)' is restored at the end" })." -ForegroundColor DarkGray
+    return $prev
+}
+function Restore-McsPacProfile {
+    param([Parameter(Mandatory)][string]$Pac, $Previous)
+    if (-not $Previous -or -not $Previous.name) { return }
+    $cur = Get-McsPacActiveProfile -Pac $Pac
+    if ($cur.name -ne $Previous.name) { & $Pac auth select --name $Previous.name 2>$null | Out-Null }
+}
+
+# ---------------------------------------------------------------- Dataverse Web API (no pac auth)
+# Import path that never touches the machine-wide pac profile: the environment URL from the Power Platform admin API
+# and the solution import through the Dataverse Web API, both with az tokens of the CURRENT az context (the caller pins
+# the tenant; the Demo Builder uses a lab-private AZURE_CONFIG_DIR).
+function Get-McsEnvironmentInfo {
+    param([Parameter(Mandatory)][string]$EnvironmentId)
+    $t = az account get-access-token --resource 'https://service.powerapps.com/' --query accessToken -o tsv 2>$null
+    if (-not $t) { throw 'az could not get a Power Platform token: sign in to the target tenant with az first.' }
+    $e = Invoke-RestMethod -Headers @{ Authorization = "Bearer $t" } -Uri "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$EnvironmentId`?api-version=2021-04-01"
+    $url = [string]$e.properties.linkedEnvironmentMetadata.instanceUrl
+    [pscustomobject]@{ id = $e.name; displayName = $e.properties.displayName; orgUrl = $(if ($url) { $url.TrimEnd('/') + '/' } else { $null }); hasDataverse = [bool]$url }
+}
+function Test-McsPaygViaApi {
+    param([Parameter(Mandatory)][string]$EnvironmentId)
+    $t = az account get-access-token --resource 'https://api.powerplatform.com' --query accessToken -o tsv 2>$null
+    if (-not $t) { return $null }
+    $h = @{ Authorization = "Bearer $t" }
+    try {
+        foreach ($p in @((Invoke-RestMethod -Headers $h -Uri 'https://api.powerplatform.com/licensing/billingPolicies?api-version=2022-03-01-preview').value)) {
+            if ($p.status -ne 'Enabled') { continue }
+            $envs = (Invoke-RestMethod -Headers $h -Uri "https://api.powerplatform.com/licensing/billingPolicies/$($p.id)/environments?api-version=2022-03-01-preview").value
+            if (@($envs | Where-Object { $_.environmentId -eq $EnvironmentId }).Count) { return $true }
+        }
+        return $false
+    }
+    catch { return $null }
+}
+function Import-McsSolutionViaApi {
+    param([Parameter(Mandatory)][string]$OrgUrl, [Parameter(Mandatory)][string]$Zip)
+    $org = $OrgUrl.TrimEnd('/')
+    $tok = Get-McsDataverseToken -OrgUrl $org
+    if (-not $tok) { throw "az could not get a Dataverse token for $org (az must be signed in to the target tenant)." }
+    $h = @{ Authorization = "Bearer $tok"; Accept = 'application/json'; 'OData-MaxVersion' = '4.0'; 'OData-Version' = '4.0' }
+    $job = [guid]::NewGuid()
+    $body = @{ OverwriteUnmanagedCustomizations = $true; PublishWorkflows = $true; CustomizationFile = [Convert]::ToBase64String([IO.File]::ReadAllBytes($Zip)); ImportJobId = $job } | ConvertTo-Json
+    Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json' -Uri "$org/api/data/v9.2/ImportSolution" -Body $body -TimeoutSec 1800 | Out-Null
+    $ij = Invoke-RestMethod -Headers $h -Uri "$org/api/data/v9.2/importjobs($job)?`$select=progress,completedon,solutionname"
+    if ([double]$ij.progress -lt 100) { throw "ImportSolution job $job ended at $($ij.progress)% (see the import job in the environment)." }
+    Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json' -Uri "$org/api/data/v9.2/PublishAllXml" -Body '{}' -TimeoutSec 1800 | Out-Null
+    return $ij.solutionname
+}
 # Deleting a Copilot Studio AGENT needs its bot GUID (pac copilot-studio delete-copilot-agent --bot-id).
 # The bot GUID is per-environment (assigned on import), so it must be discovered at removal time. We query
 # the Dataverse `bots` table with an az-issued token (works when az is logged into the target tenant).

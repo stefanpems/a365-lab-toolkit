@@ -33,14 +33,10 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_mcs-common.ps1')
 $pac = Assert-PacCli
 
-if ($Tenant) {
-    $active = (& $pac auth list) 2>$null
-    # Create a target profile only if none is active for this tenant (idempotent; interactive sign-in).
-    if (-not ($active -match $Tenant)) {
-        Write-Host "A browser sign-in will open — sign in as an admin of tenant $Tenant." -ForegroundColor Yellow
-        & $pac auth create --name "mcs-target" --tenant $Tenant | Out-Null
-    }
-}
+# Select the target tenant's own pac profile; the previously active profile is restored at the end.
+$prevPac = if ($Tenant) { Use-McsPacProfile -Pac $pac -Tenant $Tenant -Purpose 'TARGET Copilot Studio' } else { $null }
+try {
+
 
 $key = ($Harness -replace '(?i)^MCS-', '').ToUpper()
 $result = [ordered]@{
@@ -99,3 +95,5 @@ Write-Host ("  RESULT: {0}" -f ($(if ($result.ok) { 'OK' } else { 'BLOCKED' })))
 
 $result
 if (-not $result.ok) { $global:LASTEXITCODE = 1 } else { $global:LASTEXITCODE = 0 }
+}
+finally { if ($prevPac) { Restore-McsPacProfile -Pac $pac -Previous $prevPac } }

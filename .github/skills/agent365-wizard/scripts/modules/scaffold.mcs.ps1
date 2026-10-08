@@ -48,11 +48,19 @@ function Invoke-ScaffoldMcsAgent {
     $sameType   = @($plan.agents | Where-Object { $_.type -eq $a.type })
     $ordinal    = ([Array]::IndexOf(@($sameType | ForEach-Object { $_.name }), $a.name)) + 1
     $solUnique  = if ($sameType.Count -gt 1) { "${prefixSlug}MCS${harness}${ordinal}" } else { "${prefixSlug}MCS${harness}" }
-    # BROWSER SIGN-IN gate (#2): make it explicit WHY a browser may open and WITH WHICH identity.
-    $nextCommands.Add("# BROWSER SIGN-IN (pac) for '$($a.name)': the import below authenticates to the TARGET Copilot Studio tenant ($tenant). A browser window opens ONLY when there is no valid pac profile for that tenant yet (typically just the FIRST MCS agent of the run, or after a profile expires); later imports reuse the profile SILENTLY. When it opens, sign in as an ADMIN of the TARGET Copilot Studio tenant (the Power Platform / Dataverse admin of env '$envId') -- NOT your Azure/corp account if they differ. This is expected, not an error.")
     # Optional free-text display name (agents[].displayName, e.g. a localized "Grants Desk – Pilot"); 'name' stays the structural id.
     $disp = if ($a.PSObject.Properties['displayName'] -and $a.displayName) { [string]$a.displayName } else { [string]$a.name }
+    if ($plan.solution.copilotStudio.importVia -eq 'dataverse-api') {
+        # Opt-in: import through the Dataverse Web API with the az tokens of the current az context; the machine-wide
+        # pac profile is never touched (parallel sessions). az must be signed in to the TARGET tenant.
+        $nextCommands.Add("# az must be signed in to the TARGET Copilot Studio tenant ($tenant) for the import below (Dataverse Web API: no pac sign-in, the machine-wide pac profile is not touched).")
+        $nextCommands.Add("pwsh -File `"$csScripts\New-McsAgent.ps1`" -Harness $($a.type) -DisplayName `"$disp`" -SolutionUniqueName `"$solUnique`" -Tenant `"$tenant`" -EnvironmentId `"$envId`" -IsolateSchemaName -InstallPac -UseDataverseApi$pubFlag   # transform base zip (display name '$disp', solution '$solUnique', UNIQUE bot schema) + import + publish through the Dataverse Web API")
+    }
+    else {
+    # BROWSER SIGN-IN gate (#2): make it explicit WHY a browser may open and WITH WHICH identity.
+    $nextCommands.Add("# BROWSER SIGN-IN (pac) for '$($a.name)': the import below authenticates to the TARGET Copilot Studio tenant ($tenant). A browser window opens ONLY when there is no valid pac profile for that tenant yet (typically just the FIRST MCS agent of the run, or after a profile expires); later imports reuse the profile SILENTLY. When it opens, sign in as an ADMIN of the TARGET Copilot Studio tenant (the Power Platform / Dataverse admin of env '$envId') -- NOT your Azure/corp account if they differ. This is expected, not an error.")
     $nextCommands.Add("pwsh -File `"$csScripts\New-McsAgent.ps1`" -Harness $($a.type) -DisplayName `"$disp`" -SolutionUniqueName `"$solUnique`" -Tenant `"$tenant`" -EnvironmentId `"$envId`" -IsolateSchemaName -InstallPac$pubFlag   # transform base zip (display name '$disp', solution '$solUnique', UNIQUE bot schema) + pac solution import --publish-changes (browser sign-in to the target tenant on first use)")
+    }
 
     # 3) Optional MCP tool integration via the A365 tool gateway (Entra client app + guided Copilot Studio step).
     if ($mcp) {

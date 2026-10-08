@@ -34,13 +34,10 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_mcs-common.ps1')
 $pac = Assert-PacCli
 
-if ($Tenant) {
-    $active = (& $pac auth list) 2>$null
-    if (-not ($active -match $Tenant)) {
-        Write-Host "A browser sign-in will open — sign in as an admin of tenant $Tenant." -ForegroundColor Yellow
-        & $pac auth create --name "mcs-target" --tenant $Tenant | Out-Null
-    }
-}
+# Select the target tenant's own pac profile; the previously active profile is restored at the end.
+$prevPac = if ($Tenant) { Use-McsPacProfile -Pac $pac -Tenant $Tenant -Purpose 'TARGET Copilot Studio' } else { $null }
+try {
+
 
 if (-not $EnvironmentUrl) {
     if (-not $EnvironmentId) { throw "Provide -EnvironmentUrl or -EnvironmentId." }
@@ -78,3 +75,5 @@ if ($SolutionUniqueName) {
 else {
     Write-Host "  No -SolutionUniqueName supplied: skipping solution delete. List with 'pac solution list --environment $EnvironmentUrl'." -ForegroundColor Yellow
 }
+}
+finally { if ($prevPac) { Restore-McsPacProfile -Pac $pac -Previous $prevPac } }

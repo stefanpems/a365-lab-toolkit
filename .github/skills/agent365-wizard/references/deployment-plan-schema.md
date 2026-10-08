@@ -48,7 +48,8 @@ gitignored.
     },
     "copilotStudio": {                    // REQUIRED when any MCS agent is planned (Copilot Studio target)
       "targetTenantId": "<guid>",         // the Copilot Studio target tenant (often NOT the az tenant; cross-tenant is the norm)
-      "targetEnvironmentId": "<guid>"     // the target PP environment GUID — REQUIRED for MCS-NH (must be PAYG + Dataverse + Copilot Studio); MCS-OH can use any Dataverse env
+      "targetEnvironmentId": "<guid>",    // the target PP environment GUID — REQUIRED for MCS-NH (must be PAYG + Dataverse + Copilot Studio); MCS-OH can use any Dataverse env
+      "importVia": "pac"                  // OPTIONAL — "pac" (default: pac solution import, interactive pac sign-in) | "dataverse-api" (New-McsAgent.ps1 -UseDataverseApi: az tokens, the machine-wide pac profile is never touched)
     }
   },
   "agents": [

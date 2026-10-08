@@ -36,6 +36,10 @@
 .PARAMETER AcaApp             (ACA only) container app name, to wire UI_ALLOWED_ORIGINS/UI_AUDIENCE.
 .PARAMETER AcaResourceGroup   (ACA only) container app RG.
 .PARAMETER WorkFolder         Local UI folder to stage config.js in before deploy. Default: the repo's ui/.
+.PARAMETER TabId              Tab id to replace instead of <typeShortId>-<labPrefix> (e.g. a tab the scaffolder created
+                              hidden in a LAB-OWNED config.js: 'obo', 's2s-1').
+.PARAMETER SpaAppId           SPA app id of the UI: also grant + admin-consent the SPA for the agent's scopes (ACA-S2S
+                              access_agent_as_user; Tools.ListInvoke.All of each BYO audience). Omit = unchanged behaviour.
 .PARAMETER NoDeploy           Build + validate the merged config.js but do not redeploy (dry preview).
 
 .EXAMPLE
@@ -62,6 +66,11 @@ param(
     [string]$AcaApp,
     [string]$AcaResourceGroup,
     [string]$WorkFolder,
+    # Tab id to replace (e.g. a tab scaffolded hidden in a lab-owned config.js: 'obo', 's2s-1'). Default <shortId>-<labPrefix>.
+    [string]$TabId,
+    # SPA app id of the UI: when given, the SPA is also granted + admin-consented for the agent's own delegated scopes
+    # (ACA-S2S access_agent_as_user; Tools.ListInvoke.All of each BYO audience), docs/setup-web-ui.md 6b/6c.
+    [string]$SpaAppId,
     [switch]$NoDeploy
 )
 
@@ -104,7 +113,7 @@ else {
 # --- Build + merge the ONE tab ---
 # InstanceSuffix (e.g. '-2') disambiguates one of N instances of the same type in a SHARED config.js; the
 # tab id becomes '<shortId><suffix>-<labPrefix>' and still ends '-<labPrefix>' so Remove-TabsByLab finds it.
-$tabIdOverride = if ($InstanceSuffix) { "$(Get-TabShortId -AgentType $AgentType)$InstanceSuffix-$LabPrefix" } else { $null }
+$tabIdOverride = if ($TabId) { $TabId } elseif ($InstanceSuffix) { "$(Get-TabShortId -AgentType $AgentType)$InstanceSuffix-$LabPrefix" } else { $null }
 $entry = New-TabEntry -AgentType $AgentType -Name $Name -LabPrefix $LabPrefix -TabId $tabIdOverride -ApiBase $ApiBase -S2sAppId $S2sAppId `
     -Endpoint $Endpoint -AgentName $AgentName -AnonAudience $AnonAudience -AuthAudience $AuthAudience
 # Multi-instance: keep the FH Invocations session prefix unique per instance too (mirrors scaffold.ui.ps1).
@@ -126,6 +135,14 @@ if ($LASTEXITCODE -ne 0) { throw "node --check failed on the merged config.js â€
 Write-Host "config.js validated (node --check)." -ForegroundColor Green
 
 if ($NoDeploy) { Write-Host "-NoDeploy: staged $cfgPath, skipping SWA deploy + tagging." -ForegroundColor Yellow; return }
+
+# --- SPA consent for the agent's own scopes (only with -SpaAppId) BEFORE the tab goes live ---
+if ($SpaAppId) {
+    if ($AgentType -eq 'ACA-S2S') { if (Grant-SpaDelegatedScope -SpaAppId $SpaAppId -ResourceAppId $S2sAppId -ScopeValue 'access_agent_as_user') { Write-Host "SPA granted + consented: api://$S2sAppId/access_agent_as_user." -ForegroundColor Green } }
+    foreach ($aud in @($AnonAudience, $AuthAudience | Where-Object { $_ })) {
+        if (Grant-SpaDelegatedScope -SpaAppId $SpaAppId -ResourceAppId $aud -ScopeValue 'Tools.ListInvoke.All') { Write-Host "SPA granted + consented: $aud/Tools.ListInvoke.All." -ForegroundColor Green }
+    }
+}
 
 # --- Redeploy the SPA (build-free static re-upload) ---
 Deploy-SwaContent -SwaName $swa.name -ResourceGroup $swa.resourceGroup -AppFolder $WorkFolder -Subscription $Subscription

@@ -54,10 +54,18 @@ for every MCS agent (captured from a source tenant; re-extract with `Export-McsB
   abort the in-flight import (the solution zip builds but the import does not land; re-run it alone). Wait
   for each import to fully return before the next command.
 - **First interactive sign-in is expected.** The FIRST MCS import of a run opens a browser to authenticate
-  pac to the TARGET tenant (profile `mcs-target`); later imports reuse it silently. Tell the user up-front
-  WHY the window opens and to sign in as an ADMIN of the target Copilot Studio tenant (not their Azure/corp
-  account if different). See `New-McsAgent.ps1` (it prints a clear banner and skips the prompt when a
-  matching profile already exists).
+  pac to the TARGET tenant (profile `mcs-<first 8 chars of the tenant id>`, one per tenant); later imports
+  reuse it silently. Tell the user up-front WHY the window opens and to sign in as an ADMIN of the target
+  Copilot Studio tenant (not their Azure/corp account if different).
+- **pac has ONE machine-wide active profile, shared by every session.** The scripts select the target
+  tenant's own profile explicitly (`Use-McsPacProfile`, verified with `pac auth who`, which prints the tenant
+  id; `pac auth list` does not, so the old `-match <tenant>` test never matched) and restore the previously
+  active profile at the end (`Restore-McsPacProfile`). Other sessions still see the switch while a script
+  runs: when they must not, import with **`New-McsAgent.ps1 -UseDataverseApi`** (plan:
+  `solution.copilotStudio.importVia = "dataverse-api"`, the Demo Builder sets it with a lab-private az
+  profile). It resolves the environment through the Power Platform admin API, checks the NH PAYG policy
+  through the licensing API and imports + publishes through the Dataverse Web API, all with az tokens of the
+  target tenant; pac is used only offline to pack the zip.
 
 ## Scripts (durable — do NOT regenerate agent code each run)
 All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.

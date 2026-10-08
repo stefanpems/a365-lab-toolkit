@@ -29,8 +29,12 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
 
 ## Flow
 1. Scaffold via the router: [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1).
-2. Run the printed next-commands: `a365 setup all --agent-name <name>` → the variant's
-   `deploy-aca*.ps1`. Auth to Azure OpenAI = Managed Identity (default) or API key (terminal only).
+2. Run the printed next-commands: `a365 setup all --agent-name <name>` (default naming; in `namingMode`
+   `custom` the scaffolder omits `--agent-name` so that a365 uses the plan's display names from the agent
+   folder's `a365.config.json`, after filling its `clientAppId` with
+   [Set-A365ClientAppId.ps1](../agent365-wizard/scripts/Set-A365ClientAppId.ps1)) → the variant's `deploy-aca*.ps1`
+   (`-ClientSecretFromA365` in `assisted` secret mode). Auth to Azure OpenAI = Managed Identity
+   (default) or API key (terminal only).
 3. Register the messaging endpoint after the container is up; verify `/api/health`.
 
 ## Known corrections (apply these)
@@ -87,11 +91,11 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
   `az containerapp show … --query "properties.template.containers[0].env"` points at the plan's account,
   not a prior one; `az containerapp update --set-env-vars AZURE_OPENAI_ENDPOINT=https://<acct>.openai.azure.com/
   AZURE_OPENAI_DEPLOYMENT=<deployment>` fixes a live container.
-- **AcrPull race on ACA-OBO's first deploy.** `deploy-aca.ps1` uses `az containerapp up`, which can
-  create the app before the system MI has AcrPull on the auto-created ACR → the first revision falls
-  back to `mcr.microsoft.com/k8se/quickstart` (health may 200 but it's the placeholder, not your agent).
-  The script now detects this and remediates (grant AcrPull + set the real image). S2S/DW use admin
-  registry creds and are unaffected.
+- **ACA-OBO deploy without `az containerapp up`** (2026-10). It used to create the app before the system MI
+  had AcrPull (first revision on `mcr.microsoft.com/k8se/quickstart`) and its build-log stream crashed with
+  cp1252 when the output was captured (no app, empty FQDN). `deploy-aca.ps1` now builds with
+  `az acr build --no-logs` and creates/updates the app pulling with its system identity (AcrPull granted),
+  like S2S/DW (which use admin registry creds); all three exit 1 on an empty FQDN.
 
 ## Tools
 The ACA turn path is **manifest-driven**, so attaching any Work IQ MCP works generically. Token/refresh

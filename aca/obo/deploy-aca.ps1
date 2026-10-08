@@ -8,6 +8,8 @@
 [CmdletBinding()]
 param(
     [string]$ClientSecret,
+    # Assisted secret handling: read the secret with 'a365 setup blueprint --show-secret' (run from the agent folder).
+    [switch]$ClientSecretFromA365,
     [string]$Subscription = $env:DEPLOY_SUB,
     [string]$AoaiRg       = $env:DEPLOY_AOAI_RG,
     [string]$AoaiAcc      = $env:DEPLOY_AOAI_ACC,
@@ -20,10 +22,16 @@ param(
     [switch]$ReuseEnv
 )
 $ErrorActionPreference = 'Stop'
+# Assisted secret handling: the value never reaches the console or a chat.
+if (-not $ClientSecret -and $ClientSecretFromA365) {
+    $a365Out = a365 setup blueprint --show-secret 2>&1 | Out-String
+    if ($a365Out -match 'Blueprint client secret:\s*(\S+)') { $ClientSecret = $Matches[1] }
+    else { Write-Error "Could not read the blueprint client secret with 'a365 setup blueprint --show-secret' (run this script from the agent folder, after 'a365 setup all')."; exit 1 }
+    $a365Out = $null
+}
 
-# Console UTF-8: avoids UnicodeEncodeError (cp1252) in the 'az acr build' / 'az containerapp up' log
-# stream. NB: still run this script RAW (never pipe through Select-Object/Out-String) — a caller-side
-# pipe reintroduces the colorama cp1252 crash that aborts container creation (empty FQDN).
+# Console UTF-8 for the az output. The image is built with 'az acr build --no-logs' (no log stream), so the script
+# is safe to run with its output captured (an agent's shell, a pipe or a file).
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
@@ -153,7 +161,6 @@ Get-Content env/.env.playground.user |
 if ($AOAI_ACC) { $m['AZURE_OPENAI_ENDPOINT'] = "https://$AOAI_ACC.openai.azure.com/" }
 
 # --- 5. Deploy to Azure Container Apps (build from the Dockerfile via ACR) ---
-Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
 
 # Base env vars. NB: do NOT set AZURE_OPENAI_API_KEY when the key is empty:
 # with Entra ID (key auth disabled) an empty string "" is interpreted by the
@@ -183,31 +190,42 @@ if ($m['SECRET_AZURE_OPENAI_API_KEY']) {
     $envVars += "AZURE_OPENAI_API_KEY=$($m['SECRET_AZURE_OPENAI_API_KEY'])"
 }
 
-az containerapp up `
-  --name $APP --resource-group $RG --location $LOC --environment $ENVNAME `
-  --subscription $SUB `
-  --source . --target-port 3978 --ingress external `
-  --env-vars @envVars
-
-# 'az containerapp up' can create the app before the system-assigned identity has AcrPull on the
-# auto-created ACR, leaving the first revision on the mcr.microsoft.com/k8se/quickstart placeholder.
-# Detect and remediate: grant AcrPull to the app identity and (re)set the real built image.
-$curImg = az containerapp show -n $APP -g $RG --query "properties.template.containers[0].image" -o tsv @SubArg 2>$null
-if ($curImg -like '*k8se/quickstart*') {
-    Write-Host "First revision fell back to the quickstart image; granting AcrPull and setting the built image..." -ForegroundColor Yellow
-    $acrName = az acr list -g $RG --query "[0].name" -o tsv @SubArg
-    if ($acrName) {
-        $miPrincipal = az containerapp identity assign -n $APP -g $RG --system-assigned --query principalId -o tsv @SubArg
-        $acrId = az acr show -n $acrName --query id -o tsv @SubArg
-        az role assignment create --assignee-object-id $miPrincipal --assignee-principal-type ServicePrincipal --role AcrPull --scope $acrId @SubArg 2>$null | Out-Null
-        $realTag = az acr repository show-tags -n $acrName --repository $APP --orderby time_desc --top 1 -o tsv @SubArg 2>$null
-        if ($realTag) {
-            az containerapp registry set -n $APP -g $RG --server "$acrName.azurecr.io" --identity system @SubArg 2>$null | Out-Null
-            az containerapp update -n $APP -g $RG --image "$acrName.azurecr.io/$APP`:$realTag" @SubArg | Out-Null
-            Write-Host "Set image $acrName.azurecr.io/$APP`:$realTag with AcrPull on the managed identity." -ForegroundColor Green
-        }
-    }
+# --- 5. Build the image in the cloud and create/update the Container App ---
+# No 'az containerapp up': it streams the build log, which crashes with UnicodeEncodeError (colorama/cp1252)
+# whenever the output is captured (an agent's shell, a pipe, a file) and then the app is never created. The
+# image is built server-side with 'az acr build --no-logs' (as the S2S/DW scripts do) and the app pulls it
+# with its system-assigned managed identity (as 'az containerapp up' configured it on earlier deploys).
+$acrName = az acr list -g $RG --query "[0].name" -o tsv @SubArg 2>$null
+if (-not $acrName) {
+    $acrName = "afoboacr" + (Get-Random -Minimum 10000 -Maximum 99999)
+    Write-Host "Creating ACR '$acrName'..." -ForegroundColor Cyan
+    az acr create -n $acrName -g $RG -l $LOC --sku Basic @SubArg | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Error "az acr create '$acrName' failed."; exit 1 }
 }
+$acrServer = az acr show -n $acrName -g $RG --query loginServer -o tsv @SubArg
+$IMAGE = "${APP}:$(Get-Date -Format 'yyyyMMddHHmmss')"
+Write-Host "Building image '$IMAGE' on ACR '$acrName' (cloud build, --no-logs)..." -ForegroundColor Cyan
+az acr build -r $acrName -t $IMAGE --no-logs . @SubArg | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Error "az acr build failed (see: az acr task list-runs -r $acrName)."; exit 1 }
+
+Write-Host "Deploying Container App '$APP' in '$LOC'..." -ForegroundColor Cyan
+$appExists = az containerapp show -n $APP -g $RG --query name -o tsv @SubArg 2>$null
+if ($appExists) {
+    $miPrincipal = az containerapp identity assign -n $APP -g $RG --system-assigned --query principalId -o tsv @SubArg
+    $acrId = az acr show -n $acrName --query id -o tsv @SubArg
+    az role assignment create --assignee-object-id $miPrincipal --assignee-principal-type ServicePrincipal --role AcrPull --scope $acrId @SubArg 2>$null | Out-Null
+    az containerapp registry set -n $APP -g $RG --server $acrServer --identity system @SubArg 2>$null | Out-Null
+    az containerapp update -n $APP -g $RG --image "$acrServer/$IMAGE" --set-env-vars @envVars @SubArg | Out-Null
+}
+else {
+    az containerapp create `
+        --name $APP --resource-group $RG --environment $ENVNAME `
+        --image "$acrServer/$IMAGE" `
+        --registry-server $acrServer --registry-identity system `
+        --target-port 3978 --ingress external `
+        --env-vars @envVars @SubArg | Out-Null
+}
+if ($LASTEXITCODE -ne 0) { Write-Error "Container App '$APP' create/update failed."; exit 1 }
 
 # --- 5b. (Entra ID auth for Azure OpenAI) Managed identity + role ---
 # Needed when the subscription disables key auth (Azure Policy disableLocalAuth=true):
@@ -228,6 +246,7 @@ if ($AOAI_ACC -and $AOAI_RG) {
 
 # --- 6. Output URL + next step ---
 $fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv @SubArg
+if (-not $fqdn) { Write-Error "Container App '$APP' has no ingress FQDN: the deploy did not complete (check 'az containerapp show -n $APP -g $RG')."; exit 1 }
 Write-Host ""
 Write-Host "Deploy complete." -ForegroundColor Green
 Write-Host "Messaging endpoint: https://$fqdn/api/messages"

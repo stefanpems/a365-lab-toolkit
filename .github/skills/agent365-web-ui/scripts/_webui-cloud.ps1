@@ -116,3 +116,26 @@ function Add-AcaCorsOrigin {
     az containerapp update -n $App -g $ResourceGroup --subscription $Subscription --set-env-vars @envArgs -o none 2>$null
     return ($LASTEXITCODE -eq 0)
 }
+
+# Grant the SPA app a delegated scope of a resource API and admin-consent it tenant-wide (docs/setup-web-ui.md 6b/6c):
+# the S2S blueprint's access_agent_as_user, a BYO tool's Tools.ListInvoke.All. Idempotent (an existing permission or
+# grant is kept). Retries while a just-created scope/service principal propagates. Returns $true when consented.
+function Grant-SpaDelegatedScope {
+    param([Parameter(Mandatory)][string]$SpaAppId, [Parameter(Mandatory)][string]$ResourceAppId, [Parameter(Mandatory)][string]$ScopeValue, [int]$Tries = 6)
+    $scopeId = $null
+    for ($i = 0; $i -lt $Tries -and -not $scopeId; $i++) {
+        $scopeId = az ad sp show --id $ResourceAppId --query "oauth2PermissionScopes[?value=='$ScopeValue'].id | [0]" -o tsv 2>$null
+        if (-not $scopeId) { $scopeId = az ad app show --id $ResourceAppId --query "api.oauth2PermissionScopes[?value=='$ScopeValue'].id | [0]" -o tsv 2>$null }
+        if (-not $scopeId) { Start-Sleep -Seconds 10 }
+    }
+    if (-not $scopeId) { Write-Host "  WARN: scope '$ScopeValue' not found on ${ResourceAppId}: SPA grant skipped." -ForegroundColor Yellow; return $false }
+    $has = az ad app permission list --id $SpaAppId --query "[?resourceAppId=='$ResourceAppId'].resourceAccess[].id" -o tsv 2>$null
+    if (@($has) -notcontains $scopeId) { az ad app permission add --id $SpaAppId --api $ResourceAppId --api-permissions "$scopeId=Scope" -o none 2>$null }
+    for ($i = 0; $i -lt 3; $i++) {
+        az ad app permission admin-consent --id $SpaAppId -o none 2>$null
+        if ($LASTEXITCODE -eq 0) { return $true }
+        Start-Sleep -Seconds 15
+    }
+    Write-Host "  WARN: admin consent of the SPA failed (run as a tenant admin: az ad app permission admin-consent --id $SpaAppId)." -ForegroundColor Yellow
+    return $false
+}

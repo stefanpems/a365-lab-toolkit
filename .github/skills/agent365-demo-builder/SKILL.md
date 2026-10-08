@@ -47,8 +47,9 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
   - The scripts record their own manual actions: `Test-DemoPrereqs.ps1` (one row with the MANUAL checks),
     `Set-DemoIdentities.ps1` (Purview role groups), `Publish-DemoKnowledge.ps1` (personal file),
     `New-DemoMcpRegistration.ps1` (the BLOCKING approval row, DONE when no long-lived server is pending; the per-user
-    connection URLs).
-  - The agent adds ONLY what no script knows (for example a Lab Builder package to upload, deferred agent tests, a
+    connection URLs), `New-DemoLabPlan.ps1` (row `agent-smoke-tests`: one test prompt per lab-built agent on its
+    surface, because the Lab Builder per-agent test gate is not a blocker in a demo build).
+  - The agent adds ONLY what no script knows (for example a Lab Builder package to upload, a
     check found during the build) with `Set-DemoUserAction.ps1 -Prefix <p> -Key <key> -Action ... -Where ...
     -NeededBy ... [-Blocking]`, and marks such rows with `-Status DONE` after the verification. Never edit the Markdown
     file by hand; `Set-DemoUserAction.ps1 -List` prints the register.
@@ -122,7 +123,7 @@ Start at least **five days** before the first event or rehearsal that uses the l
 |---|---|---|
 | 0. Interview | runtime-model gate; **language**; tenant + subscription (confirm, pin, assert, as the Lab Builder does); **lab-private az profile** (recommended when other sessions run on the machine: `-IsolatedAzProfile`, then the interactive `az login` in that profile); prefix (`^[a-z][a-z0-9]{2,8}$`; the bootstrap gate refuses a prefix contained in foreign resource group names), domain, admin UPN, region, Copilot Studio environments (pay-as-you-go and default), Foundry mode, license SKUs (a bundle `SKU1+SKU2+...` when the tenant has no single SKU for a role; `-TeamsForAllPersonas`) → `New-DemoConfig.ps1` | agent + user |
 | 1. bootstrap | license gate and prerequisites (operator roles, prefix collision); pack and locale check; Python packages; Foundry project (FD-only packs); users, licenses (bundles, conflicting mailbox plans disabled), roles (the operator's attribute roles too), managers, groups; photos (lab or shared folder, missing = a user action) | scripts |
-| 2. setup | knowledge (build, publish); demo MCP backends; registrations; **admin approval of the demo MCP servers (BLOCKING: the runner stops there)**; agents through the Lab Builder engine (plan, scaffold, then a Lab Builder **resume** of the prefix; the runner stops there too; the agent outside the plan uses `outside-plan.json`); Azure OpenAI sizing; governance by script; cards and run of show | scripts + agent |
+| 2. setup | knowledge (build, publish); demo MCP backends; registrations (automatic: `-Run` answers the a365 prompt and confirms); **admin approval of the demo MCP servers (BLOCKING: the runner stops there)**; agents through the Lab Builder engine (plan, scaffold, then a Lab Builder **resume** of the prefix; the runner stops there too; the agent outside the plan uses `outside-plan.json`); Azure OpenAI sizing; governance by script; cards and run of show | scripts + agent |
 | 3. interactive | per-user connection URLs BEFORE the tests, the portal cards (Copilot Studio, Agent Builder agents created by their personas, Digital Worker instance created from Teams, Foundry, Entra, Purview, Defender, admin center), identities refresh, the test hand-out, the pre-flight | user + personas, verified by script |
 | 4. use | the demo itself, outside this agent: [agent365-demo-guide](../agent365-demo-guide/SKILL.md) | presenters |
 | 5. restore | pre-flight, reset of what the demos change (owners, blocks, assignments, the MCP pool; leavers recreated and deleted again), manual resets: [agent365-demo-reset](../agent365-demo-reset/SKILL.md) | scripts + user |

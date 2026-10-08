@@ -34,7 +34,7 @@ Always write **in English** in every file, log and command you persist. Reply in
   resource group the lab did not create).
 - **Work by phases** with `Invoke-DemoPhase.ps1` (bootstrap, setup, interactive, use, restore, teardown; see the
   skill): dry run first, then `-Apply`; confirm manual steps with `-Done <step>`; `-Phase status` is the progress.
-  An `-Apply` run STOPS at a blocking step (the registration of each demo MCP server, their admin approval, the
+  An `-Apply` run registers the demo MCP servers by itself, then STOPS at a blocking step (their admin approval, the
   Lab Builder work of the `agents` step) and prints how to resume (`-Done <step>`, then `-From <next step>`).
 - **Use the interactive questions tool** for every choice (pack, language, prefix, environments, Foundry mode, gates),
   one clear question at a time; prefer choices discovered from the tenant or the pack over free text.
@@ -56,11 +56,16 @@ Always write **in English** in every file, log and command you persist. Reply in
   -OperatorSlots` to check that the file is complete.
 - **Actions that a demo shows are done by the story persona in the portal** (approvals, blocks, audit trail); you only
   verify them by read-back. A preparation step that is itself a demo moment is done live, not during the build.
-- **Terminals that ask for input** (the `a365` registration `Proceed? (y/N)`, sign-ins, secrets): follow the Lab
-  Builder protocol "When a terminal blocks on input": give the user the exact command to run in a real terminal.
+- **Terminals that ask for input** (sign-ins, secrets): follow the Lab Builder protocol "When a terminal blocks on
+  input". The `a365` registration prompt `Proceed? (y/N)` is answered by the setup step itself
+  (`New-DemoMcpRegistration.ps1 -Register -Run` pipes `y`, logs to `mcp-registration/register-<name>.log` and runs
+  `-Action Confirm`); without `-Run` it prints the command to run.
 - **Never duplicate the Lab Builder.** For agents, run `New-DemoLabPlan.ps1 -Scaffold` and continue as a Lab Builder
-  resume of the prefix; for teardown hand over to the [Lab Cleaner](./lab-cleaner.agent.md); for state reports to the
-  [Lab Reporter](./lab-reporter.agent.md).
+  resume of the prefix. Its per-agent "Test now / Continue" gate is not a blocker in a demo build: continue, the
+  smoke test of every agent is the register row `agent-smoke-tests` written by `New-DemoLabPlan.ps1` (agent, variant
+  and test surface). For teardown hand over to the [Lab Cleaner](./lab-cleaner.agent.md); for state reports to the
+  [Lab Reporter](./lab-reporter.agent.md). In `assisted` secret mode run the ACA deploy scripts with
+  `-ClientSecretFromA365` (no ad-hoc parsing of the secret).
 
 ## Progress and resume
 - The progress of the phases lives in `generated/<prefix>/demo/state.json` (`Invoke-DemoPhase.ps1 -Prefix <p>` shows

@@ -29,6 +29,8 @@
   the id once from an OBO agent (ask it: "Give me the Power Platform setup URL for the ext_<Name>Anon
   server" and copy the environmentName= value) and pass it here. It is then cached per tenant under
   %LOCALAPPDATA%\a365-lab\pp-compliant-env.<tenantId>.txt and reused automatically on later runs.
+  Without it, the script falls back to scanning the environments: a scan result is printed as UNVERIFIED
+  and never cached (the ext_ connectors are visible in every environment).
 .EXAMPLE
   .\print-connection-urls.ps1 -Name a09081
 .EXAMPLE
@@ -74,8 +76,13 @@ $tenantId  = (az account show --query tenantId -o tsv 2>$null)
 $cacheFile = if ($tenantId) { Join-Path $cacheDir "pp-compliant-env.$tenantId.txt" } else { $null }
 
 $apis = @()
+# Where the env id comes from: 'param' (given by the user, from an agent's setup URL = verified), 'cache' (a value
+# that was given before), 'scan' (first non-Default environment where the connectors are VISIBLE - NOT verified:
+# ext_ connectors are visible in every environment, so a scan can return an ordinary environment).
+$source = $null
 if ($EnvironmentId) {
     $apis = Get-Apis $EnvironmentId
+    $source = 'param'
 } else {
     # 1) Prefer the per-tenant cache: the Compliant Container env id is stable per tenant and the
     #    environment-listing APIs don't return it, so the cache is the reliable fast path.
@@ -83,7 +90,7 @@ if ($EnvironmentId) {
         $cand = (Get-Content -LiteralPath $cacheFile -Raw).Trim()
         if ($cand) {
             $a = Get-Apis $cand
-            if (Test-Hit $a) { $EnvironmentId = $cand; $apis = $a }
+            if (Test-Hit $a) { $EnvironmentId = $cand; $apis = $a; $source = 'cache' }
         }
     }
     # 2) Otherwise scan environments, EXCLUDING the tenant Default: 'shared_' custom connectors are
@@ -95,7 +102,7 @@ if ($EnvironmentId) {
         foreach ($e in $envs.value) {
             if ($e.name -like 'Default-*') { continue }
             $a = Get-Apis $e.name
-            if (Test-Hit $a) { $EnvironmentId = $e.name; $apis = $a; break }
+            if (Test-Hit $a) { $EnvironmentId = $e.name; $apis = $a; $source = 'scan'; break }
         }
     }
     if (-not $EnvironmentId) {
@@ -112,12 +119,18 @@ Obtain the environment id ONCE and re-run with -EnvironmentId (it is then cached
     }
 }
 
-# Cache the resolved env id per tenant so later runs/agents resolve it without -EnvironmentId.
-if ($EnvironmentId -and $cacheFile -and (Test-Hit $apis)) {
+# Cache ONLY an env id given with -EnvironmentId (taken from an agent's setup URL): a scan result is a guess and,
+# once cached, would be reused silently by every later run and lab in the tenant.
+if ($source -eq 'param' -and $cacheFile -and (Test-Hit $apis)) {
     try { New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null; Set-Content -LiteralPath $cacheFile -Value $EnvironmentId } catch { }
 }
 
-Write-Host "Power Platform environment: $EnvironmentId" -ForegroundColor Cyan
+Write-Host "Power Platform environment: $EnvironmentId ($source)" -ForegroundColor Cyan
+if ($source -eq 'scan') {
+    Write-Warning ("UNVERIFIED environment: '$EnvironmentId' was found by scanning, and ext_ connectors are visible in every environment, so it may not be the hidden 'Compliant Container' (not cached). " +
+        "If the URL below shows no connector or the connection fails, ask an OBO agent that has the server attached: 'Give me the Power Platform setup URL for the $($targets[0].server) server', " +
+        "copy environmentName=<ENV-ID> and re-run with -EnvironmentId <ENV-ID> (that value is cached per tenant).")
+}
 Write-Host "Give the user $(if (-not $Server.Count) { 'BOTH URLs' } elseif ($targets.Count -gt 1) { 'ALL the URLs' } else { 'the URL' }) below - each ext_ server needs its OWN one-time connection:" -ForegroundColor Cyan
 $found = @()
 foreach ($t in $targets) {
@@ -134,7 +147,7 @@ foreach ($t in $targets) {
     Write-Host ""
     Write-Host "  $($t.label) ($($c.properties.displayName), $($t.kind)):" -ForegroundColor Green
     Write-Host "    $url"
-    $found += [pscustomobject]@{ server = $t.server; connectorId = $connectorId; environmentId = $EnvironmentId; url = $url }
+    $found += [pscustomobject]@{ server = $t.server; connectorId = $connectorId; environmentId = $EnvironmentId; url = $url; verified = ($source -ne 'scan'); source = $source }
 }
 Write-Host ""
 Write-Host "Fallback (lists every connector needing a connection): https://make.powerapps.com/connectionsMcp?environmentName=$EnvironmentId"

@@ -73,7 +73,9 @@ writes `generated/<name>-ui/config.js` with **zero tabs** and prints the SWA nex
 1. **Create the SWA** (`az staticwebapp create -n <name>-ui -g <name>-ui-rg -l <swaRegion> --sku Free
    --tags a365component=web-ui`) and the **SPA app registration** (redirect URIs `https://<swa-host>` +
    `http://localhost:3000`; delegated Graph OIDC + the chosen scopes; admin-consent AllPrincipals) per
-   [docs/setup-web-ui.md](../../docs/setup-web-ui.md) §2–§6.
+   [docs/setup-web-ui.md](../../docs/setup-web-ui.md) §2–§6. Scripted (also step 2 and the tag of step 3):
+   `.github/skills/agent365-web-ui/scripts/New-WebUi.ps1 -Name <name>-ui -SpaAppName <name>-spa -Standalone
+   -Subscription <sub> -TenantId <tenant> -UiFolder generated/<name>-ui [-Mail] [-Foundry]` (idempotent, `-WhatIf`).
 2. **Deploy the shell** (empty `config.js`) with `StaticSitesClient.exe` from the repo root.
 3. ⛔ **Ensure the component tag is present.** If you created the SWA without `--tags`, run
    `.github/skills/agent365-wizard/scripts/Set-ComponentTags.ps1 -SwaName <name>-ui -Subscription <sub>

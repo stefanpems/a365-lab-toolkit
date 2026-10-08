@@ -7,7 +7,8 @@
   The a365 CLI asks 'Proceed with registration? (y/N)' and needs a real terminal, so this script never registers by
   itself: it checks everything, writes the payload and prints the exact command to run. Actions:
     Status                                 pack validation, instances in state.json, ext_ servers seen in the tenant
-    Register -Server <key> [-ServerName n] long-lived server (records, companies): checks + payload + command
+    Register -Server <key> [-ServerName n] long-lived server (records, companies): checks + payload + command;
+                                           -Run also registers it (pipes 'y' to the a365 prompt) and runs Confirm
     Register -Role live|rehearsal|spare    reserve-name pool: next free <base><NN>, checks + payload + command
     Confirm  -Name <n>                     after 'registered successfully': backing apps + approval consents
                                            (custom-mcp/preempt-proxy-consents.ps1 -Server), BYO audience -> state
@@ -36,6 +37,7 @@ param(
     [string]$Name,
     [switch]$All,
     [switch]$Confirmed,
+    [switch]$Run,
     [string]$EnvironmentId
 )
 $ErrorActionPreference = 'Stop'
@@ -89,7 +91,7 @@ function Update-ConnectionsAction {
             $s = $state.mcp.servers[$k]
             if (-not $s.connectionUrl -or $s.status -ne 'approved') { continue }
             $users = @(Get-ConnectionUsers $k | ForEach-Object { "$(Get-DemoPersonaAlias $LOC $_)@$($cfg.domain)" })
-            "$($s.name) -> $(if ($users.Count) { $users -join ', ' } else { 'the testers of the agents that use it' }): $($s.connectionUrl)"
+            "$($s.name) -> $(if ($users.Count) { $users -join ', ' } else { 'the testers of the agents that use it' }): $($s.connectionUrl)$(if (-not $s.connectionVerified) { ' [environment UNVERIFIED: found by scanning]' })"
         })
     if (-not $parts.Count) { return }
     $null = Set-DemoUserAction -Prefix $Prefix -Key 'mcp-connections' -Action "One-time Power Platform connection per demo MCP server, each user signed in as themselves: $($parts -join ' ; ')" `
@@ -188,7 +190,24 @@ if ($Action -eq 'Register') {
     $conn = Get-ExtMcpProxyConnectorId -Name $cand
     Write-DemoLog $Prefix "MCP payload ready: $cand ($(if ($isPool) { "pool, role $Role" } else { 'long-lived' }); name $($cand.Length) chars, proxy connector $($conn.Length) chars; backend tools [$($declared -join ', ')] match)"
     Write-Host ''
-    Write-Host 'Run this in a REAL terminal (the CLI asks "Proceed with registration? (y/N)": answer y; do not pipe the command):' -ForegroundColor Cyan
+    if ($Run) {
+        # The CLI prompt 'Proceed with registration? (y/N)' reads stdin: piping 'y' answers it (verified 07/10). The
+        # registration runs in the az context of this process (lab-private profile when configured).
+        $log = Join-Path $regDir "register-$cand.log"
+        Write-DemoLog $Prefix "Registering $cand with the a365 CLI (answer y piped; log $log)"
+        Push-Location $regDir
+        try { 'y' | a365 develop-mcp register-external-mcp-server -f "register-$cand.json" 2>&1 | Tee-Object -FilePath $log | Out-Null }
+        finally { Pop-Location }
+        $text = if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Raw } else { '' }
+        if ($text -notmatch 'has been registered successfully') {
+            Write-DemoLog $Prefix "Registration of $cand did not report success (see $log). The name may stay reserved: run Register again (the pool takes the next number; a long-lived server needs -ServerName)." 'ERROR'
+            exit 1
+        }
+        Write-DemoLog $Prefix "$cand registered by the a365 CLI: confirming (backing apps, consents, BYO audience)"
+        pwsh -NoProfile -File $PSCommandPath -Prefix $Prefix -Action Confirm -Name $cand
+        exit $LASTEXITCODE
+    }
+    Write-Host 'Run this in a terminal (the CLI asks "Proceed with registration? (y/N)": answer y), or re-run this script with -Run:' -ForegroundColor Cyan
     Write-Host "  cd `"$regDir`"; a365 develop-mcp register-external-mcp-server -f `"register-$cand.json`""
     Write-Host "When it prints 'has been registered successfully':  New-DemoMcpRegistration.ps1 -Prefix $Prefix -Action Confirm -Name $cand"
     Write-Host 'If it fails, the name may stay reserved: run Register again (the pool takes the next number; a long-lived server needs -ServerName).'
@@ -276,7 +295,7 @@ if ($Action -eq 'Urls') {
     }
     foreach ($u in $urls) {
         $e = Find-Instance $u.server
-        $e.connectionUrl = $u.url; $state.mcp['environmentId'] = $u.environmentId
+        $e.connectionUrl = $u.url; $e.connectionVerified = [bool]($u.PSObject.Properties['verified'] -and $u.verified); $state.mcp['environmentId'] = $u.environmentId
         $users = @(Get-ConnectionUsers $e.key)
         Write-Host ("{0}: every user below opens it ONCE, signed in as themselves, and creates the connection BEFORE the tests:" -f $u.server) -ForegroundColor Green
         Write-Host "  $($u.url)"

@@ -30,7 +30,7 @@
   a single query parameter (no '&') for the same reason.
 
 .PARAMETER Prefix        The solution prefix (lab name), e.g. zzrigel.
-.PARAMETER Subscription  Target subscription id (pins the az context).
+.PARAMETER Subscription  Target subscription id (pins the az context). Default: the plan's solution.subscriptionId.
 .PARAMETER TenantId      Expected tenant id (the script aborts on a mismatch — az ad / Graph ignore
                          --subscription and use the active account, which a parallel session can flip).
 .PARAMETER PlanPath      Optional path to the plan JSON. Default: generated/<prefix>/a365-deployment-plan.json.
@@ -42,7 +42,8 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory)][string]$Prefix,
-    [Parameter(Mandatory)][string]$Subscription,
+    # Optional: defaults to the plan's solution.subscriptionId (and -TenantId to solution.tenantId).
+    [string]$Subscription,
     [string]$TenantId,
     [string]$PlanPath
 )
@@ -76,6 +77,11 @@ if ($plan -and (@($plan.agents).Count -eq 0)) {
     Write-Host "Plan '$PlanPath' has no agents -> STANDALONE instance (web UI / custom MCP). Set-LabTags stamps the lab-ownership tag a365lab, which must NEVER be applied to a standalone instance. Nothing tagged (use Set-ComponentTags.ps1 for a365component)." -ForegroundColor Yellow
     exit 0
 }
+
+# Subscription/tenant default to the plan (a lab is always tagged in the subscription it was planned for).
+if (-not $Subscription -and $plan -and $plan.solution.subscriptionId) { $Subscription = [string]$plan.solution.subscriptionId }
+if (-not $TenantId -and $plan -and $plan.solution.tenantId) { $TenantId = [string]$plan.solution.tenantId }
+if (-not $Subscription) { throw 'Pass -Subscription <id> (no plan with solution.subscriptionId was found).' }
 
 # ---------------------------------------------------------------------------
 # Context: pin the subscription and verify the tenant.
@@ -236,8 +242,8 @@ if ($plan -and @($plan.agents | Where-Object { $_.type -in @('FD-OBO', 'FD-S2S')
 Write-Host ""
 Write-Host "Tagging summary for lab '$Prefix':" -ForegroundColor Green
 foreach ($line in $summary) { Write-Host "  $line" }
-$tagged = @($summary | Where-Object { $_ -match 'TAGGED' }).Count
-$errs   = @($summary | Where-Object { $_ -match 'ERROR' }).Count
+$tagged = @($summary | Where-Object { $_ -cmatch '\bTAGGED\b' }).Count
+$errs   = @($summary | Where-Object { $_ -cmatch '\bERROR\b' }).Count
 Write-Host ""
 Write-Host "  $tagged newly tagged, $errs error(s). Re-run any time — tagging is idempotent." -ForegroundColor DarkGray
 if ($errs -gt 0) { exit 1 }

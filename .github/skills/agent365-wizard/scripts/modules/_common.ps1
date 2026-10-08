@@ -197,6 +197,16 @@ function Get-FoundryAccessGrants {
 # When the block is ABSENT the legacy per-agent behaviour is unchanged (each agent uses its own a.ai).
 
 # Resolve the effective Azure OpenAI target for one ACA agent from solution.azureOpenAI (fallback = a.ai).
+# ' --agent-name "<name>"' for the a365 commands the scaffolder emits (setup all, publish, setup permissions mcp), or ''.
+# '--agent-name' makes a365 IGNORE a365.config.json and derive "<name> Blueprint" / "<name> Identity" / "<name> Agent".
+# Default naming: those derived names ARE the plan's names, so the switch is kept (byte-identical output). Custom
+# naming (namingMode custom, e.g. the Demo Builder's localized names): the commands run FROM the agent folder, whose
+# a365.config.json carries plan.agents[].displayNames, so the switch is omitted and the custom names are used.
+function Get-A365AgentNameArg($plan, $a) {
+    if ($plan.solution.namingMode -eq 'custom') { return '' }
+    return " --agent-name `"$($a.name)`""
+}
+
 function Resolve-AoaiTarget {
     param($plan, $a)
     $t = [ordered]@{

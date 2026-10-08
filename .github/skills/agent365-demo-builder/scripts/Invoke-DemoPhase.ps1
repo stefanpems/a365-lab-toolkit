@@ -58,11 +58,12 @@ $steps.Add((New-Step 'setup' 'knowledge-build' 'Fictional documents in the demo 
 $steps.Add((New-Step 'setup' 'knowledge-publish' 'SharePoint library of the knowledge' 'auto' (Join-Path $PSScriptRoot 'Publish-DemoKnowledge.ps1') $P ($P + '-WhatIf') ''))
 $steps.Add((New-Step 'setup' 'mcp-deploy' 'Demo MCP backends (Container Apps)' 'auto' (Join-Path $PSScriptRoot 'Deploy-DemoMcp.ps1') $P ($P + '-WhatIf') ''))
 foreach ($k in @($pack.mcp.longLived | ForEach-Object { [string]$_.key })) {
-    $steps.Add((New-Step 'setup' "mcp-register-$k" "Registration payload of the '$k' server" 'terminal' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Register', '-Server', $k)) ($P + @('-Action', 'Status')) "run the printed a365 command (answer y; piping `"y`" into it works), then New-DemoMcpRegistration.ps1 -Action Confirm -Name <server>"))
+    # -Run: registers with the a365 CLI (the 'y' of its prompt is piped) and confirms (backing apps, consents, audience).
+    $steps.Add((New-Step 'setup' "mcp-register-$k" "Registration of the '$k' server (a365 CLI + confirm)" 'auto' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Register', '-Server', $k, '-Run')) ($P + @('-Action', 'Status')) 'on failure the name may stay reserved: re-run with -ServerName <another ext_ name>'))
 }
 # The admin approval gates the agents: an ext_ tool cannot be attached to an agent before it (was in 'interactive').
 $steps.Add((New-Step 'setup' 'mcp-approve' 'Registered demo MCP servers: admin approval (BLOCKING before the agents)' 'manual' (Join-Path $PSScriptRoot 'New-DemoMcpRegistration.ps1') ($P + @('-Action', 'Status')) ($P + @('-Action', 'Status')) 'per server: the admin approves it in the admin center (allow pop-ups; the live pool instance stays pending), then -Action Approved -Name <n>'))
-$steps.Add((New-Step 'setup' 'agents' 'Lab Builder plan and scaffold of the agents' 'agent' (Join-Path $PSScriptRoot 'New-DemoLabPlan.ps1') ($P + '-Scaffold') ($P + '-ValidateOnly') "then continue exactly as a Lab Builder 'resume $Prefix' (deploy ordering, test gate after each agent)"))
+$steps.Add((New-Step 'setup' 'agents' 'Lab Builder plan and scaffold of the agents' 'agent' (Join-Path $PSScriptRoot 'New-DemoLabPlan.ps1') ($P + '-Scaffold') ($P + '-ValidateOnly') "then continue as a Lab Builder 'resume $Prefix' (deploy ordering); its per-agent test gate is deferred to the register row agent-smoke-tests"))
 $steps.Add((New-Step 'setup' 'aoai-capacity' 'Size the shared Azure OpenAI deployment for the demo traffic' 'auto' (Join-Path $PSScriptRoot 'Set-DemoAoaiCapacity.ps1') $P ($P + '-WhatIf') 'after the ACA agents exist; the Lab Builder default capacity is too small for the traffic plan'))
 $steps.Add((New-Step 'setup' 'governance' 'Attribute, owners/sponsors/attributes of agent identities, catalog' 'auto' (Join-Path $PSScriptRoot 'Set-DemoGovernance.ps1') $P ($P + '-WhatIf') 're-run -Step identities whenever a new agent identity appears'))
 $steps.Add((New-Step 'setup' 'cards' 'Guided cards and test hand-out' 'auto' (Join-Path $PSScriptRoot 'New-DemoCards.ps1') $P $P ''))
@@ -111,7 +112,6 @@ function Set-StepMeta([string]$Id, [string]$NeededBy, [bool]$Blocking, [string]$
     foreach ($sp in @($steps | Where-Object { $_.id -eq $Id })) { if ($NeededBy) { $sp.neededBy = $NeededBy }; $sp.blocking = $Blocking; if ($Key) { $sp.key = $Key } }
 }
 Set-StepMeta 'first-signin' 'every card done by a persona, the per-user MCP connections and the tests' $false
-foreach ($k in @($pack.mcp.longLived | ForEach-Object { [string]$_.key })) { Set-StepMeta "mcp-register-$k" "agents step (the ext_ tools are attached to the agents)" $true }
 Set-StepMeta 'mcp-approve' 'agents step (an ext_ tool cannot be attached before the admin approval)' $true 'mcp-approve'
 Set-StepMeta 'tests' 'the rehearsal (traffic from T-3 to T-1; usage metrics and audit records)' $false
 # --- use, restore, teardown ---

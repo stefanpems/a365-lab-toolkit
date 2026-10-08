@@ -22,6 +22,8 @@
 .PARAMETER OutDir             Where to write the renamed solution zip. Default: generated/copilot-studio.
 .PARAMETER InstallPac         Install the Power Platform CLI if missing.
 .PARAMETER SkipPrereqCheck    Skip the NH PAYG/Dataverse verification (not recommended).
+.PARAMETER UseDataverseApi  Import through the Dataverse Web API with az tokens (needs -EnvironmentId): never touches the
+                              machine-wide pac profile (parallel sessions). pac is still used offline to pack the zip.
 .PARAMETER ScaffoldOnly       Produce the renamed zip only; do NOT auth/import (dry run).
 .PARAMETER Publish            After import, print the guided publication step (Availability options ->
                               Show to everyone in my org) — the actual toggle is a maker-portal action.
@@ -41,6 +43,7 @@ param(
     [switch]$InstallPac,
     [switch]$SkipPrereqCheck,
     [switch]$ScaffoldOnly,
+    [switch]$UseDataverseApi,
     [switch]$Publish
 )
 $ErrorActionPreference = 'Stop'
@@ -63,52 +66,57 @@ if ($ScaffoldOnly) {
     return $built
 }
 
-# 2) Authenticate pac to the target tenant (idempotent).
-if ($Tenant) {
-    $active = (& $pac auth list) 2>$null
-    if (-not ($active -match $Tenant)) {
-        Write-Host "" -ForegroundColor Yellow
-        Write-Host "=== INTERACTIVE SIGN-IN REQUIRED (pac / Power Platform) ===" -ForegroundColor Yellow
-        Write-Host "  A browser window is about to open to authenticate the Power Platform CLI to the TARGET" -ForegroundColor Yellow
-        Write-Host "  Copilot Studio tenant ($Tenant)." -ForegroundColor Yellow
-        Write-Host "  -> Sign in as an ADMIN of THAT tenant (the Dataverse / Power Platform admin of the target" -ForegroundColor Yellow
-        Write-Host "     environment), NOT your Azure/corporate account if they are different." -ForegroundColor Yellow
-        Write-Host "  This happens only ONCE per tenant per machine: the profile 'mcs-target' is then reused" -ForegroundColor Yellow
-        Write-Host "  SILENTLY by every later import in this run. This is expected, not an error." -ForegroundColor Yellow
-        & $pac auth create --name "mcs-target" --tenant $Tenant | Out-Null
+# 2-5) Target environment, NH prerequisites, import + publish customizations.
+if ($UseDataverseApi) {
+    # No pac auth at all (the machine-wide pac profile is never touched): az tokens of the current az context.
+    if (-not $EnvironmentId) { throw '-UseDataverseApi needs -EnvironmentId.' }
+    if ($Tenant) {
+        $azTenant = (az account show --query tenantId -o tsv 2>$null)
+        if ($azTenant -ne $Tenant) { throw "az is on tenant '$azTenant', the target is '$Tenant': sign az in to the target tenant first." }
     }
-    else {
-        Write-Host "  Reusing existing pac profile for target tenant $Tenant (no browser sign-in needed)." -ForegroundColor DarkGray
+    $envInfo = Get-McsEnvironmentInfo -EnvironmentId $EnvironmentId
+    if (-not $envInfo.hasDataverse) { throw "Environment $EnvironmentId has no Dataverse: add it in PPAC ('+ Add Dataverse'), wait until Ready, then retry." }
+    if (-not $EnvironmentUrl) { $EnvironmentUrl = $envInfo.orgUrl }
+    if ($key -eq 'NH' -and -not $SkipPrereqCheck) {
+        $payg = Test-McsPaygViaApi -EnvironmentId $EnvironmentId
+        if ($payg -eq $false) { throw "MCS-NH prerequisites not met: environment $EnvironmentId is not linked to an enabled pay-as-you-go billing policy (Copilot Credits). Use -SkipPrereqCheck to override." }
+        if ($null -eq $payg) { Write-Host '  WARN: the PAYG billing policy could not be read through the API; ensure PAYG/credits are in place, else preview fails with EnforcementUsageCredits.' -ForegroundColor Yellow }
+        else { Write-Host "  MCS-NH prerequisites OK (Dataverse + enabled PAYG billing policy) for $($envInfo.displayName)." -ForegroundColor DarkGray }
     }
+    Write-Host "  Importing '$($built.solutionUniqueName)' into $EnvironmentUrl (Dataverse Web API) ..." -ForegroundColor Cyan
+    $null = Import-McsSolutionViaApi -OrgUrl $EnvironmentUrl -Zip $built.zip
+    Write-Host "  Imported + published: agent '$DisplayName' is now in the target Copilot Studio environment." -ForegroundColor Green
 }
-
-# 3) Resolve the target org URL.
-if (-not $EnvironmentUrl) {
-    if (-not $EnvironmentId) { throw "Provide -EnvironmentUrl or -EnvironmentId (target Dataverse environment)." }
-    $row = (& $pac env list) 2>&1 | Select-String -SimpleMatch $EnvironmentId
-    if ($row -and $row.Line -match 'https://\S+') { $EnvironmentUrl = $matches[0].TrimEnd('/') + '/' }
-    else { throw "Environment $EnvironmentId not found by 'pac env list'. It likely has no Dataverse — add it in PPAC ('+ Add Dataverse'), wait until Ready, then retry." }
+else {
+    # pac path: select the target tenant's own profile explicitly, restore the previously active one at the end.
+    $prevPac = if ($Tenant) { Use-McsPacProfile -Pac $pac -Tenant $Tenant -Purpose 'TARGET Copilot Studio' } else { $null }
+    try {
+        if (-not $EnvironmentUrl) {
+            if (-not $EnvironmentId) { throw "Provide -EnvironmentUrl or -EnvironmentId (target Dataverse environment)." }
+            $row = (& $pac env list) 2>&1 | Select-String -SimpleMatch $EnvironmentId
+            if ($row -and $row.Line -match 'https://\S+') { $EnvironmentUrl = $matches[0].TrimEnd('/') + '/' }
+            else { throw "Environment $EnvironmentId not found by 'pac env list'. It likely has no Dataverse — add it in PPAC ('+ Add Dataverse'), wait until Ready, then retry." }
+        }
+        if ($key -eq 'NH' -and -not $SkipPrereqCheck) {
+            $envIdForCheck = $EnvironmentId
+            if (-not $envIdForCheck) {
+                $envIdForCheck = ((& $pac env list) 2>&1 | Select-String -SimpleMatch ($EnvironmentUrl.TrimEnd('/')) | ForEach-Object { if ($_.Line -match '([0-9a-fA-F-]{36})') { $matches[1] } } | Select-Object -First 1)
+            }
+            if ($envIdForCheck) {
+                $chk = & (Join-Path $PSScriptRoot 'Test-McsPrereqs.ps1') -EnvironmentId $envIdForCheck -Harness 'MCS-NH'
+                if (-not $chk.ok) { throw "MCS-NH prerequisites not met for $envIdForCheck. Fix the items above (Dataverse and/or PAYG/Copilot Credits), then retry. Use -SkipPrereqCheck to override." }
+            }
+            else {
+                Write-Host "  WARN: could not resolve the environment GUID to run the NH prerequisite check; ensure PAYG/credits are in place, else preview fails with EnforcementUsageCredits." -ForegroundColor Yellow
+            }
+        }
+        Write-Host "  Importing '$($built.solutionUniqueName)' into $EnvironmentUrl ..." -ForegroundColor Cyan
+        & $pac solution import --path $built.zip --environment $EnvironmentUrl --publish-changes
+        if ($LASTEXITCODE -ne 0) { throw "pac solution import failed (exit $LASTEXITCODE)." }
+        Write-Host "  Imported + published: agent '$DisplayName' is now in the target Copilot Studio environment." -ForegroundColor Green
+    }
+    finally { if ($prevPac) { Restore-McsPacProfile -Pac $pac -Previous $prevPac } }
 }
-
-# 4) NH prerequisite gate (Dataverse + PAYG/credits) unless skipped.
-if ($key -eq 'NH' -and -not $SkipPrereqCheck) {
-    $envIdForCheck = $EnvironmentId
-    if (-not $envIdForCheck) {
-        $envIdForCheck = ((& $pac env list) 2>&1 | Select-String -SimpleMatch ($EnvironmentUrl.TrimEnd('/')) | ForEach-Object { if ($_.Line -match '([0-9a-fA-F-]{36})') { $matches[1] } } | Select-Object -First 1)
-    }
-    if ($envIdForCheck) {
-        $chk = & (Join-Path $PSScriptRoot 'Test-McsPrereqs.ps1') -EnvironmentId $envIdForCheck -Harness 'MCS-NH'
-        if (-not $chk.ok) { throw "MCS-NH prerequisites not met for $envIdForCheck. Fix the items above (Dataverse and/or PAYG/Copilot Credits), then retry. Use -SkipPrereqCheck to override." }
-    }
-    else {
-        Write-Host "  WARN: could not resolve the environment GUID to run the NH prerequisite check; ensure PAYG/credits are in place, else preview fails with EnforcementUsageCredits." -ForegroundColor Yellow
-    }
-}
-
-# 5) Import + publish customizations.
-Write-Host "  Importing '$($built.solutionUniqueName)' into $EnvironmentUrl ..." -ForegroundColor Cyan
-& $pac solution import --path $built.zip --environment $EnvironmentUrl --publish-changes
-Write-Host "  Imported + published: agent '$DisplayName' is now in the target Copilot Studio environment." -ForegroundColor Green
 
 $built.environmentUrl = $EnvironmentUrl
 

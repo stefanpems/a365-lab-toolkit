@@ -40,10 +40,14 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
      until that agent is created, deployed and wired** (its `enabled` flag flips to true). Every tab
      appears and starts working as its agent goes live. Say this BEFORE moving on, so the empty sidebar
      isn't mistaken for a broken UI.
-3. **Follow the canonical steps** for the SPA app registration, Entra consent (AllPrincipals), Azure
-   RBAC for Foundry agents, and the SWA deploy: [docs/setup-web-ui.md](../../../docs/setup-web-ui.md)
-   §2–§6. Per-host permission specifics (Mail consent for OBO, `UI_AUDIENCE` for ACA-S2S, Foundry
-   access for FH/FD) are in that guide.
+3. **Scripted path (recommended):** [New-WebUi.ps1](./scripts/New-WebUi.ps1) creates (idempotent) the SWA, the
+   SPA app (redirects, public-client loopback, Graph OIDC + `-Mail` + `-Foundry` permissions, admin consent),
+   fills `msal.clientId` and deploys the shell (never over a live `config.js` unless `-Redeploy`); then
+   [Add-WebUiTab.ps1](./scripts/Add-WebUiTab.ps1) wires each agent (also in `create` mode: `-TabId <scaffolded
+   id> -WorkFolder <lab ui folder> -SpaAppId <id>`). The scaffolder emits both commands. The canonical manual
+   steps (SPA app registration, Entra consent (AllPrincipals), Azure RBAC for Foundry agents, SWA deploy) stay
+   in [docs/setup-web-ui.md](../../../docs/setup-web-ui.md) §2–§6. Per-host permission specifics (Mail consent
+   for OBO, `UI_AUDIENCE` for ACA-S2S, Foundry access for FH/FD) are in that guide.
 
 ## Standalone / shared web UIs, association scripts, and tags
 A web UI can be **lab-owned** (created inside a lab run, mode `create`) or **standalone/shared** (created
@@ -70,6 +74,11 @@ the LIVE `config.js` from the SWA as the source of truth, edit ONLY the `agents[
   (+ `UI_AUDIENCE` for S2S). Used by Lab Builder (attach mode) and the Web UI Creator flow. For one of **N
   instances** of the same type, pass `-InstanceSuffix -<n>` so the id becomes `<typeShortId>-<n>-<labPrefix>`
   (still ends `-<labPrefix>`, so `Remove-TabsByLab` still finds it) and the FH session prefix stays unique.
+  `-TabId <id>` replaces a given tab instead (a tab scaffolded hidden in a LAB-OWNED `config.js`), and
+  `-SpaAppId <id>` also grants + admin-consents the SPA for the agent's own scopes (ACA-S2S
+  `access_agent_as_user`, BYO `Tools.ListInvoke.All`); without them the behaviour is unchanged.
+- **[New-WebUi.ps1](./scripts/New-WebUi.ps1)** — CREATE a lab-owned (`-LabPrefix`) or standalone (`-Standalone`)
+  UI: SWA + SPA app + permissions + consent + shell, idempotent, `-WhatIf`.
 - **[Remove-WebUiTab.ps1](./scripts/Remove-WebUiTab.ps1)** — DEREGISTER: remove a whole lab's tabs
   (`-LabPrefix`) or one agent's tab (`-TabId`), redeploy, and clear `a365ref_<prefix>` when the last tab of
   that lab goes. Used by the Lab Cleaner (per lab); the `-TabId` form detaches a single agent's tab.

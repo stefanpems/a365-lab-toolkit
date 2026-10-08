@@ -12,6 +12,8 @@
 [CmdletBinding()]
 param(
     [string]$ClientSecret,
+    # Assisted secret handling: read the secret with 'a365 setup blueprint --show-secret' (run from the agent folder).
+    [switch]$ClientSecretFromA365,
     [string]$Subscription = $env:DEPLOY_SUB,
     [string]$AoaiRg       = $env:DEPLOY_AOAI_RG,
     [string]$AoaiAcc      = $env:DEPLOY_AOAI_ACC,
@@ -21,6 +23,13 @@ param(
     [switch]$ReuseEnv
 )
 $ErrorActionPreference = 'Stop'
+# Assisted secret handling: the value never reaches the console or a chat.
+if (-not $ClientSecret -and $ClientSecretFromA365) {
+    $a365Out = a365 setup blueprint --show-secret 2>&1 | Out-String
+    if ($a365Out -match 'Blueprint client secret:\s*(\S+)') { $ClientSecret = $Matches[1] }
+    else { Write-Error "Could not read the blueprint client secret with 'a365 setup blueprint --show-secret' (run this script from the agent folder, after 'a365 setup all')."; exit 1 }
+    $a365Out = $null
+}
 
 # Console UTF-8: avoids UnicodeEncodeError (cp1252) in the 'az acr build' log stream.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -207,6 +216,7 @@ if ($AoaiAcc -and $AoaiRg) {
 
 # --- 8. Output URL + next steps ---
 $fqdn = az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv @SubArg
+if (-not $fqdn) { Write-Error "Container App '$APP' has no ingress FQDN: the deploy did not complete (check 'az containerapp show -n $APP -g $RG')."; exit 1 }
 Write-Host ""
 Write-Host "Deploy complete." -ForegroundColor Green
 Write-Host "Messaging endpoint: https://$fqdn/api/messages"

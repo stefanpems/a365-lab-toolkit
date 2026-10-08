@@ -27,6 +27,8 @@ from azure.ai.projects.models import (
 )
 from azure.identity import DefaultAzureCredential
 
+import time
+
 import agent_config as cfg
 
 
@@ -47,25 +49,34 @@ def _overlay_tools(project) -> list:
 
         folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), fs.get("dir", "knowledge"))
         files = sorted(glob.glob(os.path.join(folder, "*")))
-        try:
-            from azure.ai.projects.models import FileSearchTool
+        from azure.ai.projects.models import FileSearchTool
 
-            if not files:
-                raise RuntimeError(f"no files in {folder}")
-            oai = project.get_openai_client()
-            store = oai.vector_stores.create(name=fs.get("storeName", "knowledge"))
-            for path in files:
-                with open(path, "rb") as fh:
-                    oai.vector_stores.files.upload_and_poll(vector_store_id=store.id, file=fh)
-                print(f"File search: indexed {os.path.basename(path)}")
-            extra.append(FileSearchTool(vector_store_ids=[store.id]))
-        except Exception as exc:  # the Foundry portal (Knowledge > File search) remains the fallback
-            print(f"WARNING: overlay File search not configured ({exc}); add the files in the Foundry portal.")
+        if not files:
+            raise SystemExit(f"ERROR: overlay File search: no files in {folder}.")
+        # The overlay's knowledge IS the agent: a version without it must never be created silently. One retry
+        # covers a transient failure (e.g. the first az token request timing out); then the deploy stops.
+        for attempt in (1, 2):
+            try:
+                oai = project.get_openai_client()
+                store = oai.vector_stores.create(name=fs.get("storeName", "knowledge"))
+                for path in files:
+                    with open(path, "rb") as fh:
+                        oai.vector_stores.files.upload_and_poll(vector_store_id=store.id, file=fh)
+                    print(f"File search: indexed {os.path.basename(path)}")
+                extra.append(FileSearchTool(vector_store_ids=[store.id]))
+                break
+            except Exception as exc:
+                if attempt == 2:
+                    raise SystemExit(f"ERROR: overlay File search not configured ({exc}). Fix it and re-run (nothing was deployed).")
+                print(f"WARNING: overlay File search failed ({exc}); retrying once in 15 s...")
+                time.sleep(15)
     return extra
 
 
 def main() -> None:
-    project = AIProjectClient(endpoint=cfg.PROJECT_ENDPOINT, credential=DefaultAzureCredential())
+    # One credential for every call; process_timeout 60 s: the default 10 s of the Azure CLI credential can expire on the
+    # first, cold 'az account get-access-token' (seen with a fresh az profile).
+    project = AIProjectClient(endpoint=cfg.PROJECT_ENDPOINT, credential=DefaultAzureCredential(process_timeout=60))
 
     # Mail MCP tool. The bearer is NOT baked into the version (it is per-user and short-lived):
     # the Authorization header is a template resolved at runtime from the `mail_token`

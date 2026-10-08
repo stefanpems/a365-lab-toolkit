@@ -34,7 +34,7 @@ function Add-AgentCustomAttach {
 
     if ($wiqExtras.Count -gt 0) {
         $note = if ($a.type -like 'FH-*') { '   # FH-OBO is manifest-driven for ext_ custom MCP; a non-Mail Work IQ tool may still need the code generalization in references/workiq-mcp-integration.md' } else { '   # ACA turn path is manifest-driven — Work IQ token/refresh lessons apply generically (references/workiq-mcp-integration.md)' }
-        $nextCommands.Add("cd `"$dst`"; a365 develop add-mcp-servers $($wiqExtras -join ' '); a365 setup permissions mcp --agent-name `"$($a.name)`"$note")
+        $nextCommands.Add("cd `"$dst`"; a365 develop add-mcp-servers $($wiqExtras -join ' '); a365 setup permissions mcp$(Get-A365AgentNameArg $plan $a)$note")
         $nextCommands.Add("#   ^ then REDEPLOY $($a.name) so the runtime loads the new ToolingManifest.json (it is baked into the image at build time; a revision restart alone keeps the old manifest): $redeploy")
     }
 
@@ -49,7 +49,7 @@ function Add-AgentCustomAttach {
             $nextCommands.Add("cd `"$dst`"; a365 develop add-mcp-servers $extJoin   # attach BEFORE the single deploy when possible (bakes the manifest in one pass); OBO does NOT require 'a365 setup permissions mcp'")
         } else {
             # Agents started without waiting for approval -> attach once the servers are approved.
-            $nextCommands.Add("# ONLY AFTER the ext_ servers are ADMIN-APPROVED (M365 admin center > Agents > Tools > Requests): cd `"$dst`"; a365 develop add-mcp-servers $extJoin; a365 setup permissions mcp --agent-name `"$($a.name)`"   # if they are not approved yet when $($a.name) deploys, run this manually later to integrate the custom MCP")
+            $nextCommands.Add("# ONLY AFTER the ext_ servers are ADMIN-APPROVED (M365 admin center > Agents > Tools > Requests): cd `"$dst`"; a365 develop add-mcp-servers $extJoin; a365 setup permissions mcp$(Get-A365AgentNameArg $plan $a)   # if they are not approved yet when $($a.name) deploys, run this manually later to integrate the custom MCP")
         }
         $nextCommands.Add("#   ^ 'setup permissions mcp' opens a BROWSER for admin consent: grant ALL 3 additional admin consents; IGNORE the final 'Try that again using a different browser / We couldn't connect to that service...' page — consent still succeeds and the CLI detects it (waits up to 180s). Watch for a BLOCKED POPUP (the approval silently stalls if the popup is blocked).")
         $nextCommands.Add("#   ^ then REDEPLOY $($a.name) so the runtime loads the new ToolingManifest.json (baked into the image at build time; a revision restart keeps the old manifest): $redeploy")

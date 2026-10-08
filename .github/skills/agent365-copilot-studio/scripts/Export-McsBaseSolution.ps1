@@ -43,13 +43,10 @@ $pac = Assert-PacCli -Install:$InstallPac
 if (-not $OutDir) { $OutDir = $script:McsBaseDir }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
-# Auth to the source tenant (idempotent). --tenant is explicit so a non-default source tenant is honored.
-$active = (& $pac auth list) 2>$null
-if (-not ($active -match $Tenant)) {
-    Write-Host "A browser sign-in will open — sign in as an admin of the SOURCE tenant $Tenant." -ForegroundColor Yellow
-    if ($EnvironmentUrl) { & $pac auth create --name "mcs-source" --tenant $Tenant --environment $EnvironmentUrl | Out-Null }
-    else { & $pac auth create --name "mcs-source" --tenant $Tenant | Out-Null }
-}
+# Select the SOURCE tenant's own pac profile; the previously active profile is restored at the end.
+$prevPac = Use-McsPacProfile -Pac $pac -Tenant $Tenant -Purpose 'SOURCE'
+try {
+
 
 if (-not $EnvironmentUrl) {
     if (-not $EnvironmentId) { throw "Provide -EnvironmentUrl or -EnvironmentId (source environment)." }
@@ -71,3 +68,5 @@ foreach ($t in $targets) {
 Write-Host ""
 Write-Host "Re-extract complete. Review and COMMIT the updated base zips under $OutDir." -ForegroundColor Green
 Get-ChildItem $OutDir -Filter *.zip | Select-Object Name, Length, LastWriteTime
+}
+finally { Restore-McsPacProfile -Pac $pac -Previous $prevPac }

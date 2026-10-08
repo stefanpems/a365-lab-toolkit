@@ -219,7 +219,7 @@ if ($Retro) {
 Write-Host ""
 Write-Host "Component-tagging summary:" -ForegroundColor Green
 foreach ($l in $summary) { Write-Host "  $l" }
-$tagged = @($summary | Where-Object { $_ -match 'TAGGED' }).Count
-$errs   = @($summary | Where-Object { $_ -match 'ERROR' }).Count
+$tagged = @($summary | Where-Object { $_ -cmatch '\bTAGGED\b' }).Count
+$errs   = @($summary | Where-Object { $_ -cmatch '\bERROR\b' }).Count
 Write-Host "`n  $tagged newly tagged, $errs error(s). Idempotent — safe to re-run." -ForegroundColor DarkGray
 if ($errs -gt 0) { exit 1 }

@@ -51,6 +51,11 @@ cd a365-lab-toolkit/ui
 
 ## 2. Create the SPA app registration
 
+> **Scripted:** [New-WebUi.ps1](../.github/skills/agent365-web-ui/scripts/New-WebUi.ps1) does §2, §3 (base
+> permissions) and §6 (SWA + shell deploy) idempotently, and
+> [Add-WebUiTab.ps1](../.github/skills/agent365-web-ui/scripts/Add-WebUiTab.ps1) `-SpaAppId` does §5, §6a, §6b and
+> §6c for one agent. The steps below are what they automate.
+
 Register a **single-page application** (SPA platform) in Microsoft Entra whose **redirect URIs**
 are the SPA origin(s) — the SWA host (created in §6) and, for local testing, `http://localhost:3000`.
 Also add a **public-client (Mobile & desktop) loopback redirect** `http://localhost` so native/CLI

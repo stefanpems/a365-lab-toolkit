@@ -85,7 +85,7 @@ foreach ($a in ($pack.agents | Sort-Object { [int]$_.buildOrder })) {
             $sol = (($Prefix -replace '[^A-Za-z0-9]', '') + 'MCSX' + ($a.key -replace '[^A-Za-z0-9]', '')).Substring(0, [Math]::Min(40, (($Prefix -replace '[^A-Za-z0-9]', '') + 'MCSX' + ($a.key -replace '[^A-Za-z0-9]', '')).Length))
             $cs = Join-Path $script:DemoRepoRoot '.github\skills\agent365-copilot-studio\scripts\New-McsAgent.ps1'
             $outside.Add([ordered]@{ key = $a.key; displayName = $la.displayName; environment = $a.environment; environmentId = $cfg.copilotStudio[$envKey]
-                command = "pwsh -File `"$cs`" -Harness $($a.variant) -DisplayName `"$($la.displayName)`" -SolutionUniqueName `"$sol`" -Tenant `"$($cfg.tenantId)`" -EnvironmentId `"$($cfg.copilotStudio[$envKey])`" -IsolateSchemaName -InstallPac -Publish" })
+                command = "pwsh -File `"$cs`" -Harness $($a.variant) -DisplayName `"$($la.displayName)`" -SolutionUniqueName `"$sol`" -Tenant `"$($cfg.tenantId)`" -EnvironmentId `"$($cfg.copilotStudio[$envKey])`" -IsolateSchemaName -InstallPac$(if ($cfg.azConfigDir) { ' -UseDataverseApi' }) -Publish" })
             continue
         }
         $agents.Add($entry)
@@ -103,7 +103,8 @@ $solution = [ordered]@{
     foundry = $cfgFoundry
     azureOpenAI = [ordered]@{ mode = 'create-shared'; deployment = 'gpt-4.1-mini' }
     observability = [ordered]@{ appInsights = [ordered]@{ mode = 'create-shared' } }
-    copilotStudio = [ordered]@{ targetTenantId = $cfg.tenantId; targetEnvironmentId = $cfg.copilotStudio.paygEnvironmentId }
+    # importVia dataverse-api with a lab-private az profile: the machine-wide pac profile is never touched.
+    copilotStudio = [ordered]@{ targetTenantId = $cfg.tenantId; targetEnvironmentId = $cfg.copilotStudio.paygEnvironmentId; importVia = $(if ($cfg.azConfigDir) { 'dataverse-api' } else { 'pac' }) }
 }
 $audiences = [ordered]@{}
 foreach ($k in @($state.mcp.servers.Keys)) { $s = $state.mcp.servers[$k]; if ($s.name -and $s.audience) { $audiences[$s.name] = $s.audience } }
@@ -119,6 +120,21 @@ $plan | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $planPath -Encoding 
 $outside | ConvertTo-Json -Depth 5 -AsArray | Set-Content -LiteralPath (Join-Path $labDir 'outside-plan.json') -Encoding utf8
 Write-DemoLog $Prefix "Lab Builder plan written ($($agents.Count) agents, locale $($cfg.locale)): $planPath"
 if ($outside.Count) { Write-Host "Outside the lab plan (Lab Builder engine command in demo\outside-plan.json): $(@($outside | ForEach-Object { $_.displayName }) -join ', ')" }
+if (-not $ValidateOnly) {
+    # The Lab Builder's per-agent test gate is deferred in a demo build: the smoke test of every agent is a user action.
+    $exposed = @($pack.webUi.expose)
+    $tests = @($pack.agents | Where-Object { $_.platform -in 'code', 'copilotStudio' } | Sort-Object { [int]$_.buildOrder } | ForEach-Object {
+        $la = $L.agents[$_.key]; $name = if ($la.displayName) { $la.displayName } else { $la.codeName }
+        $surface = if ($exposed -contains $_.key) { 'web UI tab' } elseif ($_.variant -like '*-DW') { 'Teams chat with its instance' }
+                   elseif ($_.platform -eq 'copilotStudio') { 'Copilot Studio test pane, then Teams/Microsoft 365 Copilot' }
+                   elseif ($_.variant -like 'FD-*' -or $_.variant -like 'FH-*') { 'Foundry playground' } else { 'Teams / Microsoft 365 Copilot' }
+        "$name ($($_.variant)): $surface" })
+    if ($tests.Count) {
+        $null = Set-DemoUserAction -Prefix $Prefix -Key 'agent-smoke-tests' -Blocking $false `
+            -Action "After the Lab Builder resume, send one test prompt to each lab agent on its surface (the Lab Builder test gate is deferred in a demo build): $($tests -join ' ; ')" `
+            -Where 'web UI / Teams / Copilot Studio / Foundry' -NeededBy 'the pre-flight, before the first rehearsal'
+    }
+}
 $scaffolder = Join-Path $script:WizardScriptsDir 'scaffold-from-plan.ps1'
 if ($ValidateOnly) { & pwsh -NoProfile -File $scaffolder -PlanPath $planPath -ValidateOnly; exit $LASTEXITCODE }
 if ($Scaffold) { & pwsh -NoProfile -File $scaffolder -PlanPath $planPath; exit $LASTEXITCODE }

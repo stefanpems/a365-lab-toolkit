@@ -169,6 +169,24 @@ only a real SECRET prompt is handled per the chosen secret-handling mode (you ca
 If a NEW interactive prompt appears that is not listed here, ADD it to this table (that is a lesson
 learned — propagate it per the standing rule above).
 
+> **The y/N prompts read stdin (verified 2026-10-07 with a365 1.1.214):** piping the answers works and needs no
+> terminal interaction (one answer per line). Judge the result from the log ("has been registered successfully", the
+> setup summary, "Package created") and the artifacts, not from a terminal buffer. The Demo Builder registers its
+> MCP servers this way (`New-DemoMcpRegistration.ps1 -Run`).
+>
+> ```powershell
+> 'y' | a365 develop-mcp register-external-mcp-server -f <payload> 2>&1 | Tee-Object -FilePath <log>
+> @('y','y','y','y') | a365 setup all 2>&1 | Tee-Object -FilePath <log>
+> @('n','') | a365 publish --aiteammate 2>&1 | Tee-Object -FilePath <log>
+> ```
+
+> **`a365 setup all` admin consent — "Consent was not detected" is often a FALSE alarm.** The CLI waits 180 s for the
+> browser consent; when the operator is slower (first consent in a tenant, MFA, away from the PC) it reports "Consent
+> was not detected", then tries the grant itself and gets `409 Request_MultipleObjectsWithSameKeyValue / Permission
+> entry already exists` — which means the consent DID land. The summary then says "Blueprint Permission Grants
+> unverified". Verify instead of re-running: `a365 query-entra inheritance` from the agent folder (or read the
+> blueprint's oauth2PermissionGrants); re-grant with the printed admin-consent URL only if a scope is really missing.
+
 > ⛔ **NEVER pipe an interactive `a365` command through `| Out-String` (or `| Tee-Object | Out-String`).**
 > `Out-String` buffers ALL output until the process exits, so a mid-run `y/N` prompt is **invisible** and
 > the command looks **hung for minutes** — the single biggest time-waster in the first runs. Stream it
@@ -231,8 +249,10 @@ learned — propagate it per the standing rule above).
 > the paste dance.** With `solution.secretHandling: assisted` the user has authorized you to fetch the
 > blueprint client secret yourself — from the `a365 setup all` Tee log
 > (`Select-String 'Blueprint client secret:' <log>`) or by running `a365 setup blueprint --show-secret`
-> from the agent folder — and supply it to the deploy: pass `-ClientSecret <value>` to `deploy-aca.ps1` /
-> `deploy-aca-S2S.ps1`, or send it to the waiting `Read-Host` via the terminal-input tool. ⛔ Still **never
+> from the agent folder — and supply it to the deploy. Preferred: run `deploy-aca.ps1` / `deploy-aca-S2S.ps1` /
+> `deploy-aca-DW.ps1` **from the agent folder with `-ClientSecretFromA365`**: the script reads the secret itself
+> (`a365 setup blueprint --show-secret`) and the value never passes through a command line or a chat. Fallbacks:
+> `-ClientSecret <value>`, or send it to the waiting `Read-Host` via the terminal-input tool. ⛔ Still **never
 > print the secret value in a chat message.** This is for test tenants whose labs are torn down quickly;
 > hand the user the rotation steps below once the lab is up.
 
@@ -721,11 +741,11 @@ Feasibility conclusion (do not re-derive — act on it):
   is a different account than the plan's, fix it with `az containerapp update --set-env-vars
   AZURE_OPENAI_ENDPOINT=https://<plan-acct>.openai.azure.com/ AZURE_OPENAI_DEPLOYMENT=<plan-deployment>`.
   (A brand-new AOAI account's data-plane RBAC can also lag 5–15 min, but the endpoint is the usual cause.)
-- **ACA-OBO first deploy can land on the `k8se/quickstart` placeholder** (`az containerapp up` created
-  the app before the system MI had AcrPull on the auto-created ACR). Health may return 200 but it's the
-  placeholder, not the agent. `deploy-aca.ps1` now detects and remediates (AcrPull grant + real image);
-  if you hit it on an old copy, grant AcrPull to the app MI on the RG's ACR, `az containerapp registry
-  set --identity system`, then `az containerapp update --image <acr>/<app>:<realtag>`.
+- **ACA-OBO no longer uses `az containerapp up`** (2026-10: it caused both the `k8se/quickstart` placeholder
+  race and the cp1252 crash below). `deploy-aca.ps1` builds with `az acr build --no-logs` and creates/updates
+  the app pulling with its system-assigned identity (AcrPull granted). If an OLD generated copy lands on the
+  placeholder: grant AcrPull to the app MI on the RG's ACR, `az containerapp registry set --identity system`,
+  then `az containerapp update --image <acr>/<app>:<realtag>` (or re-scaffold the agent folder).
 - **⛔ Custom-MCP connections: give the user the EXACT per-server URL from
   `print-connection-urls.ps1`, NOT the model's echoed URL.** Each `ext_` server has its OWN Power
   Platform connector (`…anonp…` vs `…authp…`); the agent LLM, when a tool isn't set up, may **reuse a
@@ -737,10 +757,12 @@ Feasibility conclusion (do not re-derive — act on it):
   `deploy-aca*.ps1` (and any `az containerapp up`/`create` + `az acr build`) crash with a **colorama
   `UnicodeEncodeError` (cp1252)** when their stdout is redirected/piped under the Windows console — the
   crash **aborts the container creation** (empty FQDN `https:///…`, "containerapp does not exist" or
-  `provisioningState=Failed`, plus a spurious `--assignee-object-id: expected one argument`). Run deploy
-  scripts **RAW** with UTF-8 forced (the scripts now set it internally; the OBO script was brought to
-  parity). If a container ends up Failed/no-ingress: `az containerapp delete` it, then re-run the deploy
-  **`-ReuseEnv` RAW** (recreating the managed env also changes the FQDN — re-wire the UI tab + CORS).
+  `provisioningState=Failed`, plus a spurious `--assignee-object-id: expected one argument`). The three
+  `deploy-aca*.ps1` now build with `az acr build --no-logs` (no log stream; ACA-OBO no longer uses
+  `az containerapp up`, verified with captured output on 2026-10-08) and exit 1 on an empty FQDN, so they can
+  run with captured output; still prefer running them RAW for a readable progress. If a container ends up
+  Failed/no-ingress: `az containerapp delete` it, then re-run the deploy
+  **`-ReuseEnv`** (recreating the managed env also changes the FQDN — re-wire the UI tab + CORS).
 - **⛔ For an OBO custom-MCP agent, ATTACH BEFORE THE SINGLE DEPLOY** (`a365 develop add-mcp-servers
   ext_…Anon ext_…Auth` → `a365 setup all` → ONE deploy) so the 3-server manifest bakes in one pass. A
   post-deploy attach forces a **redeploy**, and re-running the plain `deploy-aca.ps1` **deletes+recreates
