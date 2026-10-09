@@ -75,6 +75,17 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 
 ## Scripts (`scripts/`)
 
+### Standard inventory, at hand-over and on demand
+
+Run `Get-DemoInventory.ps1 -Prefix <p>` (or `Invoke-DemoPhase.ps1 -Prefix <p> -Phase report`).
+Present the complete nine-section report in chat and link its self-contained HTML file.
+The stable schema, columns, evidence semantics and delivery rules are in
+[inventory-report.md](references/inventory-report.md); `_demo-inventory.ps1` defines the shared renderers.
+The script writes `inventory.md`, `inventory.html` and `inventory.json` under the lab's demo directory,
+from the same data. It reuses `Get-DemoPersonas.ps1` for the requested user table.
+`-SnapshotOnly` is an explicit offline mode, not an automatic fallback after an API or authentication error.
+Run `test-demo-inventory.ps1` after changing the schema or renderers.
+
 | Script | Does | Writes to the tenant |
 |---|---|---|
 | `New-DemoConfig.ps1` | per-lab config (tenant, language, domain, environments, license SKUs or bundles `SKU1+SKU2`, Teams for all, lab-private az profile; an event date is optional and informational) | no |
@@ -95,6 +106,7 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 | `Install-DemoPythonDeps.ps1` | bootstrap step `python-deps`: installs the missing packages of `py/requirements.txt` (user site) | no |
 | `Set-DemoFoundry.ps1` | bootstrap step `foundry`: Foundry project for FD-only packs (Lab Builder `New-FoundryProject.ps1`), config switched to reuse-existing | Azure |
 | `Get-DemoPersonas.ps1` | read-only table of the demo people (persona, user, job title, Entra roles read back, other roles) → `personas.md`; required in the hand-over | no |
+| `Get-DemoInventory.ps1` | standard nine-section inventory in chat Markdown, HTML and JSON; live read-only or explicit `-SnapshotOnly`; required at hand-over and on demand | no |
 
 Shared helpers: `_demo-common.ps1` (pack, locale, config, state, tokens, Graph, user-actions register), `_demo-entra.ps1` (agent identities,
 temporary app-only session). Offline tests: `test-demo-user-actions.ps1` (register) and `test-demo-helpers.ps1`

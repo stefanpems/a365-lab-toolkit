@@ -77,9 +77,19 @@ Always write **in English** in every file, log and command you persist. Reply in
   `generated/<prefix>/demo/` already exists.
 
 ## Hand-over at the end of the build
+At hand-over AND on demand during a build, run
+`Get-DemoInventory.ps1 -Prefix <p>` (or `Invoke-DemoPhase.ps1 -Prefix <p> -Phase report`).
+Present all nine sections and every row in chat, with the fixed columns from
+[inventory-report.md](../skills/agent365-demo-builder/references/inventory-report.md), and link
+`generated/<prefix>/demo/inventory.html`. Markdown, HTML and JSON come from the same script-generated data:
+never invent a different table layout or describe planned/manual configuration as already created.
+Use `-SnapshotOnly` only explicitly, and label it as not cloud-verified. Live reads use the lab-private Azure
+profile; request interactive browser sign-in only if required. The Users section reuses the existing
+persona table (including Entra role read-back and missing-role flags); do not generate a second conflicting table.
+
 Summarize what exists (people, knowledge, MCP servers, agents and their surfaces, web UI URL, governance, generated
 cards and run of show), list any change made to the plan during the build (for example a region switch), then show
-the **demo people table** from `Get-DemoPersonas.ps1 -Prefix <p>` (columns: demo role (persona), user (name - UPN),
+the **Users section of the inventory** (from the reused `Get-DemoPersonas.ps1` data; columns: demo role (persona), user (name - UPN),
 job title, Entra roles assigned as read back from the tenant, other roles / notes; flag any MISSING role; never a
 password: point to the secrets file), then present
 the whole user-actions register (`Set-DemoUserAction.ps1 -Prefix <p> -List`, every row with id, status, action and

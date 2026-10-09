@@ -22,13 +22,19 @@
 [CmdletBinding(PositionalBinding = $false)]
 param(
     [Parameter(Mandatory)][string]$Prefix,
-    [ValidateSet('status', 'bootstrap', 'setup', 'interactive', 'use', 'restore', 'teardown')][string]$Phase = 'status',
+    [ValidateSet('status', 'report', 'bootstrap', 'setup', 'interactive', 'use', 'restore', 'teardown')][string]$Phase = 'status',
+    [switch]$SnapshotOnly,
     [switch]$Apply,
     [string]$From,
     [string]$Only,
     [string]$Done
 )
 $ErrorActionPreference = 'Stop'
+if ($Phase -eq 'report') {
+    & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'Get-DemoInventory.ps1') -Prefix $Prefix -SnapshotOnly:$SnapshotOnly
+    exit $LASTEXITCODE
+}
+if ($SnapshotOnly) { throw '-SnapshotOnly is valid only with -Phase report.' }
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
 $cfg = Read-DemoConfig $Prefix
 $pack = Get-DemoPack $cfg.pack
