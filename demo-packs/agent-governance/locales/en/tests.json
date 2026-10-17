@@ -49,10 +49,6 @@
    "prompt": "{{prompts.d6RegisterRecord}}",
    "expected": "not executed while the server is blocked; note how long the block and the unblock take to apply"
   },
-  "RA-08": {
-   "expected": "the tool invocation is blocked by the real-time protection rule",
-   "promptSlot": "slot-2"
-  },
   "RA-09": {
    "prompts": [
     "{{prompts.d6RegisterRecord}}",
@@ -158,13 +154,6 @@
   "CA-02": {
    "prompt": "Prepare a communication for the businesses about the new version 2.1 of Form A.",
    "expected": "a draft from the Notices knowledge; it asks before sending"
-  },
-  "FQ-01": {
-   "prompts": [
-    "What is the minimum eligible cost?",
-    "By when must the applications be submitted?"
-   ],
-   "expected": "€10,000; 30/10/2026 18:00"
   },
   "CI-01": {
    "prompt": "By when can the supplementary quotes be uploaded?",

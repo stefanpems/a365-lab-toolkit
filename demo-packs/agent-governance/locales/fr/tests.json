@@ -49,10 +49,6 @@
    "prompt": "{{prompts.d6RegisterRecord}}",
    "expected": "non exécuté tant que le serveur est bloqué ; noter le délai d'application du blocage et du déblocage"
   },
-  "RA-08": {
-   "expected": "l'appel d'outil est bloqué par la règle de protection en temps réel",
-   "promptSlot": "slot-2"
-  },
   "RA-09": {
    "prompts": [
     "{{prompts.d6RegisterRecord}}",
@@ -158,13 +154,6 @@
   "CA-02": {
    "prompt": "Prépare une communication pour les entreprises concernant la nouvelle version 2.1 du Formulaire A.",
    "expected": "un projet issu de la connaissance Avis ; il demande avant l'envoi"
-  },
-  "FQ-01": {
-   "prompts": [
-    "Quel est le coût éligible minimal ?",
-    "Jusqu'à quand les dossiers doivent-ils être déposés ?"
-   ],
-   "expected": "10 000 € ; 30/10/2026 18:00"
   },
   "CI-01": {
    "prompt": "Jusqu'à quand les devis complémentaires peuvent-ils être téléversés ?",

@@ -18,16 +18,31 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 > **Preview, not yet validated end to end**: checked offline and read-only against a real tenant; a complete build with
 > `-Apply` in a new tenant has not been run yet. Dry-run every phase first.
 
+## Current story contract
+
+The agent-governance pack targets the current Demo Kit story, **D1-D15 only**. Persona responsibilities, browser
+profiles and agent memberships follow story sections 4.3-4.4. D9 owns risk-based Conditional Access; D15 includes
+the DLP incident and the Purview DSPM / Insider Risk Management evidence for the circulars agent.
+
+**D14 still needs operator reconciliation.** Its definition remains unchanged. Track the operator's confirmation
+separately from locale validation; a successful dictionary check does not establish demo readiness.
+
+`faqPrototype` and `governance.defender.rtpRule` are retained as legacy compatibility data with empty demo lists,
+not as current-story requirements. Do not create them or run the retired `FQ-01` / `RA-08` tests unless the operator
+explicitly requests the legacy setup. Their locale keys remain available for existing labs. The current story needs
+the pay-as-you-go Copilot Studio environment; ask for the default environment only for an explicitly requested addition.
+The remaining operator-slot ids are stable: `slot-1`, `slot-3`, `slot-4`, `slot-5`; `slot-2` is retired.
+
 ## Binding rules
 
 - **Every persisted file is in English.** The only exception are the locale files of a pack, which hold the visible
   texts of the demo; generated cards are English instructions with the localized values inserted.
 - **The license gate is first** (`Test-DemoPrereqs.ps1`, [docs/demo-environment-prerequisites.md](../../../docs/demo-environment-prerequisites.md)):
   nothing is created in a tenant that fails it.
-- **Operator slots are never printed.** A few test inputs of the protection demos are not part of the repository:
-  they are operator slots (`slot-1`...`slot-5`), filled by the operator in `generated/<prefix>/demo/operator-slots.json`
-  from [OPERATOR-SLOTS.md](../../../demo-packs/agent-governance/OPERATOR-SLOTS.md). Scripts only check that the file
-  is complete; chat, logs and cards refer to those demos by code (C6, C7, D16, D17) and to the inputs by slot id.
+- **Operator slots are never printed.** Use only the ids declared in `pack.operatorSlots`, filled by the operator in
+  `generated/<prefix>/demo/operator-slots.json` from
+  [OPERATOR-SLOTS.md](../../../demo-packs/agent-governance/OPERATOR-SLOTS.md). Scripts only check completeness;
+  chat, logs and cards refer to D12 and D14 by code and to their inputs by slot id.
 - **Iron naming rules** of the Lab Builder ([text-limits.json](../agent365-wizard/references/text-limits.json),
   `Test-A365Names.ps1`) are checked before anything is registered; `Test-DemoPack.ps1` validates a whole locale.
 - **Demo MCP server and tool names are tenant-wide.** One demo lab per tenant and language; a second lab in the same
@@ -133,9 +148,9 @@ Start at least **five days** before the first event or rehearsal that uses the l
 
 | Phase | What | Who |
 |---|---|---|
-| 0. Interview | runtime-model gate; **language**; tenant + subscription (confirm, pin, assert, as the Lab Builder does); **lab-private az profile** (recommended when other sessions run on the machine: `-IsolatedAzProfile`, then the interactive `az login` in that profile); prefix (`^[a-z][a-z0-9]{2,8}$`; the bootstrap gate refuses a prefix contained in foreign resource group names), domain, admin UPN, region, Copilot Studio environments (pay-as-you-go and default), Foundry mode, license SKUs (a bundle `SKU1+SKU2+...` when the tenant has no single SKU for a role; `-TeamsForAllPersonas`) → `New-DemoConfig.ps1` | agent + user |
+| 0. Interview | runtime-model gate; **language**; tenant + subscription (confirm, pin, assert, as the Lab Builder does); **lab-private az profile** (recommended when other sessions run on the machine: `-IsolatedAzProfile`, then the interactive `az login` in that profile); prefix (`^[a-z][a-z0-9]{2,8}$`; the bootstrap gate refuses a prefix contained in foreign resource group names), domain, admin UPN, region, pay-as-you-go Copilot Studio environment (default environment only for an explicitly requested addition), Foundry mode, license SKUs (a bundle `SKU1+SKU2+...` when the tenant has no single SKU for a role; `-TeamsForAllPersonas`) → `New-DemoConfig.ps1` | agent + user |
 | 1. bootstrap | license gate and prerequisites (operator roles, prefix collision); pack and locale check; Python packages; Foundry project (FD-only packs); users, licenses (bundles, conflicting mailbox plans disabled), roles (the operator's attribute roles too), managers, groups; photos (lab or shared folder, missing = a user action) | scripts |
-| 2. setup | knowledge (build, publish); demo MCP backends; registrations (automatic: `-Run` answers the a365 prompt and confirms); **admin approval of the demo MCP servers (BLOCKING: the runner stops there)**; agents through the Lab Builder engine (plan, scaffold, then a Lab Builder **resume** of the prefix; the runner stops there too; the agent outside the plan uses `outside-plan.json`); Azure OpenAI sizing; governance by script; cards and run of show | scripts + agent |
+| 2. setup | knowledge (build, publish); demo MCP backends; registrations (automatic: `-Run` answers the a365 prompt and confirms); **admin approval of the demo MCP servers (BLOCKING: the runner stops there)**; agents through the Lab Builder engine (plan, scaffold, then a Lab Builder **resume** of the prefix; the runner stops there too; explicitly requested out-of-plan additions use `outside-plan.json`); Azure OpenAI sizing; governance by script; cards and run of show | scripts + agent |
 | 3. interactive | per-user connection URLs BEFORE the tests, the portal cards (Copilot Studio, Agent Builder agents created by their personas, Digital Worker instance created from Teams, Foundry, Entra, Purview, Defender, admin center), identities refresh, the test hand-out, the pre-flight | user + personas, verified by script |
 | 4. use | the demo itself, outside this agent: [agent365-demo-guide](../agent365-demo-guide/SKILL.md) | presenters |
 | 5. restore | pre-flight, reset of what the demos change (owners, blocks, assignments, the MCP pool; leavers recreated and deleted again), manual resets: [agent365-demo-reset](../agent365-demo-reset/SKILL.md) | scripts + user |

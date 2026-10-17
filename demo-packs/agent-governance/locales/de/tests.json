@@ -49,10 +49,6 @@
    "prompt": "{{prompts.d6RegisterRecord}}",
    "expected": "nicht ausgeführt, solange der Server blockiert ist; beobachten, wie lange Blockierung und Entblockung bis zur Wirkung brauchen"
   },
-  "RA-08": {
-   "expected": "der Tool-Aufruf wird durch die Echtzeitschutzregel blockiert",
-   "promptSlot": "slot-2"
-  },
   "RA-09": {
    "prompts": [
     "{{prompts.d6RegisterRecord}}",
@@ -158,13 +154,6 @@
   "CA-02": {
    "prompt": "Bereite eine Mitteilung an die Unternehmen über die neue Version 2.1 von Formular A vor.",
    "expected": "ein Entwurf aus dem Wissen Hinweise; fragt vor dem Senden nach"
-  },
-  "FQ-01": {
-   "prompts": [
-    "Wie hoch sind die förderfähigen Mindestkosten?",
-    "Bis wann müssen die Anträge eingereicht werden?"
-   ],
-   "expected": "10.000 €; 30.10.2026 18:00"
   },
   "CI-01": {
    "prompt": "Bis wann können die ergänzenden Angebote hochgeladen werden?",

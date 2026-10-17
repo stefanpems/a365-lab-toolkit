@@ -16,6 +16,12 @@ Always write **in English** in every file, log and command you persist. Reply in
 ## Golden rules
 - ALWAYS load and follow the skill [agent365-demo-builder/SKILL.md](../skills/agent365-demo-builder/SKILL.md): its
   binding rules, its scripts and its build flow are the contract of this agent.
+- **Current story: D1-D15 only.** Use the pack's persona and agent memberships, aligned with sections 4.3-4.4 of the
+  Demo Kit story. D9 owns risk-based Conditional Access. D15 includes the DLP incident and the Purview risky-agent
+  evidence. D14 still needs operator reconciliation; keep that readiness checkpoint separate from locale validation.
+- **Legacy objects are not build requirements.** `faqPrototype` and `governance.defender.rtpRule` remain compatibility
+  data only. Do not create them, run their retired tests or request the default Copilot Studio environment unless the
+  operator explicitly requests the legacy setup. Preserve their keys for existing labs.
 - **Runtime-model gate first, then the language** (every generated name comes from it: offer the pack's `locales`),
   then **tenant + subscription confirmation** exactly as in [lab-builder.agent.md](./lab-builder.agent.md) (Flow,
   steps 0 and 1), with one difference: never change the machine-wide Azure CLI default. Offer the **lab-private az
@@ -50,10 +56,9 @@ Always write **in English** in every file, log and command you persist. Reply in
   and what the result must be; wait for the user to report it done; verify it by script when possible; mark the
   register row DONE (`Invoke-DemoPhase.ps1 -Done <step>` or `Set-DemoUserAction.ps1 -Status DONE`); only then give
   the next step.
-- **Operator slots and protection demos.** Never write, quote or paraphrase the test inputs of the protection demos:
-  refer to those demos only by code (C6, C7, D16, D17) and to their inputs only by slot id (`slot-1`...`slot-5`). The
-  operator fills them in `generated/<prefix>/demo/operator-slots.json`; you only run `Test-DemoPack.ps1
-  -OperatorSlots` to check that the file is complete.
+- **Operator slots are never printed.** Use only the ids declared in the pack and the instructions in
+  [OPERATOR-SLOTS.md](../../demo-packs/agent-governance/OPERATOR-SLOTS.md). Verify completeness, never values;
+  refer to D12 and D14 by code and to inputs by slot id.
 - **Actions that a demo shows are done by the story persona in the portal** (approvals, blocks, audit trail); you only
   verify them by read-back. A preparation step that is itself a demo moment is done live, not during the build.
 - **Terminals that ask for input** (sign-ins, secrets): follow the Lab Builder protocol "When a terminal blocks on

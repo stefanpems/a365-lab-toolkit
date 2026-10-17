@@ -1,5 +1,5 @@
 {
- "$comment": "Language-neutral definition of the Contoso agent-governance demo. Every visible text (names, descriptions, instructions, tools, knowledge, prompts) lives in locales/<lang>.json under the same keys. Read by the Demo Builder skills (build, reset, guide). Field reference: README.md in this folder.",
+ "$comment": "Language-neutral definition of the Contoso agent-governance demo. Every visible text (names, descriptions, instructions, tools, knowledge, prompts) lives in locales/<lang>/ under the same keys. Read by the Demo Builder skills (build, reset, guide). Field reference: README.md in this folder.",
  "id": "agent-governance",
  "version": 1,
  "title": "Agent 365 governance demo - one fictional grants process, many agents, many people",
@@ -54,9 +54,7 @@
    "story": "AI administrator: opens the registry, decides, blocks, reassigns",
    "entraRoles": [
     "AI Administrator",
-    "Global Reader",
-    "Attribute Assignment Administrator",
-    "Conditional Access Administrator"
+    "Global Reader"
    ],
    "licenses": [
     "copilotUser",
@@ -72,8 +70,7 @@
     "D5",
     "D6",
     "D7",
-    "D8",
-    "D17"
+    "D8"
    ]
   },
   {
@@ -95,11 +92,9 @@
    "manager": null,
    "office": "main",
    "demos": [
-    "D7",
     "D9",
     "D10",
-    "D11",
-    "D17"
+    "D11"
    ]
   },
   {
@@ -142,9 +137,7 @@
    "manager": null,
    "office": "main",
    "demos": [
-    "D14",
-    "D16",
-    "D17"
+    "D14"
    ]
   },
   {
@@ -163,10 +156,7 @@
    "manager": "director",
    "office": "main",
    "demos": [
-    "D4",
-    "D6",
-    "D7",
-    "D16"
+    "D6"
    ]
   },
   {
@@ -185,11 +175,9 @@
    "manager": "maker",
    "office": "secondary",
    "demos": [
-    "D4",
     "D5",
     "D12",
-    "D16",
-    "D17"
+    "D14"
    ]
   },
   {
@@ -204,13 +192,13 @@
    "manager": null,
    "office": "main",
    "demos": [
-    "D10"
+    "D10",
+     "D15"
    ]
   },
   {
    "key": "programLead",
-   "profile": "P9",
-   "story": "program lead: new owner of the orphan agent (D5), creator of the agent that is rejected (D4)",
+   "story": "circulars lead: author of Personal Contacts Draft (D4), creator of a digital colleague (D7), user of Reports Monitor (D9, D10)",
    "entraRoles": [],
    "licenses": [
     "copilotUser",
@@ -221,15 +209,16 @@
     "Basic User"
    ],
    "manager": "maker",
-   "office": "main",
+   "office": "secondary",
    "demos": [
     "D4",
-    "D5"
+    "D7",
+    "D9",
+    "D10"
    ]
   },
   {
    "key": "orphanLeaver",
-   "profile": "P10",
    "story": "creator of the orphan agent; NO manager on purpose; permanently deleted (hard delete) before the demo",
    "entraRoles": [],
    "licenses": [
@@ -239,13 +228,11 @@
    "office": "main",
    "leaver": true,
    "demos": [
-    "D1",
-    "D5"
+    "D1"
    ]
   },
   {
    "key": "d8Leaver",
-   "profile": "P11",
    "story": "creator of the forms agent; manager = maker; permanently deleted before the D8 rule runs",
    "entraRoles": [],
    "licenses": [
@@ -460,8 +447,7 @@
    "sponsorOn": "instance",
    "demos": [
     "D7",
-    "D13",
-    "D15"
+    "D13"
    ],
    "leadTime": "instance creation takes minutes to hours; Teams visibility up to one day",
    "buildOrder": 1,
@@ -489,10 +475,8 @@
     "exceptions": true
    },
    "demos": [
-    "D1",
     "D2",
-    "D6",
-    "D16"
+    "D6"
    ],
    "note": "the role prompt deliberately has no recipient or content restriction: see demo D16 (reference lab, 28/09 section-6 instructions)",
    "buildOrder": 2,
@@ -519,11 +503,9 @@
    },
    "accessPackageTarget": true,
    "demos": [
-    "D1",
     "D9",
     "D10",
-    "D11",
-    "D17"
+    "D11"
    ],
    "buildOrder": 3,
    "tags": [
@@ -546,8 +528,8 @@
     "blocked": false
    },
    "demos": [
-    "D11",
-    "D9"
+    "D9",
+    "D11"
    ],
    "buildOrder": 4,
    "tags": [
@@ -585,9 +567,7 @@
     "usage": true
    },
    "demos": [
-    "D1",
-    "D2",
-    "D14"
+    "D1"
    ],
    "buildOrder": 5,
    "tags": [
@@ -617,9 +597,8 @@
    },
    "demos": [
     "D1",
-    "D2",
     "D5",
-    "D12"
+    "D8"
    ],
    "buildOrder": 6,
    "note": "new-harness Copilot Studio agents accept no BYO MCP server and have no description field (reference lab, 27/09): registrations go to the records assistant",
@@ -647,7 +626,8 @@
     "installedFor": "persona:caseOfficer"
    },
    "demos": [
-    "D5"
+    "D5",
+     "D8"
    ],
    "buildOrder": 7,
    "webSearch": false,
@@ -675,7 +655,8 @@
     "pendingRequest": true
    },
    "demos": [
-    "D4"
+    "D4",
+     "D8"
    ],
    "buildOrder": 8,
    "webSearch": false,
@@ -705,8 +686,9 @@
     "usage": true
    },
    "demos": [
-    "D16",
-    "D17"
+    "D1",
+    "D8",
+    "D14"
    ],
    "buildOrder": 9,
    "webSearch": false,
@@ -741,14 +723,12 @@
     "noInstructions"
    ],
    "removeAfterEvent": true,
-   "demos": [
-    "D14"
-   ],
+   "demos": [],
    "buildOrder": 10,
    "catalog": false,
    "webSearch": false,
    "generalKnowledge": true,
-   "note": "Microsoft channels removed BEFORE choosing No authentication; web search off, only the FAQ document (reference lab, 28/09)"
+   "note": "Legacy compatibility object outside the Lab Builder plan; not part of the current story cast. Do not create it for a new build unless the operator explicitly requests it."
   },
   {
    "key": "circularsAssistant",
@@ -765,7 +745,7 @@
    },
    "demos": [
     "D1",
-    "D5"
+    "D15"
    ],
    "buildOrder": 11,
    "shareLinkOpenedBy": [
@@ -775,7 +755,8 @@
    ],
    "tags": [
     "department"
-   ]
+   ],
+   "note": "Created by the former circulars lead; used for the registry overview (D1) and the DSPM risky-agent investigation (D15), not for a live ownership handover."
   },
   {
    "key": "formsAssistant",
@@ -813,7 +794,8 @@
     "pendingRequest": true
    },
    "demos": [
-    "D4"
+    "D1",
+     "D4"
    ],
    "buildOrder": 13,
    "submitToCatalog": {
@@ -832,7 +814,7 @@
    "knowledgeFolder": "cases",
    "shareWith": "department",
    "shareLinkOpenedBy": [
-    "programLead"
+    "director"
    ],
    "customSkill": "caseSummary",
    "registryOwner": "maker",
@@ -882,22 +864,10 @@
    "kind": "knowledgeText",
    "document": "formsNotice",
    "demos": [
-    "D16",
-    "D17"
+    "D14",
+    "D15"
    ],
    "note": "invisible run (white, 1 pt) at the end of the D16 notice"
-  },
-  {
-   "id": "slot-2",
-   "kind": "prompt",
-   "agent": "recordsAssistant",
-   "persona": "maker",
-   "demos": [
-    "D16"
-   ],
-   "tests": [
-    "RA-08"
-   ]
   },
   {
    "id": "slot-3",
@@ -927,7 +897,7 @@
    "agent": "communicationsAssistant",
    "persona": "caseOfficer",
    "demos": [
-    "D17"
+    "D15"
    ]
   }
  ],
@@ -974,7 +944,6 @@
    "phase": "agentTests",
    "repeatTimes": 4,
    "demos": [
-    "D1",
     "D2"
    ]
   },
@@ -998,17 +967,6 @@
    ]
   },
   {
-   "id": "RA-08",
-   "agent": "recordsAssistant",
-   "persona": "maker",
-   "surface": "webUi",
-   "phase": "d16Rehearsal",
-   "demos": [
-    "D16"
-   ],
-   "after": "defenderSetup"
-  },
-  {
    "id": "RA-09",
    "agent": "recordsAssistant",
    "personas": [
@@ -1023,7 +981,6 @@
    "window": "T-3..T-1",
    "needsConnection": "records",
    "demos": [
-    "D1",
     "D2"
    ],
    "note": "C5 traffic: each persona creates the records connection once, then alternates in each conversation the register and the status check"
@@ -1116,7 +1073,7 @@
   {
    "id": "RM-03",
    "agent": "reportsMonitor",
-   "persona": "maker",
+   "persona": "programLead",
    "surface": "webUi",
    "repeat": "RM-02",
    "phase": "accessPackageTrial",
@@ -1126,14 +1083,14 @@
   },
   {
    "id": "RM-04",
-   "agent": "reportsMonitor",
-   "persona": "maker",
+   "agent": "reportsMonitorTest",
+   "persona": "programLead",
    "surface": "webUi",
    "repeat": "RM-02",
    "phase": "confirmCompromiseThenSafe",
    "demos": [
     "D9",
-    "D17"
+    "D15"
    ]
   },
   {
@@ -1162,8 +1119,7 @@
    "surface": "webUi",
    "phase": "agentTests",
    "demos": [
-    "D1",
-    "D2"
+    "D1"
    ]
   },
   {
@@ -1245,9 +1201,9 @@
    "agent": "communicationsAssistant",
    "persona": "caseOfficer",
    "surface": "m365Copilot",
-   "phase": "d16Rehearsal",
+   "phase": "d14Rehearsal",
    "demos": [
-    "D16"
+    "D14"
    ],
    "after": "defenderSetup"
   },
@@ -1256,13 +1212,6 @@
    "agent": "communicationsAssistant",
    "persona": "maker",
    "surface": "testPane",
-   "phase": "agentTests"
-  },
-  {
-   "id": "FQ-01",
-   "agent": "faqPrototype",
-   "persona": "anyone",
-   "surface": "demoWebsite",
    "phase": "agentTests"
   },
   {
@@ -1314,7 +1263,7 @@
   {
    "id": "DL-01",
    "agent": "casesAssistant",
-   "persona": "programLead",
+   "persona": "director",
    "surface": "m365Copilot",
    "phase": "d15Rehearsal",
    "after": "dlpActive",
@@ -1325,7 +1274,7 @@
   {
    "id": "DL-02",
    "agent": "casesAssistant",
-   "persona": "programLead",
+   "persona": "director",
    "surface": "m365Copilot",
    "phase": "d15Rehearsal",
    "after": "dlpActive",
@@ -1351,8 +1300,7 @@
     "condition": "agentRiskHigh",
     "grant": "block",
     "demos": [
-     "D9",
-     "D17"
+     "D9"
     ]
    },
    {
@@ -1433,7 +1381,11 @@
     "leadHours": 24,
     "demos": [
      "D15"
-    ]
+    ],
+    "riskyAgents": [
+       "circularsAssistant"
+     ],
+    "agentPolicies": true
    }
   },
   "defender": {
@@ -1442,16 +1394,24 @@
    "copilotStudioThreatDetection": {
     "environment": "payg",
     "demos": [
-     "D16"
+     "D14"
     ]
    },
    "rtpRule": {
     "agent": "recordsAssistant",
     "action": "block",
-    "demos": [
-     "D16"
-    ]
-   }
+    "demos": [],
+    "optional": true
+   },
+   "incidents": {
+      "agents": [
+        "casesAssistant"
+      ],
+      "demos": [
+        "D15"
+      ],
+      "evidence": "dlpAlerts"
+    }
   },
   "adminCenter": {
    "tags": [
@@ -1514,7 +1474,7 @@
  "demos": [
   {
    "id": "D1",
-   "title": "Registry overview: usage, agents without owners, exceptions",
+   "title": "Single registry and agent ID card",
    "act": 1,
    "importance": "high",
    "minutes": [
@@ -1528,7 +1488,10 @@
    ],
    "agents": [
     "grantsDesk",
-    "circularsAssistant"
+    "communicationsAssistant",
+    "circularsAssistant",
+    "personalContacts",
+    "applicationReview"
    ],
    "resetClass": "readOnly",
    "leadHours": 24,
@@ -1543,7 +1506,7 @@
   },
   {
    "id": "D2",
-   "title": "Map of an agent's connections",
+   "title": "The agent map",
    "act": 1,
    "importance": "high",
    "minutes": [
@@ -1556,7 +1519,6 @@
     "aiAdmin"
    ],
    "agents": [
-    "grantsDesk",
     "recordsAssistant"
    ],
    "resetClass": "readOnly",
@@ -1567,7 +1529,7 @@
   },
   {
    "id": "D3",
-   "title": "Agents from every platform in one registry",
+   "title": "Connected platforms (registry sync)",
    "act": 1,
    "importance": "medium",
    "minutes": [
@@ -1586,7 +1548,7 @@
   },
   {
    "id": "D4",
-   "title": "Agent requests: approve with a template, reject with a reason",
+   "title": "Controlled onboarding: request, approval, template",
    "act": 2,
    "importance": "high",
    "minutes": [
@@ -1596,15 +1558,11 @@
    "status": "GA",
    "portal": "microsoft365Admin",
    "profiles": [
-    "maker",
-    "aiAdmin",
-    "caseOfficer",
-    "programLead"
+    "aiAdmin"
    ],
    "agents": [
     "siteInspections",
-    "personalContacts",
-    "grantsDesk"
+    "personalContacts"
    ],
    "resetClass": "consumes",
    "leadHours": 12,
@@ -1620,7 +1578,7 @@
   },
   {
    "id": "D5",
-   "title": "Distribute, block and hand over agents",
+   "title": "Agent in production: block and unblock",
    "act": 2,
    "importance": "high",
    "minutes": [
@@ -1635,26 +1593,23 @@
    ],
    "agents": [
     "grantsDesk",
-    "grantsDeskPilot",
-    "circularsAssistant"
+    "grantsDeskPilot"
    ],
    "resetClass": "consumes",
    "leadHours": 12,
    "manualReset": [
     "{agent:grantsDesk} approved and installed for {group:department} (admin center > Requests, then the Users tab of the published entry).",
     "Blocking an agent disables its agent ID and removes its installations: after the live block and unblock of {agent:grantsDesk}, re-install it for {group:department} and remove any test install or pin.",
-    "{agent:grantsDeskPilot} (published entry) blocked by {name:aiAdmin} the evening before; it stays blocked.",
-    "Rehearsals: stop at the 'Assign a new owner' pane, or recreate the orphan afterwards (New-OrphanAgent.ps1, about 45 minutes, then the share link opened again by the recipients)."
+    "{agent:grantsDeskPilot} (published entry) blocked by {name:aiAdmin} the evening before; it stays blocked."
    ],
    "notes": [
-    "Change the owner ONLY of {agent:circularsAssistant} (Assign new owner → {name:programLead}); never of {agent:grantsDesk}: the previous owner loses all access, including read, and {name:maker} needs it in D6.",
-    "'Add owner' is not offered on an ownerless agent. Rehearsals stop at the 'Assign a new owner' pane.",
-    "In some tenants the hard delete of the creator leaves a dangling owner for good: the card and the D8 rule never count the agent (reference lab: four tests, also with a brand-new agent and creator). Check the card the day after the leaver deletion; plan B: the empty Owner column and 'Assign new owner'."
+    "Keep the blocked pilot separate from the production agent: the before/after is ready without waiting for propagation.",
+    "Ownership is discussed in D1 and D8; this demo does not transfer the circulars agent."
    ]
   },
   {
    "id": "D6",
-   "title": "Approve a tool (MCP) server, then block a tool",
+   "title": "Governing tools: block and approve",
    "act": 2,
    "importance": "high",
    "minutes": [
@@ -1684,7 +1639,7 @@
   },
   {
    "id": "D7",
-   "title": "Policy templates and the AI teammate",
+   "title": "The digital colleague",
    "act": 2,
    "importance": "medium",
    "minutes": [
@@ -1695,7 +1650,7 @@
    "portal": "microsoft365Admin",
    "profiles": [
     "aiAdmin",
-    "identityAdmin"
+    "programLead"
    ],
    "agents": [
     "recordsColleague"
@@ -1707,12 +1662,13 @@
     "Custom templates of earlier labs are visible in D7 (some show personal names): remove or rename them first, unless another lab still needs them."
    ],
    "notes": [
-    "Custom templates of other labs are visible: scroll past them or search."
+    "Custom templates of other labs are visible: scroll past them or search.",
+     "The maker's instance is prepared first; the program lead creates her own instance in Teams during the story."
    ]
   },
   {
    "id": "D8",
-   "title": "Management rule: ownerless agents go to the creator's manager",
+   "title": "Automation rules: templates and ownerless agents",
    "act": 2,
    "importance": "medium",
    "minutes": [
@@ -1725,22 +1681,27 @@
     "aiAdmin"
    ],
    "agents": [
-    "formsAssistant"
+    "communicationsAssistant",
+     "siteInspections",
+     "grantsDeskPilot",
+     "grantsDesk",
+     "formsAssistant"
    ],
    "resetClass": "time",
    "leadHours": 24,
    "manualReset": [
-    "The rule that reassigns ownerless Agent Builder agents to the creator's manager exists; after a run {agent:formsAssistant} is owned by {name:maker}. To show it again: New-OrphanAgent.ps1 -Agent formsAssistant, then run the rule live."
+    "Remove or reset the custom apply-template rule so the four Copilot Studio agents can be reviewed again with '{{governance.templates.productionTemplate}}'.",
+     "The ownerless-agent rule is shown as a separate branch. Recreate {agent:formsAssistant} with New-OrphanAgent.ps1 only when that optional branch must be run again."
    ],
    "notes": [
-    "The rule is predefined: it is only RUN, live, once {agent:formsAssistant} shows in 'Agents to review'. Plan B: Assign new owner → {name:maker}, stated on camera.",
-    "In some tenants the hard delete of the creator leaves a dangling owner for good: the card and the D8 rule never count the agent (reference lab: four tests, also with a brand-new agent and creator). Check the card the day after the leaver deletion; plan B: the empty Owner column and 'Assign new owner'.",
-    "The rule supports only agents created with Agent Builder."
+    "The current story shows the four existing Copilot Studio agents in the apply-template rule and a separate stale-publish-request rule.",
+    "The default ownerless-agent rule may show zero agents; state the observed result instead of promising a reassignment.",
+    "Only the ownerless branch uses the Agent Builder forms agent; do not confuse it with the custom apply-template rule."
    ]
   },
   {
    "id": "D9",
-   "title": "Conditional Access blocks a high-risk agent",
+   "title": "Conditional Access for risky agents",
    "act": 2,
    "importance": "high",
    "minutes": [
@@ -1750,7 +1711,8 @@
    "status": "Agent ID GA; agent risk condition Preview",
    "portal": "entra",
    "profiles": [
-    "identityAdmin"
+    "identityAdmin",
+     "programLead"
    ],
    "agents": [
     "reportsMonitorTest"
@@ -1769,7 +1731,7 @@
   },
   {
    "id": "D10",
-   "title": "The sponsor requests time-limited access for an agent",
+   "title": "Time-bound access with access packages",
    "act": 2,
    "importance": "medium",
    "minutes": [
@@ -1780,7 +1742,8 @@
    "portal": "entra",
    "profiles": [
     "identityAdmin",
-    "director"
+    "director",
+    "programLead"
    ],
    "agents": [
     "reportsMonitor"
@@ -1796,7 +1759,7 @@
   },
   {
    "id": "D11",
-   "title": "Only approved agents: Conditional Access by attribute (report-only)",
+   "title": "Security attributes and What If",
    "act": 2,
    "importance": "low",
    "minutes": [
@@ -1843,7 +1806,7 @@
   },
   {
    "id": "D13",
-   "title": "eDiscovery on the AI teammate",
+   "title": "eDiscovery on interactions with agents",
    "act": 2,
    "importance": "medium",
    "minutes": [
@@ -1888,77 +1851,30 @@
   },
   {
    "id": "D15",
-   "title": "Data security posture and DLP for agents",
+   "title": "Confidential data stays confidential",
    "act": 3,
-   "importance": "medium",
+   "importance": "high",
    "minutes": [
-    2,
-    3
+    4,
+    7
    ],
    "status": "GA",
    "portal": "purview",
    "profiles": [
-    "complianceOfficer"
+    "director",
+     "complianceOfficer"
    ],
    "agents": [
-    "recordsColleague",
-    "casesAssistant"
+    "casesAssistant",
+    "circularsAssistant"
    ],
    "resetClass": "readOnly",
    "leadHours": 24,
-   "onDemand": true
-  },
-  {
-   "id": "D16",
-   "title": "Real-time protection of agents",
-   "act": 3,
-   "importance": "high",
-   "minutes": [
-    3,
-    4
-   ],
-   "status": "variant A Preview; variant B GA",
-   "portal": "copilot",
-   "profiles": [
-    "caseOfficer",
-    "socAnalyst",
-    "maker"
-   ],
-   "agents": [
-    "communicationsAssistant",
-    "recordsAssistant"
-   ],
-   "resetClass": "readOnly",
-   "leadHours": 24,
+   "onDemand": false,
    "manualReset": [
-    "Copilot Studio threat detection on the pay-as-you-go environment; the real-time protection rule '{{governance.rtpRule}}' On (block) for {agent:recordsAssistant}."
-   ]
-  },
-  {
-   "id": "D17",
-   "title": "An agent incident and risk-based access",
-   "act": 3,
-   "importance": "high",
-   "minutes": [
-    3,
-    5
-   ],
-   "status": "agent detections Preview; incidents and hunting GA",
-   "portal": "defender",
-   "profiles": [
-    "socAnalyst",
-    "aiAdmin",
-    "identityAdmin"
-   ],
-   "agents": [
-    "communicationsAssistant",
-    "reportsMonitor"
-   ],
-   "resetClass": "consumes",
-   "leadHours": 24,
-   "manualReset": [
-    "The incident prepared at T-1 on {agent:communicationsAssistant} present in Defender; the hunting queries saved."
-   ]
+      "As {name:director}, verify {agent:casesAssistant} can summarize an ordinary application but cannot retrieve the labeled confidential application after the DLP policy is active.",
+      "Prepare the related DLP incident and alerts in Microsoft Defender, and verify the risky {agent:circularsAssistant} entry with its alerts and accessed-file evidence in Purview DSPM and Insider Risk Management."
+    ]
   }
  ],
  "timeline": [
@@ -2011,18 +1927,19 @@
    "focus": "rehearse",
    "tasks": [
     "communicationCompliance",
-    "d16Rehearsal",
+    "d14Rehearsal",
     "d9Rehearsal",
     "casesAssistant",
     "dlpActive",
-    "traffic"
+    "traffic",
+    "d15Rehearsal"
    ]
   },
   {
    "day": -1,
    "focus": "stage",
    "tasks": [
-    "d17Incident",
+    "d15Incident",
     "ccMatches",
     "auditSearches",
     "registryActivityEveryAgentType",
@@ -2035,7 +1952,8 @@
     "accessPackageTrial",
     "ediscoveryCase",
     "fullReset",
-    "freeze"
+    "freeze",
+    "d15RiskyAgents"
    ]
   },
   {

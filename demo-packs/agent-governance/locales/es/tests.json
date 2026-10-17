@@ -49,10 +49,6 @@
    "prompt": "{{prompts.d6RegisterRecord}}",
    "expected": "no se ejecuta mientras el servidor está bloqueado; observa cuánto tardan en aplicarse el bloqueo y el desbloqueo"
   },
-  "RA-08": {
-   "expected": "la invocación de la herramienta se bloquea por la regla de protección en tiempo real",
-   "promptSlot": "slot-2"
-  },
   "RA-09": {
    "prompts": [
     "{{prompts.d6RegisterRecord}}",
@@ -158,13 +154,6 @@
   "CA-02": {
    "prompt": "Prepara una comunicación para las empresas sobre la nueva versión 2.1 del Formulario A.",
    "expected": "un borrador a partir del conocimiento de Avisos; pregunta antes de enviar"
-  },
-  "FQ-01": {
-   "prompts": [
-    "¿Cuál es el coste subvencionable mínimo?",
-    "¿Hasta cuándo deben presentarse las solicitudes?"
-   ],
-   "expected": "10.000 €; 30/10/2026 18:00"
   },
   "CI-01": {
    "prompt": "¿Hasta cuándo se pueden subir los presupuestos complementarios?",

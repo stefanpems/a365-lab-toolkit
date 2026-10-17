@@ -49,10 +49,6 @@
    "prompt": "{{prompts.d6RegisterRecord}}",
    "expected": "non eseguito mentre il server è bloccato; annota i tempi di effetto del blocco e dello sblocco"
   },
-  "RA-08": {
-   "expected": "l'invocazione del tool è bloccata dalla regola di real-time protection",
-   "promptSlot": "slot-2"
-  },
   "RA-09": {
    "prompts": [
     "{{prompts.d6RegisterRecord}}",
@@ -158,13 +154,6 @@
   "CA-02": {
    "prompt": "Prepara una comunicazione per le imprese sulla nuova versione 2.1 del Modulo A.",
    "expected": "bozza dalla knowledge Avvisi; chiede conferma prima dell'invio"
-  },
-  "FQ-01": {
-   "prompts": [
-    "Qual è la spesa minima ammissibile?",
-    "Entro quando si presentano le domande?"
-   ],
-   "expected": "10.000 €; 30/10/2026 ore 18:00"
   },
   "CI-01": {
    "prompt": "Entro quando si possono caricare i preventivi integrativi?",
