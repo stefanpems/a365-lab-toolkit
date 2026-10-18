@@ -25,6 +25,10 @@
   EXACT resource names — including custom ones — then tags each that actually exists. It performs no
   deletes and no deploys.
 
+  Native Agent 365 registry tags are a SEPARATE store. No documented tag-write API is available.
+  This script prints the shared manual action for the native tag named <prefix>; it never claims
+  that an Azure/Entra write applied the native tag. See docs/agent365-lab-tags.md.
+
   Entra tags are written with a Microsoft Graph token + Invoke-RestMethod (NOT `az rest --body @file`,
   which corrupts the JSON body on some Windows hosts — see repo notes). Graph filters are URL-encoded as
   a single query parameter (no '&') for the same reason.
@@ -50,6 +54,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+. (Join-Path $PSScriptRoot 'Get-Agent365TagAction.ps1')
 
 $LabTagKey   = 'a365lab'
 $AzureTagVal = $Prefix                  # Azure tag: a365lab=<prefix>
@@ -240,10 +245,16 @@ if ($plan -and @($plan.agents | Where-Object { $_.type -in @('FD-OBO', 'FD-S2S')
 # Report.
 # ---------------------------------------------------------------------------
 Write-Host ""
-Write-Host "Tagging summary for lab '$Prefix':" -ForegroundColor Green
+Write-Host "Azure/Entra tagging summary for lab '$Prefix':" -ForegroundColor Green
 foreach ($line in $summary) { Write-Host "  $line" }
 $tagged = @($summary | Where-Object { $_ -cmatch '\bTAGGED\b' }).Count
 $errs   = @($summary | Where-Object { $_ -cmatch '\bERROR\b' }).Count
 Write-Host ""
 Write-Host "  $tagged newly tagged, $errs error(s). Re-run any time — tagging is idempotent." -ForegroundColor DarkGray
+$nativeTagAction = Get-Agent365TagAction -Prefix $Prefix -TenantId $ctx.tenantId
+Write-Host ""
+Write-Warning "Native Agent 365 tag '$Prefix': MANUAL ACTION REQUIRED; not applied by this script."
+Write-Host $nativeTagAction.Action
+Write-Host $nativeTagAction.Where
+Write-Host "Procedure: $(Join-Path $repoRoot 'docs\agent365-lab-tags.md')"
 if ($errs -gt 0) { exit 1 }

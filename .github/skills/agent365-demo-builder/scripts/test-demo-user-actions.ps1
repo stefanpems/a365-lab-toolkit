@@ -82,6 +82,30 @@ try {
     Assert ($LASTEXITCODE -eq 0 -and $out -match 'From wrapper') 'wrapper -List prints the register'
     pwsh -NoProfile -File $w -Prefix $prefix -Key 'w1' -Blocking -NotBlocking 2>$null | Out-Null
     Assert ($LASTEXITCODE -ne 0) 'wrapper rejects -Blocking with -NotBlocking'
+
+    Write-Host 'Native Agent 365 lab tag action'
+    . (Join-Path $script:WizardScriptsDir 'Get-Agent365TagAction.ps1')
+    $tenant = '11111111-2222-3333-4444-555555555555'
+    $tagAction = Get-Agent365TagAction -Prefix $prefix -TenantId $tenant
+    Assert ($tagAction.Key -eq 'agent365-lab-tag' -and -not $tagAction.Blocking) 'native tag action has a stable key and is non-blocking'
+    Assert ($tagAction.Action.Contains("'$prefix'") -and $tagAction.Where.Contains($tenant)) 'native tag uses the exact lab prefix and expected tenant'
+    Assert ($tagAction.Action -match 'manual action, NOT an applied tag' -and -not $tagAction.Contains('Status')) 'native tags are not falsely reported as applied or complete'
+    Assert ($tagAction.Action -match 'Copilot Studio and later-created agents') 'scope includes MCS and later-created agents'
+    Assert ($tagAction.Where -match '50 organization tags' -and $tagAction.Where -match 'five per agent') 'both documented native-tag limits are included'
+    Assert ($tagAction.Where -match 'Do not remove other tags' -and $tagAction.Where -match 'Reopen the agent details') 'preservation and native read-back are required'
+    $pending = Set-DemoUserAction -Prefix $prefix @tagAction
+    Assert ($pending.status -eq 'TODO' -and -not $pending.blocking) 'registration persists a pending manual action'
+    $null = Set-DemoUserAction -Prefix $prefix -Key $tagAction.Key -Status DONE
+    $again = Set-DemoUserAction -Prefix $prefix @tagAction
+    Assert ($again.id -eq $pending.id -and $again.status -eq 'DONE') 'repeat registration preserves id and explicit completion'
+    Assert (@((Read-DemoUserActions $prefix).actions | Where-Object { $_.key -eq $tagAction.Key }).Count -eq 1) 'repeat registration does not duplicate the native tag action'
+    $null = Set-DemoUserAction -Prefix $prefix -Key $tagAction.Key -Status TODO
+    Assert ((Get-Row $tagAction.Key).status -eq 'TODO') 'a later registration can reopen the manual action'
+    $unconfirmed = Get-Agent365TagAction -Prefix $prefix
+    Assert ($unconfirmed.Where -match 'confirm the target tenant from the archived lab plan') 'missing tenant requires explicit confirmation, not an ambient context'
+    $threw = $false
+    try { $null = Get-Agent365TagAction -Prefix '../foreign-lab' -TenantId $tenant } catch { $threw = $true }
+    Assert $threw 'invalid lab prefix is rejected'
 }
 finally {
     if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }

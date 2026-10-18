@@ -15,6 +15,13 @@ Recreates a whole demo (people, content, agents, governance, starting conditions
 [agent365-demo-reset](../agent365-demo-reset/SKILL.md) (starting conditions, rehearsals) and
 [agent365-demo-guide](../agent365-demo-guide/SKILL.md) (running the demo).
 
+The Lab Builder's [native Agent 365 lab-name tag procedure](../../../docs/agent365-lab-tags.md) is
+inherited too. `New-DemoLabPlan.ps1` records the shared `agent365-lab-tag` manual action as a
+non-blocking TODO (not with `-ValidateOnly`). The tag name is the lab prefix, separate from Azure/Entra
+ownership tags. No supported tag-write API is documented. Include out-of-plan and later interactive
+agents after registration, reopen the action when another agent is added, and mark it DONE only
+after the native tag is verified in the portal.
+
 > **Preview, not yet validated end to end**: checked offline and read-only against a real tenant; a complete build with
 > `-Apply` in a new tenant has not been run yet. Dry-run every phase first.
 

@@ -116,8 +116,9 @@ other and neither can resume cleanly. The isolation rules:
 `/memories/session/lab-<prefix>.md` if present; (2) read the archived plan
 `generated/<prefix>/a365-deployment-plan.json` and the tail of `generated/<prefix>/wizard-progress.log`
 to learn the last completed step; (3) re-confirm the runtime-model gate + tenant/subscription (they may
-have flipped in a parallel run — pin them again); (4) run `Set-LabTags.ps1` (idempotent) and a read-only
-discovery to reconcile what already exists in the cloud against the plan; (5) continue from the exact
+have flipped in a parallel run — pin them again); (4) run `Set-LabTags.ps1` (idempotent), reconcile the
+separate [native Agent 365 lab-name tag](../../docs/agent365-lab-tags.md) as a pending manual action,
+and use read-only discovery to reconcile what already exists in the cloud against the plan; (5) continue from the exact
 next action. Never restart from scratch if `generated/<prefix>/` already holds scaffolded folders.
 
 ## Progress visibility (do this the WHOLE time)
@@ -432,6 +433,10 @@ Several steps open a browser tab for **sign-in + admin consent**. Before each on
    `a365component` without `a365lab`" discriminator stays correct — tag EARLY, because the Cleaner must
    also delete half-created labs). It never tags a `reuse-existing`/user-owned shared account. (An
    agent-less standalone plan emits `Set-ComponentTags.ps1` instead — `a365component` only, never `a365lab`.)
+   Separately reconcile the [native Agent 365 tag named exactly the lab prefix](../../docs/agent365-lab-tags.md)
+   after each agent registration and on resume, including MCS and later-created instances. No supported
+   tag-write API is documented: emit the shared manual action, preserve existing tags, and keep it
+   pending until the native tag is verified in the portal. Azure/Entra tagging does not complete it.
 4. **Conditional questions** (only what the selection needs) — see the skill's variant matrix:
    for any **ACA** ask the **Azure OpenAI strategy** ONCE (`solution.azureOpenAI`, shared by all ACA):
    **create a new shared account+deployment** (`create-shared`, **default** — lab-owned, deleted by the

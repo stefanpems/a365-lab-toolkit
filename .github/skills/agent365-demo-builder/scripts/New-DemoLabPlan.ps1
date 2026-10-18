@@ -16,6 +16,7 @@
 [CmdletBinding(PositionalBinding = $false)]
 param([Parameter(Mandatory)][string]$Prefix, [switch]$Scaffold, [switch]$ValidateOnly)
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
+. (Join-Path $script:WizardScriptsDir 'Get-Agent365TagAction.ps1')
 $cfg = Read-DemoConfig $Prefix
 $pack = Get-DemoPack $cfg.pack
 $L = Get-DemoLocale -Locale $cfg.locale -Pack $cfg.pack
@@ -121,6 +122,10 @@ $outside | ConvertTo-Json -Depth 5 -AsArray | Set-Content -LiteralPath (Join-Pat
 Write-DemoLog $Prefix "Lab Builder plan written ($($agents.Count) agents, locale $($cfg.locale)): $planPath"
 if ($outside.Count) { Write-Host "Outside the lab plan (Lab Builder engine command in demo\outside-plan.json): $(@($outside | ForEach-Object { $_.displayName }) -join ', ')" }
 if (-not $ValidateOnly) {
+    if ($agents.Count -gt 0) {
+        $nativeTagAction = Get-Agent365TagAction -Prefix $Prefix -TenantId $cfg.tenantId
+        $null = Set-DemoUserAction -Prefix $Prefix @nativeTagAction
+    }
     # The Lab Builder's per-agent test gate is deferred in a demo build: the smoke test of every agent is a user action.
     $exposed = @($pack.webUi.expose)
     $tests = @($pack.agents | Where-Object { $_.platform -in 'code', 'copilotStudio' } | Sort-Object { [int]$_.buildOrder } | ForEach-Object {

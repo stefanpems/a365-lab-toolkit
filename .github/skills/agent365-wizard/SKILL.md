@@ -371,6 +371,14 @@ writing. Print the next commands for the user to run; never auto-run destructive
   `a365lab`" discriminator is always correct). Tag as EARLY as each resource exists — do not defer to
   "when the whole lab is live" — because the Lab Cleaner must also delete half-created labs. It never tags
   a `reuse-existing` / user-owned shared account.
+- **Native Agent 365 lab-name tag (manual, separate store).** Follow
+  [the shared native-tag procedure](../../../docs/agent365-lab-tags.md) after each agent registration
+  and again on resume, including MCS and subsequently created instances. Reuse or create the native
+  organization tag named exactly `solution.prefix`, preserve every existing agent tag, and verify it
+  in the registry. No supported tag-write API is documented; the scaffolder and `Set-LabTags.ps1`
+  emit a pending manual action, not an applied native tag. Keep it pending if registration has not
+  propagated or either tag limit is reached; never evict another tag or equate Azure/Entra success
+  with Agent 365 completion.
 - **Blocking prompts (secret / y-N / endpoint / azd login).** Beep (`[console]::beep(880,400)`),
   show a bold ⛔ ACTION REQUIRED banner naming which terminal (and how to focus it via the Terminal
   panel dropdown / `N Hidden Terminals`), what to type, and where to get the value

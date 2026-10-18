@@ -112,6 +112,9 @@ name — verify the deployed agent matches the planned `<prefix>-MAF-FH-DW`.
    [scripts/Set-LabTags.ps1](../scripts/Set-LabTags.ps1)) — the stable, folder-independent association the
    Lab Cleaner discovers by tag. Only **lab-owned** resources are tagged; a `reuse-existing`/user-owned
    shared account is never tagged.
+   The separate [native Agent 365 registry tag](../../../../docs/agent365-lab-tags.md) is named exactly
+   the lab prefix, regardless of custom display names or instance suffixes. It is a pending manual
+   portal action, not a consequence of Azure/Entra tagging; no supported tag-write API is documented.
 2. **Container App names must be lowercase**, hyphen-separated (Azure rejects uppercase).
 1d. **Instances (N per type) — the `-<n>` suffix rule.** A lab may hold **N instances** of the same agent
    type (each is a separate `agents[]` entry). A type with a **single** instance keeps the plain name (no

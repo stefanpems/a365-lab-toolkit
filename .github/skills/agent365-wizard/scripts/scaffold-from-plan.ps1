@@ -53,6 +53,7 @@ $plan = Get-Content -LiteralPath $PlanPath -Raw | ConvertFrom-Json
 # module runs in THIS scope and shares $plan / $repoRoot / $OutRoot / $nextCommands / $attachByAgent.
 $moduleDir = Join-Path $PSScriptRoot 'modules'
 . (Join-Path $moduleDir '_common.ps1')
+. (Join-Path $PSScriptRoot 'Get-Agent365TagAction.ps1')
 . (Join-Path $moduleDir 'scaffold.aca.ps1')
 . (Join-Path $moduleDir 'scaffold.fh.ps1')
 . (Join-Path $moduleDir 'scaffold.fd.ps1')
@@ -490,7 +491,9 @@ $tenantArg = if ($plan.solution.tenantId) { " -TenantId $($plan.solution.tenantI
 $subArg    = if ($plan.solution.subscriptionId) { $plan.solution.subscriptionId } else { '<subscription-id>' }
 if (@($plan.agents).Count -gt 0) {
     $tagScript = (Join-Path $PSScriptRoot 'Set-LabTags.ps1')
-    $agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # LAB: stamp the durable lab tag a365lab=<prefix> on every lab-owned resource — re-run after each deploy / on resume")
+    $agentCommands.Add("pwsh -File `"$tagScript`" -Prefix $prefix -Subscription $subArg$tenantArg   # LAB: stamp Azure/Entra ownership tags only; reconcile native Agent 365 tags separately after each registration / on resume")
+    $nativeTagAction = Get-Agent365TagAction -Prefix $prefix -TenantId $plan.solution.tenantId
+    $agentCommands.Add("# MANUAL (native Agent 365 tag, NOT applied): $($nativeTagAction.Action) $($nativeTagAction.Where)")
 }
 elseif ($plan.ui -and $plan.ui.mode -eq 'create') {
     $compScript = (Join-Path $PSScriptRoot 'Set-ComponentTags.ps1')
