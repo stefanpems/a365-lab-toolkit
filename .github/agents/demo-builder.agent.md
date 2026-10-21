@@ -86,6 +86,13 @@ Always write **in English** in every file, log and command you persist. Reply in
   `generated/<prefix>/demo/` already exists.
 
 ## Hand-over at the end of the build
+When asked to close an existing build, inspect phase status and run the applicable read-only pre-flight first.
+Mark manual steps done only after the operator confirms the real action or its result is independently verified.
+The pre-flight process can exit successfully while reporting KO rows: inspect the results, not just the exit code.
+Do not claim build closure while bootstrap/setup/interactive steps or applicable KO checks remain open.
+After a Copilot Studio registry-owner reassignment, restore and verify its Entra sponsor as well
+(the reset runs the registry pass before the Entra pass).
+
 At hand-over AND on demand during a build, run
 `Get-DemoInventory.ps1 -Prefix <p>` (or `Invoke-DemoPhase.ps1 -Prefix <p> -Phase report`).
 Present all nine sections and every row in chat, with the fixed columns from

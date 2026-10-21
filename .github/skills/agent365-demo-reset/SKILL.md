@@ -53,6 +53,13 @@ pool name and tells what to do with a consumed instance.
   agents to the manager in D8): the reset only recreates the conditions (New-OrphanAgent.ps1) and says so.
 - **Copilot Studio agents published to the organization catalog have two registry entries**: the shared one (owner)
   and the published one (install scope, block). The install-scope API is silently ignored: installs are manual.
+- **Catalog names differ between default and custom naming.** Resolve known package ids first; if none resolve,
+  `_demo-registry.ps1` tries exact catalog, localized display and identity names in order. Do not recreate an agent
+  merely because the technical `<codeName> Agent` label is absent. No substring matching is allowed.
+  Run `scripts/test-demo-registry.ps1` after changing this discovery logic.
+- **Reassign the registry owner before restoring Entra sponsors.** Copilot Studio registry reassignment can also
+  change the agent identity's sponsors. Keep the reset's registry-then-Entra order, and read back both owner and
+  sponsor afterwards. A successful package reassignment alone does not verify the complete ownership baseline.
 - **MCP pool**: names are never reused; at most one non-retired instance per base; the live base needs exactly one
   PENDING instance. After any approval (rehearsal or live), Block the server in the admin center, record it with
   `New-DemoMcpRegistration.ps1 -Action Retire -Name <n> -Confirmed`, then run the reset for D6.

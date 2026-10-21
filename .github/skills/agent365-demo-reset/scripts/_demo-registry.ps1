@@ -45,13 +45,24 @@ function Get-DemoCatalogName($Locale, $AgentDef) {
     return [string]$la.displayName
 }
 
-# Packages of a pack agent: the ids learned in state.json (agents.<key>.packages) or, the first time, every package with
-# the catalog name. A published Copilot Studio agent has TWO: 'shared' (owner) and the organization-catalog one
+# Packages of a pack agent: prefer ids learned in state.json; otherwise try exact catalog, localized display and
+# identity names in that order (custom a365 naming omits the technical ' Agent' suffix).
+# A published Copilot Studio agent has TWO: 'shared' (owner) and the organization-catalog one
 # (install scope, block). Returns @{ shared; published; all }.
 function Get-DemoAgentPackages($Config, $Locale, $State, $AgentDef) {
     $known = if ($State.agents -and $State.agents.Contains($AgentDef.key)) { @($State.agents[$AgentDef.key].packages) } else { @() }
-    $ids = if (@($known | Where-Object { $_ }).Count) { @($known | Where-Object { $_ }) } else { @(Get-DemoPackageList $Config | Where-Object { $_.displayName -eq (Get-DemoCatalogName $Locale $AgentDef) } | ForEach-Object { [string]$_.id }) }
-    $all = @($ids | ForEach-Object { Get-DemoPackageDetail $Config $_ } | Where-Object { $_ })
+    $all = @($known | Where-Object { $_ } | ForEach-Object { Get-DemoPackageDetail $Config $_ } | Where-Object { $_ })
+    if (-not $all.Count) {
+        $la = $Locale.agents[$AgentDef.key]
+        $names = @((Get-DemoCatalogName $Locale $AgentDef), [string]$la.displayName, [string]$la.identity) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+        $packages = @(Get-DemoPackageList $Config)
+        foreach ($name in $names) {
+            $all = @($packages | Where-Object { $_.displayName -eq $name } |
+                ForEach-Object { Get-DemoPackageDetail $Config ([string]$_.id) } | Where-Object { $_ })
+            if ($all.Count) { break }
+        }
+    }
     $shared = @($all | Where-Object { $_.type -eq 'shared' }) | Sort-Object createdDateTime -Descending | Select-Object -First 1
     $published = @($all | Where-Object { $_.type -and $_.type -ne 'shared' }) | Sort-Object createdDateTime -Descending | Select-Object -First 1
     if (-not $shared -and -not $published) { $shared = $all | Select-Object -First 1 }
