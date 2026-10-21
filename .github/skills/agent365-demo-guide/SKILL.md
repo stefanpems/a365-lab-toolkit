@@ -19,7 +19,7 @@ what the demo leaves behind (reset class, lead time, manual resets).
 
 - **Operator text in English, prompts in the demo language.** The cards are English; prompts and expected results
   come from the locale of the lab and are shown as they must be typed.
-- **Protection demos by code only** (C6, C7, D16, D17 and the protection tests of D12): their inputs are operator
+- **Protection demos by code only** (C6, C7 and the protection tests of D12): their inputs are operator
   slots, shown as "fill slot-N"; the operator takes them from `generated/<prefix>/demo/operator-slots.json`. Never
   write, quote or paraphrase them in chat or files.
 - **The story persona acts in the portal** (approvals, blocks, requests): the audit trail shown later must name that

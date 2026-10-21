@@ -6,7 +6,7 @@
 .DESCRIPTION
   Starting conditions come from pack.json (personas, agents[].registryOwner / entraOwner / sponsor / attribute /
   baseline, governance, mcp, operatorSlots, demos[].manualReset), names from the lab locale, ids from state.json and the
-  Lab Builder configs. -Demo selects demo codes (D1..D17) and/or the areas People, Registry, Entra, Mcp; default All.
+  Lab Builder configs. -Demo selects demo codes (D1..D15) and/or the areas People, Registry, Entra, Mcp; default All.
   The only writes are local: verified object ids are remembered in state.json and lookup methods in agent-lookups.json.
 .EXAMPLE
   pwsh -File .\Get-DemoState.ps1 -Prefix cts2
@@ -171,7 +171,7 @@ foreach ($a in @($pack.agents)) {
 # --- Entra: owners, sponsors, attribute, enabled, risk --------------------------------------------------------------
 if (Test-Sel (@('Entra') + @($pack.agents | Where-Object { $_.entraOwner -or $_.sponsor -or $_.attribute } | ForEach-Object { $_.demos }))) {
     $blockedKeys = @($pack.agents | Where-Object { $_.baseline -and $_.baseline.blocked } | ForEach-Object { [string]$_.key })
-    $riskKeys = @($pack.demos | Where-Object { $_.id -in 'D9', 'D17' } | ForEach-Object { $_.agents } | Select-Object -Unique)
+    $riskKeys = @($pack.demos | Where-Object { $_.id -in 'D9' } | ForEach-Object { $_.agents } | Select-Object -Unique)
     $gov = $LOC.governance
     $identityPack = @{ agents = @($pack.agents | Where-Object { Test-Sel (@('Entra') + @($_.demos)) }) }
     foreach ($p in Get-DemoIdentityPlan $Prefix $identityPack $LOC $state $cfg) {

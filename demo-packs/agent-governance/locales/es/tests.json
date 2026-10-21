@@ -4,7 +4,7 @@
   "trafficReplay": "Los prompts de los agentes de la interfaz web pueden reproducirse para generar tráfico mediante el agente Prompts Sender.",
   "s2sIdentity": "No preguntes nunca a un agente S2S sobre su propia identidad: informa de ella de forma incorrecta.",
   "fdTransient": "El agente de Foundry puede fallar una vez con un HTTP 400 transitorio (argumento de herramienta inventado): vuelve a intentarlo; evita ese prompt en directo.",
-  "securityPrompts": "Los textos de las pruebas de seguridad de D12, D16 y D17 son ranuras que completa el operador (ver OPERATOR-SLOTS.md)."
+  "securityPrompts": "Los textos de las pruebas de seguridad de D12 son ranuras que completa el operador (ver OPERATOR-SLOTS.md)."
  },
  "baseline": {
   "B1": {

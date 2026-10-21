@@ -11,11 +11,11 @@
               of the story persona in the admin center.
     Entra     user owner, sponsor, attribute value and enabled flag of every agent identity (application-only APIs
               through a temporary app). Blocked agents keep their agent ID disabled by design: never re-enabled.
-    D9/D17    agent risk dismissed on the agents of those demos.
+    D9    agent risk dismissed on the agents of those demos.
     D10       access-package assignments and pending requests of the target agent removed.
     D6        reserve-name MCP pool: a base without a non-retired instance gets the next payload
               (New-DemoMcpRegistration.ps1 -Action Register), which the operator registers with the printed command.
-  -Demo selects demo codes (D1..D17) and/or the areas Registry, Entra, Mcp; default All.
+  -Demo selects demo codes (D1..D15) and/or the areas Registry, Entra, Mcp; default All.
 .EXAMPLE
   pwsh -File .\Reset-DemoState.ps1 -Prefix cts2
 .EXAMPLE
@@ -135,9 +135,9 @@ if ($Apply -and $fix.Count) {
     finally { Close-DemoAppOnlySession $session }
 }
 
-# --- 3. Agent risk of the D9/D17 agents -----------------------------------------------------------------------------
-if (Test-Sel @('D9', 'D17')) {
-    $riskKeys = @($pack.demos | Where-Object { $_.id -in 'D9', 'D17' } | ForEach-Object { $_.agents } | Select-Object -Unique)
+# --- 3. Agent risk of the D9 agents -----------------------------------------------------------------------------
+if (Test-Sel @('D9')) {
+    $riskKeys = @($pack.demos | Where-Object { $_.id -in 'D9' } | ForEach-Object { $_.agents } | Select-Object -Unique)
     if (-not $plan.Count) { $plan = @(Get-DemoIdentityPlan $Prefix $pack $LOC $state $cfg) }
     foreach ($p in @($plan | Where-Object { $riskKeys -contains $_.key -and $_.identities.Count })) {
         $iid = $p.identities[0].id

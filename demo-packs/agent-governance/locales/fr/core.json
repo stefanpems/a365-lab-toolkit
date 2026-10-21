@@ -112,6 +112,8 @@
     "developer": "Contoso"
    },
    "instance": {
+    "liveDisplayName": "Collègue Courrier Rennes",
+    "liveAlias": "collegue.courrier.rennes",
     "displayName": "Collègue Courrier Paris",
     "alias": "collegue.courrier.paris",
     "description": "Collègue numérique du bureau du courrier de Paris (démo)."
@@ -617,6 +619,10 @@
   }
  },
  "governance": {
+  "rules": {
+   "applyProductionTemplate": "Contoso – Appliquer le modèle agents en production",
+   "rejectStalePublishRequests": "Contoso – Rejeter les demandes de publication de plus de 14 jours"
+  },
   "attributeSet": {
    "id": "AgentGovernance",
    "description": "Gouvernance des agents (démo Contoso)"

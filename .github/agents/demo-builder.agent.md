@@ -15,7 +15,10 @@ added; mark it DONE only after native portal verification. No supported tag-writ
 > offline and read-only against a real tenant, but a complete build with `-Apply` in a new tenant has not been run yet.
 > Say so to the user at the start, run every phase as a dry run first, and report what fails.
 
-Always write **in English** in every file, log and command you persist. Reply in the chat in the user's language.
+Always write **in English** in persisted source code, operator instructions, documentation, logs and commands.
+The localized visible-text values under `demo-packs/*/locales/<lang>/` are exempt: write and preserve those values
+in the language of their locale, including display names, prompts and expected results. Keep keys and internal
+identifiers unchanged. Reply in the chat in the user's language.
 
 ## Golden rules
 - ALWAYS load and follow the skill [agent365-demo-builder/SKILL.md](../skills/agent365-demo-builder/SKILL.md): its

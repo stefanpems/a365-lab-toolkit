@@ -1,6 +1,6 @@
 ---
 name: agent365-demo-reset
-description: 'Verify and restore the starting conditions of a demo lab built by the Demo Builder, before every rehearsal or live run, so that each demo (D1-D17 of the agent-governance pack) can be repeated. Read-only pre-flight per demo; automatic reset of what the APIs allow (registry owners, unblocks, Entra owners/sponsors/attributes/enabled, agent risk, access-package assignments, the reserve-name MCP pool, orphan agents recreated through a temporary leaver); guided list of the manual resets. Trigger phrases: reset the demo, demo pre-flight, demo readiness, restore the starting conditions, repeat a demo, recreate the orphan agent, prepare the rehearsal.'
+description: 'Verify and restore the starting conditions of a demo lab built by the Demo Builder, before every rehearsal or live run, so that each demo (D1-D15 of the agent-governance pack) can be repeated. Read-only pre-flight per demo; automatic reset of what the APIs allow (registry owners, unblocks, Entra owners/sponsors/attributes/enabled, agent risk, access-package assignments, the reserve-name MCP pool, orphan agents recreated through a temporary leaver); guided list of the manual resets. Trigger phrases: reset the demo, demo pre-flight, demo readiness, restore the starting conditions, repeat a demo, recreate the orphan agent, prepare the rehearsal.'
 argument-hint: 'A lab prefix and the demos to check or reset (default: all)'
 ---
 

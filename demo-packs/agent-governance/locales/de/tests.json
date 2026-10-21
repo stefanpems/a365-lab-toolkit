@@ -4,7 +4,7 @@
   "trafficReplay": "Die Prompts der Web-UI-Agenten können für Traffic mit dem Prompts-Sender-Agenten wiederholt werden.",
   "s2sIdentity": "Fragen Sie einen S2S-Agenten nie nach seiner eigenen Identität: Er meldet sie falsch.",
   "fdTransient": "Der Foundry-Agent kann einmal mit einem vorübergehenden HTTP 400 fehlschlagen (erfundenes Tool-Argument): erneut versuchen; diesen Prompt live vermeiden.",
-  "securityPrompts": "Die Texte der Sicherheitstests von D12, D16 und D17 sind vom Operator auszufüllende Platzhalter (siehe OPERATOR-SLOTS.md)."
+  "securityPrompts": "Die Texte der Sicherheitstests von D12 sind vom Operator auszufüllende Platzhalter (siehe OPERATOR-SLOTS.md)."
  },
  "baseline": {
   "B1": {

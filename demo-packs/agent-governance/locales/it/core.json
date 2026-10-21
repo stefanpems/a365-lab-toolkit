@@ -112,6 +112,8 @@
     "developer": "Contoso"
    },
    "instance": {
+    "liveDisplayName": "Collega Protocollo Genova",
+    "liveAlias": "collega.protocollo.genova",
     "displayName": "Collega Protocollo Milano",
     "alias": "collega.protocollo.milano",
     "description": "Collega digitale del Protocollo della sede di Milano (demo)."
@@ -617,6 +619,10 @@
   }
  },
  "governance": {
+  "rules": {
+   "applyProductionTemplate": "Contoso – Applica modello agenti in produzione",
+   "rejectStalePublishRequests": "Contoso – Rifiuta richieste di pubblicazione oltre 14 giorni"
+  },    
   "attributeSet": {
    "id": "AgentGovernance",
    "description": "Governance degli agenti (demo Contoso)"

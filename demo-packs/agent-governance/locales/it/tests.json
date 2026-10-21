@@ -4,7 +4,7 @@
   "trafficReplay": "I prompt degli agenti della web UI si possono ripetere per generare traffico con l'agente Prompts Sender.",
   "s2sIdentity": "Non chiedere mai a un agente S2S della sua identità: la riporta in modo errato.",
   "fdTransient": "L'agente Foundry può fallire una volta con un HTTP 400 transitorio (argomento di tool inventato): riprova; evita quel prompt dal vivo.",
-  "securityPrompts": "I testi dei test di sicurezza di D12, D16 e D17 sono slot dell'operatore (vedi OPERATOR-SLOTS.md)."
+  "securityPrompts": "I testi dei test di sicurezza di D12 sono slot dell'operatore (vedi OPERATOR-SLOTS.md)."
  },
  "baseline": {
   "B1": {

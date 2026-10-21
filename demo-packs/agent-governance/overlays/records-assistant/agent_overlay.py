@@ -2,7 +2,7 @@
 
 The records tools come from the registered BYO MCP server (Agent 365 gateway) attached to the agent; the prompt
 names them so the model picks them. By design the prompt does NOT restrict recipients or contents: the demo shows
-the platform real-time protection doing that (D16, variant B).
+the platform real-time protection doing that.
 """
 
 from overlay_tools import OVERLAY

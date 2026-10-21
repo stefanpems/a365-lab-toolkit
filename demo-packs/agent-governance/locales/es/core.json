@@ -112,6 +112,8 @@
     "developer": "Contoso"
    },
    "instance": {
+    "liveDisplayName": "Compañero Registro Valencia",
+    "liveAlias": "companero.registro.valencia",
     "displayName": "Compañero Registro Madrid",
     "alias": "companero.registro.madrid",
     "description": "Compañero digital de Registro de la oficina de Madrid (demo)."
@@ -617,6 +619,10 @@
   }
  },
  "governance": {
+  "rules": {
+   "applyProductionTemplate": "Contoso – Aplicar plantilla de agentes de producción",
+   "rejectStalePublishRequests": "Contoso – Rechazar solicitudes de publicación de más de 14 días"
+  },
   "attributeSet": {
    "id": "AgentGovernance",
    "description": "Gobierno de agentes (demo Contoso)"

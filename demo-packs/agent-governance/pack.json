@@ -485,7 +485,7 @@
     "D2",
     "D6"
    ],
-   "note": "the role prompt deliberately has no recipient or content restriction: see demo D16 (reference lab, 28/09 section-6 instructions)",
+   "note": "the role prompt deliberately has no recipient or content restriction (reference lab, 28/09 section-6 instructions)",
    "buildOrder": 2,
    "tags": [
     "department",
@@ -874,7 +874,7 @@
     "D14",
     "D15"
    ],
-   "note": "invisible run (white, 1 pt) at the end of the D16 notice"
+   "note": "invisible run (white, 1 pt) at the end of the notice"
   },
   {
    "id": "slot-3",
@@ -1862,13 +1862,12 @@
     "socAnalyst"
    ],
    "agents": [
-    "faqPrototype",
     "applicationReview"
    ],
    "resetClass": "readOnly",
    "leadHours": 24,
    "manualReset": [
-    "{agent:faqPrototype} still without authentication and on the demo website only; the Foundry guardrail without the jailbreak control; the Learn MCP tool without an allowed-tools list (deliberate weaknesses)."
+    "The Foundry guardrail without the jailbreak control and the Learn MCP tool without an allowed-tools list (deliberate weaknesses)."
    ]
   },
   {

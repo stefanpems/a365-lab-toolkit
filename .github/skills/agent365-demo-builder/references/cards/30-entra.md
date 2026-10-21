@@ -10,7 +10,7 @@ are visible only to holders of the attribute roles (a Global Administrator does 
 {name:identityAdmin} has Conditional Access Administrator + Attribute Definition/Assignment Administrator + Identity
 Governance Administrator. Only step 3.3 needs a Global Administrator.
 
-## 1. Policy "{{governance.conditionalAccess.blockHighRiskAgents}}" (D9, D17)
+## 1. Policy "{{governance.conditionalAccess.blockHighRiskAgents}}" (D9)
 
 Entra ID > Conditional Access > Policies > New policy:
 

@@ -138,8 +138,8 @@ $manual = @(
     @('Power Platform', 'IP firewall not enforced on the payg and default environments (D5)', 'Power Platform admin center > Security > Identity and access > IP firewall'),
     @('Purview', 'DSPM for AI set up, one-click policies created (D15, >= 24 h before)', 'Purview > DSPM for AI > Recommendations'),
     @('Purview', 'pay-as-you-go billing (Communication Compliance on Copilot Studio agents, D12) - optional', 'Purview > Settings > Pay-as-you-go billing'),
-    @('Defender', 'Security for AI on and the Microsoft 365 connector Connected (C6, C7, D16, D17)', 'Defender portal > Settings > Security for AI; Settings > Cloud apps > App connectors'),
-    @('Operator', 'operator slots filled for the demo language (D12, D16, D17)', "demo-packs/$($cfg.pack)/OPERATOR-SLOTS.md; check: Test-DemoPack.ps1 -Locale $($cfg.locale) -OperatorSlots generated/$Prefix/demo/operator-slots.json"),
+    @('Defender', 'Security for AI on and the Microsoft 365 connector Connected (C6, C7)', 'Defender portal > Settings > Security for AI; Settings > Cloud apps > App connectors'),
+    @('Operator', 'operator slots filled for the demo language (D12)', "demo-packs/$($cfg.pack)/OPERATOR-SLOTS.md; check: Test-DemoPack.ps1 -Locale $($cfg.locale) -OperatorSlots generated/$Prefix/demo/operator-slots.json"),
     @('People', 'one browser profile per persona, first sign-in done', 'P1-P11 of the pack; passwords in generated/<prefix>/demo/secrets/')
 )
 foreach ($m in $manual) { Add-R $m[0] $m[1] 'MANUAL' '' $m[2] }

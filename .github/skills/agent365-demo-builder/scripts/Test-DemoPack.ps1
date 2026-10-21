@@ -323,7 +323,7 @@ foreach ($loc in $locales) {
     foreach ($r in @($L.overlays['reports-monitor'].reports)) { if ($r -and $r.office -notin @($L.org.offices.main, $L.org.offices.secondary)) { Add-V $loc 'error' "overlays.reports-monitor.reports.$($r.id).office" "'$($r.office)' is not one of org.offices" } }
     if ($L.overlays['records-colleague']) { Test-Need $loc $L.overlays['records-colleague'].texts 'overlays.records-colleague.texts' @('welcome', 'hired', 'goodbye', 'identityNote', 'callerNote', 'emailSender', 'notificationSender') }
 
-    # Knowledge (SharePoint-safe names, formats, block model, the poisoned notice of D16)
+    # Knowledge (SharePoint-safe names, formats, block model, the poisoned notice)
     # Knowledge folders are created at the ROOT of a SharePoint document library: some names are reserved there (the
     # library's own 'Forms' folder answers GET as an existing item but refuses uploads with 404).
     $reservedRoot = @('forms', '_cts', '_private', '_catalogs', '_layouts', '_vti_bin', '_vti_cnf', '_vti_pvt', '_vti_txt', '_vti_history')
@@ -341,7 +341,7 @@ foreach ($loc in $locales) {
         if ([IO.Path]::GetExtension([string]$ld.file).TrimStart('.').ToLowerInvariant() -ne $d.format) { Add-V $loc 'error' "$path.file" "extension must be .$($d.format)" }
         foreach ($b in @($ld.blocks)) { if ($b[0] -notin 'h1', 'h2', 'p', 'pi', 'slot', 'bullets', 'numbered', 'table') { Add-V $loc 'error' "$path.blocks" "unknown block type '$($b[0])'" } }
         foreach ($b in @($ld.blocks | Where-Object { $_[0] -eq 'slot' })) { if ($slotIds -notcontains [string]$b[1]) { Add-V $loc 'error' "$path.blocks" "slot '$($b[1])' is not declared in pack.json operatorSlots" } }
-        if ($d.poisoned -and -not @($ld.blocks | Where-Object { $_[0] -eq 'slot' }).Count) { Add-V $loc 'error' $path 'the D16 notice needs its operator slot block' }
+        if ($d.poisoned -and -not @($ld.blocks | Where-Object { $_[0] -eq 'slot' }).Count) { Add-V $loc 'error' $path 'the notice needs its operator slot block' }
     }
     foreach ($pf in $packDef.knowledge.personalFiles) {
         $lp = $L.knowledge.personal[$pf.key]

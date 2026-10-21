@@ -112,6 +112,8 @@
     "developer": "Contoso"
    },
    "instance": {
+    "liveDisplayName": "Kollege Posteingang Regensburg",
+    "liveAlias": "kollege.posteingang.regensburg",
     "displayName": "Kollege Posteingang München",
     "alias": "kollege.posteingang.muenchen",
     "description": "Digitaler Kollege des Posteingangs am Standort München (Demo)."
@@ -617,6 +619,10 @@
   }
  },
  "governance": {
+  "rules": {
+   "applyProductionTemplate": "Contoso – Vorlage Produktionsagenten anwenden",
+   "rejectStalePublishRequests": "Contoso – Veröffentlichungsanfragen älter als 14 Tage ablehnen"
+  },
   "attributeSet": {
    "id": "AgentGovernance",
    "description": "Agent Governance (Contoso-Demo)"

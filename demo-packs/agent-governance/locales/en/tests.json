@@ -4,7 +4,7 @@
   "trafficReplay": "The prompts of the web-UI agents can be replayed for traffic by the Prompts Sender agent.",
   "s2sIdentity": "Never ask an S2S agent about its own identity: it misreports it.",
   "fdTransient": "The Foundry agent may once fail with a transient HTTP 400 (invented tool argument): retry; avoid that prompt live.",
-  "securityPrompts": "The security test texts of D12, D16 and D17 are operator slots (see OPERATOR-SLOTS.md)."
+  "securityPrompts": "The security test texts of D12 are operator slots (see OPERATOR-SLOTS.md)."
  },
  "baseline": {
   "B1": {

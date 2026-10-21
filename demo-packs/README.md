@@ -10,7 +10,7 @@ conditions and [agent365-demo-guide](../.github/skills/agent365-demo-guide/SKILL
 
 | Pack | Story | Languages |
 |---|---|---|
-| [agent-governance](./agent-governance/README.md) | the Incentives Department of Contoso and its agents: inventory, lifecycle, ownership, access, compliance and protection (D1-D17) | en, it, fr, es, de |
+| [agent-governance](./agent-governance/README.md) | the Incentives Department of Contoso and its agents: inventory, lifecycle, ownership, access, compliance and protection (D1-D15) | en, it, fr, es, de |
 
 Validate a pack (every locale, the iron naming rules, the fictional e-mail domains) with
 `.github/skills/agent365-demo-builder/scripts/Test-DemoPack.ps1 -Pack <name>`. The environment variable

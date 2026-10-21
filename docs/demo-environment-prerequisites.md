@@ -98,21 +98,20 @@ when a role lacks free seats. It changes nothing.
 | eDiscovery case with the case officer and the AI-teammate mailbox | D13 | prepared the day before |
 | Purview role groups for the compliance persona | D12, D13, D15 | eDiscovery Manager, Communication Compliance Investigators, Insider Risk Management Analysts, Content Explorer Content Viewer |
 
-## 5. Microsoft Defender (protection demos C6, C7, D16, D17)
+## 5. Microsoft Defender (protection demos C6, C7)
 
 | Check | Notes |
 |---|---|
 | **Security for AI** turned on and the **Microsoft 365 connector** Connected | without the connector blocks still work but alerts and incidents do not appear |
 | Copilot Studio **threat detection** set up on the payg environment | needs an Entra app with a federated credential and the Power Platform admin center setting (per environment) |
 | The Agent 365 **real-time protection rule** of the pack on the records assistant | block mode |
-| Saved advanced-hunting queries of the pack | shown in D17 |
 | The operator slots of these demos filled locally | see [OPERATOR-SLOTS.md](../demo-packs/agent-governance/OPERATOR-SLOTS.md) |
 
 ## 6. Microsoft Entra
 
 | Check | Why |
 |---|---|
-| **Security defaults disabled** | Conditional Access policies (D9, D11, D17) cannot coexist with security defaults |
+| **Security defaults disabled** | Conditional Access policies (D9, D11) cannot coexist with security defaults |
 | The operator account can create users, groups, role assignments, custom security attributes and entitlement-management objects | the build creates them; custom security attributes need **Attribute Definition / Assignment Administrator** even for a Global Administrator: the bootstrap step `identities` assigns both roles to the operator (`adminUpn`) and the gate checks them. A privileged role assignment can revoke the operator's sessions: when Graph answers `TokenIssuedBeforeRevocationTimestamp`, run `az logout` then `az login` in the lab's az profile |
 | Application permissions can be granted (admin consent) | agent-identity sponsors and attribute assignments are application-only APIs: the build uses a temporary app, deleted at the end |
 | Device-code sign-in may be blocked by Conditional Access | the scripts use MSAL with the system browser instead |

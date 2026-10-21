@@ -22,7 +22,7 @@ function New-DemoInventorySections {
 
 function Remove-DemoInventoryExcludedRows($Report) {
     # Filter whole rows, not individual cells: never leave a misleading partial configuration.
-    $codes = '\b(D12|D14|D16|D17|C6|C7)\b'
+    $codes = '\b(D12|D14|C6|C7)\b'
     foreach ($s in $Report.sections) {
         $s.rows = @($s.rows | Where-Object { ($_ -join ' ') -notmatch $codes })
     }

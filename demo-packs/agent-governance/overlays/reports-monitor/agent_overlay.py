@@ -3,7 +3,7 @@
 - read reports: fictional anomaly reports of the locale, time-shifted to "the last 24 hours".
 - find officers: directory lookup in Microsoft Entra ID with the agent's OWN identity (agent identity token from the
   blueprint through the federated fmi_path flow). Without the Graph User.Read.All permission (granted by the access
-  package of D10) it reports "not authorized"; when Conditional Access blocks the agent identity (D9/D17) it reports
+  package of D10) it reports "not authorized"; when Conditional Access blocks the agent identity (D9) it reports
   the block. Outcome texts come from the locale.
 """
 
