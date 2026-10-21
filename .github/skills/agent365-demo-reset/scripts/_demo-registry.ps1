@@ -29,43 +29,52 @@ function Get-DemoPackageList($Config) {
 function Get-DemoPackageDetail($Config, [string]$Id) {
     if (-not $script:DemoPackageDetail.ContainsKey($Id)) {
         $r = Invoke-DemoReg $Config GET "$script:DemoG/beta/copilot/admin/catalog/packages/$Id"
+        if (-not $r.ok -and $r.status -ne 404) { throw "Registry package '$Id' could not be read ($($r.status)): $($r.error)" }
+        if ($r.ok -and [string]::IsNullOrWhiteSpace([string]$r.body.id)) { throw "Registry package '$Id' returned no package id." }
         $script:DemoPackageDetail[$Id] = if ($r.ok) { $r.body } else { $null }
         Start-Sleep -Milliseconds 300
     }
     return $script:DemoPackageDetail[$Id]
 }
 
-# Catalog display name of a pack agent (reference lab, 28/09): ACA/FH code agents '<codeName> Agent', Foundry prompt
-# agents '<codeName>', Digital Worker templates and every other agent their localized display name.
-function Get-DemoCatalogName($Locale, $AgentDef) {
-    $la = $Locale.agents[$AgentDef.key]
-    if ($AgentDef.platform -eq 'code' -and [string]$AgentDef.variant -like '*-DW') { return [string]$(if ($la.manifest -and $la.manifest.nameShort) { $la.manifest.nameShort } else { $la.displayName }) }
-    if ($AgentDef.platform -eq 'code' -and [string]$AgentDef.variant -like 'FD-*') { return [string]$la.codeName }
-    if ($AgentDef.platform -eq 'code') { return "$($la.codeName) Agent" }
-    return [string]$la.displayName
-}
-
-# Packages of a pack agent: prefer ids learned in state.json; otherwise try exact catalog, localized display and
-# identity names in that order (custom a365 naming omits the technical ' Agent' suffix).
-# A published Copilot Studio agent has TWO: 'shared' (owner) and the organization-catalog one
-# (install scope, block). Returns @{ shared; published; all }.
+# Shared and published packages keep separate roles. Never choose between duplicate roles by date or list order.
 function Get-DemoAgentPackages($Config, $Locale, $State, $AgentDef) {
     $known = if ($State.agents -and $State.agents.Contains($AgentDef.key)) { @($State.agents[$AgentDef.key].packages) } else { @() }
-    $all = @($known | Where-Object { $_ } | ForEach-Object { Get-DemoPackageDetail $Config $_ } | Where-Object { $_ })
-    if (-not $all.Count) {
-        $la = $Locale.agents[$AgentDef.key]
-        $names = @((Get-DemoCatalogName $Locale $AgentDef), [string]$la.displayName, [string]$la.identity) |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+    $known = @($known | Where-Object { $_ } | Select-Object -Unique)
+    $all = @($known | ForEach-Object { Get-DemoPackageDetail $Config $_ } | Where-Object { $_ })
+    $method = 'id'; $matchedName = ''
+    if (-not $known.Count -or $all.Count -ne $known.Count) {
+        $names = @(Get-DemoAgentName -Locale $Locale -Key $AgentDef.key -Surface registry -State $State -IncludeAliases)
         $packages = @(Get-DemoPackageList $Config)
+        $found = @()
         foreach ($name in $names) {
-            $all = @($packages | Where-Object { $_.displayName -eq $name } |
+            $hits = @($packages | Where-Object { $_.displayName -ceq $name } |
                 ForEach-Object { Get-DemoPackageDetail $Config ([string]$_.id) } | Where-Object { $_ })
-            if ($all.Count) { break }
+            if (-not $hits.Count) { continue }
+            $found += $hits
+            $matchedName = $name
+            $method = if ($name -ceq $names[0]) { 'name' } else { 'alias' }
+            if ($method -eq 'name') { break }
         }
+        $all = @(@($all) + @($found) | Group-Object id | ForEach-Object { $_.Group[0] })
+        if (-not $all.Count) { $method = 'missing'; $matchedName = $names[0] }
     }
-    $shared = @($all | Where-Object { $_.type -eq 'shared' }) | Sort-Object createdDateTime -Descending | Select-Object -First 1
-    $published = @($all | Where-Object { $_.type -and $_.type -ne 'shared' }) | Sort-Object createdDateTime -Descending | Select-Object -First 1
-    if (-not $shared -and -not $published) { $shared = $all | Select-Object -First 1 }
+    $sharedEntries = @($all | Where-Object { $_.type -eq 'shared' })
+    $publishedEntries = @($all | Where-Object { $_.type -and $_.type -ne 'shared' })
+    if ($sharedEntries.Count -gt 1 -or $publishedEntries.Count -gt 1 -or
+        ($all.Count -gt 1 -and $sharedEntries.Count + $publishedEntries.Count -ne $all.Count)) {
+        throw "Agent '$($AgentDef.key)' has ambiguous registry packages. Record the intended shared/published ids in state.json."
+    }
+    $shared = if ($sharedEntries.Count) { $sharedEntries[0] } else { $null }
+    $published = if ($publishedEntries.Count) { $publishedEntries[0] } else { $null }
+    if (-not $shared -and -not $published -and $all.Count -eq 1) { $shared = $all[0] }
+    if ($all.Count) {
+        $ids = @{ packages = @($all | ForEach-Object { [string]$_.id })
+            titleId = [string]$(if ($shared) { $shared.id } else { $published.id }) }
+        if ($published) { $ids['publishedTitleId'] = [string]$published.id }
+        Set-DemoAgentIds $Config.prefix $State $AgentDef.key $ids
+    }
+    Add-DemoAgentLookup $Config $AgentDef.key 'packages' $method $matchedName (@($all.id) -join ',')
     return [pscustomobject]@{ shared = $shared; published = $published; all = $all }
 }
 
@@ -99,13 +108,4 @@ function Get-DemoAgentRisk($Config, [string]$IdentityId) {
 }
 function Clear-DemoAgentRisk($Config, [string]$IdentityId) {
     return Invoke-DemoReg $Config POST "$script:DemoG/beta/identityProtection/riskyAgents/dismiss" @{ agentIds = @($IdentityId) }
-}
-
-# Lab Builder config of a code agent (agenticAppId, agentBlueprintId, agentRegistrationId), or $null.
-function Get-DemoAgentConfig($Locale, [string]$Prefix, $AgentDef) {
-    $cn = [string]$Locale.agents[$AgentDef.key].codeName
-    if (-not $cn) { return $null }
-    $f = Join-Path $script:DemoRepoRoot "generated\$Prefix\$cn\a365.generated.config.json"
-    if (Test-Path -LiteralPath $f) { return (Get-Content -LiteralPath $f -Raw | ConvertFrom-Json) }
-    return $null
 }

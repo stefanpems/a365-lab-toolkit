@@ -57,6 +57,7 @@ gitignored.
       "type": "ACA-OBO",                  // one of the 10 supported variants (8 code/prompt + MCS-OH/MCS-NH); the scaffolder $MAP key
       "framework": "MAF",                 // FIXED name segment identifying the agent framework (default "MAF"); today only MAF exists
       "name": "<prefix>-<framework>-<hosting>-<identity>",  // e.g. contoso-MAF-ACA-OBO — the <framework> segment is mandatory. A lab may hold N INSTANCES of a type: when a type has >1 instance EVERY instance name carries a 1-based '-<n>' suffix (contoso-MAF-ACA-OBO-1, -2); a single instance carries NO suffix.
+      "displayName": "<optional exact web UI label>", // code agents only: optional label; omitted preserves the existing generated label. Structural name, resources, endpoints and IDs are unchanged.
       "displayNames": {
         "blueprint": "<name> Blueprint",  // OBO/S2S: "<name> Blueprint". DW: "<name>" (NO " Blueprint" suffix — a365 publish derives name.short from it and Teams/M365 rejects name.short > 30 chars)
         "identity": "<name> Identity"

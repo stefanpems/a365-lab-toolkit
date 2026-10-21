@@ -55,8 +55,9 @@ $orphans = @()
 # --- 1. Registry owners and blocks ---------------------------------------------------------------------------------
 foreach ($a in @($pack.agents)) {
     if (-not (Test-Sel (@('Registry') + @($a.demos)))) { continue }
-    $nm = [string]$LOC.agents[$a.key].displayName
+    $nm = Get-DemoAgentName -Locale $LOC -Key $a.key
     if ($a.catalog -eq $false) { continue }
+    Initialize-DemoAgentState $cfg $LOC $state $a
     $pk = Get-DemoAgentPackages $cfg $LOC $state $a
     if (-not @($pk.all).Count) { Add-Action "${nm}: registry" 'not found' 'exists' 'MANUAL: create or publish it (cards)'; continue }
     $own = if ($pk.shared) { $pk.shared } else { $pk.published }
@@ -65,9 +66,8 @@ foreach ($a in @($pack.agents)) {
     if ($ro -and $ro -ne 'none') {
         $want = Get-UserId $ro
         if ($want -and [string]$own.ownerId -ne $want) {
-            $gc = if ($a.platform -eq 'code') { Get-DemoAgentConfig $LOC $Prefix $a } else { $null }
             $res = 'would reassign'
-            if ($Apply) { $res = Get-Res (Set-DemoRegistryOwner $cfg $own $want $(if ($gc) { [string]$gc.agentRegistrationId } else { '' })) 'reassigned' }
+            if ($Apply) { $res = Get-Res (Set-DemoRegistryOwner $cfg $own $want ([string]$state.agents[$a.key].registrationId)) 'reassigned' }
             if ($res -like 'FAILED*') { $res += " - admin center > Agents > $nm > Assign new owner > $(Get-DemoPersonaDisplayName $LOC $ro)" }
             Add-Action "${nm}: registry owner" (Get-Name ([string]$own.ownerId)) (Get-Upn $ro) $res
         }
@@ -90,7 +90,7 @@ foreach ($a in @($pack.agents)) {
 # --- 2. Entra: owner, sponsor, attribute, enabled (application-only, temporary app) -------------------------------
 $blockedKeys = @($pack.agents | Where-Object { $_.baseline -and $_.baseline.blocked } | ForEach-Object { [string]$_.key })
 $plan = @()
-if (Test-Sel (@('Entra') + @($pack.agents | Where-Object { $_.entraOwner -or $_.sponsor -or $_.attribute } | ForEach-Object { $_.demos }))) { $plan = @(Get-DemoIdentityPlan $Prefix $pack $LOC) }
+if (Test-Sel (@('Entra') + @($pack.agents | Where-Object { $_.entraOwner -or $_.sponsor -or $_.attribute } | ForEach-Object { $_.demos }))) { $plan = @(Get-DemoIdentityPlan $Prefix $pack $LOC $state $cfg) }
 $fix = @()
 foreach ($p in $plan) {
     if (-not (Test-Sel (@('Entra') + @($p.def.demos)))) { continue }
@@ -138,7 +138,7 @@ if ($Apply -and $fix.Count) {
 # --- 3. Agent risk of the D9/D17 agents -----------------------------------------------------------------------------
 if (Test-Sel @('D9', 'D17')) {
     $riskKeys = @($pack.demos | Where-Object { $_.id -in 'D9', 'D17' } | ForEach-Object { $_.agents } | Select-Object -Unique)
-    if (-not $plan.Count) { $plan = @(Get-DemoIdentityPlan $Prefix $pack $LOC) }
+    if (-not $plan.Count) { $plan = @(Get-DemoIdentityPlan $Prefix $pack $LOC $state $cfg) }
     foreach ($p in @($plan | Where-Object { $riskKeys -contains $_.key -and $_.identities.Count })) {
         $iid = $p.identities[0].id
         $lvl = Get-DemoAgentRisk $cfg $iid
@@ -164,7 +164,7 @@ if ($ent -and (Test-Sel @($ent.demos))) {
         foreach ($x in @(if ($as.ok) { @($as.body.value) | Where-Object { $_.target.objectId -eq $tid -and $_.state -notin 'expired', 'deliveryFailed' } })) {
             $res = 'would remove'
             if ($Apply) { $res = Get-Res (Invoke-DemoReg $cfg POST "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests" @{ requestType = 'adminRemove'; assignment = @{ id = $x.id } }) 'removal requested' }
-            Add-Action "$($LOC.agents[$ent.target].displayName): access-package assignment" $x.state 'none' $res
+            Add-Action "$(Get-DemoAgentName -Locale $LOC -Key $ent.target): access-package assignment" $x.state 'none' $res
         }
         # assignmentRequests has no 'target' navigation ($expand=target returns 400): the target is on the assignment.
         $rq = Invoke-DemoReg $cfg GET "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests?`$filter=accessPackage/id eq '$($ap.id)'&`$expand=assignment(`$expand=target)"
@@ -172,7 +172,7 @@ if ($ent -and (Test-Sel @($ent.demos))) {
         foreach ($x in @(if ($rq.ok) { @($rq.body.value) | Where-Object { $_.assignment.target.objectId -eq $tid -and $_.state -match '(?i)pending' } })) {
             $res = 'would cancel'
             if ($Apply) { $res = Get-Res (Invoke-DemoReg $cfg POST "$G/v1.0/identityGovernance/entitlementManagement/assignmentRequests/$($x.id)/cancel") 'cancelled' }
-            Add-Action "$($LOC.agents[$ent.target].displayName): pending access-package request" $x.state 'none' $res
+            Add-Action "$(Get-DemoAgentName -Locale $LOC -Key $ent.target): pending access-package request" $x.state 'none' $res
         }
     }
 }

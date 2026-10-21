@@ -37,7 +37,8 @@ function Invoke-ScaffoldUi {
             }
             $acaHint = if ($t -like 'ACA-*') { " -AcaApp <container-app> -AcaResourceGroup <rg>" } else { "" }
             $sfxArg = if ($sfx) { " -InstanceSuffix $sfx" } else { "" }
-            $nextCommands.Add("pwsh -File .github/skills/agent365-web-ui/scripts/Add-WebUiTab.ps1 -SwaName $swa -Subscription <sub> -TenantId $($plan.solution.tenantId) -AgentType $t -Name `"$($ag.name)`" -LabPrefix $prefix$sfxArg $epHint$acaHint  # (add -AnonAudience/-AuthAudience if a custom MCP is attached)")
+            $tabName = if ($ag.PSObject.Properties['displayName'] -and $ag.displayName) { [string]$ag.displayName } else { [string]$ag.name }
+            $nextCommands.Add("pwsh -File .github/skills/agent365-web-ui/scripts/Add-WebUiTab.ps1 -SwaName $swa -Subscription <sub> -TenantId $($plan.solution.tenantId) -AgentType $t -Name `"$tabName`" -LabPrefix $prefix$sfxArg $epHint$acaHint  # (add -AnonAudience/-AuthAudience if a custom MCP is attached)")
         }
         return
     }
@@ -117,6 +118,7 @@ function Invoke-ScaffoldUi {
             default   { $null }
         }
         if ($entry) {
+            if ($ag.PSObject.Properties['displayName'] -and $ag.displayName) { $entry['name'] = [string]$ag.displayName }
             # Multi-instance: a type with >1 instance suffixes its tab id (and FH session prefix) '-<n>' so
             # the SPA tabs / session ids stay unique. A lone instance keeps the base id (byte-identical to before).
             $sfx = [string]$suffixMap[[string]$ag.name]

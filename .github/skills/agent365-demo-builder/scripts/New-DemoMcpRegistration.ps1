@@ -286,7 +286,7 @@ if ($Action -eq 'Urls') {
     try { $urls = @(& (Join-Path $customMcp 'print-connection-urls.ps1') @p | Where-Object { $_ -is [pscustomobject] -and $_.PSObject.Properties['url'] }) }
     catch {
         $agent = @($pack.agents | Where-Object { $_.variant -like '*-OBO' -and @($_.tools) -contains "mcp:$((Find-Instance $names[0]).key)" }) | Select-Object -First 1
-        $who = if ($agent) { "the web UI tab of '$($LOC.agents[$agent.key].displayName)'" } else { 'an OBO agent that has the server attached' }
+        $who = if ($agent) { "the web UI tab of '$(Get-DemoAgentName -Locale $LOC -Key $agent.key -Surface webui)'" } else { 'an OBO agent that has the server attached' }
         Write-Host "The Power Platform environment of the ext_ connectors is not known yet in this tenant (first time only)." -ForegroundColor Yellow
         Write-Host "  1. In $who send:  $(([string]$LOC.prompts.mcpSetupUrl).Replace('{server}', $names[0]))"
         Write-Host '  2. Copy the environmentName=<id> value of the URL it returns.'

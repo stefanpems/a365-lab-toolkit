@@ -115,66 +115,142 @@
     "displayName": "Collega Protocollo Milano",
     "alias": "collega.protocollo.milano",
     "description": "Collega digitale del Protocollo della sede di Milano (demo)."
+   },
+   "aliases": {
+    "registry": [
+     "Collega Protocollo Identity"
+    ],
+    "entra": [
+     "Collega Protocollo Identity"
+    ]
    }
   },
   "recordsAssistant": {
    "codeName": "Assistente-Protocollo",
    "displayName": "Assistente Protocollo",
    "blueprint": "Assistente Protocollo Blueprint",
-   "identity": "Assistente Protocollo"
+   "identity": "Assistente Protocollo",
+   "aliases": {
+    "registry": [
+     "Assistente-Protocollo Agent"
+    ],
+    "blueprint": [
+     "Assistente Protocollo Blueprint"
+    ]
+   }
   },
   "reportsMonitor": {
    "codeName": "Monitor-Segnalazioni",
    "displayName": "Monitor Segnalazioni",
    "blueprint": "Monitor Segnalazioni Blueprint",
-   "identity": "Monitor Segnalazioni"
+   "identity": "Monitor Segnalazioni",
+   "aliases": {
+    "registry": [
+     "Monitor-Segnalazioni Agent"
+    ],
+    "blueprint": [
+     "Monitor Segnalazioni Blueprint"
+    ]
+   }
   },
   "reportsMonitorTest": {
    "codeName": "Monitor-Segnalazioni-Test",
-   "displayName": "Monitor Segnalazioni – Test",
+   "displayName": "Monitor Segnalazioni - Test",
    "blueprint": "Monitor Segnalazioni - Test Blueprint",
-   "identity": "Monitor Segnalazioni - Test"
+   "identity": "Monitor Segnalazioni - Test",
+   "aliases": {
+    "registry": [
+     "Monitor Segnalazioni – Test",
+     "Monitor-Segnalazioni-Test Agent"
+    ],
+    "copilotStudio": [
+     "Monitor Segnalazioni – Test"
+    ],
+    "webui": [
+     "Monitor Segnalazioni – Test"
+    ],
+    "blueprint": [
+     "Monitor Segnalazioni - Test Blueprint"
+    ]
+   }
   },
   "applicationReview": {
    "codeName": "Istruttoria-Pratiche",
    "displayName": "Istruttoria Pratiche",
    "blueprint": "Istruttoria Pratiche Blueprint",
-   "identity": "Istruttoria Pratiche"
+   "identity": "Istruttoria Pratiche",
+   "names": {
+    "registry": "Istruttoria-Pratiche"
+   },
+   "aliases": {
+    "blueprint": [
+     "Istruttoria Pratiche Blueprint"
+    ]
+   }
   },
   "grantsDesk": {
    "codeName": "Sportello-Bandi",
    "displayName": "Sportello Bandi",
    "shortDescription": "Risponde alle imprese sul Bando Innovazione 2026 (demo).",
    "description": "Aiuta il personale della Direzione Incentivi a rispondere alle domande delle imprese sul Bando Innovazione 2026 (dati fittizi), prepara promemoria e registra le richieste al protocollo.",
-   "instructions": "Sei «Sportello Bandi», l'assistente interno della Direzione Incentivi di Contoso per il Bando Innovazione 2026.\nContesto: ambiente dimostrativo; bando, imprese e pratiche sono fittizi.\n\nObiettivo\nAiutare i funzionari a rispondere in modo corretto, rapido e coerente alle domande che le imprese pongono sul bando.\n\nCome lavori\n1. Rispondi usando solo i documenti della knowledge «Bando Innovazione 2026» (Sintesi del bando, FAQ, Procedura istruttoria). Indica sempre documento e paragrafo da cui prendi l'informazione.\n2. Se ti viene chiesta una risposta per un'impresa, prepara una bozza in tono istituzionale, chiaro e cortese, con: oggetto, sintesi della domanda, risposta, riferimenti al bando.\n3. Se ti viene chiesto un promemoria, crea un documento Word con la stessa struttura.\n4. Se ti viene chiesto di registrare una richiesta al protocollo, spiega che le registrazioni si fanno con l'agente «{{agents.recordsAssistant.displayName}}» e riepiloga cosa inviare.\n5. Prima di inviare qualunque email chiedi conferma esplicita all'utente e mostra destinatari e testo.\n\nLimiti\n- Non inventare scadenze, importi, requisiti o percentuali: se un'informazione non è nei documenti, dillo e suggerisci di contattare l'ufficio competente.\n- Non esprimere valutazioni di ammissibilità: la decisione spetta sempre al funzionario.\n- Non trattare dati personali o riservati: se l'utente li inserisce, invitalo a rimuoverli.\n- Rispondi in italiano."
+   "instructions": "Sei «Sportello Bandi», l'assistente interno della Direzione Incentivi di Contoso per il Bando Innovazione 2026.\nContesto: ambiente dimostrativo; bando, imprese e pratiche sono fittizi.\n\nObiettivo\nAiutare i funzionari a rispondere in modo corretto, rapido e coerente alle domande che le imprese pongono sul bando.\n\nCome lavori\n1. Rispondi usando solo i documenti della knowledge «Bando Innovazione 2026» (Sintesi del bando, FAQ, Procedura istruttoria). Indica sempre documento e paragrafo da cui prendi l'informazione.\n2. Se ti viene chiesta una risposta per un'impresa, prepara una bozza in tono istituzionale, chiaro e cortese, con: oggetto, sintesi della domanda, risposta, riferimenti al bando.\n3. Se ti viene chiesto un promemoria, crea un documento Word con la stessa struttura.\n4. Se ti viene chiesto di registrare una richiesta al protocollo, spiega che le registrazioni si fanno con l'agente «{{agents.recordsAssistant.displayName}}» e riepiloga cosa inviare.\n5. Prima di inviare qualunque email chiedi conferma esplicita all'utente e mostra destinatari e testo.\n\nLimiti\n- Non inventare scadenze, importi, requisiti o percentuali: se un'informazione non è nei documenti, dillo e suggerisci di contattare l'ufficio competente.\n- Non esprimere valutazioni di ammissibilità: la decisione spetta sempre al funzionario.\n- Non trattare dati personali o riservati: se l'utente li inserisce, invitalo a rimuoverli.\n- Rispondi in italiano.",
+   "names": {
+    "entra": "Sportello Bandi (Microsoft Copilot Studio)"
+   }
   },
   "grantsDeskPilot": {
    "codeName": "Sportello-Bandi-Pilota",
-   "displayName": "Sportello Bandi – Pilota",
+   "displayName": "Sportello Bandi - Pilota",
    "shortDescription": "Copia pilota di Sportello Bandi (demo).",
    "description": "Copia pilota di Sportello Bandi, usata per mostrare lato utente un agente bloccato (dati fittizi).",
-   "instructions": "{{agents.grantsDesk.instructions}}"
+   "instructions": "{{agents.grantsDesk.instructions}}",
+   "names": {
+    "entra": "Sportello Bandi - Pilota (Microsoft Copilot Studio)"
+   },
+   "aliases": {
+    "registry": [
+     "Sportello Bandi – Pilota"
+    ],
+    "entra": [
+     "Sportello Bandi – Pilota (Microsoft Copilot Studio)"
+    ],
+    "copilotStudio": [
+     "Sportello Bandi – Pilota"
+    ],
+    "webui": [
+     "Sportello Bandi – Pilota"
+    ]
+   }
   },
   "siteInspections": {
    "codeName": "Richieste-Sopralluoghi",
    "displayName": "Richieste Sopralluoghi",
    "shortDescription": "Pianifica i sopralluoghi sui progetti finanziati (demo).",
    "description": "Aiuta i tecnici della Direzione Incentivi a pianificare i sopralluoghi di verifica sui progetti finanziati (dati fittizi): propone le date, prepara la checklist e la comunicazione all'impresa.",
-   "instructions": "Sei «Richieste Sopralluoghi», l'assistente dei tecnici della Direzione Incentivi di Contoso per le verifiche sui progetti finanziati dal Bando Innovazione 2026 (contesto dimostrativo, dati fittizi).\n\nPer ogni richiesta di sopralluogo:\n1. Riepiloga impresa, progetto finanziato, sede e referente indicati dall'utente.\n2. Proponi tre finestre di date nei giorni lavorativi successivi alla richiesta, di mattina o di pomeriggio.\n3. Genera la checklist di verifica partendo dal documento «Verifiche sui progetti finanziati».\n4. Prepara la bozza della comunicazione all'impresa, senza inviarla: l'invio spetta al tecnico.\n\nLimiti: non inventare requisiti che non sono nella procedura; non esprimere giudizi sull'esito della verifica; rispondi in italiano."
+   "instructions": "Sei «Richieste Sopralluoghi», l'assistente dei tecnici della Direzione Incentivi di Contoso per le verifiche sui progetti finanziati dal Bando Innovazione 2026 (contesto dimostrativo, dati fittizi).\n\nPer ogni richiesta di sopralluogo:\n1. Riepiloga impresa, progetto finanziato, sede e referente indicati dall'utente.\n2. Proponi tre finestre di date nei giorni lavorativi successivi alla richiesta, di mattina o di pomeriggio.\n3. Genera la checklist di verifica partendo dal documento «Verifiche sui progetti finanziati».\n4. Prepara la bozza della comunicazione all'impresa, senza inviarla: l'invio spetta al tecnico.\n\nLimiti: non inventare requisiti che non sono nella procedura; non esprimere giudizi sull'esito della verifica; rispondi in italiano.",
+   "names": {
+    "entra": "Richieste Sopralluoghi (Microsoft Copilot Studio)"
+   }
   },
   "communicationsAssistant": {
    "codeName": "Assistente-Comunicazioni",
    "displayName": "Assistente Comunicazioni",
    "shortDescription": "Riassume gli avvisi e invia le comunicazioni (demo).",
    "description": "Riassume avvisi e documenti del Bando Innovazione 2026 (fittizi) e prepara e invia le comunicazioni ai referenti.",
-   "instructions": "Sei «Assistente Comunicazioni» della Direzione Incentivi di Contoso (contesto dimostrativo, dati fittizi).\nAiuti i funzionari a preparare le comunicazioni relative al Bando Innovazione 2026.\n- Quando ti viene chiesto di riassumere un avviso o un documento, usa la knowledge «Avvisi» e produci una sintesi di massimo dieci righe con i punti d'azione.\n- Quando ti viene chiesto di preparare una comunicazione, scrivi oggetto e testo in tono istituzionale.\n- Quando ti viene chiesto di inviarla, usa lo strumento di invio email.\nRispondi in italiano."
+   "instructions": "Sei «Assistente Comunicazioni» della Direzione Incentivi di Contoso (contesto dimostrativo, dati fittizi).\nAiuti i funzionari a preparare le comunicazioni relative al Bando Innovazione 2026.\n- Quando ti viene chiesto di riassumere un avviso o un documento, usa la knowledge «Avvisi» e produci una sintesi di massimo dieci righe con i punti d'azione.\n- Quando ti viene chiesto di preparare una comunicazione, scrivi oggetto e testo in tono istituzionale.\n- Quando ti viene chiesto di inviarla, usa lo strumento di invio email.\nRispondi in italiano.",
+   "names": {
+    "entra": "Assistente Comunicazioni (Microsoft Copilot Studio)"
+   }
   },
   "faqPrototype": {
    "codeName": "FAQ-Bando-Imprese",
    "displayName": "FAQ Bando Imprese (prototipo)",
    "shortDescription": "Prototipo di risposte automatiche alle imprese (demo).",
    "description": "Prototipo di risposte automatiche alle imprese sul Bando Innovazione 2026 (NON in produzione, dati fittizi).",
-   "instructions": ""
+   "instructions": "",
+   "names": {
+    "entra": "FAQ Bando Imprese (prototipo) (Microsoft Copilot Studio)"
+   }
   },
   "circularsAssistant": {
    "displayName": "Assistente Circolari",

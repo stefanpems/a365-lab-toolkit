@@ -79,6 +79,414 @@ function Get-DemoPersonaAlias($Locale, [string]$Key) {
 }
 function Get-DemoPersonaDisplayName($Locale, [string]$Key) { $p = $Locale.personas[$Key]; "$($p.givenName) $($p.surname)" }
 
+function Get-DemoAgentName {
+    param([Parameter(Mandatory)]$Locale, [Parameter(Mandatory)][string]$Key,
+          [ValidateSet('registry', 'entra', 'copilotStudio', 'webui', 'blueprint', 'instance', 'liveInstance')][string]$Surface = 'registry',
+          $State, [switch]$IncludeAliases)
+    $agent = $Locale.agents[$Key]
+    if (-not $agent) { throw "Agent '$Key' is not configured in the locale." }
+    $name = if ($agent.names -and $agent.names[$Surface]) { [string]$agent.names[$Surface] }
+            elseif ($Surface -eq 'instance') { [string]$agent.instance.displayName }
+            elseif ($Surface -eq 'liveInstance') { [string]$agent.instance.liveDisplayName }
+            elseif ($Surface -eq 'blueprint' -and $agent.blueprint) { [string]$agent.blueprint }
+            elseif ($Surface -eq 'entra' -and $agent.identity) { [string]$agent.identity }
+            else { [string]$agent.displayName }
+    if ([string]::IsNullOrWhiteSpace($name)) { throw "Agent '$Key' has no configured name for '$Surface'." }
+    $name
+    if ($IncludeAliases -and $State.agentResolution.legacyAliases -and $agent.aliases) {
+        @($agent.aliases[$Surface] | Where-Object { $_ -and $_ -cne $name } | Select-Object -Unique)
+    }
+}
+
+function Assert-DemoLiveNames($Pack, $Locale) {
+    foreach ($agent in @($Pack.agents | Where-Object { $_.instance.live })) {
+        $null = Get-DemoAgentName -Locale $Locale -Key $agent.key -Surface liveInstance
+        if ([string]::IsNullOrWhiteSpace([string]$Locale.agents[$agent.key].instance.liveAlias)) {
+            throw "Missing localized instance alias: agents.$($agent.key).instance.liveAlias. Run Test-DemoPack."
+        }
+    }
+    foreach ($rule in @($Pack.governance.adminCenter.rules | Where-Object { $_.nameKey })) {
+        if (-not $Locale.governance.rules -or [string]::IsNullOrWhiteSpace([string]$Locale.governance.rules[$rule.nameKey])) {
+            throw "Missing localized rule name: governance.rules.$($rule.nameKey). Run Test-DemoPack."
+        }
+    }
+}
+
+function Get-DemoPreparedInstanceAction($Config, $Locale, $AgentDef) {
+    $instance = $AgentDef.instance
+    if (-not $instance -or $instance.createFrom -ne 'teams' -or -not $instance.creator -or -not $instance.manager) {
+        throw "Agent '$($AgentDef.key)' needs an explicit Teams instance creator and manager."
+    }
+    $name = Get-DemoAgentName -Locale $Locale -Key $AgentDef.key -Surface instance
+    $alias = [string]$Locale.agents[$AgentDef.key].instance.alias
+    if ([string]::IsNullOrWhiteSpace($alias)) { throw "Agent '$($AgentDef.key)' has no configured prepared-instance alias." }
+    $creator = Get-DemoPersonaDisplayName $Locale $instance.creator
+    $upn = Get-DemoUpn $Locale $Config $instance.creator
+    $manager = Get-DemoPersonaDisplayName $Locale $instance.manager
+    $template = Get-DemoAgentName -Locale $Locale -Key $AgentDef.key -Surface registry
+    return @{
+        Key = "prepared-instance-$($AgentDef.key)"
+        Action = "Manually create the prepared Teams instance '$name' as $creator ($upn), after the AI-teammate package upload and activation."
+        Where = "After the package upload/activation is verified, sign in as $upn in Teams > Apps > Built for your org > $template > Create instance. Name: '$name'; alias: '$alias'; managed by: $manager. Follow generated\$($Config.prefix)\demo\cards\20-digital-worker.md. Prepared instance only; leave live-demo instance creation on camera."
+        NeededBy = "Before rehearsals of $(@($AgentDef.demos) -join ', '), after package upload/activation and before identities-refresh."
+        Blocking = $false
+    }
+}
+
+function ConvertTo-DemoAgentNameKey([string]$Name) {
+    ($Name -replace '[\p{Pd}\p{Pi}\p{Pf}\u2212\u2032\u2033\uff02\uff07''"\s\p{Z}]', '').ToLowerInvariant()
+}
+
+function ConvertTo-DemoCanonicalAgentName([string]$Name) {
+    $value = $Name -replace '[\u2012-\u2015\u2e3a\u2e3b]', ' - ' -replace '[\p{Pd}\u2212]', '-'
+    $value = $value -replace '[\u2018-\u201b\u2032\u2039\u203a\uff07]', "'"
+    $value = $value -replace '[\p{Pi}\p{Pf}\u2033\uff02]', '"'
+    ($value -replace '[\s\p{Z}]+', ' ').Trim()
+}
+
+function Set-DemoJsonProperties {
+    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][System.Collections.IDictionary]$Changes)
+    $text = [IO.File]::ReadAllText($Path)
+    $document = [Text.Json.JsonDocument]::Parse($text)
+    $propertyPattern = [regex]::new('\G\s*,?\s*(?<key>"(?:\\.|[^"\\])*")\s*:\s*')
+    $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+    function Get-Indent([int]$Offset) {
+        $line = $text.LastIndexOf("`n", [Math]::Max(0, $Offset - 1)) + 1
+        [regex]::Match($text.Substring($line, $Offset - $line), '^[ \t]*').Value
+    }
+    function Get-Location([string]$PropertyPath) {
+        $parts = $PropertyPath.Split('.')
+        $element = $document.RootElement
+        $start = 0
+        for ($partIndex = 0; $partIndex -lt $parts.Count; $partIndex++) {
+            if ($element.ValueKind -eq [Text.Json.JsonValueKind]::Array) {
+                if ($parts[$partIndex] -notmatch '^\d+$') { throw "JSON path '$PropertyPath' requires an array index." }
+                $wanted = [int]$parts[$partIndex]
+                if ($wanted -ge $element.GetArrayLength()) { throw "JSON array index is out of range in '$PropertyPath'." }
+                $cursor = $start + 1
+                $index = 0
+                foreach ($item in $element.EnumerateArray()) {
+                    $separator = [regex]::Match($text.Substring($cursor), '^\s*,?\s*')
+                    $valueStart = $cursor + $separator.Length
+                    $raw = $item.GetRawText()
+                    if ($index -eq $wanted) {
+                        if ($partIndex -eq $parts.Count - 1) {
+                            return [pscustomobject]@{ exists = $true; start = $valueStart; length = $raw.Length; indent = (Get-Indent $valueStart); unit = '  ' }
+                        }
+                        $element = $item
+                        $start = $valueStart
+                        break
+                    }
+                    $cursor = $valueStart + $raw.Length
+                    $index++
+                }
+                continue
+            }
+            if ($element.ValueKind -ne [Text.Json.JsonValueKind]::Object) { throw "JSON path '$PropertyPath' has a non-object parent." }
+            $cursor = $start + 1
+            $count = 0
+            $firstIndent = $null
+            $found = $false
+            foreach ($property in $element.EnumerateObject()) {
+                $match = $propertyPattern.Match($text, $cursor)
+                if (-not $match.Success) { throw "Cannot locate JSON property '$PropertyPath' without reformatting unrelated content." }
+                $valueStart = $match.Index + $match.Length
+                $raw = $property.Value.GetRawText()
+                if ($text.Substring($valueStart, $raw.Length) -cne $raw) { throw "JSON span mismatch for '$PropertyPath'." }
+                $indent = Get-Indent $match.Groups['key'].Index
+                if ($null -eq $firstIndent) { $firstIndent = $indent }
+                $parentIndent = Get-Indent $start
+                $unit = if ($indent.StartsWith($parentIndent) -and $indent.Length -gt $parentIndent.Length) { $indent.Substring($parentIndent.Length) } else { '  ' }
+                if ($property.Name -ceq $parts[$partIndex]) {
+                    if ($partIndex -eq $parts.Count - 1) {
+                        return [pscustomobject]@{ exists = $true; start = $valueStart; length = $raw.Length; indent = $indent; unit = $unit }
+                    }
+                    $element = $property.Value
+                    $start = $valueStart
+                    $found = $true
+                    break
+                }
+                $cursor = $valueStart + $raw.Length
+                $count++
+            }
+            if ($found) { continue }
+            if ($partIndex -ne $parts.Count - 1) { throw "Cannot insert '$PropertyPath': its parent is missing." }
+            $parentIndent = Get-Indent $start
+            $indent = if ($null -ne $firstIndent) { $firstIndent } else { $parentIndent + '  ' }
+            $unit = if ($indent.Length -gt $parentIndent.Length) { $indent.Substring($parentIndent.Length) } else { '  ' }
+            return [pscustomobject]@{ exists = $false; start = $cursor; length = 0; indent = $indent; unit = $unit
+                parent = $start; count = $count; name = $parts[-1]; multiline = $element.GetRawText().Contains("`n") }
+        }
+    }
+    function Format-Value($Value, [string]$Indent, [string]$Unit) {
+        $lines = (ConvertTo-Json -InputObject $Value -Depth 100) -split '\r?\n'
+        if ($lines.Count -eq 1) { return $lines[0] }
+        $result = @($lines[0])
+        $result += @($lines | Select-Object -Skip 1 | ForEach-Object {
+            $spaces = [regex]::Match($_, '^ *').Length
+            $Indent + ($Unit * ($spaces / 2)) + $_.Substring($spaces)
+        })
+        $result -join $newline
+    }
+    try {
+        $edits = [Collections.Generic.List[object]]::new()
+        $insertions = @{}
+        foreach ($key in $Changes.Keys) {
+            $location = Get-Location ([string]$key)
+            $value = Format-Value $Changes[$key] $location.indent $location.unit
+            if ($location.exists) {
+                $edits.Add([pscustomobject]@{ start = $location.start; length = $location.length; value = $value })
+            }
+            else {
+                $parent = [string]$location.parent
+                if (-not $insertions.ContainsKey($parent)) {
+                    $insertions[$parent] = @{ location = $location; properties = [Collections.Generic.List[string]]::new() }
+                }
+                $encodedKey = ConvertTo-Json -InputObject $location.name -Compress
+                $insertions[$parent].properties.Add("${encodedKey}: $value")
+            }
+        }
+        foreach ($insertion in $insertions.Values) {
+            $location = $insertion.location
+            $separator = if ($location.multiline) { $newline + $location.indent } else { '' }
+            $prefix = if ($location.count) { ',' + $separator } else { $separator }
+            $value = $prefix + ($insertion.properties -join (',' + $separator))
+            $edits.Add([pscustomobject]@{ start = $location.start; length = 0; value = $value })
+        }
+        foreach ($edit in $edits | Sort-Object start -Descending) {
+            $text = $text.Substring(0, $edit.start) + $edit.value + $text.Substring($edit.start + $edit.length)
+        }
+        $verification = [Text.Json.JsonDocument]::Parse($text)
+        $verification.Dispose()
+        [IO.File]::WriteAllText($Path, $text, [Text.UTF8Encoding]::new($false))
+    }
+    finally { $document.Dispose() }
+}
+
+function Test-DemoAgentNameSource {
+    param([Parameter(Mandatory)][string]$Source, [string]$File = '<source>')
+    $tokens = $null; $errors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseInput($Source, [ref]$tokens, [ref]$errors)
+    if ($errors.Count) { throw "Cannot check agent-name resolution in '$File': PowerShell parse errors." }
+    $localeVariables = @('la')
+    foreach ($assignment in $ast.FindAll({ param($node) $node -is [Management.Automation.Language.AssignmentStatementAst] }, $true)) {
+        if ($assignment.Left -is [Management.Automation.Language.VariableExpressionAst] -and $assignment.Right.Extent.Text -match '\.agents\[') {
+            $localeVariables += $assignment.Left.VariablePath.UserPath
+        }
+    }
+    $reported = @{}
+    foreach ($node in $ast.FindAll({ param($item)
+        $item -is [Management.Automation.Language.MemberExpressionAst] -or
+        $item -is [Management.Automation.Language.ExpandableStringExpressionAst] -or
+        $item -is [Management.Automation.Language.BinaryExpressionAst]
+    }, $true)) {
+        $parent = $node
+        $allowed = $false
+        while ($parent) {
+            if ($parent -is [Management.Automation.Language.FunctionDefinitionAst] -and
+                $parent.Name -in 'Get-DemoAgentName', 'Test-DemoAgentNameSource') { $allowed = $true; break }
+            $parent = $parent.Parent
+        }
+        if ($allowed) { continue }
+        $text = $node.Extent.Text
+        $reason = ''
+        if ($node -is [Management.Automation.Language.MemberExpressionAst] -and
+            $node.Member.Extent.Text -in 'displayName', 'identity', 'blueprint') {
+            $root = $node.Expression.Extent.Text
+            if ($root -match '\.agents\[' -or @($localeVariables | Where-Object { $root -match ('^\$' + [regex]::Escape($_) + '(?:\.instance)?$') }).Count) {
+                $reason = 'Read configured agent names through Get-DemoAgentName.'
+            }
+        }
+        elseif ($text -match '(?i)(?:\.codeName|\$codeName)' -and $text -match '(?i)\b(?:Agent|Blueprint|Identity)\b|AgentIdentity') {
+            if ($text -notmatch '[\\/]') { $reason = 'Do not construct agent names from codeName or suffixes.' }
+        }
+        elseif ($node -is [Management.Automation.Language.BinaryExpressionAst] -and
+            $text -match '\+\s*[''"]\s*(?:Agent|Identity|Blueprint)\b') {
+            $reason = 'Do not append conventional agent-name suffixes.'
+        }
+        elseif ($node -is [Management.Automation.Language.ExpandableStringExpressionAst] -and
+            ($text -match '\(Microsoft Copilot Studio\)|-AgentIdentity' -or
+             $text -match '\$(?:\([^)]*\)|\{[^}]+\}|[\w:]+)[ -]+(?:Agent|Blueprint|Identity)(?=["'']|$)')) {
+            $reason = 'Configure agent and provider names explicitly instead of constructing them.'
+        }
+        if ($reason -and -not $reported.ContainsKey($node.Extent.StartLineNumber)) {
+            $reported[$node.Extent.StartLineNumber] = $true
+            [pscustomobject]@{ file = $File; line = $node.Extent.StartLineNumber; message = $reason }
+        }
+    }
+}
+
+function Set-DemoAgentIds {
+    param([Parameter(Mandatory)][string]$Prefix, [Parameter(Mandatory)]$State,
+          [Parameter(Mandatory)][string]$Key, [Parameter(Mandatory)][System.Collections.IDictionary]$Ids)
+    if (-not $State.agents) { $State['agents'] = [ordered]@{} }
+    if (-not $State.agents.Contains($Key)) { $State.agents[$Key] = [ordered]@{} }
+    $entry = $State.agents[$Key]
+    $changed = $false
+    foreach ($field in $Ids.Keys) {
+        if ($null -eq $Ids[$field] -or $Ids[$field] -eq '') { continue }
+        if (($entry[$field] | ConvertTo-Json -Depth 10 -Compress) -cne ($Ids[$field] | ConvertTo-Json -Depth 10 -Compress)) {
+            $entry[$field] = $Ids[$field]
+            $changed = $true
+        }
+    }
+    if ($changed) { Save-DemoLabState $Prefix $State }
+}
+
+function Get-DemoAgentConfig($Locale, [string]$Prefix, $AgentDef) {
+    $codeName = [string]$Locale.agents[$AgentDef.key].codeName
+    if (-not $codeName) { return $null }
+    $path = Join-Path $script:DemoRepoRoot "generated\$Prefix\$codeName\a365.generated.config.json"
+    if (-not (Test-Path -LiteralPath $path)) { return $null }
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
+    $public = [ordered]@{}
+    foreach ($field in 'agentBlueprintId', 'agentBlueprintObjectId', 'agenticAppId', 'agentIdentityId', 'agentRegistrationId', 'botId', 'messagingEndpoint') {
+        if ($raw[$field]) { $public[$field] = $raw[$field] }
+    }
+    return [pscustomobject]$public
+}
+
+function Initialize-DemoAgentState($Config, $Locale, $State, $AgentDef) {
+    $key = [string]$AgentDef.key
+    $entry = if ($State.agents -and $State.agents.Contains($key)) { $State.agents[$key] } else { @{} }
+    $ids = [ordered]@{}
+    $generated = Get-DemoAgentConfig $Locale $Config.prefix $AgentDef
+    if ($generated) {
+        $fields = @{ blueprintId = 'agentBlueprintObjectId'; blueprintAppId = 'agentBlueprintId'
+            identityAppId = 'agenticAppId'; identityId = 'agentIdentityId'; registrationId = 'agentRegistrationId' }
+        foreach ($field in $fields.Keys) {
+            if (-not $entry[$field] -and $generated.($fields[$field])) { $ids[$field] = [string]$generated.($fields[$field]) }
+        }
+    }
+    $legacy = @(if ($State.governance.identities) { $State.governance.identities[$key] | Where-Object { $_.identityId } })
+    if ($legacy.Count) {
+        if ($AgentDef.sponsorOn -eq 'instance') {
+            if (-not $entry.instanceIdentityIds) { $ids['instanceIdentityIds'] = @($legacy | ForEach-Object { [string]$_.identityId }) }
+        }
+        else {
+            if (-not $entry.identityId) { $ids['identityId'] = [string]$legacy[0].identityId }
+            if ([string]$AgentDef.variant -like 'FD-*' -and $legacy.Count -gt 1 -and -not $entry.projectIdentityId) {
+                $ids['projectIdentityId'] = [string]$legacy[1].identityId
+            }
+        }
+    }
+    if ($ids.Count) { Set-DemoAgentIds -Prefix $Config.prefix -State $State -Key $key -Ids $ids }
+}
+
+$script:DemoAgentLookups = [System.Collections.Generic.List[object]]::new()
+function Add-DemoAgentLookup($Config, [string]$Key, [string]$Object, [string]$Method, [string]$Name, [string]$Id) {
+    $script:DemoAgentLookups.Add([pscustomobject]@{ key = $Key; object = $Object; method = $Method; name = $Name; id = $Id })
+    if ($Method -in 'name', 'alias') {
+        Write-DemoLog $Config.prefix "Agent '$Key' ($Object): exact $Method fallback '$Name'; saved id '$Id'." 'WARN'
+    }
+}
+
+function Get-DemoGraphObject([string]$Uri, [string]$Token) {
+    $result = Invoke-DemoGraph GET $Uri -Token $Token -NoThrow
+    if ($result -and $result.PSObject.Properties['error'] -and $result.PSObject.Properties['status']) {
+        if ($result.status -eq 404) { return $null }
+        throw $result.error
+    }
+    return $result
+}
+
+function Resolve-DemoAgentObject {
+    param([Parameter(Mandatory)]$Config, [Parameter(Mandatory)]$Locale, [Parameter(Mandatory)]$State,
+          [Parameter(Mandatory)][string]$Key, [Parameter(Mandatory)][string]$IdField,
+          [Parameter(Mandatory)][string]$Surface, [Parameter(Mandatory)][scriptblock]$ReadById,
+          [Parameter(Mandatory)][scriptblock]$FindByName, [string]$IdProperty = 'id',
+          [string]$NameProperty = 'displayName', [string[]]$CandidateIds = @())
+    $known = if ($State.agents -and $State.agents.Contains($Key)) { [string]$State.agents[$Key][$IdField] } else { '' }
+    foreach ($id in @(@($known) + $CandidateIds | Where-Object { $_ } | Select-Object -Unique)) {
+        $object = & $ReadById $id
+        if ($object -and [string]::IsNullOrWhiteSpace([string]$object.$IdProperty)) {
+            throw "Agent '$Key' ($IdField): the id lookup returned an object without '$IdProperty'."
+        }
+        if ($object -and $object.$IdProperty) {
+            $resolved = [string]$object.$IdProperty
+            Set-DemoAgentIds $Config.prefix $State $Key @{ $IdField = $resolved }
+            Add-DemoAgentLookup $Config $Key $IdField 'id' '' $resolved
+            return $object
+        }
+        if ($id -eq $known) { Write-DemoLog $Config.prefix "Agent '$Key' ($IdField): recorded id '$id' no longer exists; checking remaining id candidates before exact-name fallback." 'WARN' }
+    }
+    $names = @(Get-DemoAgentName -Locale $Locale -Key $Key -Surface $Surface -State $State -IncludeAliases)
+    $aliases = [System.Collections.Generic.List[object]]::new()
+    foreach ($name in $names) {
+        $hits = @(& $FindByName $name | Where-Object { $_ -and $_.$NameProperty -ceq $name })
+        if (@($hits | Where-Object { [string]::IsNullOrWhiteSpace([string]$_.$IdProperty) }).Count) {
+            throw "Agent '$Key' ($IdField): the exact-name lookup returned an object without '$IdProperty'."
+        }
+        if ($hits.Count -gt 1) { throw "Agent '$Key' ($IdField): exact name '$name' is ambiguous ($($hits.Count) objects). Record the intended id in state.json." }
+        if ($hits.Count -eq 0) { continue }
+        if ($name -ceq $names[0]) {
+            $id = [string]$hits[0].$IdProperty
+            Set-DemoAgentIds $Config.prefix $State $Key @{ $IdField = $id }
+            Add-DemoAgentLookup $Config $Key $IdField 'name' $name $id
+            return $hits[0]
+        }
+        $aliases.Add([pscustomobject]@{ name = $name; value = $hits[0] })
+    }
+    $distinct = @($aliases | Group-Object { [string]$_.value.$IdProperty })
+    if ($distinct.Count -gt 1) { throw "Agent '$Key' ($IdField): legacy aliases match different objects. Record the intended id in state.json." }
+    if ($aliases.Count) {
+        $match = $aliases[0]
+        $id = [string]$match.value.$IdProperty
+        Set-DemoAgentIds $Config.prefix $State $Key @{ $IdField = $id }
+        Add-DemoAgentLookup $Config $Key $IdField 'alias' $match.name $id
+        return $match.value
+    }
+    Add-DemoAgentLookup $Config $Key $IdField 'missing' $names[0] ''
+    return $null
+}
+
+function Get-DemoAgentReference($Locale, $State, [string]$Key, [string]$Surface = 'registry') {
+    $name = Get-DemoAgentName -Locale $Locale -Key $Key -Surface $Surface
+    $entry = $State.agents[$Key]
+    if ($Surface -eq 'copilotStudio' -and $entry.botId -and $entry.environmentId) {
+        return "[$name](https://copilotstudio.microsoft.com/environments/$($entry.environmentId)/bots/$($entry.botId)/overview)"
+    }
+    if ($Surface -in 'registry', 'webui' -and $entry.titleId) { return "[$name](https://m365.cloud.microsoft/chat/?titleId=$([uri]::EscapeDataString($entry.titleId)))" }
+    $field = @{ registry = 'titleId'; webui = 'titleId'; copilotStudio = 'botId'
+        entra = 'identityId'; blueprint = 'blueprintId'; instance = 'instanceUserId'; liveInstance = 'liveInstanceUserId' }[$Surface]
+    if ($entry.$field) { return "$name (${field}: $($entry.$field))" }
+    return "$name ($field not recorded yet)"
+}
+
+$script:DemoOrgUrls = @{}
+function Get-DemoCopilotStudioOrgUrl($Config, [string]$EnvironmentId) {
+    if (-not $EnvironmentId) { throw 'No Copilot Studio environment id is configured.' }
+    $cacheKey = "$($Config.tenantId)/$EnvironmentId"
+    if (-not $script:DemoOrgUrls.ContainsKey($cacheKey)) {
+        $token = Get-DemoAzToken -Resource 'https://service.powerapps.com/' -TenantId $Config.tenantId
+        $environment = Invoke-DemoGraph GET "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments/${EnvironmentId}?api-version=2020-10-01" -Token $token
+        $url = [string]$environment.properties.linkedEnvironmentMetadata.instanceUrl
+        if (-not $url) { throw "Environment '$EnvironmentId' has no Dataverse instance URL." }
+        $script:DemoOrgUrls[$cacheKey] = $url.TrimEnd('/')
+    }
+    return $script:DemoOrgUrls[$cacheKey]
+}
+
+function Resolve-DemoCopilotStudioBot($Config, $Locale, $State, $AgentDef) {
+    $environmentId = if ($AgentDef.environment -eq 'default') { [string]$Config.copilotStudio.defaultEnvironmentId } else { [string]$Config.copilotStudio.paygEnvironmentId }
+    $entry = $State.agents[$AgentDef.key]
+    if ($entry.botId -and $entry.environmentId -and $entry.environmentId -ne $environmentId) {
+        throw "Agent '$($AgentDef.key)' is recorded in environment '$($entry.environmentId)', not '$environmentId'. Reconcile state.json before continuing."
+    }
+    $org = Get-DemoCopilotStudioOrgUrl $Config $environmentId
+    $token = Get-DemoAzToken -Resource $org -TenantId $Config.tenantId
+    $columns = 'botid,name,publishedon,modifiedon,synchronizationstatus'
+    $bot = Resolve-DemoAgentObject -Config $Config -Locale $Locale -State $State -Key $AgentDef.key -IdField botId -Surface copilotStudio -IdProperty botid -NameProperty name -ReadById {
+        param($id) Get-DemoGraphObject "$org/api/data/v9.2/bots($id)?`$select=$columns" $token
+    } -FindByName {
+        param($name)
+        $filter = [uri]::EscapeDataString("name eq '$($name.Replace("'", "''"))'")
+        (Invoke-DemoGraph GET "$org/api/data/v9.2/bots?`$select=$columns&`$filter=$filter" -Token $token).value
+    }
+    if ($bot) { Set-DemoAgentIds $Config.prefix $State $AgentDef.key @{ environmentId = $environmentId; dataverseUrl = $org } }
+    return $bot
+}
+
 # --------------------------------------------------------------------------------------------- operator texts
 # UPN of a persona key ('admin' = the operator admin account of the config).
 function Get-DemoUpn($Locale, $Config, [string]$Key) { if ($Key -eq 'admin') { return [string]$Config.adminUpn }; "$(Get-DemoPersonaAlias $Locale $Key)@$($Config.domain)" }
@@ -90,7 +498,15 @@ function ConvertTo-DemoText($V) { if ($null -eq $V) { return $null }; if ($V -is
 # {state:<path>}, {pack:<path>}, {slot:<id>}. An unresolved value becomes '<missing ...>'.
 function Expand-DemoText([string]$Text, $Locale, $Config, $State, $Pack) {
     $t = [regex]::Replace($Text, '\{\{([A-Za-z0-9_.\-]+)\}\}', [System.Text.RegularExpressions.MatchEvaluator]{
-        param($m) $v = ConvertTo-DemoText (Resolve-DemoPath $Locale $m.Groups[1].Value); if ($null -eq $v) { "<missing $($m.Groups[1].Value)>" } else { $v } })
+        param($m)
+        $path = $m.Groups[1].Value
+        $v = if ($path -match '^agents\.([^.]+)\.(displayName|identity|blueprint|instance\.displayName|instance\.liveDisplayName)$') {
+            $surface = switch ($Matches[2]) { 'identity' { 'entra' }; 'blueprint' { 'blueprint' }; 'instance.displayName' { 'instance' }; 'instance.liveDisplayName' { 'liveInstance' }; default { 'registry' } }
+            Get-DemoAgentName -Locale $Locale -Key $Matches[1] -Surface $surface
+        }
+        else { ConvertTo-DemoText (Resolve-DemoPath $Locale $path) }
+        if ($null -eq $v) { "<missing $path>" } else { $v }
+    })
     return [regex]::Replace($t, '\{(upn|name|agent|group|folder|cfg|state|pack|slot|tagged):([A-Za-z0-9_.\-]+)\}', [System.Text.RegularExpressions.MatchEvaluator]{
         param($m)
         $k = $m.Groups[2].Value
@@ -98,14 +514,14 @@ function Expand-DemoText([string]$Text, $Locale, $Config, $State, $Pack) {
         $v = switch ($m.Groups[1].Value) {
             'upn' { if ($known) { Get-DemoUpn $Locale $Config $k } }
             'name' { if ($k -eq 'admin') { 'the tenant administrator' } elseif ($known) { Get-DemoPersonaDisplayName $Locale $k } }
-            'agent' { [string]$Locale.agents[$k].displayName }
+            'agent' { Get-DemoAgentName -Locale $Locale -Key $k }
             'group' { [string]$Locale.groups[$k].displayName }
             'folder' { [string]$Locale.knowledge.folders[$k] }
             'cfg' { ConvertTo-DemoText (Resolve-DemoPath $Config $k) }
             'state' { ConvertTo-DemoText (Resolve-DemoPath $State $k) }
             'pack' { ConvertTo-DemoText (Resolve-DemoPath $Pack $k) }
             'slot' { Get-DemoSlotText $k ([string]$Config.pack) }
-            'tagged' { (@($Pack.agents | Where-Object { @($_.tags) -contains $k } | ForEach-Object { [string]$Locale.agents[$_.key].displayName }) -join ', ') }
+            'tagged' { (@($Pack.agents | Where-Object { @($_.tags) -contains $k } | ForEach-Object { Get-DemoAgentName -Locale $Locale -Key $_.key }) -join ', ') }
         }
         if ($v) { $v } else { "<missing $($m.Value)>" }
     })
@@ -126,8 +542,9 @@ function Read-DemoConfig([Parameter(Mandatory)][string]$Prefix) {
 # for this process and its children (az, a365, the Lab Builder scripts), so the lab's az login / account set never
 # change the machine-wide default of other sessions. Extensions stay shared (AZURE_EXTENSION_DIR = the default folder).
 function Use-DemoAzProfile($Config) {
-    if (-not $Config -or -not $Config.azConfigDir) { return }
-    $dir = if ([IO.Path]::IsPathRooted([string]$Config.azConfigDir)) { [string]$Config.azConfigDir } else { Join-Path $script:DemoRepoRoot ([string]$Config.azConfigDir) }
+    $configured = if ($env:DEMO_SESSION_AUTH_DIR) { Join-Path $env:DEMO_SESSION_AUTH_DIR 'azure' } else { [string]$Config.azConfigDir }
+    if (-not $configured) { return }
+    $dir = if ([IO.Path]::IsPathRooted($configured)) { $configured } else { Join-Path $script:DemoRepoRoot $configured }
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     Set-DemoAzProfileDefaults $dir
     $env:AZURE_CONFIG_DIR = $dir
@@ -157,14 +574,29 @@ function Set-DemoAzProfileDefaults([Parameter(Mandatory)][string]$Dir) {
 
 # The command line the operator (or the agent) runs to sign in to the lab's az profile.
 function Get-DemoAzLoginCommand($Config) {
-    $p = if ($Config.azConfigDir) { "`$env:AZURE_CONFIG_DIR='$($env:AZURE_CONFIG_DIR)'; `$env:AZURE_EXTENSION_DIR='$($env:AZURE_EXTENSION_DIR)'; " } else { '' }
+    $p = if ($env:DEMO_SESSION_AUTH_DIR -or $Config.azConfigDir) { "`$env:AZURE_CONFIG_DIR='$($env:AZURE_CONFIG_DIR)'; `$env:AZURE_EXTENSION_DIR='$($env:AZURE_EXTENSION_DIR)'; " } else { '' }
     "${p}az login --tenant $($Config.tenantId)"
 }
 
 function Read-DemoLabState([Parameter(Mandatory)][string]$Prefix) {
     $f = Join-Path (Get-DemoLabDir $Prefix) 'state.json'
-    if (Test-Path -LiteralPath $f) { return (Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable) }
-    return [ordered]@{ prefix = $Prefix; users = [ordered]@{}; groups = [ordered]@{}; agents = [ordered]@{}; mcp = [ordered]@{ servers = [ordered]@{}; pool = @() }; knowledge = [ordered]@{}; governance = [ordered]@{} }
+    if (Test-Path -LiteralPath $f) {
+        $state = Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
+        if (-not $state.Contains('agentResolution')) {
+            $built = ($state.agents.Count -gt 0) -or ($state.governance.identities.Count -gt 0) -or
+                ($state.phases.setup.agents.status -in 'started', 'done')
+            if (-not $built) {
+                $runDir = Split-Path (Get-DemoLabDir $Prefix) -Parent
+                $built = @(Get-ChildItem -LiteralPath $runDir -Directory | Where-Object {
+                    Test-Path -LiteralPath (Join-Path $_.FullName 'a365.generated.config.json')
+                }).Count -gt 0
+            }
+            $state['agentResolution'] = [ordered]@{ version = 1; legacyAliases = $built }
+        }
+        return $state
+    }
+    return [ordered]@{ prefix = $Prefix; agentResolution = [ordered]@{ version = 1; legacyAliases = $false }
+        users = [ordered]@{}; groups = [ordered]@{}; agents = [ordered]@{}; mcp = [ordered]@{ servers = [ordered]@{}; pool = @() }; knowledge = [ordered]@{}; governance = [ordered]@{} }
 }
 
 function Save-DemoLabState([Parameter(Mandatory)][string]$Prefix, [Parameter(Mandatory)]$State) {
@@ -210,7 +642,8 @@ function Get-DemoMsalToken {
           [string]$LoginHint, [string]$ClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e', [string]$CacheName = 'msal_graph_cache.json',
           [switch]$SilentOnly, [switch]$ForceRefresh)
     # -SilentOnly (dry runs): never opens a browser; returns $null when no cached sign-in serves the scopes.
-    $cache = Join-Path (Get-DemoLabDir $Prefix) "secrets\$CacheName"
+    $cache = if ($env:DEMO_SESSION_AUTH_DIR) { Join-Path $env:DEMO_SESSION_AUTH_DIR "msal\$Prefix\$CacheName" }
+             else { Join-Path (Get-DemoLabDir $Prefix) "secrets\$CacheName" }
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cache) | Out-Null
     $pyArgs = @('--tenant', $TenantId, '--client', $ClientId, '--scopes', ($Scopes -join ','), '--cache', $cache, '--hint', "$LoginHint")
     if ($SilentOnly) { $pyArgs += '--silent-only' }

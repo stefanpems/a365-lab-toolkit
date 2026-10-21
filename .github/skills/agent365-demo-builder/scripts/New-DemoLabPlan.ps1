@@ -48,7 +48,7 @@ function New-AgentOverlay($A) {
     [ordered]@{ org = $L.org; overlay = $L.overlays[$A.overlay] } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $dst 'overlay_strings.json') -Encoding utf8
     if ($A.variant -like '*-DW') {
         $m = $L.agents[$A.key].manifest
-        [ordered]@{ name = [ordered]@{ short = $m.nameShort; full = $m.nameFull }; description = [ordered]@{ short = $m.descriptionShort; full = $m.descriptionFull }; developer = [ordered]@{ name = $m.developer } } |
+        [ordered]@{ name = [ordered]@{ short = Get-DemoAgentName -Locale $L -Key $A.key -Surface registry; full = $m.nameFull }; description = [ordered]@{ short = $m.descriptionShort; full = $m.descriptionFull }; developer = [ordered]@{ name = $m.developer } } |
             ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $dst 'manifest.overrides.json') -Encoding utf8
     }
     if ($A.knowledgeFiles) {
@@ -70,9 +70,12 @@ $agents = [System.Collections.Generic.List[object]]::new()
 $outside = [System.Collections.Generic.List[object]]::new()
 foreach ($a in ($pack.agents | Sort-Object { [int]$_.buildOrder })) {
     $la = $L.agents[$a.key]
+    Initialize-DemoAgentState $cfg $L $state $a
     if ($a.platform -eq 'code') {
         $entry = [ordered]@{ type = $a.variant; framework = 'MAF'; name = $la.codeName
-            displayNames = [ordered]@{ blueprint = $la.blueprint; identity = $la.identity }
+            displayName = Get-DemoAgentName -Locale $L -Key $a.key -Surface webui
+            displayNames = [ordered]@{ blueprint = Get-DemoAgentName -Locale $L -Key $a.key -Surface blueprint
+                identity = Get-DemoAgentName -Locale $L -Key $a.key -Surface entra }
             resourceGroup = "$($la.codeName)-rg"; tools = @($a.tools | ForEach-Object { Resolve-PackTool $_ }) }
         if ($a.variant -like 'FD-*') { $entry.tools = @() }
         if ($a.variant -like '*-DW') { $entry['frontier'] = [ordered]@{ enrollmentConfirmed = $true; policyTemplate = $L.governance.templates.aiTeammateTemplate } }
@@ -80,13 +83,14 @@ foreach ($a in ($pack.agents | Sort-Object { [int]$_.buildOrder })) {
         $agents.Add($entry)
     }
     elseif ($a.platform -eq 'copilotStudio') {
-        $entry = [ordered]@{ type = $a.variant; name = $la.codeName; displayName = $la.displayName; mcp = @(); publish = $true }
+        $displayName = Get-DemoAgentName -Locale $L -Key $a.key -Surface copilotStudio
+        $entry = [ordered]@{ type = $a.variant; name = $la.codeName; displayName = $displayName; mcp = @(); publish = $true }
         if ($a.outsideLabPlan) {
             $envKey = if ($a.environment -eq 'default') { 'defaultEnvironmentId' } else { 'paygEnvironmentId' }
             $sol = (($Prefix -replace '[^A-Za-z0-9]', '') + 'MCSX' + ($a.key -replace '[^A-Za-z0-9]', '')).Substring(0, [Math]::Min(40, (($Prefix -replace '[^A-Za-z0-9]', '') + 'MCSX' + ($a.key -replace '[^A-Za-z0-9]', '')).Length))
             $cs = Join-Path $script:DemoRepoRoot '.github\skills\agent365-copilot-studio\scripts\New-McsAgent.ps1'
-            $outside.Add([ordered]@{ key = $a.key; displayName = $la.displayName; environment = $a.environment; environmentId = $cfg.copilotStudio[$envKey]
-                command = "pwsh -File `"$cs`" -Harness $($a.variant) -DisplayName `"$($la.displayName)`" -SolutionUniqueName `"$sol`" -Tenant `"$($cfg.tenantId)`" -EnvironmentId `"$($cfg.copilotStudio[$envKey])`" -IsolateSchemaName -InstallPac$(if ($cfg.azConfigDir) { ' -UseDataverseApi' }) -Publish" })
+            $outside.Add([ordered]@{ key = $a.key; displayName = $displayName; environment = $a.environment; environmentId = $cfg.copilotStudio[$envKey]
+                command = "pwsh -File `"$cs`" -Harness $($a.variant) -DisplayName `"$displayName`" -SolutionUniqueName `"$sol`" -Tenant `"$($cfg.tenantId)`" -EnvironmentId `"$($cfg.copilotStudio[$envKey])`" -IsolateSchemaName -InstallPac$(if ($cfg.azConfigDir) { ' -UseDataverseApi' }) -Publish" })
             continue
         }
         $agents.Add($entry)
@@ -126,10 +130,14 @@ if (-not $ValidateOnly) {
         $nativeTagAction = Get-Agent365TagAction -Prefix $Prefix -TenantId $cfg.tenantId
         $null = Set-DemoUserAction -Prefix $Prefix @nativeTagAction
     }
+    foreach ($agent in @($pack.agents | Where-Object { $_.variant -like '*-DW' -and $_.instance })) {
+        $preparedInstanceAction = Get-DemoPreparedInstanceAction $cfg $L $agent
+        $null = Set-DemoUserAction -Prefix $Prefix @preparedInstanceAction
+    }
     # The Lab Builder's per-agent test gate is deferred in a demo build: the smoke test of every agent is a user action.
     $exposed = @($pack.webUi.expose)
     $tests = @($pack.agents | Where-Object { $_.platform -in 'code', 'copilotStudio' } | Sort-Object { [int]$_.buildOrder } | ForEach-Object {
-        $la = $L.agents[$_.key]; $name = if ($la.displayName) { $la.displayName } else { $la.codeName }
+        $name = Get-DemoAgentName -Locale $L -Key $_.key
         $surface = if ($exposed -contains $_.key) { 'web UI tab' } elseif ($_.variant -like '*-DW') { 'Teams chat with its instance' }
                    elseif ($_.platform -eq 'copilotStudio') { 'Copilot Studio test pane, then Teams/Microsoft 365 Copilot' }
                    elseif ($_.variant -like 'FD-*' -or $_.variant -like 'FH-*') { 'Foundry playground' } else { 'Teams / Microsoft 365 Copilot' }

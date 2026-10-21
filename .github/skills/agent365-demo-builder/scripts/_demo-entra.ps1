@@ -11,53 +11,186 @@ function Get-DemoAgentIdentities([switch]$Refresh) {
     return $script:DemoAgentIdentities
 }
 
-# The agent identity of one pack agent. Platform naming (verified in the reference lab, 28/09): code agents use the
-# localized identity name (locale agents.<key>.identity), Copilot Studio agents '<displayName> (Microsoft Copilot
-# Studio)', Foundry prompt agents '<account>-<project>-<codeName>-AgentIdentity'. Returns $null when not found (not
-# created or published yet) and throws when a name is ambiguous (two identities match).
-function Resolve-DemoAgentIdentity($Locale, [Parameter(Mandatory)][string]$AgentKey) {
-    $la = $Locale.agents[$AgentKey]
-    $n = if ($la.identity) { [string]$la.identity } else { [string]$la.displayName }
-    $mcs = "$([string]$la.displayName) (Microsoft Copilot Studio)"
-    $fd = if ($la.codeName) { "*-$([string]$la.codeName)-AgentIdentity" } else { $null }
-    $all = Get-DemoAgentIdentities
-    foreach ($test in @({ param($i) $i.displayName -eq $n }, { param($i) $i.displayName -eq $mcs }, { param($i) $fd -and $i.displayName -like $fd })) {
-        $hits = @($all | Where-Object { & $test $_ })
-        if ($hits.Count -gt 1) { throw "Agent identity of '$AgentKey' is ambiguous: $(@($hits | ForEach-Object { "'$($_.displayName)' ($($_.id))" }) -join ', '). Delete the stale identities first." }
-        if ($hits.Count -eq 1) { return $hits[0] }
+function Get-DemoIdentityById([string]$Id) {
+    $columns = 'id,appId,displayName,accountEnabled'
+    $identity = Get-DemoGraphObject "$script:DemoG/beta/servicePrincipals/$Id`?`$select=$columns"
+    if (-not $identity) { $identity = Get-DemoGraphObject "$script:DemoG/beta/servicePrincipals(appId='$Id')?`$select=$columns" }
+    return $identity
+}
+
+function Get-DemoFoundryAgentResource($Config, $Locale, $State, $AgentDef, [string]$ExpectedIdentityId) {
+    $entry = $State.agents[$AgentDef.key]
+    $knownResourceId = [bool]$entry.foundryAgentId
+    $endpoint = ([string]$Config.foundry.endpoint).TrimEnd('/')
+    if ($entry.foundryEndpoint -and $entry.foundryEndpoint -ne $endpoint) {
+        throw "Agent '$($AgentDef.key)' is recorded in a different Foundry project. Reconcile state.json before continuing."
     }
+    $resourceId = if ($entry.foundryAgentId) { [string]$entry.foundryAgentId } else { [string]$Locale.agents[$AgentDef.key].codeName }
+    $token = Get-DemoAzToken -Resource 'https://ai.azure.com' -TenantId $Config.tenantId
+    $resource = Get-DemoGraphObject "$endpoint/agents/$([uri]::EscapeDataString($resourceId))?api-version=v1" $token
+    if (-not $resource) { return $null }
+    if (-not $resource.id -or -not $resource.instance_identity.principal_id) {
+        throw "Foundry agent '$resourceId' returned no resource or instance identity id."
+    }
+    if ($ExpectedIdentityId -and $resource.instance_identity.principal_id -ne $ExpectedIdentityId) {
+        throw "Foundry agent '$resourceId' does not reference the recorded identity '$ExpectedIdentityId'. Reconcile state.json."
+    }
+    $ids = @{ foundryAgentId = [string]$resource.id; foundryEndpoint = $endpoint }
+    if ($resource.blueprint.client_id) { $ids['blueprintAppId'] = [string]$resource.blueprint.client_id }
+    if ($resource.blueprint.principal_id) { $ids['blueprintPrincipalId'] = [string]$resource.blueprint.principal_id }
+    Set-DemoAgentIds $Config.prefix $State $AgentDef.key $ids
+    Add-DemoAgentLookup $Config $AgentDef.key 'foundryAgentId' $(if ($knownResourceId) { 'id' } else { 'relationship' }) '' $resource.id
+    return $resource
+}
+
+function Resolve-DemoAgentIdentity($Config, $Locale, $State, $AgentDef) {
+    Initialize-DemoAgentState $Config $Locale $State $AgentDef
+    $entry = $State.agents[$AgentDef.key]
+    $foundryLookupId = ''; $knownIdentity = $null; $resource = $null
+    if ([string]$AgentDef.variant -match '^(FD|FH)-' -and $Config.foundry.endpoint -match '/api/projects/') {
+        $foundryLookupId = if ($entry.identityId) { [string]$entry.identityId } else { [string]$entry.identityAppId }
+        if ($foundryLookupId) { $knownIdentity = Get-DemoIdentityById $foundryLookupId }
+        if (-not $knownIdentity -or -not $entry.blueprintAppId) {
+            $resource = Get-DemoFoundryAgentResource $Config $Locale $State $AgentDef ([string]$knownIdentity.id)
+        }
+    }
+    $candidates = @($entry.identityAppId, $resource.instance_identity.principal_id | Where-Object { $_ })
+    $identity = Resolve-DemoAgentObject -Config $Config -Locale $Locale -State $State -Key $AgentDef.key -IdField identityId -Surface entra -CandidateIds $candidates -ReadById {
+        param($id)
+        if ($foundryLookupId -and $id -eq $foundryLookupId) { return $knownIdentity }
+        Get-DemoIdentityById $id
+    } -FindByName {
+        param($name)
+        $filter = [uri]::EscapeDataString("displayName eq '$($name.Replace("'", "''"))'")
+        Invoke-DemoGraph GET "$script:DemoG/beta/servicePrincipals/microsoft.graph.agentIdentity?`$filter=$filter&`$select=id,appId,displayName,accountEnabled" -All
+    }
+    if ($identity.appId) { Set-DemoAgentIds $Config.prefix $State $AgentDef.key @{ identityAppId = [string]$identity.appId } }
+    if ($identity -and $resource.blueprint.client_id -and -not $State.agents[$AgentDef.key].blueprintId) {
+        $null = Resolve-DemoAgentBlueprint $Config $Locale $State $AgentDef
+    }
+    return $identity
+}
+
+function Resolve-DemoAgentBlueprint($Config, $Locale, $State, $AgentDef) {
+    Initialize-DemoAgentState $Config $Locale $State $AgentDef
+    $entry = $State.agents[$AgentDef.key]
+    $blueprint = Resolve-DemoAgentObject -Config $Config -Locale $Locale -State $State -Key $AgentDef.key -IdField blueprintId -Surface blueprint -CandidateIds @($entry.blueprintAppId) -ReadById {
+        param($id)
+        $object = Get-DemoGraphObject "$script:DemoG/beta/applications/$id`?`$select=id,appId,displayName"
+        if (-not $object) { $object = Get-DemoGraphObject "$script:DemoG/beta/applications(appId='$id')?`$select=id,appId,displayName" }
+        $object
+    } -FindByName {
+        param($name)
+        $filter = [uri]::EscapeDataString("displayName eq '$($name.Replace("'", "''"))'")
+        Invoke-DemoGraph GET "$script:DemoG/beta/applications/microsoft.graph.agentIdentityBlueprint?`$filter=$filter&`$select=id,appId,displayName" -All
+    }
+    if ($blueprint.appId) { Set-DemoAgentIds $Config.prefix $State $AgentDef.key @{ blueprintAppId = [string]$blueprint.appId } }
+    return $blueprint
+}
+
+function Get-DemoFoundryProjectIdentity($Config, $State, $AgentDef) {
+    $entry = $State.agents[$AgentDef.key]
+    $knownIdentity = $null
+    if ($entry.projectIdentityId) {
+        $knownIdentity = Get-DemoIdentityById $entry.projectIdentityId
+        if ($knownIdentity -and $entry.projectResourceId -and $entry.projectBlueprintId -and $entry.projectBlueprintAppId) {
+            Add-DemoAgentLookup $Config $AgentDef.key 'projectIdentityId' 'id' '' $knownIdentity.id
+            return $knownIdentity
+        }
+        if (-not $knownIdentity) {
+            Write-DemoLog $Config.prefix "Agent '$($AgentDef.key)': recorded project identity no longer exists; reading the Foundry project resource." 'WARN'
+        }
+    }
+    $projectMatch = [regex]::Match([string]$Config.foundry.endpoint, '/api/projects/([^/?]+)/?$')
+    if (-not $Config.subscriptionId -or -not $Config.foundry.account -or -not $Config.foundry.existingResourceGroup -or
+        -not $projectMatch.Success) {
+        throw "Agent '$($AgentDef.key)': configure the Foundry account, resource group, subscription and project endpoint to resolve its project identity by resource id."
+    }
+    $projectName = [uri]::EscapeDataString([uri]::UnescapeDataString($projectMatch.Groups[1].Value))
+    $uri = "https://management.azure.com/subscriptions/$($Config.subscriptionId)/resourceGroups/$($Config.foundry.existingResourceGroup)/providers/Microsoft.CognitiveServices/accounts/$($Config.foundry.account)/projects/$projectName`?api-version=2025-04-01-preview"
+    if ($entry.projectResourceId) { $uri = "https://management.azure.com$($entry.projectResourceId)?api-version=2025-04-01-preview" }
+    $token = Get-DemoAzToken -Resource 'https://management.azure.com/' -TenantId $Config.tenantId
+    $project = Get-DemoGraphObject $uri $token
+    if ($project.properties.agentIdentity.agentIdentityId) {
+        if ($knownIdentity -and $project.properties.agentIdentity.agentIdentityId -ne $knownIdentity.id) {
+            throw "Foundry project metadata does not reference the recorded identity '$($knownIdentity.id)'. Reconcile state.json."
+        }
+        $identity = if ($knownIdentity) { $knownIdentity } else { Get-DemoIdentityById $project.properties.agentIdentity.agentIdentityId }
+        if ($identity) {
+            Set-DemoAgentIds $Config.prefix $State $AgentDef.key @{
+                projectIdentityId = [string]$identity.id
+                projectBlueprintAppId = [string]$project.properties.agentIdentity.agentIdentityBlueprintId
+                projectBlueprintId = [string]$project.properties.agentIdentity.agentIdentityBlueprintObjectId
+                projectManagedIdentityId = [string]$project.identity.principalId
+                projectResourceId = [string]$project.id
+            }
+            Add-DemoAgentLookup $Config $AgentDef.key 'projectIdentityId' $(if ($knownIdentity) { 'id' } else { 'relationship' }) '' $identity.id
+            return $identity
+        }
+    }
+    Write-DemoLog $Config.prefix "Agent '$($AgentDef.key)': the Foundry project has no resolvable agent identity yet." 'WARN'
+    Add-DemoAgentLookup $Config $AgentDef.key 'projectIdentityId' 'missing' '' ''
     return $null
 }
 
-# Shared identity of the Foundry project of a Foundry prompt agent identity ('<account>-<project>-AgentIdentity').
-function Get-DemoFoundryProjectIdentity($AgentIdentity, [string]$CodeName) {
-    $suffix = "-$CodeName-AgentIdentity"
-    if (-not $AgentIdentity -or -not $CodeName -or -not $AgentIdentity.displayName.EndsWith($suffix)) { return $null }
-    $name = $AgentIdentity.displayName.Substring(0, $AgentIdentity.displayName.Length - $suffix.Length) + '-AgentIdentity'
-    $hits = @(Get-DemoAgentIdentities | Where-Object { $_.displayName -eq $name })
-    if ($hits.Count -eq 1) { return $hits[0] }
-    return $null
-}
-
-# Pack agents that carry an Entra owner, sponsor or attribute, each with its agent identities: code agents by the
-# agenticAppId of their Lab Builder config, Digital Worker instances by blueprint (sponsorOn: instance), the others by
-# name (Resolve-DemoAgentIdentity); Foundry prompt agents also get their project's shared identity (reference lab).
-function Get-DemoIdentityPlan([string]$Prefix, $Pack, $Locale) {
+function Get-DemoIdentityPlan([string]$Prefix, $Pack, $Locale, $State, $Config) {
+    if (-not $Config) { $Config = Read-DemoConfig $Prefix }
+    if (-not $State) { $State = Read-DemoLabState $Prefix }
     @(foreach ($a in @($Pack.agents | Where-Object { $_.entraOwner -or $_.sponsor -or $_.attribute })) {
-        $la = $Locale.agents[$a.key]
-        $gcFile = if ($la.codeName) { Join-Path $script:DemoRepoRoot "generated\$Prefix\$($la.codeName)\a365.generated.config.json" } else { $null }
-        $gc = if ($gcFile -and (Test-Path -LiteralPath $gcFile)) { Get-Content -LiteralPath $gcFile -Raw | ConvertFrom-Json } else { $null }
-        $ids = if ($a.sponsorOn -eq 'instance') { if ($gc -and $gc.agentBlueprintId) { @(Get-DemoBlueprintInstances ([string]$gc.agentBlueprintId)) } else { @() } }
-               elseif ($gc -and $gc.agenticAppId) { @(Get-DemoAgentIdentities | Where-Object { $_.appId -eq [string]$gc.agenticAppId }) }
-               else { @(Resolve-DemoAgentIdentity $Locale $a.key | Where-Object { $_ }) }
-        if ([string]$a.variant -like 'FD-*' -and @($ids).Count -eq 1) { $pi = Get-DemoFoundryProjectIdentity $ids[0] ([string]$la.codeName); if ($pi) { $ids = @($ids) + $pi } }
-        [pscustomobject]@{ key = [string]$a.key; name = [string]$la.displayName; def = $a; identities = @($ids) }
+        Initialize-DemoAgentState $Config $Locale $State $a
+        $entry = $State.agents[$a.key]
+        $ids = @()
+        if ($a.sponsorOn -eq 'instance') {
+            $known = @($entry.instanceIdentityIds | Where-Object { $_ })
+            $ids = @($known | ForEach-Object { Get-DemoIdentityById $_ } | Where-Object { $_ })
+            if (-not $known.Count -or $ids.Count -ne $known.Count) {
+                $blueprint = Resolve-DemoAgentBlueprint $Config $Locale $State $a
+                if ($blueprint) { $ids = @(Get-DemoBlueprintInstances ([string]$blueprint.appId)) }
+                if ($ids.Count) {
+                    Set-DemoAgentIds $Prefix $State $a.key @{ instanceIdentityIds = @($ids | ForEach-Object { [string]$_.id }) }
+                }
+                Add-DemoAgentLookup $Config $a.key 'instanceIdentityIds' $(if ($ids.Count) { 'relationship' } else { 'missing' }) '' (@($ids.id) -join ',')
+            }
+            else { Add-DemoAgentLookup $Config $a.key 'instanceIdentityIds' 'id' '' ($known -join ',') }
+        }
+        else { $ids = @(Resolve-DemoAgentIdentity $Config $Locale $State $a | Where-Object { $_ }) }
+        if ([string]$a.variant -like 'FD-*' -and $ids.Count -eq 1) {
+            $projectIdentity = Get-DemoFoundryProjectIdentity $Config $State $a
+            if ($projectIdentity) { $ids += $projectIdentity }
+        }
+        [pscustomobject]@{ key = [string]$a.key; name = Get-DemoAgentName -Locale $Locale -Key $a.key; def = $a; identities = @($ids) }
     })
 }
 
 # Instances (agent identities) created from one blueprint, e.g. the Digital Worker instances of an ACA-DW/FH-DW agent.
 function Get-DemoBlueprintInstances([Parameter(Mandatory)][string]$BlueprintAppId) {
-    return @(Get-DemoAgentIdentities | Where-Object { $_.agentIdentityBlueprintId -eq $BlueprintAppId })
+    return @(Invoke-DemoGraph GET "$script:DemoG/beta/servicePrincipals/microsoft.graph.agentIdentity?`$filter=agentIdentityBlueprintId eq '$BlueprintAppId'&`$select=id,appId,displayName,agentIdentityBlueprintId,accountEnabled" -All)
+}
+
+function Resolve-DemoInstanceUser($Config, $Locale, $State, $AgentDef) {
+    Initialize-DemoAgentState $Config $Locale $State $AgentDef
+    $entry = $State.agents[$AgentDef.key]
+    $columns = 'id,displayName,userPrincipalName,accountEnabled,assignedLicenses,identityParentId'
+    $candidateIds = @()
+    $identityIds = @($entry.instanceIdentityIds | Where-Object { $_ })
+    if (-not $entry.instanceUserId -and $identityIds.Count -eq 1) {
+        $parentId = [string]$identityIds[0]
+        $users = @(Invoke-DemoGraph GET "$script:DemoG/beta/users/microsoft.graph.agentUser?`$filter=identityParentId eq '$parentId'&`$select=$columns" -All)
+        if ($users.Count -gt 1) { throw "Agent '$($AgentDef.key)' has multiple users for identity '$parentId'. Record instanceUserId in state.json." }
+        $candidateIds = @($users | ForEach-Object { [string]$_.id })
+    }
+    $user = Resolve-DemoAgentObject -Config $Config -Locale $Locale -State $State -Key $AgentDef.key -IdField instanceUserId -Surface instance -CandidateIds $candidateIds -ReadById {
+        param($id) Get-DemoGraphObject "$script:DemoG/beta/users/$id`?`$select=$columns"
+    } -FindByName {
+        param($name)
+        $filter = [uri]::EscapeDataString("displayName eq '$($name.Replace("'", "''"))'")
+        Invoke-DemoGraph GET "$script:DemoG/beta/users/microsoft.graph.agentUser?`$filter=$filter&`$select=$columns" -All
+    }
+    if ($user.identityParentId) {
+        $identities = @(@($entry.instanceIdentityIds) + @([string]$user.identityParentId) | Where-Object { $_ } | Select-Object -Unique)
+        Set-DemoAgentIds $Config.prefix $State $AgentDef.key @{ instanceIdentityIds = $identities }
+    }
+    return $user
 }
 
 function Wait-DemoConverged([scriptblock]$Read, [scriptblock]$IsDone, [int]$Tries = 6, [int]$DelaySeconds = 8) {

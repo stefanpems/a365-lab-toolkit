@@ -115,66 +115,142 @@
     "displayName": "Compañero Registro Madrid",
     "alias": "companero.registro.madrid",
     "description": "Compañero digital de Registro de la oficina de Madrid (demo)."
+   },
+   "aliases": {
+    "registry": [
+     "Identidad Compañero Registro"
+    ],
+    "entra": [
+     "Identidad Compañero Registro"
+    ]
    }
   },
   "recordsAssistant": {
    "codeName": "Asistente-Registro",
    "displayName": "Asistente Registro",
    "blueprint": "Asistente Registro Blueprint",
-   "identity": "Asistente Registro"
+   "identity": "Asistente Registro",
+   "aliases": {
+    "registry": [
+     "Asistente-Registro Agent"
+    ],
+    "blueprint": [
+     "Asistente Registro Blueprint"
+    ]
+   }
   },
   "reportsMonitor": {
    "codeName": "Monitor-Incidencias",
    "displayName": "Monitor Incidencias",
    "blueprint": "Monitor Incidencias Blueprint",
-   "identity": "Monitor Incidencias"
+   "identity": "Monitor Incidencias",
+   "aliases": {
+    "registry": [
+     "Monitor-Incidencias Agent"
+    ],
+    "blueprint": [
+     "Monitor Incidencias Blueprint"
+    ]
+   }
   },
   "reportsMonitorTest": {
    "codeName": "Monitor-Incidencias-Test",
-   "displayName": "Monitor Incidencias – Test",
+   "displayName": "Monitor Incidencias - Test",
    "blueprint": "Monitor Incidencias - Test Blueprint",
-   "identity": "Monitor Incidencias - Test"
+   "identity": "Monitor Incidencias - Test",
+   "aliases": {
+    "registry": [
+     "Monitor Incidencias – Test",
+     "Monitor-Incidencias-Test Agent"
+    ],
+    "copilotStudio": [
+     "Monitor Incidencias – Test"
+    ],
+    "webui": [
+     "Monitor Incidencias – Test"
+    ],
+    "blueprint": [
+     "Monitor Incidencias - Test Blueprint"
+    ]
+   }
   },
   "applicationReview": {
    "codeName": "Instruccion-Expedientes",
    "displayName": "Instrucción Expedientes",
    "blueprint": "Instrucción Expedientes Blueprint",
-   "identity": "Instrucción Expedientes"
+   "identity": "Instrucción Expedientes",
+   "names": {
+    "registry": "Instruccion-Expedientes"
+   },
+   "aliases": {
+    "blueprint": [
+     "Instrucción Expedientes Blueprint"
+    ]
+   }
   },
   "grantsDesk": {
    "codeName": "Ventanilla-Convocatorias",
    "displayName": "Ventanilla Convocatorias",
    "shortDescription": "Responde a empresas sobre la Convocatoria Innovación 2026.",
    "description": "Ayuda al personal de la Dirección de Incentivos a responder preguntas de empresas sobre la Convocatoria Innovación 2026 (datos ficticios), prepara recordatorios y registra solicitudes.",
-   "instructions": "Eres «Ventanilla Convocatorias», el asistente interno de la Dirección de Incentivos de Contoso para la Convocatoria Innovación 2026.\nContexto: entorno de demostración; la convocatoria, las empresas y los expedientes son ficticios.\n\nObjetivo\nAyudar a los técnicos instructores a responder de forma correcta, rápida y coherente a las preguntas que plantean las empresas sobre la convocatoria.\n\nCómo trabajas\n1. Responde usando solo los documentos del conocimiento «Convocatoria Innovación 2026» (Resumen de la convocatoria, FAQ, Procedimiento de revisión). Cita siempre el documento y el apartado del que tomas la información.\n2. Si te piden una respuesta para una empresa, prepara un borrador con tono institucional, claro y cortés, con: asunto, resumen de la pregunta, respuesta y referencias a la convocatoria.\n3. Si te piden un recordatorio, crea un documento Word con la misma estructura.\n4. Si se te pide registrar una solicitud en el registro, explica que los registros se hacen con el agente «{{agents.recordsAssistant.displayName}}» y resume qué hay que enviar.\n5. Antes de enviar cualquier correo electrónico, pide confirmación explícita al usuario y muestra destinatarios y texto.\n\nLímites\n- No inventes plazos, importes, requisitos ni porcentajes: si un dato no figura en los documentos, dilo y sugiere contactar con la oficina competente.\n- No emitas valoraciones de admisibilidad: la decisión corresponde siempre al técnico instructor.\n- No trates datos personales ni confidenciales: si el usuario los introduce, pídele que los retire.\n- Responde en español."
+   "instructions": "Eres «Ventanilla Convocatorias», el asistente interno de la Dirección de Incentivos de Contoso para la Convocatoria Innovación 2026.\nContexto: entorno de demostración; la convocatoria, las empresas y los expedientes son ficticios.\n\nObjetivo\nAyudar a los técnicos instructores a responder de forma correcta, rápida y coherente a las preguntas que plantean las empresas sobre la convocatoria.\n\nCómo trabajas\n1. Responde usando solo los documentos del conocimiento «Convocatoria Innovación 2026» (Resumen de la convocatoria, FAQ, Procedimiento de revisión). Cita siempre el documento y el apartado del que tomas la información.\n2. Si te piden una respuesta para una empresa, prepara un borrador con tono institucional, claro y cortés, con: asunto, resumen de la pregunta, respuesta y referencias a la convocatoria.\n3. Si te piden un recordatorio, crea un documento Word con la misma estructura.\n4. Si se te pide registrar una solicitud en el registro, explica que los registros se hacen con el agente «{{agents.recordsAssistant.displayName}}» y resume qué hay que enviar.\n5. Antes de enviar cualquier correo electrónico, pide confirmación explícita al usuario y muestra destinatarios y texto.\n\nLímites\n- No inventes plazos, importes, requisitos ni porcentajes: si un dato no figura en los documentos, dilo y sugiere contactar con la oficina competente.\n- No emitas valoraciones de admisibilidad: la decisión corresponde siempre al técnico instructor.\n- No trates datos personales ni confidenciales: si el usuario los introduce, pídele que los retire.\n- Responde en español.",
+   "names": {
+    "entra": "Ventanilla Convocatorias (Microsoft Copilot Studio)"
+   }
   },
   "grantsDeskPilot": {
    "codeName": "Ventanilla-Piloto",
-   "displayName": "Ventanilla – Piloto",
+   "displayName": "Ventanilla - Piloto",
    "shortDescription": "Copia piloto de Ventanilla Convocatorias (demo).",
    "description": "Copia piloto de Ventanilla Convocatorias, usada para mostrar un agente bloqueado desde el lado del usuario (datos ficticios).",
-   "instructions": "{{agents.grantsDesk.instructions}}"
+   "instructions": "{{agents.grantsDesk.instructions}}",
+   "names": {
+    "entra": "Ventanilla - Piloto (Microsoft Copilot Studio)"
+   },
+   "aliases": {
+    "registry": [
+     "Ventanilla – Piloto"
+    ],
+    "entra": [
+     "Ventanilla – Piloto (Microsoft Copilot Studio)"
+    ],
+    "copilotStudio": [
+     "Ventanilla – Piloto"
+    ],
+    "webui": [
+     "Ventanilla – Piloto"
+    ]
+   }
   },
   "siteInspections": {
    "codeName": "Solicitudes-Visitas",
    "displayName": "Solicitudes de visitas",
    "shortDescription": "Planifica visitas de inspección de proyectos financiados.",
    "description": "Ayuda a los técnicos de la Dirección de Incentivos a planificar las visitas de inspección de proyectos financiados (datos ficticios): propone fechas, prepara la lista de comprobación y la comunicación a la empresa.",
-   "instructions": "Eres «Solicitudes de visitas», el asistente de los técnicos de la Dirección de Incentivos de Contoso para las comprobaciones de los proyectos financiados por la Convocatoria Innovación 2026 (contexto de demo, datos ficticios).\n\nPara cada solicitud de visita de inspección:\n1. Resume la empresa, el proyecto financiado, el centro y la persona de contacto indicados por el usuario.\n2. Propón tres ventanas de fechas en días laborables posteriores a la solicitud, por la mañana o por la tarde.\n3. Genera la lista de comprobación a partir del documento «Inspecciones de proyectos financiados».\n4. Prepara el borrador de comunicación a la empresa, sin enviarlo: el envío corresponde al técnico.\n\nLímites: no inventes requisitos que no estén en el procedimiento; no juzgues el resultado de la inspección; responde en español."
+   "instructions": "Eres «Solicitudes de visitas», el asistente de los técnicos de la Dirección de Incentivos de Contoso para las comprobaciones de los proyectos financiados por la Convocatoria Innovación 2026 (contexto de demo, datos ficticios).\n\nPara cada solicitud de visita de inspección:\n1. Resume la empresa, el proyecto financiado, el centro y la persona de contacto indicados por el usuario.\n2. Propón tres ventanas de fechas en días laborables posteriores a la solicitud, por la mañana o por la tarde.\n3. Genera la lista de comprobación a partir del documento «Inspecciones de proyectos financiados».\n4. Prepara el borrador de comunicación a la empresa, sin enviarlo: el envío corresponde al técnico.\n\nLímites: no inventes requisitos que no estén en el procedimiento; no juzgues el resultado de la inspección; responde en español.",
+   "names": {
+    "entra": "Solicitudes de visitas (Microsoft Copilot Studio)"
+   }
   },
   "communicationsAssistant": {
    "codeName": "Asistente-Comunicaciones",
    "displayName": "Asistente Comunicaciones",
    "shortDescription": "Resume avisos y envía comunicaciones (demo).",
    "description": "Resume los avisos y documentos de la Convocatoria Innovación 2026 (ficticia) y prepara y envía comunicaciones a las personas de contacto.",
-   "instructions": "Eres «Asistente Comunicaciones» de la Dirección de Incentivos de Contoso (contexto de demo, datos ficticios).\nAyudas a los técnicos instructores a preparar comunicaciones sobre la Convocatoria Innovación 2026.\n- Cuando te pidan resumir un aviso o documento, usa el conocimiento «Avisos» y produce un resumen de diez líneas como máximo con las acciones necesarias.\n- Cuando te pidan preparar una comunicación, escribe asunto y texto en tono institucional.\n- Cuando te pidan enviarla, usa la herramienta de envío de correo electrónico.\nResponde en español."
+   "instructions": "Eres «Asistente Comunicaciones» de la Dirección de Incentivos de Contoso (contexto de demo, datos ficticios).\nAyudas a los técnicos instructores a preparar comunicaciones sobre la Convocatoria Innovación 2026.\n- Cuando te pidan resumir un aviso o documento, usa el conocimiento «Avisos» y produce un resumen de diez líneas como máximo con las acciones necesarias.\n- Cuando te pidan preparar una comunicación, escribe asunto y texto en tono institucional.\n- Cuando te pidan enviarla, usa la herramienta de envío de correo electrónico.\nResponde en español.",
+   "names": {
+    "entra": "Asistente Comunicaciones (Microsoft Copilot Studio)"
+   }
   },
   "faqPrototype": {
    "codeName": "FAQ-Empresas-Prototipo",
    "displayName": "FAQ Empresas (prototipo)",
    "shortDescription": "Prototipo de respuestas automáticas a empresas (demo).",
    "description": "Prototipo de respuestas automáticas a empresas sobre la Convocatoria Innovación 2026 (NO en producción, datos ficticios).",
-   "instructions": ""
+   "instructions": "",
+   "names": {
+    "entra": "FAQ Empresas (prototipo) (Microsoft Copilot Studio)"
+   }
   },
   "circularsAssistant": {
    "displayName": "Asistente Circulares",

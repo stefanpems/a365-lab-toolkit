@@ -38,7 +38,7 @@ if (-not $a -or -not $a.leaver) { throw "'$Agent' is not an agent with a leaver 
 $leaver = [string]$a.leaver
 $lp = $pack.personas | Where-Object { $_.key -eq $leaver } | Select-Object -First 1
 $upn = Get-DemoUpn $LOC $cfg $leaver
-$nm = [string]$LOC.agents[$a.key].displayName
+$nm = Get-DemoAgentName -Locale $LOC -Key $a.key
 $pk = Get-DemoAgentPackages $cfg $LOC $state $a
 $pkg = if ($pk.shared) { $pk.shared } else { $pk.published }
 if (-not $pkg) { throw "'$nm' is not in the registry: create it first (Agent Builder card)." }

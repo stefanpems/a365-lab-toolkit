@@ -54,7 +54,9 @@
    "story": "AI administrator: opens the registry, decides, blocks, reassigns",
    "entraRoles": [
     "AI Administrator",
-    "Global Reader"
+    "Global Reader",
+    "Conditional Access Administrator",
+    "Attribute Assignment Administrator"
    ],
    "licenses": [
     "copilotUser",
@@ -440,7 +442,12 @@
      "teams",
      "copilotUser"
     ],
-    "createFrom": "teams"
+    "createFrom": "teams",
+    "live": {
+     "creator": "programLead",
+     "manager": "programLead",
+     "demo": "D7"
+    }
    },
    "registryOwner": "none",
    "sponsor": "director",
@@ -1453,6 +1460,21 @@
      "demos": [
       "D8"
      ]
+    },
+    {
+     "key": "applyProductionTemplate",
+     "nameKey": "applyProductionTemplate",
+     "demos": [
+      "D8"
+     ]
+    },
+    {
+     "key": "rejectStalePublishRequests",
+     "nameKey": "rejectStalePublishRequests",
+     "olderThanDays": 14,
+     "demos": [
+      "D8"
+     ]
     }
    ]
   }
@@ -1663,7 +1685,7 @@
    ],
    "notes": [
     "Custom templates of other labs are visible: scroll past them or search.",
-     "The maker's instance is prepared first; the program lead creates her own instance in Teams during the story."
+    "The maker's instance is prepared first; {name:programLead} creates {{agents.recordsColleague.instance.liveDisplayName}} in Teams during the story, with alias {{agents.recordsColleague.instance.liveAlias}}."
    ]
   },
   {
@@ -1690,8 +1712,8 @@
    "resetClass": "time",
    "leadHours": 24,
    "manualReset": [
-    "Remove or reset the custom apply-template rule so the four Copilot Studio agents can be reviewed again with '{{governance.templates.productionTemplate}}'.",
-     "The ownerless-agent rule is shown as a separate branch. Recreate {agent:formsAssistant} with New-OrphanAgent.ps1 only when that optional branch must be run again."
+    "Remove or reset '{{governance.rules.applyProductionTemplate}}' so the four Copilot Studio agents can be reviewed again with '{{governance.templates.productionTemplate}}'.",
+    "The ownerless-agent rule is shown as a separate branch. Recreate {agent:formsAssistant} with New-OrphanAgent.ps1 only when that optional branch must be run again."
    ],
    "notes": [
     "The current story shows the four existing Copilot Studio agents in the apply-template rule and a separate stale-publish-request rule.",

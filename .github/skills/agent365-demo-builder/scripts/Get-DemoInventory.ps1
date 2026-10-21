@@ -13,6 +13,8 @@
 param([Parameter(Mandatory)][string]$Prefix, [switch]$SnapshotOnly, [switch]$AsJson)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
+. (Join-Path $PSScriptRoot '_demo-entra.ps1')
+. (Join-Path $PSScriptRoot '..\..\agent365-demo-reset\scripts\_demo-registry.ps1')
 . (Join-Path $PSScriptRoot '_demo-inventory.ps1')
 $cfg = Read-DemoConfig $Prefix
 $dir = Get-DemoLabDir $Prefix
@@ -196,8 +198,10 @@ if ($cfg.foundry.deployment) {
     Add-Row 6 @($cfg.foundry.deployment, 'Foundry model deployment', $cfg.foundry.existingResourceGroup, '',
         'Configured in lab config; model deployment not read back', $cfg.foundry.endpoint, 'Reused Foundry target; capacity not verified')
 }
+$instanceUsers = @{}
 foreach ($a in @($pack.agents | Sort-Object { [int]$_.buildOrder }, { $_.key })) {
     $la = $loc.agents[$a.key]
+    Initialize-DemoAgentState $cfg $loc $state $a
     $pa = $plan.agents | Where-Object { $_.name -eq $la.codeName } | Select-Object -First 1
     $variant = [string]$a.variant
     $tech = switch ($a.platform) {
@@ -230,26 +234,44 @@ foreach ($a in @($pack.agents | Sort-Object { [int]$_.buildOrder }, { $_.key }))
     }
     $evidence = 'Planned; no deployment evidence'
     $url = ''
+    if ($live) {
+        try {
+            if ($a.catalog -ne $false) {
+                $packages = Get-DemoAgentPackages $cfg $loc $state $a
+                if (@($packages.all).Count) {
+                    $evidence = 'Verified: registry object IDs; runtime health and effective access not checked'
+                    $url = "https://m365.cloud.microsoft/chat/?titleId=$([uri]::EscapeDataString($state.agents[$a.key].titleId))"
+                }
+            }
+            if ($a.platform -eq 'copilotStudio') { $null = Resolve-DemoCopilotStudioBot $cfg $loc $state $a }
+            if ($a.platform -eq 'code' -and [string]$a.variant -notlike 'FD-*') { $null = Resolve-DemoAgentBlueprint $cfg $loc $state $a }
+            if ($a.instance) { $instanceUsers[$a.key] = Resolve-DemoInstanceUser $cfg $loc $state $a }
+            elseif ($a.platform -ne 'agentBuilder') { $null = Resolve-DemoAgentIdentity $cfg $loc $state $a }
+        }
+        catch {
+            Write-Warning "Agent inventory verification failed for '$($a.key)': $($_.Exception.Message)"
+            $warnings.Add([ordered]@{ resource = "Agent $($a.key)"; detail = 'Object resolution failed; see the command warning. Recorded IDs are not proof of verification.' })
+            $evidence = 'Agent object verification incomplete; see warnings'
+        }
+    }
     if ($pa.resourceGroup) {
         $app = $resources | Where-Object { $_.resourceGroup -eq $pa.resourceGroup -and $_.type -eq 'Microsoft.App/containerApps' } | Select-Object -First 1
         if ($app) { $evidence = 'Verified: ACA resource exists; health not checked'; $url = "https://portal.azure.com/#@$($cfg.tenantId)/resource$($app.id)" }
     }
     if ($state.governance.identities[$a.key]) { if (-not $url) { $evidence = 'Recorded agent identity; runtime/publication not verified' } }
-    $generatedPath = Join-Path (Split-Path $dir -Parent) "$($la.codeName)\a365.generated.config.json"
-    if (Test-Path $generatedPath) {
-        # Project only public identifiers; never include the raw config or secret fields.
-        $generated = Get-Content $generatedPath -Raw | ConvertFrom-Json -AsHashtable
-        $ids = @('agentBlueprintId', 'agentBlueprintObjectId', 'agenticAppId', 'agentRegistrationId' | ForEach-Object {
-            if ($generated[$_]) { "$_=$($generated[$_])" }
-        }) -join '; '
-        if ($ids) { Add-Row 2 @('Agent registration / blueprint', $la.codeName, 'Recorded generated identifiers; not a live registry read', $ids, 'Identity lifecycle metadata; no credentials included') }
-        if ($generated.messagingEndpoint) { $url = $generated.messagingEndpoint }
-        $generated = $null
-    }
-    if ($a.platform -eq 'agentBuilder') { $evidence = 'Manual creation planned; not verified' }
+    $entry = if ($state.agents.Contains($a.key)) { $state.agents[$a.key] } else { @{} }
+    $ids = @('blueprintId', 'blueprintAppId', 'blueprintPrincipalId', 'identityId', 'identityAppId', 'registrationId', 'botId',
+        'titleId', 'publishedTitleId', 'instanceUserId', 'foundryAgentId', 'projectIdentityId', 'projectBlueprintId',
+        'projectBlueprintAppId', 'projectManagedIdentityId', 'projectResourceId' | ForEach-Object {
+        if ($entry[$_]) { "$_=$($entry[$_])" }
+    }) -join '; '
+    if ($ids) { Add-Row 2 @('Agent object identifiers', (Get-DemoAgentName -Locale $loc -Key $a.key), 'Recorded IDs; live evidence is listed in the agent row', $ids, 'Identity lifecycle metadata; no credentials included') }
+    $generated = Get-DemoAgentConfig $loc $Prefix $a
+    if ($generated.messagingEndpoint) { $url = $generated.messagingEndpoint }
+    if ($a.platform -eq 'agentBuilder' -and -not $entry.titleId) { $evidence = 'Manual creation planned; not verified' }
     $surface = if ($a.variant -like '*-DW') { 'Teams instance; hiring not verified' } elseif ($plan.ui.expose.agentName -contains $la.codeName) { 'Lab web UI' }
         elseif ($a.platform -eq 'copilotStudio') { 'Copilot Studio / Teams / Microsoft 365 Copilot; publication not verified' } else { 'Microsoft 365 Copilot' }
-    Add-Row 4 @($(if ($la.displayName) { $la.displayName } else { $la.codeName }), $variant, $tech, $auth, $knowledgeText, $tools, $surface, $evidence, $url)
+    Add-Row 4 @((Get-DemoAgentName -Locale $loc -Key $a.key -Surface webui), $variant, $tech, $auth, $knowledgeText, $tools, $surface, $evidence, $url)
 }
 foreach ($key in @($state.mcp.backends.Keys | Sort-Object)) {
     $b = $state.mcp.backends[$key]; $s = $state.mcp.servers[$key]
@@ -284,8 +306,12 @@ $personal = $knowledge.personal
 foreach ($key in @($personal.Keys | Sort-Object)) {
     Add-Row 6 @($personal[$key].file, 'Personal knowledge file', 'User OneDrive (manual)', '', 'Planned; upload not verified', '', 'Not a SharePoint library upload')
 }
-foreach ($p in @($plan.agents | Where-Object { $_.type -like '*-DW' })) {
-    Add-Row 6 @($p.name, 'Digital Worker instance', 'Teams / Entra agent user', '', 'Manual instance creation / licenses not verified', '', 'Blueprint deployment is not evidence of hiring an instance')
+foreach ($a in @($pack.agents | Where-Object { $_.instance })) {
+    $user = $instanceUsers[$a.key]
+    $entry = $state.agents[$a.key]
+    Add-Row 6 @((Get-DemoAgentName -Locale $loc -Key $a.key -Surface instance), 'Digital Worker instance', 'Teams / Entra agent user', $entry.instanceUserId,
+        $(if ($user) { "Verified: user id; enabled=$($user.accountEnabled); assigned licenses=$(@($user.assignedLicenses).Count)" } else { 'Instance user not verified; recorded id only when available' }),
+        '', 'Blueprint deployment is not evidence of hiring an instance')
 }
 foreach ($name in 'cards', 'overlays', 'knowledge', 'mcp-registration') {
     $path = Join-Path $dir $name

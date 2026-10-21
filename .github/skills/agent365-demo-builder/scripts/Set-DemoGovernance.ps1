@@ -83,7 +83,7 @@ if (Test-Step 'attributes') {
 }
 # --- 2. Agent identities: user owner, sponsor, attribute value (application-only APIs) ---------------------------
 if (Test-Step 'identities') {
-    $plan = Get-DemoIdentityPlan $Prefix $pack $LOC
+    $plan = Get-DemoIdentityPlan $Prefix $pack $LOC $state $cfg
     foreach ($p in $plan) {
         $what = @()
         if ($p.def.entraOwner) { $what += "owner $(Get-Upn $p.def.entraOwner)" }
@@ -131,13 +131,9 @@ if (Test-Step 'identities') {
     # Blueprints of the code agents: the Entra owner is added as co-owner, the admin stays (reference lab); blueprint
     # sponsors are not settable (403), they stay the creator's.
     foreach ($a in @($pack.agents | Where-Object { $_.platform -eq 'code' -and $_.entraOwner })) {
-        $la = $LOC.agents[$a.key]
-        $gcFile = Join-Path $script:DemoRepoRoot "generated\$Prefix\$($la.codeName)\a365.generated.config.json"
-        if (-not (Test-Path -LiteralPath $gcFile)) { continue }
-        $bpApp = [string](Get-Content -LiteralPath $gcFile -Raw | ConvertFrom-Json).agentBlueprintId
-        if (-not $bpApp) { continue }
-        $bp = Invoke-DemoGraph GET "$G/v1.0/applications(appId='$bpApp')?`$select=id,displayName" -NoThrow
-        if ($bp -and $bp.PSObject.Properties['error']) { Write-DemoLog $Prefix "Blueprint of $($la.displayName) not readable ($($bp.status))" 'WARN'; continue }
+        if ([string]$a.variant -like 'FD-*') { continue }
+        $bp = Resolve-DemoAgentBlueprint $cfg $LOC $state $a
+        if (-not $bp) { Write-DemoLog $Prefix "Blueprint of $(Get-DemoAgentName -Locale $LOC -Key $a.key) not found" 'WARN'; continue }
         $ownerUpn = Get-Upn $a.entraOwner
         $uid = (Invoke-DemoGraph GET "$G/v1.0/users/$([uri]::EscapeDataString($ownerUpn))?`$select=id").id
         $cur = @((Invoke-DemoGraph GET "$G/v1.0/applications/$($bp.id)/owners?`$select=id" -All) | ForEach-Object { $_.id })

@@ -11,8 +11,10 @@
   pwsh -File .\Set-DemoIdentities.ps1 -Prefix cts2 -WhatIf
 #>
 [CmdletBinding(PositionalBinding = $false)]
-param([Parameter(Mandatory)][string]$Prefix, [string[]]$Persona = @('all'), [switch]$SkipLicenses, [switch]$SkipRoles, [switch]$WhatIf)
+param([Parameter(Mandatory)][string]$Prefix, [string[]]$Persona = @('all'), [switch]$SkipLicenses, [switch]$SkipRoles,
+      [switch]$RolesOnly, [switch]$WhatIf)
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
+if ($RolesOnly -and $SkipRoles) { throw '-RolesOnly cannot be combined with -SkipRoles.' }
 $cfg = Read-DemoConfig $Prefix
 Assert-DemoTenant $cfg
 $pack = Get-DemoPack $cfg.pack
@@ -21,6 +23,9 @@ $state = Read-DemoLabState $Prefix
 $G = 'https://graph.microsoft.com/v1.0'
 $tag = "a365lab:$Prefix"
 $Persona = @($Persona | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
+foreach ($key in $Persona) {
+    if ($key -ne 'all' -and $key -notin @($pack.personas.key)) { throw "Unknown persona '$key'." }
+}
 $secrets = Join-Path (Get-DemoLabDir $Prefix) 'secrets\personas.secret.txt'
 $log = [System.Collections.Generic.List[string]]::new()
 function Note([string]$m) { $log.Add($m); Write-Host "  $m" }
@@ -39,9 +44,18 @@ function Get-UserOrNull([string]$Upn) {
 }
 
 # --- users ----------------------------------------------------------------------------------------------------
-Write-DemoLog $Prefix "Identities ($(if ($WhatIf) { 'dry run' } else { 'apply' })): users"
+Write-DemoLog $Prefix "Identities ($(if ($WhatIf) { 'dry run' } else { 'apply' })): $(if ($RolesOnly) { 'selected persona roles only' } else { 'users' })"
 $ids = @{}
 foreach ($p in $pack.personas) {
+    if ($RolesOnly) {
+        if ($Persona -notcontains 'all' -and $Persona -notcontains $p.key) { continue }
+        $reference = if ($state.users[$p.key].id) { [string]$state.users[$p.key].id } else { Get-DemoUpn $LOC $cfg $p.key }
+        $u = Get-DemoGraphObject "$G/users/$([uri]::EscapeDataString($reference))?`$select=id"
+        if (-not $u) { throw "Role-only update requires an existing persona user: '$($p.key)'." }
+        $ids[$p.key] = [string]$u.id
+        Note "roles-only user $($p.key): $($u.id)"
+        continue
+    }
     $lp = $LOC.personas[$p.key]
     $alias = Get-DemoPersonaAlias $LOC $p.key
     $upn = "$alias@$($cfg.domain)"
@@ -77,8 +91,8 @@ foreach ($p in $pack.personas) {
     $state.users[$p.key] = [ordered]@{ upn = $upn; id = $u.id; leaver = [bool]$p.leaver; photo = $(if ($prev) { $prev.photo } else { $null }) }
 }
 # --- managers -------------------------------------------------------------------------------------------------
-Write-DemoLog $Prefix 'Identities: managers'
-foreach ($p in $pack.personas) {
+if (-not $RolesOnly) { Write-DemoLog $Prefix 'Identities: managers' }
+foreach ($p in $pack.personas | Where-Object { -not $RolesOnly }) {
     if (-not $ids.ContainsKey($p.key)) { continue }
     $cur = Invoke-DemoGraph GET "$G/users/$($ids[$p.key])/manager?`$select=id" -NoThrow
     $curId = if ($cur -and -not $cur.PSObject.Properties['error']) { $cur.id } else { $null }
@@ -97,9 +111,9 @@ foreach ($p in $pack.personas) {
 }
 
 # --- groups ---------------------------------------------------------------------------------------------------
-Write-DemoLog $Prefix 'Identities: groups'
-$me = Invoke-DemoGraph GET "$G/me?`$select=id"
-foreach ($gd in $pack.groups) {
+if (-not $RolesOnly) { Write-DemoLog $Prefix 'Identities: groups' }
+$me = if (-not $RolesOnly) { Invoke-DemoGraph GET "$G/me?`$select=id" } else { $null }
+foreach ($gd in $pack.groups | Where-Object { -not $RolesOnly }) {
     $lg = $LOC.groups[$gd.key]
     $grp = @((Invoke-DemoGraph GET "$G/groups?`$filter=mailNickname eq '$($lg.mailNickname)'&`$select=id,displayName").value) | Select-Object -First 1
     if (-not $grp) {
@@ -141,19 +155,29 @@ if (-not $SkipRoles) {
     foreach ($p in $pack.personas) {
         if (-not $ids.ContainsKey($p.key)) { continue }
         foreach ($rn in @($p.entraRoles)) {
-            $def = $defs | Where-Object displayName -eq $rn | Select-Object -First 1
-            if (-not $def) { Note "role NOT FOUND '$rn'"; continue }
-            $has = @((Invoke-DemoGraph GET ("$G/roleManagement/directory/roleAssignments?`$filter=principalId eq '{0}' and roleDefinitionId eq '{1}'" -f $ids[$p.key], $def.id)).value)
-            if ($has.Count) { continue }
+            $matches = @($defs | Where-Object { $_.displayName -ceq $rn })
+            if ($matches.Count -ne 1) { throw "Directory role '$rn' has $($matches.Count) exact definitions; expected one." }
+            $def = $matches[0]
+            $assignmentUri = "$G/roleManagement/directory/roleAssignments?`$filter=principalId eq '$($ids[$p.key])' and roleDefinitionId eq '$($def.id)'"
+            $has = @((Invoke-DemoGraph GET $assignmentUri).value | Where-Object { $_.directoryScopeId -eq '/' })
+            if ($has.Count) { Note "role VERIFIED $($p.key) = $rn"; continue }
             if ($WhatIf) { Note "would ASSIGN $($p.key) = $rn"; continue }
             $r = Invoke-DemoGraph POST "$G/roleManagement/directory/roleAssignments" -Body @{ principalId = $ids[$p.key]; roleDefinitionId = $def.id; directoryScopeId = '/' } -NoThrow
-            if ($r -and $r.PSObject.Properties['error']) { Note "role FAILED $($p.key) = $rn ($($r.status))" } else { Note "role ASSIGNED $($p.key) = $rn" }
+            if ($r -and $r.PSObject.Properties['error']) { throw "Role assignment failed for '$($p.key)' / '$rn' ($($r.status)): $($r.error)" }
+            $verified = $false
+            for ($attempt = 0; $attempt -lt 6; $attempt++) {
+                $readBack = @((Invoke-DemoGraph GET $assignmentUri).value | Where-Object { $_.directoryScopeId -eq '/' })
+                if ($readBack.Count) { $verified = $true; break }
+                Start-Sleep -Seconds 2
+            }
+            if (-not $verified) { throw "Role '$rn' for '$($p.key)' was assigned but not verified by read-back." }
+            Note "role ASSIGNED and VERIFIED $($p.key) = $rn"
         }
     }
     # The operator (adminUpn) needs these roles for the governance step: a Global Administrator does NOT have them
     # (custom security attributes, docs/demo-environment-prerequisites.md section 6). A role change reaches the
     # delegated tokens only after a refresh (Set-DemoGovernance.ps1 forces it).
-    if ($cfg.adminUpn) {
+    if ($cfg.adminUpn -and -not $RolesOnly) {
         $op = Invoke-DemoGraph GET "$G/users/$([uri]::EscapeDataString([string]$cfg.adminUpn))?`$select=id" -NoThrow
         if (-not $op -or $op.PSObject.Properties['error']) { Note "operator $($cfg.adminUpn) NOT FOUND: roles not checked" }
         else {
@@ -171,7 +195,7 @@ if (-not $SkipRoles) {
 }
 
 # --- licenses ----------------------------------------------------------------------------------------------------
-if (-not $SkipLicenses) {
+if (-not $SkipLicenses -and -not $RolesOnly) {
     Write-DemoLog $Prefix 'Identities: licenses'
     $skus = @(Invoke-DemoGraph GET "$G/subscribedSkus" -All)
     $skipTeams = @(Get-DemoRolePlans $skus ([string]$cfg.licenseSkus.copilotUser)) -contains 'TEAMS1'
@@ -199,7 +223,7 @@ if (-not $SkipLicenses) {
 }
 
 # --- Purview role groups and Power Platform roles: printed, not applied (other tools) -----------------------------
-foreach ($p in $pack.personas | Where-Object { $_.purviewRoleGroups }) {
+foreach ($p in $pack.personas | Where-Object { $_.purviewRoleGroups -and -not $RolesOnly }) {
     Note "MANUAL (Purview portal > Roles and scopes > Role groups, or Security & Compliance PowerShell Add-RoleGroupMember): add $(Get-DemoPersonaAlias $LOC $p.key)@$($cfg.domain) to $($p.purviewRoleGroups -join ', ')"
     if (-not $WhatIf) {
         $pv = @(Get-DemoIdsFor $pack -Portals @('purview'))
@@ -207,7 +231,7 @@ foreach ($p in $pack.personas | Where-Object { $_.purviewRoleGroups }) {
             -Where 'Purview portal > Settings > Roles and scopes > Role groups (card 40-purview, section 1)' -NeededBy $(if ($pv.Count) { $pv -join ', ' } else { 'the Purview demos' })
     }
 }
-$pp = @($pack.personas | Where-Object { $_.powerPlatformRoles })
+$pp = @($pack.personas | Where-Object { $_.powerPlatformRoles -and -not $RolesOnly })
 if ($pp.Count -and $cfg.copilotStudio.paygEnvironmentId) {
     foreach ($p in $pp) { foreach ($r in $p.powerPlatformRoles) { Note ("NEXT: pac admin assign-user --environment {0} --user {1}@{2} --role `"{3}`"" -f $cfg.copilotStudio.paygEnvironmentId, (Get-DemoPersonaAlias $LOC $p.key), $cfg.domain, $r) } }
 }

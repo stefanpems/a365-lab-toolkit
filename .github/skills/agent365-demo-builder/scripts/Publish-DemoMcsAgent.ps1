@@ -24,47 +24,30 @@ $Agent = @($Agent | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim(
 $cfg = Read-DemoConfig $Prefix
 $pack = Get-DemoPack $cfg.pack
 $LOC = Get-DemoLocale -Locale $cfg.locale -Pack $cfg.pack
+$state = Read-DemoLabState $Prefix
 Assert-DemoTenant $cfg
 $list = @($pack.agents | Where-Object { $_.platform -eq 'copilotStudio' -and ($Agent -contains 'all' -or $Agent -contains $_.key) })
 if (-not $list.Count) { throw "No Copilot Studio agent of pack '$($cfg.pack)' matches: $($Agent -join ', ')." }
 
-$script:orgUrls = @{}
-function Get-OrgUrl([string]$EnvId) {
-    if (-not $script:orgUrls.ContainsKey($EnvId)) {
-        $t = Get-DemoAzToken -Resource 'https://service.powerapps.com/'
-        $e = Invoke-DemoGraph GET "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments/${EnvId}?api-version=2020-10-01" -Token $t
-        $u = [string]$e.properties.linkedEnvironmentMetadata.instanceUrl
-        if (-not $u) { throw "Environment $EnvId has no Dataverse instance URL." }
-        $script:orgUrls[$EnvId] = $u.TrimEnd('/')
-    }
-    return $script:orgUrls[$EnvId]
-}
-function Get-Bot([string]$Org, [string]$Name) {
-    $t = Get-DemoAzToken -Resource $Org
-    $n = $Name.Replace("'", "''")
-    $r = Invoke-DemoGraph GET "$Org/api/data/v9.2/bots?`$select=botid,name,publishedon,modifiedon,synchronizationstatus&`$filter=name eq '$n'" -Token $t
-    return @($r.value)
-}
 function Get-SyncState($Bot) { try { [string](([string]$Bot.synchronizationstatus | ConvertFrom-Json).currentSynchronizationState.state) } catch { '' } }
 
 foreach ($a in $list) {
-    $name = [string]$LOC.agents[$a.key].displayName
+    $name = Get-DemoAgentName -Locale $LOC -Key $a.key -Surface copilotStudio
     $envId = if ($a.environment -eq 'default') { [string]$cfg.copilotStudio.defaultEnvironmentId } else { [string]$cfg.copilotStudio.paygEnvironmentId }
     if (-not $envId) { Write-DemoLog $Prefix "${name}: no environment id in the demo config (New-DemoConfig.ps1)" 'WARN'; continue }
-    $org = Get-OrgUrl $envId
-    $bots = @(Get-Bot $org $name)
-    if ($bots.Count -ne 1) { Write-DemoLog $Prefix "${name}: $($bots.Count) bot(s) with this name in the environment (expected 1)" 'WARN'; continue }
-    $b = $bots[0]
-    $state = Get-SyncState $b
+    $b = Resolve-DemoCopilotStudioBot $cfg $LOC $state $a
+    if (-not $b) { Write-DemoLog $Prefix "${name}: bot not found by id or exact configured name" 'WARN'; continue }
+    $org = [string]$state.agents[$a.key].dataverseUrl
+    $syncState = Get-SyncState $b
     $pub = if ($b.publishedon) { [datetime]$b.publishedon } else { [datetime]::MinValue }
     $mod = [datetime]$b.modifiedon
     $stale = (-not $b.publishedon) -or ($mod -gt $pub.AddMinutes(1))
-    $stuck = $state -eq 'Synchronizing'
+    $stuck = $syncState -eq 'Synchronizing'
     # Agents whose starting state is a pending request or a block are never republished without -Force: a publish would
     # change what the live demo shows.
     $protected = $a.baseline -and ($a.baseline.pendingRequest -or $a.baseline.blocked)
     $verdict = if ($stale) { 'NOT up to date' } elseif ($stuck) { 'synchronization not finished (check the Channels page)' } else { 'up to date' }
-    Write-Host ("{0,-34} published {1}  modified {2}  sync '{3}'  -> {4}{5}" -f $name, $(if ($b.publishedon) { $pub.ToString('s') } else { 'never' }), $mod.ToString('s'), $state, $verdict, $(if ($protected) { ' [pending request or blocked: never republished without -Force]' }))
+    Write-Host ("{0,-34} published {1}  modified {2}  sync '{3}'  -> {4}{5}" -f $name, $(if ($b.publishedon) { $pub.ToString('s') } else { 'never' }), $mod.ToString('s'), $syncState, $verdict, $(if ($protected) { ' [pending request or blocked: never republished without -Force]' }))
     if (-not $Publish) { continue }
     if ($protected -and -not $Force) { continue }
     if (-not ($stale -or $stuck) -and -not $Force) { continue }
@@ -73,7 +56,8 @@ foreach ($a in $list) {
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes); $done = $false
     while (-not $done -and (Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 10
-        $nb = @(Get-Bot $org $name)[0]
+        $nb = Resolve-DemoCopilotStudioBot $cfg $LOC $state $a
+        if (-not $nb) { throw "Bot '$($b.botid)' disappeared while waiting for publication." }
         $done = $nb.publishedon -and ([datetime]$nb.publishedon -gt $pub) -and ((Get-SyncState $nb) -ne 'Synchronizing')
     }
     Write-DemoLog $Prefix "${name}: PvaPublish $(if ($done) { 'done' } else { "not confirmed within $TimeoutMinutes min (check Channels in Copilot Studio)" })" $(if ($done) { 'INFO' } else { 'WARN' })

@@ -14,6 +14,64 @@ Languages: en, it, fr, es, de. Start with the license gate in
 > checked offline and read-only against a real tenant; a complete build with the Demo Builder in a new tenant has not
 > been run yet.
 
+## Deterministic agent resolution
+
+All Demo Builder scripts get human-facing names from `Get-DemoAgentName` in
+[`_demo-common.ps1`](../../.github/skills/agent365-demo-builder/scripts/_demo-common.ps1).
+The supported surfaces are `registry`, `entra`, `copilotStudio`, `webui`, `blueprint`, `instance` and `liveInstance`.
+Names are explicit locale values, never a code name with an inferred suffix. Name checks align punctuation only:
+ASCII hyphens and quotes, and single spaces. Each field keeps its intended words and identity/blueprint suffixes;
+`Records Colleague Identity` and `Records Assistant Blueprint` are not shortened to the display name. Provider-specific names belong in
+`agents.<key>.names.<surface>`. Previous spellings belong only in `agents.<key>.aliases.<surface>`.
+
+`generated/<prefix>/demo/state.json` is the authoritative object index. Each `agents.<key>` entry can contain
+`blueprintId` (application object ID), `blueprintAppId` (client ID), `identityId`, `identityAppId`, `registrationId`,
+`packages`, `titleId`, `publishedTitleId`, `botId`, `environmentId`, `projectIdentityId`, `instanceIdentityIds` and
+`instanceUserId`. Foundry also records `foundryAgentId`, `foundryEndpoint`, `blueprintPrincipalId`,
+`projectBlueprintId`, `projectBlueprintAppId`, `projectManagedIdentityId` and `projectResourceId` from provider
+metadata, never from an inferred identity name. Generated deployment IDs and existing governance evidence are
+imported without a name search. Confirming the build's `agents` step imports newly created deployment IDs too.
+
+Every cloud lookup tries recorded IDs first. A missing/deleted ID permits an exact configured-name fallback; a
+successful fallback saves the new ID immediately. Authentication/authorization failures and ambiguous names do not
+fall back or select the first/newest object. Legacy aliases are enabled only when migrating an already-built lab;
+fresh labs never use them. Existing tenant objects are not renamed automatically.
+
+`Test-DemoPack.ps1` reports the exact field, current value and canonical punctuation value. Deterministic punctuation
+corrections are warnings, not build blockers. `-Fix` updates only the affected locale values, retaining previous
+spellings as surface aliases and preserving unrelated JSON text. It never writes to a tenant. Punctuation-equivalent
+names of different agents are ambiguous errors and are not auto-fixed; other schema and platform-limit errors still
+block validation.
+
+The prepared AI-teammate instance and the D7 live instance have separate names and aliases in
+`agents.recordsColleague.instance` (`displayName`/`alias` and `liveDisplayName`/`liveAlias`). D8 custom rules use
+`governance.rules.applyProductionTemplate` and `governance.rules.rejectStalePublishRequests`. Every locale must
+provide its own values. Cards and the guide use those keys without an English or convention-built fallback.
+
+Normal plan generation also registers `prepared-instance-<agentKey>` as a manual user action, after package
+upload/activation and before identity refresh. It specifies the prepared instance name and alias, its configured
+maker and manager, and creation from Teams using card 20. It never creates the instance or registers the separate
+on-camera live instance. `-ValidateOnly` does not add the action; re-registering preserves its row ID and status.
+
+The AI administrator needs Conditional Access Administrator and Attribute Assignment Administrator to apply the custom
+template live. Reapply only persona directory roles with
+`Set-DemoIdentities.ps1 -Prefix <prefix> -Persona aiAdmin -RolesOnly -WhatIf`, then repeat without `-WhatIf`.
+`-RolesOnly` never changes user properties, licenses, managers, groups or operator roles, and assignments are verified
+by Graph read-back. Sign out and in again before the approval/template demo so the persona receives fresh claims.
+
+The read-only pre-flight also verifies blueprints, Copilot Studio bots and AI-teammate instance users. Its
+`agent-lookups.json` and the lookup table in `demo-state.md` distinguish `id`, `relationship`, `name`, `alias` and
+`missing`. Re-run after the initial migration to see which objects still need name discovery. Cards and the guide
+link to recorded bot/title IDs; offline inventory labels recorded IDs separately from live evidence.
+
+For session-isolated authentication, set `DEMO_SESSION_AUTH_DIR` to a dedicated absolute directory in the current
+process before running a script. Azure CLI uses its `azure` subdirectory and MSAL its `msal/<prefix>` subdirectory;
+no shared authentication store is copied, switched or cleared. Sign in interactively in external Edge.
+
+Offline checks: `Test-DemoPack.ps1`, `test-demo-followup.ps1`, `test-demo-agent-resolution.ps1`, `test-demo-registry.ps1`,
+`test-demo-helpers.ps1`, `test-demo-inventory.ps1` and `test-demo-user-actions.ps1`. The agent-resolution source guard
+fails when a demo script reads configured names outside the resolver or constructs conventional agent-name suffixes.
+
 ## Story alignment
 
 The target is the current Demo Kit story, **D1-D15 only**. The cast, persona responsibilities and demo memberships

@@ -114,67 +114,145 @@
    "instance": {
     "displayName": "Records Colleague Dublin",
     "alias": "records.colleague.dublin",
-    "description": "Records office digital colleague of the Dublin office (demo)."
+    "description": "Records office digital colleague of the Dublin office (demo).",
+    "liveDisplayName": "Records Colleague Galway",
+    "liveAlias": "records.colleague.galway"
+   },
+   "aliases": {
+    "registry": [
+     "Records Colleague Identity"
+    ],
+    "entra": [
+     "Records Colleague Identity"
+    ]
    }
   },
   "recordsAssistant": {
    "codeName": "Records-Assistant",
    "displayName": "Records Assistant",
    "blueprint": "Records Assistant Blueprint",
-   "identity": "Records Assistant"
+   "identity": "Records Assistant",
+   "aliases": {
+    "registry": [
+     "Records-Assistant Agent"
+    ],
+    "blueprint": [
+     "Records Assistant Blueprint"
+    ]
+   }
   },
   "reportsMonitor": {
    "codeName": "Reports-Monitor",
    "displayName": "Reports Monitor",
    "blueprint": "Reports Monitor Blueprint",
-   "identity": "Reports Monitor"
+   "identity": "Reports Monitor",
+   "aliases": {
+    "registry": [
+     "Reports-Monitor Agent"
+    ],
+    "blueprint": [
+     "Reports Monitor Blueprint"
+    ]
+   }
   },
   "reportsMonitorTest": {
    "codeName": "Reports-Monitor-Test",
-   "displayName": "Reports Monitor – Test",
+   "displayName": "Reports Monitor - Test",
    "blueprint": "Reports Monitor - Test Blueprint",
-   "identity": "Reports Monitor - Test"
+   "identity": "Reports Monitor - Test",
+   "aliases": {
+    "registry": [
+     "Reports Monitor – Test",
+     "Reports-Monitor-Test Agent"
+    ],
+    "copilotStudio": [
+     "Reports Monitor – Test"
+    ],
+    "webui": [
+     "Reports Monitor – Test"
+    ],
+    "blueprint": [
+     "Reports Monitor - Test Blueprint"
+    ]
+   }
   },
   "applicationReview": {
    "codeName": "Application-Review",
    "displayName": "Application Review",
    "blueprint": "Application Review Blueprint",
-   "identity": "Application Review"
+   "identity": "Application Review",
+   "names": {
+    "registry": "Application-Review"
+   },
+   "aliases": {
+    "blueprint": [
+     "Application Review Blueprint"
+    ]
+   }
   },
   "grantsDesk": {
    "codeName": "Grants-Desk",
    "displayName": "Grants Desk",
    "shortDescription": "Answers businesses' questions on the Innovation Grant 2026 (demo).",
    "description": "Helps Incentives Department staff answer businesses' questions about the Innovation Grant 2026 (fictional data), prepares reminders and registers requests with the records office.",
-   "instructions": "You are “Grants Desk”, the internal assistant of the Contoso Incentives Department for the Innovation Grant 2026.\nContext: demo environment; the grant, the businesses and the applications are fictional.\n\nGoal\nHelp case officers answer the questions that businesses ask about the grant correctly, quickly and consistently.\n\nHow you work\n1. Answer using only the documents of the “Innovation Grant 2026” knowledge (Grant summary, FAQ, Review procedure). Always cite the document and the section you take the information from.\n2. If you are asked for an answer to a business, prepare a draft in an institutional, clear and courteous tone, with: subject, summary of the question, answer, references to the grant.\n3. If you are asked for a reminder, create a Word document with the same structure.\n4. If you are asked to register a request with the records office, explain that registrations are made with the “{{agents.recordsAssistant.displayName}}” agent and summarize what to send.\n5. Before sending any e-mail, ask the user for explicit confirmation and show recipients and text.\n\nLimits\n- Do not invent deadlines, amounts, requirements or percentages: if a piece of information is not in the documents, say so and suggest contacting the competent office.\n- Do not express eligibility assessments: the decision always belongs to the case officer.\n- Do not process personal or confidential data: if the user enters it, ask them to remove it.\n- Answer in English."
+   "instructions": "You are “Grants Desk”, the internal assistant of the Contoso Incentives Department for the Innovation Grant 2026.\nContext: demo environment; the grant, the businesses and the applications are fictional.\n\nGoal\nHelp case officers answer the questions that businesses ask about the grant correctly, quickly and consistently.\n\nHow you work\n1. Answer using only the documents of the “Innovation Grant 2026” knowledge (Grant summary, FAQ, Review procedure). Always cite the document and the section you take the information from.\n2. If you are asked for an answer to a business, prepare a draft in an institutional, clear and courteous tone, with: subject, summary of the question, answer, references to the grant.\n3. If you are asked for a reminder, create a Word document with the same structure.\n4. If you are asked to register a request with the records office, explain that registrations are made with the “{{agents.recordsAssistant.displayName}}” agent and summarize what to send.\n5. Before sending any e-mail, ask the user for explicit confirmation and show recipients and text.\n\nLimits\n- Do not invent deadlines, amounts, requirements or percentages: if a piece of information is not in the documents, say so and suggest contacting the competent office.\n- Do not express eligibility assessments: the decision always belongs to the case officer.\n- Do not process personal or confidential data: if the user enters it, ask them to remove it.\n- Answer in English.",
+   "names": {
+    "entra": "Grants Desk (Microsoft Copilot Studio)"
+   }
   },
   "grantsDeskPilot": {
    "codeName": "Grants-Desk-Pilot",
-   "displayName": "Grants Desk – Pilot",
+   "displayName": "Grants Desk - Pilot",
    "shortDescription": "Pilot copy of Grants Desk (demo).",
    "description": "Pilot copy of Grants Desk, used to show a blocked agent from the user side (fictional data).",
-   "instructions": "{{agents.grantsDesk.instructions}}"
+   "instructions": "{{agents.grantsDesk.instructions}}",
+   "names": {
+    "entra": "Grants Desk - Pilot (Microsoft Copilot Studio)"
+   },
+   "aliases": {
+    "registry": [
+     "Grants Desk – Pilot"
+    ],
+    "entra": [
+     "Grants Desk – Pilot (Microsoft Copilot Studio)"
+    ],
+    "copilotStudio": [
+     "Grants Desk – Pilot"
+    ],
+    "webui": [
+     "Grants Desk – Pilot"
+    ]
+   }
   },
   "siteInspections": {
    "codeName": "Site-Inspections",
    "displayName": "Site Inspection Requests",
    "shortDescription": "Plans site inspections of funded projects (demo).",
    "description": "Helps Incentives Department technicians plan the site inspections of funded projects (fictional data): proposes dates, prepares the checklist and the communication to the business.",
-   "instructions": "You are “Site Inspection Requests”, the assistant of the Contoso Incentives Department technicians for the checks on the projects funded by the Innovation Grant 2026 (demo context, fictional data).\n\nFor every site-inspection request:\n1. Summarize the business, the funded project, the site and the contact person given by the user.\n2. Propose three date windows on the working days after the request, in the morning or in the afternoon.\n3. Generate the inspection checklist from the document “Inspections of funded projects”.\n4. Prepare the draft of the communication to the business, without sending it: sending it is up to the technician.\n\nLimits: do not invent requirements that are not in the procedure; do not judge the outcome of the inspection; answer in English."
+   "instructions": "You are “Site Inspection Requests”, the assistant of the Contoso Incentives Department technicians for the checks on the projects funded by the Innovation Grant 2026 (demo context, fictional data).\n\nFor every site-inspection request:\n1. Summarize the business, the funded project, the site and the contact person given by the user.\n2. Propose three date windows on the working days after the request, in the morning or in the afternoon.\n3. Generate the inspection checklist from the document “Inspections of funded projects”.\n4. Prepare the draft of the communication to the business, without sending it: sending it is up to the technician.\n\nLimits: do not invent requirements that are not in the procedure; do not judge the outcome of the inspection; answer in English.",
+   "names": {
+    "entra": "Site Inspection Requests (Microsoft Copilot Studio)"
+   }
   },
   "communicationsAssistant": {
    "codeName": "Communications-Assistant",
    "displayName": "Communications Assistant",
    "shortDescription": "Summarizes notices and sends communications (demo).",
    "description": "Summarizes the notices and documents of the Innovation Grant 2026 (fictional) and prepares and sends the communications to the contact persons.",
-   "instructions": "You are “Communications Assistant” of the Contoso Incentives Department (demo context, fictional data).\nYou help case officers prepare the communications about the Innovation Grant 2026.\n- When you are asked to summarize a notice or a document, use the “Notices” knowledge and produce a summary of at most ten lines with the action items.\n- When you are asked to prepare a communication, write subject and text in an institutional tone.\n- When you are asked to send it, use the e-mail sending tool.\nAnswer in English."
+   "instructions": "You are “Communications Assistant” of the Contoso Incentives Department (demo context, fictional data).\nYou help case officers prepare the communications about the Innovation Grant 2026.\n- When you are asked to summarize a notice or a document, use the “Notices” knowledge and produce a summary of at most ten lines with the action items.\n- When you are asked to prepare a communication, write subject and text in an institutional tone.\n- When you are asked to send it, use the e-mail sending tool.\nAnswer in English.",
+   "names": {
+    "entra": "Communications Assistant (Microsoft Copilot Studio)"
+   }
   },
   "faqPrototype": {
    "codeName": "Business-FAQ-Prototype",
    "displayName": "Business FAQ (prototype)",
    "shortDescription": "Prototype of automatic answers to businesses (demo).",
    "description": "Prototype of automatic answers to businesses about the Innovation Grant 2026 (NOT in production, fictional data).",
-   "instructions": ""
+   "instructions": "",
+   "names": {
+    "entra": "Business FAQ (prototype) (Microsoft Copilot Studio)"
+   }
   },
   "circularsAssistant": {
    "displayName": "Circulars Assistant",
@@ -603,6 +681,10 @@
    "agentsLatestState": "AI agents – latest state",
    "agentActivity24h": "AI agents – activity in the last 24 hours",
    "promptInjectionAlerts": "AI agents – prompt injection alerts"
+  },
+  "rules": {
+   "applyProductionTemplate": "Contoso – Apply production-agents template",
+   "rejectStalePublishRequests": "Contoso – Reject publish requests older than 14 days"
   }
  },
  "prompts": {

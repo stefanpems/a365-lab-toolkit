@@ -141,6 +141,10 @@ function Get-StepStatus($Sp) {
 function Set-StepStatus($Sp, [string]$Status) {
     # Re-read: the step's own script may have saved state.json since this runner started.
     $script:state = Read-DemoLabState $Prefix
+    if ($Sp.id -eq 'agents' -and $Status -eq 'done') {
+        $locale = Get-DemoLocale -Locale $cfg.locale -Pack $cfg.pack
+        foreach ($agent in $pack.agents) { Initialize-DemoAgentState $cfg $locale $state $agent }
+    }
     if (-not $state.Contains('phases')) { $state['phases'] = [ordered]@{} }
     if (-not $state.phases.Contains($Sp.phase)) { $state.phases[$Sp.phase] = [ordered]@{} }
     $state.phases[$Sp.phase][$Sp.id] = [ordered]@{ status = $Status; at = (Get-Date).ToString('s') }

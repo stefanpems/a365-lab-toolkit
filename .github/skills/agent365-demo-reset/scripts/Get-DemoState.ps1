@@ -7,7 +7,7 @@
   Starting conditions come from pack.json (personas, agents[].registryOwner / entraOwner / sponsor / attribute /
   baseline, governance, mcp, operatorSlots, demos[].manualReset), names from the lab locale, ids from state.json and the
   Lab Builder configs. -Demo selects demo codes (D1..D17) and/or the areas People, Registry, Entra, Mcp; default All.
-  The only write is local: the catalog package ids found by name are remembered in state.json (agents.<key>.packages).
+  The only writes are local: verified object ids are remembered in state.json and lookup methods in agent-lookups.json.
 .EXAMPLE
   pwsh -File .\Get-DemoState.ps1 -Prefix cts2
 .EXAMPLE
@@ -74,18 +74,16 @@ if (Test-Sel @('People')) {
     }
 }
 # --- Registry (Agent 365 catalog) ---------------------------------------------------------------------------------
-$ownerless = @(); $learned = $false
+$ownerless = @()
 if (-not $state.Contains('agents')) { $state['agents'] = [ordered]@{} }
 if (Test-Sel (@('Registry') + @($pack.agents | ForEach-Object { $_.demos }))) {
     foreach ($a in @($pack.agents)) {
         if (-not (Test-Sel (@('Registry') + @($a.demos)))) { continue }
-        $tag = @($a.demos) -join ','; $nm = [string]$LOC.agents[$a.key].displayName
+        $tag = @($a.demos) -join ','; $nm = Get-DemoAgentName -Locale $LOC -Key $a.key
         if ($a.catalog -eq $false) { Add-Check $tag "${nm}: registry entry" 'none by design (no Microsoft channel)' 'not checked' 'INFO'; continue }
+        Initialize-DemoAgentState $cfg $LOC $state $a
         $pk = Get-DemoAgentPackages $cfg $LOC $state $a
-        if (-not @($pk.all).Count) { Add-Check $tag "${nm}: registry entry" "exists ('$(Get-DemoCatalogName $LOC $a)')" 'NOT FOUND' 'KO' 'create or publish it (cards), then re-run'; continue }
-        $ids = @($pk.all | ForEach-Object { [string]$_.id })
-        if (-not $state.agents.Contains($a.key)) { $state.agents[$a.key] = [ordered]@{} }
-        if ((@($state.agents[$a.key].packages) -join ',') -ne ($ids -join ',')) { $state.agents[$a.key]['packages'] = $ids; $learned = $true }
+        if (-not @($pk.all).Count) { Add-Check $tag "${nm}: registry entry" "exists ('$(Get-DemoAgentName -Locale $LOC -Key $a.key -Surface registry)')" 'NOT FOUND' 'KO' 'create or publish it (cards), then re-run'; continue }
         $own = if ($pk.shared) { $pk.shared } else { $pk.published }
         $scope = if ($pk.published) { $pk.published } else { $own }
         $ro = [string]$a.registryOwner
@@ -135,19 +133,39 @@ if (Test-Sel (@('Registry') + @($pack.agents | ForEach-Object { $_.demos }))) {
         }
     }
     if (Test-Sel @('D1', 'D5', 'D8', 'Registry')) {
-        $exp = @($pack.agents | Where-Object { $_.baseline -and $_.baseline.ownerless } | ForEach-Object { [string]$LOC.agents[$_.key].displayName })
+        $exp = @($pack.agents | Where-Object { $_.baseline -and $_.baseline.ownerless } | ForEach-Object { Get-DemoAgentName -Locale $LOC -Key $_.key })
         $same = ((@($ownerless | Sort-Object -Unique) -join '|') -eq (@($exp | Sort-Object -Unique) -join '|'))
         Add-Check 'D1' 'Agents without owners' ($exp -join ', ') $(if ($ownerless) { (@($ownerless | Sort-Object -Unique) -join ', ') } else { '(none)' }) $(if ($same) { 'OK' } else { 'KO' }) 'New-OrphanAgent.ps1 / the D8 rule'
         Add-Check 'D1' 'Agents without owners (admin-center card)' ($exp -join ', ') 'API only: the card can lag for hours or keep a ghost owner' 'MANUAL' 'check the card as the AI administrator; plan B: the empty Owner column in All agents'
     }
     foreach ($a in @($pack.agents | Where-Object { $_.shareLinkOpenedBy })) {
+        if (-not (Test-Sel (@('Registry') + @($a.demos)))) { continue }
         $pk = Get-DemoAgentPackages $cfg $LOC $state $a
         $id = if ($pk.shared) { $pk.shared.id } elseif ($pk.published) { $pk.published.id } else { $null }
         if (-not $id) { continue }
         $who = @($a.shareLinkOpenedBy | ForEach-Object { Get-DemoPersonaDisplayName $LOC $_ }) -join ', '
-        Add-Check (@($a.demos) -join ',') "$($LOC.agents[$a.key].displayName): share link opened by $who" 'each recipient opened it once (shared agents are not listed anywhere)' "https://m365.cloud.microsoft/chat/?titleId=$id" 'MANUAL' 'open it signed in as each recipient (again after every orphan recreation)'
+        Add-Check (@($a.demos) -join ',') "$(Get-DemoAgentName -Locale $LOC -Key $a.key): share link opened by $who" 'each recipient opened it once (shared agents are not listed anywhere)' "https://m365.cloud.microsoft/chat/?titleId=$id" 'MANUAL' 'open it signed in as each recipient (again after every orphan recreation)'
     }
-    if ($learned) { Save-DemoLabState $Prefix $state }
+}
+
+foreach ($a in @($pack.agents)) {
+    if (-not (Test-Sel (@('Registry', 'Entra') + @($a.demos)))) { continue }
+    $tag = @($a.demos) -join ','
+    $name = Get-DemoAgentName -Locale $LOC -Key $a.key
+    Initialize-DemoAgentState $cfg $LOC $state $a
+    if ($a.platform -eq 'code') {
+        if ([string]$a.variant -like 'FD-*') { $null = Resolve-DemoAgentIdentity $cfg $LOC $state $a }
+        $blueprint = Resolve-DemoAgentBlueprint $cfg $LOC $state $a
+        Add-Check $tag "${name}: blueprint" 'exists by recorded id' $(if ($blueprint) { $blueprint.id } else { 'NOT FOUND' }) $(if ($blueprint) { 'OK' } else { 'KO' }) 'complete the Lab Builder deployment'
+    }
+    if ($a.platform -eq 'copilotStudio') {
+        $bot = Resolve-DemoCopilotStudioBot $cfg $LOC $state $a
+        Add-Check $tag "${name}: Copilot Studio bot" 'exists by recorded bot id' $(if ($bot) { $bot.botid } else { 'NOT FOUND' }) $(if ($bot) { 'OK' } else { 'KO' }) 'create or import the bot, then re-run'
+    }
+    if ($a.instance) {
+        $user = Resolve-DemoInstanceUser $cfg $LOC $state $a
+        Add-Check $tag "${name}: instance user" 'exists, enabled' $(if ($user) { "$($user.id) (enabled=$($user.accountEnabled))" } else { 'NOT FOUND' }) $(if ($user -and $user.accountEnabled) { 'OK' } else { 'KO' }) 'create the AI-teammate instance (card)'
+    }
 }
 
 # --- Entra: owners, sponsors, attribute, enabled, risk --------------------------------------------------------------
@@ -155,7 +173,8 @@ if (Test-Sel (@('Entra') + @($pack.agents | Where-Object { $_.entraOwner -or $_.
     $blockedKeys = @($pack.agents | Where-Object { $_.baseline -and $_.baseline.blocked } | ForEach-Object { [string]$_.key })
     $riskKeys = @($pack.demos | Where-Object { $_.id -in 'D9', 'D17' } | ForEach-Object { $_.agents } | Select-Object -Unique)
     $gov = $LOC.governance
-    foreach ($p in Get-DemoIdentityPlan $Prefix $pack $LOC) {
+    $identityPack = @{ agents = @($pack.agents | Where-Object { Test-Sel (@('Entra') + @($_.demos)) }) }
+    foreach ($p in Get-DemoIdentityPlan $Prefix $identityPack $LOC $state $cfg) {
         if (-not (Test-Sel (@('Entra') + @($p.def.demos)))) { continue }
         $tag = if (@($p.def.demos | Where-Object { $_ }).Count) { @($p.def.demos) -join ',' } else { 'Entra' }
         if (-not $p.identities.Count) {
@@ -221,7 +240,7 @@ if ($ent -and (Test-Sel @($ent.demos))) {
         $tid = if ($tp -and $tp.identities.Count) { [string]$tp.identities[0].id } else { $null }
         $as = Invoke-DemoReg $cfg GET "$G/v1.0/identityGovernance/entitlementManagement/assignments?`$filter=accessPackage/id eq '$($ap.id)'&`$expand=target"
         $mine = @(if ($as.ok) { @($as.body.value) | Where-Object { $_.target.objectId -eq $tid -and $_.state -notin 'expired', 'deliveryFailed' } })
-        Add-Check $tag "$($LOC.agents[$ent.target].displayName): access-package assignment" 'none before the live request' $(if ($mine.Count) { "$($mine.Count) active ($($mine[0].state))" } else { 'none' }) $(if ($mine.Count) { 'KO' } else { 'OK' }) 'Reset-DemoState.ps1 -Demo D10 -Apply'
+        Add-Check $tag "$(Get-DemoAgentName -Locale $LOC -Key $ent.target): access-package assignment" 'none before the live request' $(if ($mine.Count) { "$($mine.Count) active ($($mine[0].state))" } else { 'none' }) $(if ($mine.Count) { 'KO' } else { 'OK' }) 'Reset-DemoState.ps1 -Demo D10 -Apply'
     }
 }
 
@@ -266,6 +285,10 @@ $sum = ($checks | Group-Object Status | ForEach-Object { "$($_.Name)=$($_.Count)
 $dir = Get-DemoLabDir $Prefix
 $md = @("# Demo state · lab $Prefix · $(Get-Date -Format 'yyyy-MM-dd HH:mm')", '', "Summary: $sum", '', '| Status | Demo | Item | Expected | Actual | Fix |', '|---|---|---|---|---|---|')
 $md += $rows | ForEach-Object { "| $($_.Status) | $($_.Demo) | $($_.Item) | $($_.Expected) | $(([string]$_.Actual) -replace '\|', '/') | $($_.Fix) |" }
+$lookups = @($script:DemoAgentLookups | Sort-Object key, object, method -Unique)
+$md += '', '## Agent lookup resolution', '', '| Agent key | Object | Method | Exact fallback name | ID |', '|---|---|---|---|---|'
+$md += $lookups | ForEach-Object { "| $($_.key) | $($_.object) | $($_.method) | $($_.name) | $($_.id) |" }
+$lookups | ConvertTo-Json -Depth 5 -AsArray | Set-Content -LiteralPath (Join-Path $dir 'agent-lookups.json') -Encoding utf8
 Set-Content -LiteralPath (Join-Path $dir 'demo-state.md') -Value $md -Encoding utf8
 $rows | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $dir 'demo-state.json') -Encoding utf8
 Write-DemoLog $Prefix "Demo pre-flight: $sum (report: $(Join-Path $dir 'demo-state.md'))"

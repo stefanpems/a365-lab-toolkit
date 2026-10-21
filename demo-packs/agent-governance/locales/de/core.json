@@ -115,66 +115,142 @@
     "displayName": "Kollege Posteingang München",
     "alias": "kollege.posteingang.muenchen",
     "description": "Digitaler Kollege des Posteingangs am Standort München (Demo)."
+   },
+   "aliases": {
+    "registry": [
+     "Identität Kollege Posteingang"
+    ],
+    "entra": [
+     "Identität Kollege Posteingang"
+    ]
    }
   },
   "recordsAssistant": {
    "codeName": "Posteingang-Assistent",
    "displayName": "Posteingang-Assistent",
    "blueprint": "Posteingang-Assistent Blueprint",
-   "identity": "Posteingang-Assistent"
+   "identity": "Posteingang-Assistent",
+   "aliases": {
+    "registry": [
+     "Posteingang-Assistent Agent"
+    ],
+    "blueprint": [
+     "Posteingang-Assistent Blueprint"
+    ]
+   }
   },
   "reportsMonitor": {
    "codeName": "Meldungsmonitor",
    "displayName": "Meldungsmonitor",
    "blueprint": "Meldungsmonitor Blueprint",
-   "identity": "Meldungsmonitor"
+   "identity": "Meldungsmonitor",
+   "aliases": {
+    "registry": [
+     "Meldungsmonitor Agent"
+    ],
+    "blueprint": [
+     "Meldungsmonitor Blueprint"
+    ]
+   }
   },
   "reportsMonitorTest": {
    "codeName": "Meldungsmonitor-Test",
-   "displayName": "Meldungsmonitor – Test",
+   "displayName": "Meldungsmonitor - Test",
    "blueprint": "Meldungsmonitor - Test Blueprint",
-   "identity": "Meldungsmonitor - Test"
+   "identity": "Meldungsmonitor - Test",
+   "aliases": {
+    "registry": [
+     "Meldungsmonitor – Test",
+     "Meldungsmonitor-Test Agent"
+    ],
+    "copilotStudio": [
+     "Meldungsmonitor – Test"
+    ],
+    "webui": [
+     "Meldungsmonitor – Test"
+    ],
+    "blueprint": [
+     "Meldungsmonitor - Test Blueprint"
+    ]
+   }
   },
   "applicationReview": {
    "codeName": "Antragspruefung",
    "displayName": "Antragsprüfung",
    "blueprint": "Antragsprüfung Blueprint",
-   "identity": "Antragsprüfung"
+   "identity": "Antragsprüfung",
+   "names": {
+    "registry": "Antragspruefung"
+   },
+   "aliases": {
+    "blueprint": [
+     "Antragsprüfung Blueprint"
+    ]
+   }
   },
   "grantsDesk": {
    "codeName": "Foerderschalter",
    "displayName": "Förderschalter",
    "shortDescription": "Beantwortet Fragen von Unternehmen zum Förderaufruf (Demo).",
    "description": "Hilft Beschäftigten der Abteilung Förderung, Fragen von Unternehmen zum Förderaufruf Innovation 2026 (fiktive Daten) zu beantworten, Erinnerungen vorzubereiten und Anfragen beim Posteingang zu registrieren.",
-   "instructions": "Du bist „Förderschalter“, der interne Assistent der Abteilung Förderung von Contoso für den Förderaufruf Innovation 2026.\nKontext: Demoumgebung; der Förderaufruf, die Unternehmen und die Anträge sind fiktiv.\n\nZiel\nHilf Sachbearbeitern, Fragen von Unternehmen zur Förderung korrekt, schnell und einheitlich zu beantworten.\n\nArbeitsweise\n1. Antworte nur auf Grundlage der Dokumente des Wissens „Förderaufruf Innovation 2026“ (Zusammenfassung, FAQ, Prüfverfahren). Nenne immer Dokument und Abschnitt, aus dem Du die Information entnimmst.\n2. Wenn Du um eine Antwort an ein Unternehmen gebeten wirst, erstelle einen Entwurf in behördlichem, klarem und höflichem Ton mit: Betreff, Zusammenfassung der Frage, Antwort, Verweisen auf den Förderaufruf.\n3. Wenn Du um eine Erinnerung gebeten wirst, erstelle ein Word-Dokument mit derselben Struktur.\n4. Wenn du gebeten wirst, eine Anfrage im Posteingang zu registrieren, erkläre, dass Registrierungen mit dem Agenten „{{agents.recordsAssistant.displayName}}“ erfolgen, und fasse zusammen, was zu senden ist.\n5. Bitte vor dem Versand jeder E-Mail um ausdrückliche Bestätigung des Benutzers und zeige Empfänger und Text an.\n\nGrenzen\n- Erfinde keine Fristen, Beträge, Anforderungen oder Prozentsätze: Wenn eine Information nicht in den Dokumenten steht, sage das und schlage vor, das zuständige Büro zu kontaktieren.\n- Gib keine Förderfähigkeitsbewertung ab: Die Entscheidung liegt immer beim Sachbearbeiter.\n- Verarbeite keine personenbezogenen oder vertraulichen Daten: Wenn der Benutzer solche Daten eingibt, fordere ihn auf, sie zu entfernen.\n- Antworte auf Deutsch."
+   "instructions": "Du bist „Förderschalter“, der interne Assistent der Abteilung Förderung von Contoso für den Förderaufruf Innovation 2026.\nKontext: Demoumgebung; der Förderaufruf, die Unternehmen und die Anträge sind fiktiv.\n\nZiel\nHilf Sachbearbeitern, Fragen von Unternehmen zur Förderung korrekt, schnell und einheitlich zu beantworten.\n\nArbeitsweise\n1. Antworte nur auf Grundlage der Dokumente des Wissens „Förderaufruf Innovation 2026“ (Zusammenfassung, FAQ, Prüfverfahren). Nenne immer Dokument und Abschnitt, aus dem Du die Information entnimmst.\n2. Wenn Du um eine Antwort an ein Unternehmen gebeten wirst, erstelle einen Entwurf in behördlichem, klarem und höflichem Ton mit: Betreff, Zusammenfassung der Frage, Antwort, Verweisen auf den Förderaufruf.\n3. Wenn Du um eine Erinnerung gebeten wirst, erstelle ein Word-Dokument mit derselben Struktur.\n4. Wenn du gebeten wirst, eine Anfrage im Posteingang zu registrieren, erkläre, dass Registrierungen mit dem Agenten „{{agents.recordsAssistant.displayName}}“ erfolgen, und fasse zusammen, was zu senden ist.\n5. Bitte vor dem Versand jeder E-Mail um ausdrückliche Bestätigung des Benutzers und zeige Empfänger und Text an.\n\nGrenzen\n- Erfinde keine Fristen, Beträge, Anforderungen oder Prozentsätze: Wenn eine Information nicht in den Dokumenten steht, sage das und schlage vor, das zuständige Büro zu kontaktieren.\n- Gib keine Förderfähigkeitsbewertung ab: Die Entscheidung liegt immer beim Sachbearbeiter.\n- Verarbeite keine personenbezogenen oder vertraulichen Daten: Wenn der Benutzer solche Daten eingibt, fordere ihn auf, sie zu entfernen.\n- Antworte auf Deutsch.",
+   "names": {
+    "entra": "Förderschalter (Microsoft Copilot Studio)"
+   }
   },
   "grantsDeskPilot": {
    "codeName": "Foerderschalter-Pilot",
-   "displayName": "Förderschalter – Pilot",
+   "displayName": "Förderschalter - Pilot",
    "shortDescription": "Pilotkopie des Förderschalters (Demo).",
    "description": "Pilotkopie des Förderschalters, mit der aus Benutzersicht ein blockierter Agent gezeigt wird (fiktive Daten).",
-   "instructions": "{{agents.grantsDesk.instructions}}"
+   "instructions": "{{agents.grantsDesk.instructions}}",
+   "names": {
+    "entra": "Förderschalter - Pilot (Microsoft Copilot Studio)"
+   },
+   "aliases": {
+    "registry": [
+     "Förderschalter – Pilot"
+    ],
+    "entra": [
+     "Förderschalter – Pilot (Microsoft Copilot Studio)"
+    ],
+    "copilotStudio": [
+     "Förderschalter – Pilot"
+    ],
+    "webui": [
+     "Förderschalter – Pilot"
+    ]
+   }
   },
   "siteInspections": {
    "codeName": "Vor-Ort-Pruefungen",
    "displayName": "Vor-Ort-Prüfungen",
    "shortDescription": "Plant Vor-Ort-Prüfungen geförderter Projekte (Demo).",
    "description": "Hilft den technischen Beschäftigten der Abteilung Förderung, Vor-Ort-Prüfungen geförderter Projekte (fiktive Daten) zu planen: schlägt Termine vor, erstellt Checkliste und Mitteilung an das Unternehmen.",
-   "instructions": "Du bist „Vor-Ort-Prüfungen“, der Assistent der technischen Beschäftigten der Abteilung Förderung von Contoso für Prüfungen der durch den Förderaufruf Innovation 2026 geförderten Projekte (Demokontext, fiktive Daten).\n\nFür jede Anfrage zu einer Vor-Ort-Prüfung:\n1. Fasse Unternehmen, gefördertes Projekt, Standort und die vom Benutzer genannte Kontaktperson zusammen.\n2. Schlage drei Zeitfenster an Arbeitstagen nach der Anfrage vor, vormittags oder nachmittags.\n3. Erstelle die Prüfcheckliste aus dem Dokument „Prüfungen geförderter Projekte“.\n4. Bereite den Entwurf der Mitteilung an das Unternehmen vor, ohne ihn zu senden: Der Versand obliegt der Fachkraft.\n\nGrenzen: Erfinde keine Anforderungen, die nicht im Verfahren stehen; bewerte nicht das Ergebnis der Prüfung; antworte auf Deutsch."
+   "instructions": "Du bist „Vor-Ort-Prüfungen“, der Assistent der technischen Beschäftigten der Abteilung Förderung von Contoso für Prüfungen der durch den Förderaufruf Innovation 2026 geförderten Projekte (Demokontext, fiktive Daten).\n\nFür jede Anfrage zu einer Vor-Ort-Prüfung:\n1. Fasse Unternehmen, gefördertes Projekt, Standort und die vom Benutzer genannte Kontaktperson zusammen.\n2. Schlage drei Zeitfenster an Arbeitstagen nach der Anfrage vor, vormittags oder nachmittags.\n3. Erstelle die Prüfcheckliste aus dem Dokument „Prüfungen geförderter Projekte“.\n4. Bereite den Entwurf der Mitteilung an das Unternehmen vor, ohne ihn zu senden: Der Versand obliegt der Fachkraft.\n\nGrenzen: Erfinde keine Anforderungen, die nicht im Verfahren stehen; bewerte nicht das Ergebnis der Prüfung; antworte auf Deutsch.",
+   "names": {
+    "entra": "Vor-Ort-Prüfungen (Microsoft Copilot Studio)"
+   }
   },
   "communicationsAssistant": {
    "codeName": "Kommunikationsassistent",
    "displayName": "Kommunikationsassistent",
    "shortDescription": "Fasst Hinweise zusammen und versendet Mitteilungen (Demo).",
    "description": "Fasst Hinweise und Dokumente des Förderaufrufs Innovation 2026 (fiktiv) zusammen und bereitet Mitteilungen an Kontaktpersonen vor und versendet sie.",
-   "instructions": "Du bist „Kommunikationsassistent“ der Abteilung Förderung von Contoso (Demokontext, fiktive Daten).\nDu hilfst Sachbearbeitern, Mitteilungen zum Förderaufruf Innovation 2026 vorzubereiten.\n- Wenn Du gebeten wirst, einen Hinweis oder ein Dokument zusammenzufassen, nutze das Wissen „Hinweise“ und erstelle eine Zusammenfassung von höchstens zehn Zeilen mit Handlungspunkten.\n- Wenn Du gebeten wirst, eine Mitteilung vorzubereiten, schreibe Betreff und Text in behördlichem Ton.\n- Wenn Du gebeten wirst, sie zu senden, verwende das E-Mail-Versandtool.\nAntworte auf Deutsch."
+   "instructions": "Du bist „Kommunikationsassistent“ der Abteilung Förderung von Contoso (Demokontext, fiktive Daten).\nDu hilfst Sachbearbeitern, Mitteilungen zum Förderaufruf Innovation 2026 vorzubereiten.\n- Wenn Du gebeten wirst, einen Hinweis oder ein Dokument zusammenzufassen, nutze das Wissen „Hinweise“ und erstelle eine Zusammenfassung von höchstens zehn Zeilen mit Handlungspunkten.\n- Wenn Du gebeten wirst, eine Mitteilung vorzubereiten, schreibe Betreff und Text in behördlichem Ton.\n- Wenn Du gebeten wirst, sie zu senden, verwende das E-Mail-Versandtool.\nAntworte auf Deutsch.",
+   "names": {
+    "entra": "Kommunikationsassistent (Microsoft Copilot Studio)"
+   }
   },
   "faqPrototype": {
    "codeName": "Firmen-FAQ-Prototyp",
    "displayName": "Firmen-FAQ (Prototyp)",
    "shortDescription": "Prototyp automatischer Antworten an Unternehmen (Demo).",
    "description": "Prototyp automatischer Antworten an Unternehmen zum Förderaufruf Innovation 2026 (NICHT in Produktion, fiktive Daten).",
-   "instructions": ""
+   "instructions": "",
+   "names": {
+    "entra": "Firmen-FAQ (Prototyp) (Microsoft Copilot Studio)"
+   }
   },
   "circularsAssistant": {
    "displayName": "Rundschreiben-Assistent",

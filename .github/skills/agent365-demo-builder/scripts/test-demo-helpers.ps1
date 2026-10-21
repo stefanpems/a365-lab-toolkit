@@ -67,6 +67,28 @@ try {
     $null = Read-DemoConfig 'zzhelp2'
     Assert (-not $env:AZURE_CONFIG_DIR) 'no azConfigDir = the environment is left untouched (legacy behaviour)'
 
+    Write-Host 'Agent naming consistency (Test-DemoPack.ps1)'
+    $tp = Join-Path $PSScriptRoot 'Test-DemoPack.ps1'
+    $corePath = Join-Path (Get-DemoPackDir 'agent-governance') 'locales\en\core.json'
+    $originalCore = Get-Content -LiteralPath $corePath -Raw -Encoding utf8
+    try {
+        foreach ($variant in @(
+            ('Reports Monitor ' + [char]0x2013 + ' Test'),
+            ('Reports Monitor ' + [char]0xff0d + ' Test'),
+            "Reports Monitor - 'Test'",
+            'Reports  Monitor - Test'
+        )) {
+            $value = ConvertTo-Json -InputObject $variant -Compress
+            $modified = [regex]::Replace($originalCore, '("identity"\s*:\s*)"Reports Monitor - Test"', {
+                param($match) $match.Groups[1].Value + $value
+            })
+            $modified | Set-Content -LiteralPath $corePath -Encoding utf8 -NoNewline
+            $out = pwsh -NoProfile -File $tp -Pack agent-governance -Locale en 2>&1 | Out-String
+            Assert ($LASTEXITCODE -eq 0 -and $out -match 'agents\.reportsMonitorTest\.identity.*Current:.*canonical:') 'unambiguous punctuation variants report current and canonical values without blocking validation'
+        }
+    }
+    finally { Set-Content -LiteralPath $corePath -Value $originalCore -Encoding utf8 -NoNewline }
+
     Write-Host 'Reserved knowledge folder names (Test-DemoPack.ps1)'
     $tp = Join-Path $PSScriptRoot 'Test-DemoPack.ps1'
     $out = pwsh -NoProfile -File $tp -Pack agent-governance -Locale en 2>&1 | Out-String

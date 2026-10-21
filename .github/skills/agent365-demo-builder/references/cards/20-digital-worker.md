@@ -38,3 +38,14 @@ Rules of the reference lab:
   the business sponsor ({name:director}).
 - Verification is scripted (agent user, instance identity by blueprint, license count): agent365-lab-reporter.
 - Then run the RC tests of the hand-out (Teams 1:1 chat as {name:maker}, e-mail to the instance).
+
+## 4. Separate live instance (D7; do not create during setup)
+
+{name:programLead} ({upn:programLead}) creates a second instance from Teams during the demo, using the same published
+template and inherited license configuration:
+
+- Name: `{{agents.recordsColleague.instance.liveDisplayName}}`
+- Alias: `{{agents.recordsColleague.instance.liveAlias}}`
+- Managed by: {name:programLead}
+
+This is not the prepared instance `{{agents.recordsColleague.instance.displayName}}`. Do not rename or replace it.

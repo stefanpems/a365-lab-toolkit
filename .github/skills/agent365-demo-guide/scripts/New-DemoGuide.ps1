@@ -22,7 +22,9 @@ $Demo = @($Demo | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() 
 $cfg = Read-DemoConfig $Prefix
 $pack = Get-DemoPack $cfg.pack
 $LOC = Get-DemoLocale -Locale $cfg.locale -Pack $cfg.pack
+Assert-DemoLiveNames $pack $LOC
 $state = Read-DemoLabState $Prefix
+foreach ($agent in $pack.agents) { Initialize-DemoAgentState $cfg $LOC $state $agent }
 $gov = $LOC.governance
 function Format-Code([string]$S) { '`' + $S + '`' }
 function Get-Who([string]$Key) { if ($Key -eq 'admin') { return "the tenant administrator ($($cfg.adminUpn))" }; "$(Get-DemoPersonaDisplayName $LOC $Key) ($(Get-DemoUpn $LOC $cfg $Key))" }
@@ -41,7 +43,7 @@ $resets = @{ readOnly = 'nothing to reset: the demo only reads'; consumes = 'the
 function Get-GovItems([string]$Id) {
     $g = $pack.governance
     foreach ($ca in @($g.conditionalAccess)) { if (@($ca.demos) -contains $Id) { "Conditional Access policy $(Format-Code $gov.conditionalAccess[$ca.key]) (state $($ca.state))" } }
-    if ($g.entitlement -and @($g.entitlement.demos) -contains $Id) { "access package $(Format-Code $gov.accessPackage.name) for $($LOC.agents[$g.entitlement.target].displayName)" }
+    if ($g.entitlement -and @($g.entitlement.demos) -contains $Id) { "access package $(Format-Code $gov.accessPackage.name) for $(Get-DemoAgentName -Locale $LOC -Key $g.entitlement.target)" }
     $pv = $g.purview
     if ($pv.sensitivityLabel -and @($pv.sensitivityLabel.demos) -contains $Id) { "sensitivity label $(Format-Code $gov.sensitivityLabel.name)" }
     if ($pv.dlp -and @($pv.dlp.demos) -contains $Id) { "DLP policy $(Format-Code $gov.dlpPolicy)" }
@@ -51,16 +53,27 @@ function Get-GovItems([string]$Id) {
     if ($pv.dspm -and @($pv.dspm.demos) -contains $Id) { 'DSPM one-click policies' }
     $df = $g.defender
     if ($df.copilotStudioThreatDetection -and @($df.copilotStudioThreatDetection.demos) -contains $Id) { 'Copilot Studio threat detection (pay-as-you-go environment)' }
-    if ($df.rtpRule -and @($df.rtpRule.demos) -contains $Id) { "real-time protection rule $(Format-Code $gov.rtpRule) on $($LOC.agents[$df.rtpRule.agent].displayName)" }
+    if ($df.rtpRule -and @($df.rtpRule.demos) -contains $Id) { "real-time protection rule $(Format-Code $gov.rtpRule) on $(Get-DemoAgentName -Locale $LOC -Key $df.rtpRule.agent)" }
     foreach ($t in @($g.adminCenter.templates)) { if (@($t.demos) -contains $Id) { "policy template $(Format-Code $gov.templates[$t.key])" } }
-    foreach ($r in @($g.adminCenter.rules)) { if (@($r.demos) -contains $Id) { "management rule $($r.key) (run live)" } }
+    foreach ($r in @($g.adminCenter.rules)) {
+        if (@($r.demos) -notcontains $Id) { continue }
+        if ($r.nameKey) {
+            $name = if ($gov.rules) { [string]$gov.rules[$r.nameKey] } else { '' }
+            if (-not $name) { throw "Missing localized rule name: governance.rules.$($r.nameKey). Run Test-DemoPack." }
+            "management rule $(Format-Code $name) (run live)"
+        }
+        else { "management rule $($r.key) (run live)" }
+    }
+    foreach ($a in @($pack.agents | Where-Object { $_.instance.live.demo -eq $Id })) {
+        "live instance $(Format-Code (Get-DemoAgentName -Locale $LOC -Key $a.key -Surface liveInstance)); alias $(Format-Code $LOC.agents[$a.key].instance.liveAlias); created by $(Get-Who $a.instance.live.creator)"
+    }
 }
 # Prompts of the tests linked to a demo (localized; operator slots only by id).
 function Get-TestLines([string]$Id) {
     foreach ($t in @($pack.tests | Where-Object { @($_.demos) -contains $Id })) {
         $it = if ($LOC.tests.items -and $LOC.tests.items.Contains($t.id)) { $LOC.tests.items[$t.id] } else { $null }
         $who = @(@($t.persona) + @($t.personas) | Where-Object { $_ -and $_ -ne 'anyone' } | ForEach-Object { Get-DemoPersonaDisplayName $LOC $_ }) -join ', '
-        $agent = if ($t.agent) { [string]$LOC.agents[$t.agent].displayName } else { '' }
+        $agent = if ($t.agent) { Get-DemoAgentName -Locale $LOC -Key $t.agent -Surface $(if ($t.surface -eq 'webUi') { 'webui' } elseif ($t.surface -eq 'copilotStudio') { 'copilotStudio' } else { 'registry' }) } else { '' }
         $prompt = if ($it -and $it.prompt) { Format-Code (Expand-Prompt ([string]$it.prompt)) }
                   elseif ($it -and $it.prompts) { @($it.prompts | ForEach-Object { Format-Code (Expand-Prompt ([string]$_)) }) -join ' then ' }
                   elseif ($it -and $it.promptSlot) { "fill $($it.promptSlot) (operator slot)" }
@@ -83,7 +96,7 @@ function Get-AgentHints($Keys) {
         if ($b.installedFor) { $h += "installed for $(if ($b.installedFor -like 'group:*') { $LOC.groups[$b.installedFor.Substring(6)].displayName } else { Get-DemoPersonaDisplayName $LOC ($b.installedFor -replace '^persona:', '') })" }
         if ($b.exceptions) { $h += 'shows exceptions' }
         if (@($a.weaknesses | Where-Object { $_ }).Count) { $h += "deliberate weaknesses: $(@($a.weaknesses) -join ', ')" }
-        if ($h.Count) { "$($LOC.agents[$k].displayName) $($h -join ', ')" }
+        if ($h.Count) { "$(Get-DemoAgentName -Locale $LOC -Key $k) $($h -join ', ')" }
     }
 }
 
@@ -103,7 +116,7 @@ foreach ($act in $pack.acts) {
         $lines += "- **Time**: $(@($d.minutes)[0])-$(@($d.minutes)[1]) min · importance $($d.importance) · status: $($d.status)"
         $lines += "- **Where**: $(if ($portals.ContainsKey([string]$d.portal)) { $portals[[string]$d.portal] } else { $d.portal })"
         $lines += "- **Who**: $(@($d.profiles | ForEach-Object { Get-Who $_ }) -join '; ')"
-        if (@($d.agents | Where-Object { $_ }).Count) { $lines += "- **Agents**: $(@($d.agents | ForEach-Object { $LOC.agents[$_].displayName }) -join ', ')" }
+        if (@($d.agents | Where-Object { $_ }).Count) { $lines += "- **Agents**: $(@($d.agents | ForEach-Object { Get-DemoAgentReference $LOC $state $_ }) -join ', ')" }
         $hints = @(Get-AgentHints $d.agents); if ($hints.Count) { $lines += "- **Starting state**: $($hints -join '; ')" }
         $gi = @(Get-GovItems $d.id); if ($gi.Count) { $lines += "- **Shows**: $($gi -join '; ')" }
         $tl = @(Get-TestLines $d.id); if ($tl.Count) { $lines += '- **Prompts**:'; $lines += @($tl | ForEach-Object { "  $_" }) }

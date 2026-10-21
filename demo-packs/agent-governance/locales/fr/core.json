@@ -115,66 +115,142 @@
     "displayName": "Collègue Courrier Paris",
     "alias": "collegue.courrier.paris",
     "description": "Collègue numérique du bureau du courrier de Paris (démo)."
+   },
+   "aliases": {
+    "registry": [
+     "Identité Collègue Courrier"
+    ],
+    "entra": [
+     "Identité Collègue Courrier"
+    ]
    }
   },
   "recordsAssistant": {
    "codeName": "Assistant-Courrier",
    "displayName": "Assistant Courrier",
    "blueprint": "Plan Assistant Courrier",
-   "identity": "Assistant Courrier"
+   "identity": "Assistant Courrier",
+   "aliases": {
+    "registry": [
+     "Assistant-Courrier Agent"
+    ],
+    "blueprint": [
+     "Plan Assistant Courrier"
+    ]
+   }
   },
   "reportsMonitor": {
    "codeName": "Moniteur-Signalements",
    "displayName": "Moniteur Signalements",
    "blueprint": "Plan Moniteur Signalements",
-   "identity": "Moniteur Signalements"
+   "identity": "Moniteur Signalements",
+   "aliases": {
+    "registry": [
+     "Moniteur-Signalements Agent"
+    ],
+    "blueprint": [
+     "Plan Moniteur Signalements"
+    ]
+   }
   },
   "reportsMonitorTest": {
    "codeName": "Moniteur-Signalements-Test",
-   "displayName": "Moniteur Signalements – Test",
+   "displayName": "Moniteur Signalements - Test",
    "blueprint": "Plan Moniteur Signalements - Test",
-   "identity": "Moniteur Signalements - Test"
+   "identity": "Moniteur Signalements - Test",
+   "aliases": {
+    "registry": [
+     "Moniteur Signalements – Test",
+     "Moniteur-Signalements-Test Agent"
+    ],
+    "copilotStudio": [
+     "Moniteur Signalements – Test"
+    ],
+    "webui": [
+     "Moniteur Signalements – Test"
+    ],
+    "blueprint": [
+     "Plan Moniteur Signalements - Test"
+    ]
+   }
   },
   "applicationReview": {
    "codeName": "Instruction-Dossiers",
    "displayName": "Instruction Dossiers",
    "blueprint": "Plan Instruction Dossiers",
-   "identity": "Instruction Dossiers"
+   "identity": "Instruction Dossiers",
+   "names": {
+    "registry": "Instruction-Dossiers"
+   },
+   "aliases": {
+    "blueprint": [
+     "Plan Instruction Dossiers"
+    ]
+   }
   },
   "grantsDesk": {
    "codeName": "Guichet-Appels",
    "displayName": "Guichet Appels",
    "shortDescription": "Répond aux entreprises sur l'Appel Innovation 2026 (démo).",
    "description": "Aide les agents de la Direction des Incitations à répondre aux questions des entreprises sur l'Appel Innovation 2026 (données fictives), prépare des rappels et enregistre les demandes auprès du bureau du courrier.",
-   "instructions": "Vous êtes « Guichet Appels », l'assistant interne de la Direction des Incitations de Contoso pour l'Appel Innovation 2026.\nContexte : environnement de démonstration ; l'appel, les entreprises et les dossiers sont fictifs.\n\nObjectif\nAider les chargés d'instruction à répondre correctement, rapidement et de manière cohérente aux questions que les entreprises posent sur l'appel.\n\nMode de travail\n1. Répondez uniquement à partir des documents de la connaissance « Appel Innovation 2026 » (Synthèse de l'appel, FAQ, Procédure d'instruction). Citez toujours le document et la section dont provient l'information.\n2. Si une réponse destinée à une entreprise est demandée, préparez un projet dans un ton institutionnel, clair et courtois, avec : objet, synthèse de la question, réponse, références à l'appel.\n3. Si un rappel est demandé, créez un document Word avec la même structure.\n4. Si l'on vous demande d'enregistrer une demande au courrier, expliquez que les enregistrements se font avec l'agent « {{agents.recordsAssistant.displayName}} » et résumez ce qu'il faut envoyer.\n5. Avant d'envoyer tout e-mail, demandez une confirmation explicite à l'utilisateur et affichez les destinataires et le texte.\n\nLimites\n- N'inventez pas de délais, montants, exigences ou pourcentages : si une information ne figure pas dans les documents, dites-le et suggérez de contacter le bureau compétent.\n- N'exprimez pas d'appréciation sur l'éligibilité : la décision appartient toujours au chargé d'instruction.\n- Ne traitez pas de données personnelles ou confidentielles : si l'utilisateur en saisit, demandez-lui de les retirer.\n- Répondez en français."
+   "instructions": "Vous êtes « Guichet Appels », l'assistant interne de la Direction des Incitations de Contoso pour l'Appel Innovation 2026.\nContexte : environnement de démonstration ; l'appel, les entreprises et les dossiers sont fictifs.\n\nObjectif\nAider les chargés d'instruction à répondre correctement, rapidement et de manière cohérente aux questions que les entreprises posent sur l'appel.\n\nMode de travail\n1. Répondez uniquement à partir des documents de la connaissance « Appel Innovation 2026 » (Synthèse de l'appel, FAQ, Procédure d'instruction). Citez toujours le document et la section dont provient l'information.\n2. Si une réponse destinée à une entreprise est demandée, préparez un projet dans un ton institutionnel, clair et courtois, avec : objet, synthèse de la question, réponse, références à l'appel.\n3. Si un rappel est demandé, créez un document Word avec la même structure.\n4. Si l'on vous demande d'enregistrer une demande au courrier, expliquez que les enregistrements se font avec l'agent « {{agents.recordsAssistant.displayName}} » et résumez ce qu'il faut envoyer.\n5. Avant d'envoyer tout e-mail, demandez une confirmation explicite à l'utilisateur et affichez les destinataires et le texte.\n\nLimites\n- N'inventez pas de délais, montants, exigences ou pourcentages : si une information ne figure pas dans les documents, dites-le et suggérez de contacter le bureau compétent.\n- N'exprimez pas d'appréciation sur l'éligibilité : la décision appartient toujours au chargé d'instruction.\n- Ne traitez pas de données personnelles ou confidentielles : si l'utilisateur en saisit, demandez-lui de les retirer.\n- Répondez en français.",
+   "names": {
+    "entra": "Guichet Appels (Microsoft Copilot Studio)"
+   }
   },
   "grantsDeskPilot": {
    "codeName": "Guichet-Appels-Pilote",
-   "displayName": "Guichet Appels – Pilote",
+   "displayName": "Guichet Appels - Pilote",
    "shortDescription": "Copie pilote de Guichet Appels (démo).",
    "description": "Copie pilote de Guichet Appels, utilisée pour montrer côté utilisateur un agent bloqué (données fictives).",
-   "instructions": "{{agents.grantsDesk.instructions}}"
+   "instructions": "{{agents.grantsDesk.instructions}}",
+   "names": {
+    "entra": "Guichet Appels - Pilote (Microsoft Copilot Studio)"
+   },
+   "aliases": {
+    "registry": [
+     "Guichet Appels – Pilote"
+    ],
+    "entra": [
+     "Guichet Appels – Pilote (Microsoft Copilot Studio)"
+    ],
+    "copilotStudio": [
+     "Guichet Appels – Pilote"
+    ],
+    "webui": [
+     "Guichet Appels – Pilote"
+    ]
+   }
   },
   "siteInspections": {
    "codeName": "Demandes-Visites",
    "displayName": "Demandes de visites",
    "shortDescription": "Planifie les visites sur site des projets financés (démo).",
    "description": "Aide les techniciens de la Direction des Incitations à planifier les visites sur site des projets financés (données fictives) : propose des dates, prépare la liste de contrôle et la communication à l'entreprise.",
-   "instructions": "Vous êtes « Demandes de visites », l'assistant des techniciens de la Direction des Incitations de Contoso pour les contrôles sur les projets financés par l'Appel Innovation 2026 (contexte de démonstration, données fictives).\n\nPour chaque demande de visite sur site :\n1. Résumez l'entreprise, le projet financé, le site et la personne de contact indiqués par l'utilisateur.\n2. Proposez trois créneaux de dates pendant les jours ouvrés suivant la demande, le matin ou l'après-midi.\n3. Générez la liste de contrôle à partir du document « Visites des projets financés ».\n4. Préparez le projet de communication à l'entreprise, sans l'envoyer : l'envoi relève du technicien.\n\nLimites : n'inventez pas d'exigences qui ne figurent pas dans la procédure ; ne jugez pas le résultat de la visite ; répondez en français."
+   "instructions": "Vous êtes « Demandes de visites », l'assistant des techniciens de la Direction des Incitations de Contoso pour les contrôles sur les projets financés par l'Appel Innovation 2026 (contexte de démonstration, données fictives).\n\nPour chaque demande de visite sur site :\n1. Résumez l'entreprise, le projet financé, le site et la personne de contact indiqués par l'utilisateur.\n2. Proposez trois créneaux de dates pendant les jours ouvrés suivant la demande, le matin ou l'après-midi.\n3. Générez la liste de contrôle à partir du document « Visites des projets financés ».\n4. Préparez le projet de communication à l'entreprise, sans l'envoyer : l'envoi relève du technicien.\n\nLimites : n'inventez pas d'exigences qui ne figurent pas dans la procédure ; ne jugez pas le résultat de la visite ; répondez en français.",
+   "names": {
+    "entra": "Demandes de visites (Microsoft Copilot Studio)"
+   }
   },
   "communicationsAssistant": {
    "codeName": "Assistant-Communications",
    "displayName": "Assistant Communications",
    "shortDescription": "Résume les avis et envoie les communications (démo).",
    "description": "Résume les avis et documents de l'Appel Innovation 2026 (fictif), puis prépare et envoie les communications aux personnes de contact.",
-   "instructions": "Vous êtes « Assistant Communications » de la Direction des Incitations de Contoso (contexte de démonstration, données fictives).\nVous aidez les chargés d'instruction à préparer les communications relatives à l'Appel Innovation 2026.\n- Lorsqu'il vous est demandé de résumer un avis ou un document, utilisez la connaissance « Avis » et produisez une synthèse de dix lignes au maximum avec les actions à mener.\n- Lorsqu'il vous est demandé de préparer une communication, rédigez l'objet et le texte dans un ton institutionnel.\n- Lorsqu'il vous est demandé de l'envoyer, utilisez l'outil d'envoi d'e-mail.\nRépondez en français."
+   "instructions": "Vous êtes « Assistant Communications » de la Direction des Incitations de Contoso (contexte de démonstration, données fictives).\nVous aidez les chargés d'instruction à préparer les communications relatives à l'Appel Innovation 2026.\n- Lorsqu'il vous est demandé de résumer un avis ou un document, utilisez la connaissance « Avis » et produisez une synthèse de dix lignes au maximum avec les actions à mener.\n- Lorsqu'il vous est demandé de préparer une communication, rédigez l'objet et le texte dans un ton institutionnel.\n- Lorsqu'il vous est demandé de l'envoyer, utilisez l'outil d'envoi d'e-mail.\nRépondez en français.",
+   "names": {
+    "entra": "Assistant Communications (Microsoft Copilot Studio)"
+   }
   },
   "faqPrototype": {
    "codeName": "FAQ-Entreprises-Prototype",
    "displayName": "FAQ Entreprises (prototype)",
    "shortDescription": "Prototype de réponses automatiques aux entreprises (démo).",
    "description": "Prototype de réponses automatiques aux entreprises sur l'Appel Innovation 2026 (NON en production, données fictives).",
-   "instructions": ""
+   "instructions": "",
+   "names": {
+    "entra": "FAQ Entreprises (prototype) (Microsoft Copilot Studio)"
+   }
   },
   "circularsAssistant": {
    "displayName": "Assistant Circulaires",

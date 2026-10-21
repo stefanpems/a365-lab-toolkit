@@ -8,9 +8,12 @@
   pwsh -File .\Test-DemoPack.ps1                    # every locale declared in pack.json
 .EXAMPLE
   pwsh -File .\Test-DemoPack.ps1 -Locale it,fr
+.EXAMPLE
+  pwsh -File .\Test-DemoPack.ps1 -Locale en -Fix
+  Rewrites only unambiguous locale punctuation and retains previous spellings as aliases; never changes tenant objects.
 #>
 [CmdletBinding(PositionalBinding = $false)]
-param([string]$Pack = 'agent-governance', [string[]]$Locale = @('all'), [string]$OperatorSlots, [switch]$AsObject)
+param([string]$Pack = 'agent-governance', [string[]]$Locale = @('all'), [string]$OperatorSlots, [switch]$AsObject, [switch]$Fix)
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
 # 'pwsh -File' passes "en,it" as ONE string: accept comma-separated lists.
 $Locale = @($Locale | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -18,13 +21,18 @@ $packDef = Get-DemoPack $Pack
 $locales = if ($Locale -contains 'all') { @($packDef.locales) } else { $Locale }
 $all = [System.Collections.Generic.List[object]]::new()
 
-function Add-V([string]$Loc, [string]$Level, [string]$Field, [string]$Message) { $all.Add([pscustomobject]@{ locale = $Loc; level = $Level; field = $Field; message = $Message }) }
+function Add-V([string]$Loc, [string]$Level, [string]$Field, [string]$Message, [string]$CurrentValue, [string]$CanonicalValue) {
+    $all.Add([pscustomobject]@{ locale = $Loc; level = $Level; field = $Field; message = $Message
+        currentValue = $CurrentValue; canonicalValue = $CanonicalValue })
+}
 function Add-Vs([string]$Loc, $Violations, [string]$Prefix = '') { foreach ($v in @($Violations)) { if ($v) { Add-V $Loc $v.level "$Prefix$($v.field)" $v.message } } }
 function Get-Keys($H) { if ($H -is [System.Collections.IDictionary]) { return @($H.Keys) } return @() }
 function Test-Need([string]$Loc, $Node, [string]$Path, [string[]]$Keys) {
     foreach ($k in $Keys) {
         $missing = -not ($Node -is [System.Collections.IDictionary]) -or -not $Node.Contains($k) -or $null -eq $Node[$k] -or ($Node[$k] -is [string] -and $Node[$k] -eq '')
-        if ($missing) { Add-V $Loc 'error' "$Path.$k" 'is missing or empty' }
+        if ($missing -and -not @($all | Where-Object { $_.locale -eq $Loc -and $_.level -eq 'error' -and $_.field -eq "$Path.$k" }).Count) {
+            Add-V $Loc 'error' "$Path.$k" 'is missing or empty'
+        }
     }
 }
 
@@ -41,7 +49,10 @@ $slotIds = @($packDef.operatorSlots | ForEach-Object { [string]$_.id })
 # everything that is localized). Keys starting with '_' are comments.
 function Get-LeafKeys($Node, [string]$Prefix = '') {
     if ($Node -is [System.Collections.IDictionary]) {
-        foreach ($k in $Node.Keys) { if (-not "$k".StartsWith('_')) { Get-LeafKeys $Node[$k] $(if ($Prefix) { "$Prefix.$k" } else { "$k" }) } }
+        foreach ($k in $Node.Keys) {
+            if ("$k".StartsWith('_') -or ($Prefix -match '^agents\.[^.]+$' -and $k -eq 'aliases')) { continue }
+            Get-LeafKeys $Node[$k] $(if ($Prefix) { "$Prefix.$k" } else { "$k" })
+        }
     }
     else { $Prefix }
 }
@@ -50,6 +61,40 @@ function Get-RawLocale([string]$Loc) {
     $r = Get-Content -LiteralPath (Join-Path $d 'core.json') -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
     foreach ($part in 'knowledge', 'tests') { $f = Join-Path $d "$part.json"; if (Test-Path -LiteralPath $f) { $r[$part] = Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable } }
     return $r
+}
+function Get-NameCorrections($Raw) {
+    foreach ($agent in $packDef.agents) {
+        $key = [string]$agent.key
+        $value = $Raw.agents[$key]
+        if (-not $value) { continue }
+        $entries = [Collections.Generic.List[object]]::new()
+        foreach ($field in 'displayName', 'identity', 'blueprint') {
+            if (-not $value[$field]) { continue }
+            $surfaces = switch ($field) { 'identity' { @('entra') }; 'blueprint' { @('blueprint') }; default { @('registry', 'copilotStudio', 'webui') } }
+            $entries.Add([pscustomobject]@{ field = "agents.$key.$field"; current = [string]$value[$field]; surfaces = @($surfaces) })
+        }
+        if ($value.names -is [Collections.IDictionary]) {
+            foreach ($surface in $value.names.Keys) {
+                $entries.Add([pscustomobject]@{ field = "agents.$key.names.$surface"; current = [string]$value.names[$surface]; surfaces = @($surface) })
+            }
+        }
+        if ($value.instance.displayName) {
+            $entries.Add([pscustomobject]@{ field = "agents.$key.instance.displayName"; current = [string]$value.instance.displayName; surfaces = @('instance') })
+        }
+        $display = ConvertTo-DemoCanonicalAgentName ([string]$value.displayName)
+        $displayWords = $display -replace '[\p{Pd}\p{Pi}\p{Pf}\u2212\u2032\u2033\uff02\uff07''"\s\p{Z}]', ''
+        foreach ($entry in $entries) {
+            $canonical = ConvertTo-DemoCanonicalAgentName $entry.current
+            $words = $entry.current -replace '[\p{Pd}\p{Pi}\p{Pf}\u2212\u2032\u2033\uff02\uff07''"\s\p{Z}]', ''
+            if ($entry.field -match '\.(displayName|identity|blueprint)$' -and
+                $entry.field -notmatch '\.names\.|\.instance\.' -and $words -ceq $displayWords) {
+                $canonical = $display
+            }
+            if ($entry.current -cne $canonical) {
+                [pscustomobject]@{ key = $key; field = $entry.field; current = $entry.current; canonical = $canonical; surfaces = $entry.surfaces }
+            }
+        }
+    }
 }
 $refLocale = [string]$packDef.defaultLocale
 $refKeys = @(Get-LeafKeys (Get-RawLocale $refLocale))
@@ -63,6 +108,52 @@ foreach ($loc in $locales) {
         foreach ($k in @($keys | Where-Object { $refKeys -notcontains $_ })) { Add-V $loc 'error' $k "not in the $refLocale dictionary" }
     }
     try { $L = Get-DemoLocale -Locale $loc -Pack $Pack } catch { Add-V $loc 'error' 'locale' "cannot be loaded: $($_.Exception.Message)"; continue }
+    $raw = Get-RawLocale $loc
+    $ambiguous = @{}
+    $wordKeys = @{}
+    foreach ($agent in $packDef.agents) {
+        $name = [string]$raw.agents[$agent.key].displayName
+        if (-not $name) { continue }
+        $wordKey = ConvertTo-DemoAgentNameKey $name
+        if ($wordKeys.ContainsKey($wordKey)) {
+            $ambiguous[$agent.key] = $true
+            $ambiguous[$wordKeys[$wordKey]] = $true
+            $canonical = ConvertTo-DemoCanonicalAgentName $name
+            Add-V $loc 'error' "agents.$($agent.key).displayName" "Ambiguous punctuation-equivalent names for '$($wordKeys[$wordKey])' and '$($agent.key)'; no automatic fix can choose the intended objects. Current: '$name'; canonical: '$canonical'." $name $canonical
+        }
+        else { $wordKeys[$wordKey] = $agent.key }
+    }
+    $corrections = @(Get-NameCorrections $raw)
+    $changes = [ordered]@{}
+    foreach ($correction in $corrections) {
+        if ($ambiguous.ContainsKey($correction.key)) { continue }
+        $level = if ($Fix) { 'info' } else { 'warning' }
+        Add-V $loc $level $correction.field "Current: '$($correction.current)'; canonical: '$($correction.canonical)'. Punctuation only; use -Fix to rewrite this locale, never tenant objects." $correction.current $correction.canonical
+        if (-not $Fix) {
+            $parts = $correction.field.Split('.')
+            $parent = Resolve-DemoPath $L ($parts[0..($parts.Count - 2)] -join '.')
+            $parent[$parts[-1]] = $correction.canonical
+            continue
+        }
+        $agent = $raw.agents[$correction.key]
+        if ($agent.aliases -and $agent.aliases -isnot [Collections.IDictionary]) {
+            Add-V $loc 'error' "agents.$($correction.key).aliases" 'cannot retain the old spelling: aliases must be a map keyed by surface'
+            continue
+        }
+        $changes[$correction.field] = $correction.canonical
+        if (-not $agent.aliases) { $agent['aliases'] = [ordered]@{} }
+        foreach ($surface in $correction.surfaces) {
+            $agent.aliases[$surface] = @(@($agent.aliases[$surface]) + @($correction.current) |
+                Where-Object { $_ -and $_ -cne $correction.canonical } | Select-Object -Unique)
+        }
+        $changes["agents.$($correction.key).aliases"] = $agent.aliases
+    }
+    if ($Fix -and $changes.Count) {
+        $corePath = Join-Path $dir 'core.json'
+        Set-DemoJsonProperties -Path $corePath -Changes $changes
+        Write-Host "Fixed punctuation in $corePath; intended words and suffixes were preserved."
+        $L = Get-DemoLocale -Locale $loc -Pack $Pack
+    }
     foreach ($u in $L._unresolved) { Add-V $loc 'error' "{{$u}}" 'placeholder does not resolve to a string' }
     Test-Need $loc $L 'locale' @('locale', 'language', 'usageLocation', 'org', 'personas', 'groups', 'agents', 'mcp', 'overlays', 'governance', 'prompts', 'knowledge', 'tests')
     if ($L.locale -ne $loc) { Add-V $loc 'error' 'locale' "declares '$($L.locale)' but lives in folder '$loc'" }
@@ -102,6 +193,18 @@ foreach ($loc in $locales) {
         $la = $L.agents[$a.key]; $path = "agents.$($a.key)"
         if (-not $la) { Add-V $loc 'error' $path 'missing'; continue }
         Test-Need $loc $la $path @('displayName')
+        foreach ($section in 'names', 'aliases') {
+            if (-not $la.Contains($section)) { continue }
+            if ($la[$section] -isnot [System.Collections.IDictionary]) { Add-V $loc 'error' "$path.$section" 'must be a map keyed by agent surface'; continue }
+            foreach ($surface in $la[$section].Keys) {
+                if ($surface -notin 'registry', 'entra', 'copilotStudio', 'webui', 'blueprint', 'instance', 'liveInstance') {
+                    Add-V $loc 'error' "$path.$section.$surface" 'unknown agent surface'
+                }
+                foreach ($name in @($la[$section][$surface])) {
+                    if ($name -isnot [string] -or [string]::IsNullOrWhiteSpace($name)) { Add-V $loc 'error' "$path.$section.$surface" 'names must be nonempty strings' }
+                }
+            }
+        }
         if ($displayNames.ContainsKey([string]$la.displayName)) { Add-V $loc 'error' "$path.displayName" "duplicates agents.$($displayNames[[string]$la.displayName])" } else { $displayNames[[string]$la.displayName] = $a.key }
         switch ($a.platform) {
             'code' {
@@ -112,10 +215,22 @@ foreach ($loc in $locales) {
                 if ($a.variant -like '*-DW') {
                     if ($cn.Length -gt [int]$limits.codeAgentName.dwMax) { Add-V $loc 'error' "$path.codeName" "a Digital Worker name must be <= $($limits.codeAgentName.dwMax) characters" }
                     Test-Need $loc $la $path @('manifest', 'instance')
-                    if ($la.manifest) { Add-Vs $loc (Test-TeamsManifestText -NameShort $la.manifest.nameShort -NameFull $la.manifest.nameFull -DescriptionShort $la.manifest.descriptionShort -DescriptionFull $la.manifest.descriptionFull -DeveloperName $la.manifest.developer) "$path." }
+                    if ($la.manifest) { Add-Vs $loc (Test-TeamsManifestText -NameShort (Get-DemoAgentName -Locale $L -Key $a.key -Surface registry) -NameFull $la.manifest.nameFull -DescriptionShort $la.manifest.descriptionShort -DescriptionFull $la.manifest.descriptionFull -DeveloperName $la.manifest.developer) "$path." }
                     if ($la.instance) {
                         Add-Vs $loc (Test-A365Text -Kind 'aiTeammateInstance.displayName' -Value $la.instance.displayName -Field "$path.instance.displayName")
                         Add-Vs $loc (Test-A365Text -Kind 'aiTeammateInstance.alias' -Value $la.instance.alias -Field "$path.instance.alias")
+                        if ($a.instance.live) {
+                            Test-Need $loc $la.instance "$path.instance" @('liveDisplayName', 'liveAlias')
+                            if ($la.instance.liveDisplayName) {
+                                Add-Vs $loc (Test-A365Text -Kind 'aiTeammateInstance.displayName' -Value $la.instance.liveDisplayName -Field "$path.instance.liveDisplayName")
+                            }
+                            if ($la.instance.liveAlias) {
+                                Add-Vs $loc (Test-A365Text -Kind 'aiTeammateInstance.alias' -Value $la.instance.liveAlias -Field "$path.instance.liveAlias")
+                            }
+                            if ($la.instance.liveDisplayName -ceq $la.instance.displayName -or $la.instance.liveAlias -ceq $la.instance.alias) {
+                                Add-V $loc 'error' "$path.instance" 'the live instance must have a distinct display name and alias from the prepared instance'
+                            }
+                        }
                     }
                 }
                 foreach ($f in 'blueprint', 'identity') { if ($la[$f]) { Add-Vs $loc (Test-A365Text -Kind 'entra.displayName' -Value $la[$f] -Field "$path.$f") } }
@@ -246,6 +361,12 @@ foreach ($loc in $locales) {
     Add-Vs $loc (Test-A365Text -Kind 'agent365Admin.rtpRuleName' -Value $gv.rtpRule -Field 'governance.rtpRule')
     foreach ($tk in $packDef.governance.adminCenter.tags) { Add-Vs $loc (Test-A365Text -Kind 'agent365Admin.tagName' -Value $gv.tags[$tk] -Field "governance.tags.$tk") }
     foreach ($tp in $packDef.governance.adminCenter.templates) { Add-Vs $loc (Test-A365Text -Kind 'agent365Admin.templateName' -Value $gv.templates[$tp.key] -Field "governance.templates.$($tp.key)") }
+    foreach ($rule in @($packDef.governance.adminCenter.rules | Where-Object { $_.nameKey })) {
+        Test-Need $loc $gv.rules 'governance.rules' @([string]$rule.nameKey)
+        if ($gv.rules -and $gv.rules[$rule.nameKey]) {
+            Add-Vs $loc (Test-A365Text -Kind 'entra.displayName' -Value ([string]$gv.rules[$rule.nameKey]) -Field "governance.rules.$($rule.nameKey)")
+        }
+    }
     Test-Need $loc $gv.auditSearches 'governance.auditSearches' @('agentInteractions', 'agentAdminActions')
 
     # Prompts and tests
@@ -299,4 +420,5 @@ foreach ($v in ($all | Sort-Object locale, level, field)) {
     Write-Host ('{0,-3} {1,-7} {2}: {3}' -f $v.locale, $v.level.ToUpper(), $v.field, $v.message) -ForegroundColor $color
 }
 Write-Host ("Demo pack '{0}', locales [{1}]: {2} error(s), {3} warning(s)" -f $Pack, ($locales -join ', '), $errs.Count, $warns.Count) -ForegroundColor $(if ($errs.Count) { 'Red' } else { 'Green' })
+if ($AsObject) { $all.ToArray() }
 if ($errs.Count) { exit 1 }

@@ -64,3 +64,14 @@ Agents > {agent:grantsDeskPilot} (published entry) > Block: reason **Not approve
 before Confirm (the "Explain in more detail" box stays disabled). Blocking disables the agent's Entra identity (by
 design) and removes existing installations: after any rehearsal that blocks an installed agent, re-install it when it
 is unblocked (agent365-demo-reset lists it).
+
+## 5. Custom automation rules (D8; create live, not during setup)
+
+Signed in as {name:aiAdmin}, use Agents > Settings > Rules:
+
+- Apply-template rule: `{{governance.rules.applyProductionTemplate}}`. Select the existing Copilot Studio agents
+  {agent:communicationsAssistant}, {agent:siteInspections}, {agent:grantsDeskPilot} and {agent:grantsDesk}, and apply
+  `{{governance.templates.productionTemplate}}`.
+- Stale-request rule: `{{governance.rules.rejectStalePublishRequests}}`. Reject publish requests older than **14 days**.
+
+The default ownerless-agent rule is a separate branch; do not use either custom rule name for it.
