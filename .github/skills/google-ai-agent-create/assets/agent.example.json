@@ -1,0 +1,10 @@
+{
+  "display_name": "Example Assistant",
+  "agent_name": "example_assistant",
+  "description": "A sample assistant hosted on Google AI.",
+  "instruction": "You are a helpful assistant. Explain your capabilities clearly and use fictional data in examples.",
+  "model": "YOUR_GEMINI_MODEL_ID",
+  "service_account": "YOUR_RUNTIME_SERVICE_ACCOUNT_EMAIL",
+  "min_instances": 0,
+  "max_instances": 1
+}

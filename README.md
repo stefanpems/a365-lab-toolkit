@@ -8,6 +8,10 @@ starting point, **not** the objective. The lab is **framework-agnostic by design
 
 > Full concepts and step-by-step setup guides are in **[docs/](docs/README.md)**.
 
+For Google environments, the separate **[Google AI Manager](docs/google-ai-manager.md)**
+Copilot agent provides script-first test prompts, managed ADK agent creation, and confirmed deletion.
+It requires explicit Google targeting and credentials; private runtime data is excluded from Git.
+
 ## What this lab is
 
 This is a hands-on **lab** that provisions a set of **custom agents**, a shared web UI, and optional

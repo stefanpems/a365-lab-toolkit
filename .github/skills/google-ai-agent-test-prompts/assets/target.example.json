@@ -1,0 +1,7 @@
+{
+  "project": "YOUR_PROJECT_ID",
+  "location": "YOUR_REGION",
+  "credentials_file": "C:\\private\\google\\session.credentials.json",
+  "resource_kind": "registry",
+  "agent": "YOUR_AGENT_RESOURCE_NAME_OR_DISPLAY_NAME"
+}

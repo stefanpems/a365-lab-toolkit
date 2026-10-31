@@ -44,6 +44,22 @@ tmp/
 **/*.secret.txt
 # MSAL token caches (contain refresh tokens) — Prompts Sender and any local harness
 **/token_cache.json
+# Google AI: private profiles, credentials, deployment state and transcripts.
+**/.google-ai-private/
+**/google-ai-runs/
+**/google-ai*.local.json
+**/gcloud-config/
+**/.gcloud/
+**/application_default_credentials.json
+**/google-credentials*.json
+**/service-account*.json
+**/service_account*.json
+**/*.credentials.json
+**/.config/gcloud/
+**/credentials.db
+**/access_tokens.db
+**/google-ai-*.pkl
+*.p12
 # Local throwaway test harness (never commit; may hold tokens)
 _test/
 # Certificates / keys
