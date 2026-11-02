@@ -53,10 +53,18 @@ Write-DemoLog $Prefix "Demo pre-flight (read-only) for: $($Demo -join ', ')"
 
 # --- People and licenses -----------------------------------------------------------------------------------------
 if (Test-Sel @('People')) {
+    $roleDefinitions = @(Get-DemoEntraRoleDefinitions)
     foreach ($p in $pack.personas) {
         $u = Invoke-DemoGraph GET "$G/v1.0/users/$([uri]::EscapeDataString((Get-Upn $p.key)))?`$select=id,accountEnabled,assignedLicenses" -NoThrow -MaxRetries 1
         $exists = -not (Test-Err $u)
         if ($p.leaver) { Add-Check (@($p.demos) -join ',') "leaver $(Get-Upn $p.key)" 'hard-deleted after creating and sharing the agent' $(if ($exists) { 'still exists' } else { 'gone' }) 'INFO'; continue }
+        $roleAssignments = if ($exists -and @($p.entraRoles | Where-Object { $_ }).Count) { @(Get-DemoPermanentEntraRoleAssignments ([string]$u.id)) } else { @() }
+        foreach ($roleCheck in @(Get-DemoPersonaEntraRoleStatus $p $roleDefinitions $roleAssignments)) {
+            $roleStatus = if ($exists -and $roleCheck.verified) { 'OK' } else { 'KO' }
+            $actual = if ($roleStatus -eq 'OK') { "VERIFIED $($roleCheck.assignmentId)" } elseif (-not $exists) { 'MISSING (user not found)' } else { "MISSING $($roleCheck.detail)".Trim() }
+            Add-Check 'People' "$(Get-Upn $p.key): Entra role $($roleCheck.roleName)" 'active, permanent, directory scope /' $actual $roleStatus `
+                $(if ($roleStatus -eq 'KO') { "Set-DemoIdentities.ps1 -Prefix $Prefix -Persona $($p.key) -RolesOnly (existing user only; dry-run with -WhatIf first)" } else { '' })
+        }
         if (-not $exists) { Add-Check 'People' (Get-Upn $p.key) 'exists, enabled, licensed' 'MISSING' 'KO' 'Set-DemoIdentities.ps1'; continue }
         $st = if ($u.accountEnabled -and @($u.assignedLicenses).Count -ge @($p.licenses).Count) { 'OK' } else { 'KO' }
         Add-Check 'People' (Get-Upn $p.key) "enabled, $(@($p.licenses).Count)+ license(s)" "enabled=$($u.accountEnabled) licenses=$(@($u.assignedLicenses).Count)" $st $(if ($st -eq 'KO') { 'Set-DemoIdentities.ps1' } else { '' })

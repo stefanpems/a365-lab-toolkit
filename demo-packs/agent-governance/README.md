@@ -59,6 +59,25 @@ template live. Reapply only persona directory roles with
 `-RolesOnly` never changes user properties, licenses, managers, groups or operator roles, and assignments are verified
 by Graph read-back. Sign out and in again before the approval/template demo so the persona receives fresh claims.
 
+The identity administrator (`identityAdmin`, P2) keeps Conditional Access Administrator, Identity Governance
+Administrator, Attribute Definition Administrator, Attribute Assignment Administrator, Security Operator and Reports
+Reader, and also receives Global Secure Access Administrator and Lifecycle Workflows Administrator. All are active,
+permanent, direct assignments at directory scope `/`. The three governance/access/lifecycle roles are resolved by
+their built-in role template IDs; scoped, eligible, activated or time-bound access does not satisfy this baseline.
+Verified assignment IDs and role template/definition IDs are recorded under `users.identityAdmin.roleAssignments`
+in `generated/<prefix>/demo/state.json`. The People pre-flight names every missing role separately.
+
+For an existing lab, ask the Demo Builder exactly:
+
+`<prefix>: re-apply the Entra roles of identityAdmin and verify them`
+
+This is a scoped repair, not a build or resume. It runs only
+`Set-DemoIdentities.ps1 -Prefix <prefix> -Persona identityAdmin -RolesOnly -WhatIf`, then the same command without
+`-WhatIf`, and `Get-DemoPersonas.ps1 -Prefix <prefix> -Persona identityAdmin -AsJson` for read-back. Only missing
+equivalent assignments are added to the existing user; no users, groups, licenses, other personas or operator roles
+are changed. An omitted/all/multiple persona selection with `-RolesOnly` is refused. Sign out and back in as the
+identity administrator afterwards to refresh role claims.
+
 The read-only pre-flight also verifies blueprints, Copilot Studio bots and AI-teammate instance users. Its
 `agent-lookups.json` and the lookup table in `demo-state.md` distinguish `id`, `relationship`, `name`, `alias` and
 `missing`. Re-run after the initial migration to see which objects still need name discovery. Cards and the guide

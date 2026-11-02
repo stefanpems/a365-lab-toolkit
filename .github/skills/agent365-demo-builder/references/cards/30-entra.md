@@ -7,8 +7,12 @@ Security defaults must be disabled.
 
 **Who**: {name:identityAdmin} ({upn:identityAdmin}), the story owner of the Entra policies. Custom security attributes
 are visible only to holders of the attribute roles (a Global Administrator does not see them by default), and
-{name:identityAdmin} has Conditional Access Administrator + Attribute Definition/Assignment Administrator + Identity
-Governance Administrator. Only step 3.3 needs a Global Administrator.
+{name:identityAdmin} has Conditional Access Administrator, Identity Governance Administrator, Global Secure Access
+Administrator, Lifecycle Workflows Administrator, Attribute Definition Administrator, Attribute Assignment
+Administrator, Security Operator and Reports Reader, all active and permanent at directory scope `/`.
+`pack.json` is the role source; the identity build and People pre-flight verify the actual assignments.
+For an existing lab, ask the Demo Builder `<prefix>: re-apply the Entra roles of identityAdmin and verify them`;
+sign out and back in afterwards. Only step 3.3 needs a Global Administrator.
 
 ## 1. Policy "{{governance.conditionalAccess.blockHighRiskAgents}}" (D9)
 

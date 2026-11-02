@@ -82,6 +82,8 @@
    "entraRoles": [
     "Conditional Access Administrator",
     "Identity Governance Administrator",
+    "Global Secure Access Administrator",
+    "Lifecycle Workflows Administrator",
     "Attribute Definition Administrator",
     "Attribute Assignment Administrator",
     "Security Operator",

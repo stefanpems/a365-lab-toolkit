@@ -533,7 +533,7 @@ class TransportTests(WorkflowTestBase):
             patch("google.adk.integrations.agent_registry.AgentRegistry", Registry),
         ):
             result = asyncio.run(manager.send_batch(
-                self.api, target, manager.build_prompts(2, None), self.journal(), 5, "capabilities"
+                self.api, target, manager.build_prompts(2, None), self.journal(), 5, "capabilities", "a2a"
             ))
         self.assertEqual((result["sent"], result["passed"]), (2, 2))
         self.assertEqual(registry_calls, ["initialize", "resolve"])

@@ -12,6 +12,7 @@ import hashlib
 import io
 import json
 import keyword
+import logging
 import os
 from pathlib import Path
 import re
@@ -19,6 +20,7 @@ import sys
 import tarfile
 import time
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 import uuid
 
 import google.auth
@@ -28,11 +30,13 @@ from google.auth.transport.requests import AuthorizedSession, Request
 import httpx
 import requests
 
+from google_ai_environment import (
+    PRIVATE_ROOT, REPO_ROOT, WorkflowError, private_path, reject_shared_google_store,
+)
+
 
 JsonObject = dict[str, Any]
-REPO_ROOT = Path(__file__).resolve().parents[4]
 CREATE_ASSETS = Path(__file__).resolve().parents[2] / "google-ai-agent-create" / "assets"
-PRIVATE_ROOT = Path.home() / ".copilot" / "google-ai-manager"
 DEFAULT_PROMPT = "Who are you and what can you do?"
 CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 REGISTRY_URL = "https://agentregistry.googleapis.com/v1"
@@ -40,15 +44,6 @@ RUNTIME_REFERENCE = "agentregistry.googleapis.com/system/RuntimeReference"
 RESOURCE_PATTERN = re.compile(
     r"^projects/([^/]+)/locations/([^/]+)/(agents|reasoningEngines)/([^/]+)$"
 )
-
-
-class WorkflowError(Exception):
-    def __init__(
-        self, code: str, message: str, *, details: JsonObject | None = None
-    ) -> None:
-        super().__init__(message)
-        self.code = code
-        self.details = details or {}
 
 
 def object_value(value: object, label: str) -> JsonObject:
@@ -63,18 +58,6 @@ def text_value(value: object, label: str) -> str:
     return value
 
 
-def private_path(path: Path) -> Path:
-    resolved = path.expanduser().resolve()
-    if resolved.is_relative_to(REPO_ROOT):
-        relative = resolved.relative_to(REPO_ROOT)
-        if ".google-ai-private" not in relative.parts:
-            raise WorkflowError(
-                "UNSAFE_PRIVATE_PATH",
-                "Keep private files outside the checkout or inside an ignored .google-ai-private directory.",
-            )
-    return resolved
-
-
 def read_object(path: Path) -> JsonObject:
     with path.open(encoding="utf-8-sig") as handle:
         return object_value(json.load(handle), str(path))
@@ -87,7 +70,18 @@ def atomic_write(path: Path, value: JsonObject) -> None:
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
             json.dump(value, handle, ensure_ascii=True, indent=2)
             handle.write("\n")
-        temporary.replace(path)
+        for attempt in range(5):
+            try:
+                temporary.replace(path)
+                break
+            except PermissionError as error:
+                if getattr(error, "winerror", None) not in (5, 32, 33) or attempt == 4:
+                    raise
+                logging.getLogger(__name__).warning(
+                    "Windows temporarily blocked the atomic state update; retrying the local write (%s/5). No cloud request is replayed.",
+                    attempt + 1,
+                )
+                time.sleep(0.05 * 2**attempt)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -422,20 +416,16 @@ async def check_httpx(response: httpx.Response) -> None:
 
 @asynccontextmanager
 async def conversation(
-    api: GoogleApi, target: Target, runtime: Target, user_id: str, timeout: float
+    api: GoogleApi, target: Target, runtime: Target, user_id: str, timeout: float,
+    transport: str = "auto",
 ) -> AsyncGenerator[Callable[[str], Awaitable[str]], None]:
-    protocols = target.record.get("protocols", [])
-    if not isinstance(protocols, list):
-        raise WorkflowError("INVALID_RESPONSE", "Registry protocols must be an array.")
-    use_a2a = target.kind == "registry" and any(
-        isinstance(protocol, dict) and protocol.get("type") == "A2A_AGENT" for protocol in protocols
-    )
+    selected_transport = select_transport(target, runtime, transport)
     async with httpx.AsyncClient(
         auth=ScopedGoogleAuth(api, runtime.name),
         timeout=httpx.Timeout(timeout, connect=15),
         follow_redirects=False,
     ) as http_client:
-        if use_a2a:
+        if selected_transport == "a2a":
             from google.adk.agents.run_config import RunConfig, StreamingMode
             from google.adk.integrations.agent_registry import AgentRegistry
             from google.adk.runners import Runner
@@ -466,14 +456,7 @@ async def conversation(
 
                 yield send_a2a
         else:
-            methods = object_value(runtime.record.get("spec"), "Runtime spec").get("classMethods", [])
-            if not isinstance(methods, list):
-                raise WorkflowError("INVALID_RESPONSE", "Runtime class methods must be an array.")
-            names = {method.get("name") for method in methods if isinstance(method, dict)}
-            create_method = next((name for name in ("async_create_session", "create_session") if name in names), None)
-            query_method = next((name for name in ("async_stream_query", "stream_query") if name in names), None)
-            if not create_method or not query_method:
-                raise WorkflowError("UNSUPPORTED_AGENT", "The managed runtime does not expose the ADK session and stream-query methods.")
+            create_method, query_method = native_methods(runtime)
             response = await http_client.post(
                 f"{api.scope.runtime_url}/{runtime.name}:query",
                 json={"classMethod": create_method, "input": {"user_id": user_id}},
@@ -500,21 +483,58 @@ async def conversation(
             yield send_native
 
 
+def native_methods(runtime: Target) -> tuple[str | None, str | None]:
+    methods = object_value(runtime.record.get("spec", {}), "Runtime spec").get("classMethods", [])
+    if not isinstance(methods, list):
+        raise WorkflowError("INVALID_RESPONSE", "Runtime class methods must be an array.")
+    names = {method.get("name") for method in methods if isinstance(method, dict)}
+    return (
+        next((name for name in ("async_create_session", "create_session") if name in names), None),
+        next((name for name in ("async_stream_query", "stream_query") if name in names), None),
+    )
+
+
+def select_transport(target: Target, runtime: Target, requested: str) -> str:
+    if requested not in ("auto", "native", "a2a"):
+        raise WorkflowError("INVALID_TRANSPORT", "Choose auto, native or a2a.")
+    native_ready = all(native_methods(runtime))
+    protocols = target.record.get("protocols", [])
+    if not isinstance(protocols, list):
+        raise WorkflowError("INVALID_RESPONSE", "Registry protocols must be an array.")
+    a2a_ready = target.kind == "registry" and any(
+        isinstance(protocol, dict) and protocol.get("type") == "A2A_AGENT" for protocol in protocols
+    )
+    if requested in ("auto", "native") and native_ready:
+        return "native"
+    if requested in ("auto", "a2a") and a2a_ready:
+        return "a2a"
+    raise WorkflowError("UNSUPPORTED_AGENT", "The selected agent does not expose the requested native ADK or registry A2A transport.")
+
+
 async def send_batch(
     api: GoogleApi, target: Target, prompts: list[str], journal: Journal,
-    timeout: float, expected_text: str | None,
+    timeout: float, expected_text: str | None, transport: str = "auto",
 ) -> JsonObject:
     if journal.state["phase"] == "complete":
-        return object_value(journal.state["result"], "Saved result")
+        return {
+            **object_value(journal.state["result"], "Saved result"),
+            "responses": journal.state["responses"],
+        }
     if journal.state["phase"] != "planned":
         raise WorkflowError(
             "UNCERTAIN_PROMPT_BATCH",
             "An earlier execution was interrupted or failed. Review its private responses before intentionally starting a new batch.",
         )
     runtime = api.managed_runtime(target)
-    journal.save(phase="sending", target=target.name, runtime=runtime.name)
+    selected_transport = select_transport(target, runtime, transport)
+    journal.save(
+        phase="sending", target=target.name, display_name=target.display_name,
+        runtime=runtime.name, transport=selected_transport,
+    )
     records: list[JsonObject] = []
-    async with conversation(api, target, runtime, journal.state["run_id"], timeout) as send:
+    async with conversation(
+        api, target, runtime, journal.state["run_id"], timeout, selected_transport
+    ) as send:
         for index, prompt in enumerate(prompts, 1):
             journal.save(in_flight=index, responses=records)
             start = time.monotonic()
@@ -532,22 +552,31 @@ async def send_batch(
         "complete" if all(record["passed"] for record in records) else "test_failed",
         operation="send", agent=target.name, sent=len(records),
         passed=sum(record["passed"] for record in records),
-        responses_file=str(journal.path),
+        responses_file=str(journal.path), display_name=target.display_name,
+        transport=selected_transport, responses=records,
     )
     journal.save(phase="complete", result=result)
     return result
 
 
 def validate_spec(value: JsonObject) -> JsonObject:
-    required = ("display_name", "agent_name", "instruction", "model", "service_account")
+    required = ("display_name", "instruction", "model", "service_account")
     for key in required:
         text_value(value.get(key), key)
-    allowed = {*required, "description", "min_instances", "max_instances"}
+    allowed = {*required, "agent_name", "description", "min_instances", "max_instances"}
     if value.keys() - allowed:
         raise WorkflowError("INVALID_SPEC", "The creation spec contains unknown fields.")
+    if "agent_name" not in value:
+        identifier = re.sub(r"[^a-z0-9_]+", "_", value["display_name"].lower()).strip("_")
+        if not identifier:
+            raise WorkflowError("INVALID_SPEC", "Supply agent_name when the display name cannot produce an ASCII ADK identifier.")
+        if identifier[0].isdigit() or keyword.iskeyword(identifier) or identifier == "user":
+            identifier = "agent_" + identifier
+        value = {**value, "agent_name": identifier}
+    agent_name = text_value(value["agent_name"], "agent_name")
     if (
-        not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value["agent_name"])
-        or keyword.iskeyword(value["agent_name"]) or value["agent_name"] == "user"
+        not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", agent_name)
+        or keyword.iskeyword(agent_name) or agent_name == "user"
     ):
         raise WorkflowError("INVALID_SPEC", "agent_name must be a Python identifier.")
     if len(value["display_name"]) > 128:
@@ -673,7 +702,7 @@ def create_agent(
         if not apply:
             return journal.result(
                 "needs_confirmation", operation="create", scope=api.scope.public_identity(),
-                display_name=spec["display_name"], model=spec["model"],
+                display_name=spec["display_name"], agent_name=spec["agent_name"], model=spec["model"],
                 service_account=spec["service_account"], min_instances=spec["min_instances"],
                 max_instances=spec["max_instances"], confirm=spec["display_name"],
             )
@@ -766,28 +795,89 @@ def delete_agent(
     return result
 
 
+def console_url_inputs(value: str, *, require_agent: bool = False) -> dict[str, str]:
+    try:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https" or parsed.hostname != "console.cloud.google.com"
+            or parsed.port not in (None, 443) or parsed.username or parsed.password
+        ):
+            raise ValueError("Not a Google Cloud Console HTTPS URL.")
+        query = parse_qs(parsed.query, keep_blank_values=True)
+    except ValueError as error:
+        raise WorkflowError("INVALID_CONSOLE_URL", "Copy the complete HTTPS address from Google Cloud Console.") from error
+    result: dict[str, str] = {}
+    for key in ("project", "location", "region"):
+        values = query.get(key, [])
+        if len(values) > 1 or values and not values[0]:
+            raise WorkflowError("AMBIGUOUS_CONSOLE_URL", "The console URL contains an empty or repeated scope parameter.")
+        if values:
+            destination = "location" if key == "region" else key
+            if destination in result and result[destination] != values[0]:
+                raise WorkflowError("SCOPE_MISMATCH", "The console URL contains conflicting locations.")
+            result[destination] = values[0]
+    match = re.fullmatch(
+        r"(?:/u/\d+)?/(?:agent-platform|vertex-ai)/agent-registry/agents/([^/]+)/([^/]+)(?:/overview)?/?",
+        parsed.path,
+    )
+    if match:
+        if result.get("location") not in (None, match[1]):
+            raise WorkflowError("SCOPE_MISMATCH", "The console URL contains conflicting locations.")
+        result.update(location=match[1], agent_id=match[2], resource_kind="registry")
+    elif require_agent:
+        raise WorkflowError("INVALID_AGENT_URL", "Open Agent Platform > Agent Registry > Agents, open the target agent, and copy its complete address.")
+    return result
+
+
+def matching_project(left: str, right: str) -> bool:
+    return left == right or left.isdecimal() != right.isdecimal()
+
+
 def load_inputs(args: argparse.Namespace) -> tuple[Scope, str | None, str]:
     config_path = private_path(args.config) if args.config else None
     config = read_object(config_path) if config_path else {}
-    allowed = {"project", "location", "credentials_file", "agent", "resource_kind"}
+    allowed = {"project", "location", "credentials_file", "agent", "agent_url", "project_url", "resource_kind"}
     if config.keys() - allowed:
         raise WorkflowError("INVALID_CONFIG", "The target configuration contains unknown fields.")
-    project = text_value(args.project or config.get("project"), "project")
-    location = text_value(args.location or config.get("location"), "location")
+    selector = args.agent or config.get("agent_url") or config.get("agent")
+    project_url = args.project_url or config.get("project_url")
+    derived = console_url_inputs(text_value(project_url, "project_url")) if project_url else {}
+    selector_from_url = False
+    if selector is not None:
+        selector = text_value(selector, "agent")
+        selector_values: dict[str, str] = {}
+        if selector.startswith(("https://", "http://")):
+            selector_values = console_url_inputs(selector, require_agent=True)
+            selector_from_url = True
+            selector = None
+        elif match := RESOURCE_PATTERN.fullmatch(selector):
+            selector_values = {"project": match[1], "location": match[2]}
+        for key in ("project", "location"):
+            if key in derived and key in selector_values:
+                compatible = matching_project(derived[key], selector_values[key]) if key == "project" else derived[key] == selector_values[key]
+                if not compatible:
+                    raise WorkflowError("SCOPE_MISMATCH", "The supplied console URLs or resources identify different environments.")
+        derived.update(selector_values)
+    project = text_value(args.project or config.get("project") or derived.get("project"), "project")
+    location = text_value(args.location or config.get("location") or derived.get("location"), "location")
+    if derived.get("project") and not matching_project(project, derived["project"]):
+        raise WorkflowError("SCOPE_MISMATCH", "The console URL or resource identifies a different project.")
+    if derived.get("location") not in (None, location):
+        raise WorkflowError("SCOPE_MISMATCH", "The console URL or resource identifies a different location.")
     if not re.fullmatch(r"[a-z][a-z0-9-]{4,61}[a-z0-9]|\d{6,}", project):
         raise WorkflowError("INVALID_PROJECT", "Provide a Google project ID or project number.")
     if not re.fullmatch(r"[a-z][a-z0-9-]{1,62}", location):
         raise WorkflowError("INVALID_LOCATION", "Provide the Google location explicitly.")
+    if selector_from_url:
+        selector = f"projects/{project}/locations/{location}/agents/{derived['agent_id']}"
     credential_value = args.credentials_file or config.get("credentials_file")
     credential_path = Path(text_value(str(credential_value) if credential_value else None, "credentials_file"))
     if not credential_path.is_absolute() and config_path and not args.credentials_file:
         credential_path = config_path.parent / credential_path
     credential_path = private_path(credential_path)
+    reject_shared_google_store(credential_path)
     if not credential_path.is_file():
-        raise WorkflowError("MISSING_CREDENTIALS", "The explicit Google credential file does not exist. No login or shared ADC fallback is attempted.")
-    selector = args.agent or config.get("agent")
-    if selector is not None:
-        selector = text_value(selector, "agent")
+        raise WorkflowError("MISSING_CREDENTIALS", "Select an existing credential file, or run the isolated Edge browser helper and supply its returned credential-file path. No shared ADC fallback is attempted.")
     inferred = None
     if selector and (match := RESOURCE_PATTERN.fullmatch(selector)):
         if match[2] != location:
@@ -800,16 +890,17 @@ def load_inputs(args: argparse.Namespace) -> tuple[Scope, str | None, str]:
 
 
 def parser() -> argparse.ArgumentParser:
-    root = argparse.ArgumentParser(description="Script-first Google AI agent management. Never starts a login.")
+    root = argparse.ArgumentParser(description="Script-first Google AI agent management. Accepts explicit files or isolated browser credentials from google_ai_environment.py.")
     commands = root.add_subparsers(dest="command", required=True)
     for command in ("discover", "send", "create", "delete"):
         item = commands.add_parser(command)
         item.add_argument("--config", type=Path)
         item.add_argument("--project")
+        item.add_argument("--project-url", help="Google Cloud Console URL from which to derive the project and any location.")
         item.add_argument("--location")
         item.add_argument("--credentials-file", type=Path)
         item.add_argument("--resource-kind", choices=("registry", "runtime"))
-        item.add_argument("--agent")
+        item.add_argument("--agent", "--agent-url", help="Exact name, full resource name, or copied Agent Registry console URL.")
         item.add_argument("--run-dir", type=Path)
         item.add_argument("--timeout", type=float, default=1800 if command == "create" else 180)
         if command == "send":
@@ -817,6 +908,7 @@ def parser() -> argparse.ArgumentParser:
             item.add_argument("--prompt", action="append")
             item.add_argument("--prompts-file", type=Path)
             item.add_argument("--expected-text")
+            item.add_argument("--transport", choices=("auto", "native", "a2a"), default="auto")
         if command in ("create", "delete"):
             item.add_argument("--apply", action="store_true")
             item.add_argument("--confirm")
@@ -850,6 +942,8 @@ def execute(args: argparse.Namespace) -> JsonObject:
                 raise WorkflowError("INVALID_PROMPTS", "The private prompt file must contain a non-empty JSON array.")
         prompts = build_prompts(args.count, values)
         request.update(prompts_hash=digest(prompts), expected_text=args.expected_text)
+        if args.transport != "auto":
+            request["transport"] = args.transport
     if args.command == "create":
         spec = validate_spec(read_object(private_path(args.spec)))
         if args.registry_wait < 0 or not args.registry_wait < float("inf"):
@@ -874,9 +968,14 @@ def execute(args: argparse.Namespace) -> JsonObject:
                 )
             if args.command == "send":
                 if journal.state["phase"] == "complete":
-                    return object_value(journal.state["result"], "Saved result")
+                    return {
+                        **object_value(journal.state["result"], "Saved result"),
+                        "responses": journal.state["responses"],
+                    }
                 target = api.resolve(text_value(selector, "agent"), kind)
-                return asyncio.run(send_batch(api, target, prompts, journal, args.timeout, args.expected_text))
+                return asyncio.run(send_batch(
+                    api, target, prompts, journal, args.timeout, args.expected_text, args.transport
+                ))
             if args.command == "create":
                 return create_agent(api, spec, journal, args.apply, args.confirm, args.timeout, args.registry_wait)
             return delete_agent(
@@ -891,6 +990,9 @@ def execute(args: argparse.Namespace) -> JsonObject:
             details = dict(error.details) if isinstance(error, WorkflowError) else {}
             details["run_dir"] = str(journal.directory)
             details["phase"] = journal.state["phase"]
+            if args.command == "send":
+                details["responses"] = journal.state["responses"]
+                details["display_name"] = journal.state.get("display_name", "")
             for key in ("runtime", "cloud_operation", "in_flight"):
                 if journal.state.get(key) is not None:
                     details[key] = journal.state[key]

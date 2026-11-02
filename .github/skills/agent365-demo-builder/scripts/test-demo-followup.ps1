@@ -182,13 +182,21 @@ try {
                 [pscustomobject]@{ id = 'attributes'; displayName = 'Attribute Assignment Administrator' }
             )
         }
-        if ($Method -eq 'GET' -and $Uri -match "/roleAssignments\?.*principalId eq 'admin-user'.*roleDefinitionId eq '([^']+)'") {
-            $id = $Matches[1]
-            return [pscustomobject]@{ value = @(
-                if ($script:HeldRoles.Contains($id)) {
+        if ($Method -eq 'GET' -and $Uri -match "/roleAssignments\?.*principalId eq 'admin-user'") {
+            return @(
+                foreach ($id in $script:HeldRoles) {
                     [pscustomobject]@{ id = "assignment-$id"; principalId = 'admin-user'; roleDefinitionId = $id; directoryScopeId = '/' }
                 }
-            ) }
+            )
+        }
+        if ($Method -eq 'GET' -and $Uri -match "/roleAssignmentScheduleInstances\?.*principalId eq 'admin-user'") {
+            return @(
+                foreach ($id in $script:HeldRoles) {
+                    [pscustomobject]@{ principalId = 'admin-user'; roleDefinitionId = $id; directoryScopeId = '/'
+                        assignmentType = 'Assigned'; memberType = 'Direct'; roleAssignmentOriginId = "assignment-$id"
+                        startDateTime = '2020-01-01T00:00:00Z'; endDateTime = $null }
+                }
+            )
         }
         if ($Method -eq 'POST' -and $Uri.EndsWith('/roleAssignments') -and
             $Body.principalId -eq 'admin-user' -and $Body.directoryScopeId -eq '/' -and $Body.roleDefinitionId -in 'ca', 'attributes') {

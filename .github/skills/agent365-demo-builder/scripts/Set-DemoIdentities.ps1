@@ -15,17 +15,20 @@ param([Parameter(Mandatory)][string]$Prefix, [string[]]$Persona = @('all'), [swi
       [switch]$RolesOnly, [switch]$WhatIf)
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
 if ($RolesOnly -and $SkipRoles) { throw '-RolesOnly cannot be combined with -SkipRoles.' }
+$Persona = @($Persona | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if ($RolesOnly -and ($Persona.Count -ne 1 -or $Persona -contains 'all')) {
+    throw '-RolesOnly requires exactly one explicit -Persona; it never defaults to all personas.'
+}
 $cfg = Read-DemoConfig $Prefix
-Assert-DemoTenant $cfg
 $pack = Get-DemoPack $cfg.pack
+foreach ($key in $Persona) {
+    if ($key -ne 'all' -and $key -notin @($pack.personas.key)) { throw "Unknown persona '$key'." }
+}
+Assert-DemoTenant $cfg
 $LOC = Get-DemoLocale -Locale $cfg.locale -Pack $cfg.pack
 $state = Read-DemoLabState $Prefix
 $G = 'https://graph.microsoft.com/v1.0'
 $tag = "a365lab:$Prefix"
-$Persona = @($Persona | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
-foreach ($key in $Persona) {
-    if ($key -ne 'all' -and $key -notin @($pack.personas.key)) { throw "Unknown persona '$key'." }
-}
 $secrets = Join-Path (Get-DemoLabDir $Prefix) 'secrets\personas.secret.txt'
 $log = [System.Collections.Generic.List[string]]::new()
 function Note([string]$m) { $log.Add($m); Write-Host "  $m" }
@@ -89,6 +92,7 @@ foreach ($p in $pack.personas) {
     $ids[$p.key] = $u.id
     $prev = if ($state.users.Contains($p.key)) { $state.users[$p.key] } else { $null }
     $state.users[$p.key] = [ordered]@{ upn = $upn; id = $u.id; leaver = [bool]$p.leaver; photo = $(if ($prev) { $prev.photo } else { $null }) }
+    if ($prev -and $prev.roleAssignments) { $state.users[$p.key]['roleAssignments'] = $prev.roleAssignments }
 }
 # --- managers -------------------------------------------------------------------------------------------------
 if (-not $RolesOnly) { Write-DemoLog $Prefix 'Identities: managers' }
@@ -151,28 +155,11 @@ foreach ($gd in $pack.groups | Where-Object { -not $RolesOnly }) {
 # --- directory roles ----------------------------------------------------------------------------------------------
 if (-not $SkipRoles) {
     Write-DemoLog $Prefix 'Identities: directory roles'
-    $defs = @(Invoke-DemoGraph GET "$G/roleManagement/directory/roleDefinitions?`$select=id,displayName" -All)
+    $defs = @(Get-DemoEntraRoleDefinitions)
     foreach ($p in $pack.personas) {
-        if (-not $ids.ContainsKey($p.key)) { continue }
-        foreach ($rn in @($p.entraRoles)) {
-            $matches = @($defs | Where-Object { $_.displayName -ceq $rn })
-            if ($matches.Count -ne 1) { throw "Directory role '$rn' has $($matches.Count) exact definitions; expected one." }
-            $def = $matches[0]
-            $assignmentUri = "$G/roleManagement/directory/roleAssignments?`$filter=principalId eq '$($ids[$p.key])' and roleDefinitionId eq '$($def.id)'"
-            $has = @((Invoke-DemoGraph GET $assignmentUri).value | Where-Object { $_.directoryScopeId -eq '/' })
-            if ($has.Count) { Note "role VERIFIED $($p.key) = $rn"; continue }
-            if ($WhatIf) { Note "would ASSIGN $($p.key) = $rn"; continue }
-            $r = Invoke-DemoGraph POST "$G/roleManagement/directory/roleAssignments" -Body @{ principalId = $ids[$p.key]; roleDefinitionId = $def.id; directoryScopeId = '/' } -NoThrow
-            if ($r -and $r.PSObject.Properties['error']) { throw "Role assignment failed for '$($p.key)' / '$rn' ($($r.status)): $($r.error)" }
-            $verified = $false
-            for ($attempt = 0; $attempt -lt 6; $attempt++) {
-                $readBack = @((Invoke-DemoGraph GET $assignmentUri).value | Where-Object { $_.directoryScopeId -eq '/' })
-                if ($readBack.Count) { $verified = $true; break }
-                Start-Sleep -Seconds 2
-            }
-            if (-not $verified) { throw "Role '$rn' for '$($p.key)' was assigned but not verified by read-back." }
-            Note "role ASSIGNED and VERIFIED $($p.key) = $rn"
-        }
+        if (-not $ids.ContainsKey($p.key) -or -not ($Persona -contains 'all' -or $Persona -contains $p.key) -or -not @($p.entraRoles | Where-Object { $_ }).Count) { continue }
+        Set-DemoPersonaEntraRoles -Prefix $Prefix -Persona $p -UserId $ids[$p.key] -Definitions $defs -State $state -WhatIf:$WhatIf |
+            ForEach-Object { Note $_ }
     }
     # The operator (adminUpn) needs these roles for the governance step: a Global Administrator does NOT have them
     # (custom security attributes, docs/demo-environment-prerequisites.md section 6). A role change reaches the
@@ -237,3 +224,4 @@ if ($pp.Count -and $cfg.copilotStudio.paygEnvironmentId) {
 }
 if (-not $WhatIf) { Save-DemoLabState $Prefix $state }
 Write-DemoLog $Prefix "Identities done ($(if ($WhatIf) { 'dry run' } else { 'applied' })): $($log.Count) line(s)"
+if ($RolesOnly -and -not $WhatIf) { Write-Host 'Sign out and back in as the persona before using the newly verified Entra roles.' }

@@ -15,7 +15,8 @@
     D10       access-package assignments and pending requests of the target agent removed.
     D6        reserve-name MCP pool: a base without a non-retired instance gets the next payload
               (New-DemoMcpRegistration.ps1 -Action Register), which the operator registers with the printed command.
-  -Demo selects demo codes (D1..D15) and/or the areas Registry, Entra, Mcp; default All.
+  -Demo selects demo codes (D1..D15) and/or the areas People, Registry, Entra, Mcp; default All.
+  People restores only missing persona Entra roles on existing users, not users, groups or licenses.
 .EXAMPLE
   pwsh -File .\Reset-DemoState.ps1 -Prefix cts2
 .EXAMPLE
@@ -51,6 +52,25 @@ function Get-Name([string]$Id) { if (-not $Id) { return '(none)' }; $r = Invoke-
 function Get-Res($R, [string]$Done) { if ($R.ok) { $Done } else { "FAILED $($R.status): $($R.error)" } }
 Write-DemoLog $Prefix "Demo reset ($mode) for: $($Demo -join ', ')"
 $orphans = @()
+
+# --- Persona directory roles (same pack data and assignment path as the identity build) ----------------------------
+if (Test-Sel @('People')) {
+    $roleDefinitions = @(Get-DemoEntraRoleDefinitions)
+    foreach ($p in @($pack.personas | Where-Object { -not $_.leaver -and @($_.entraRoles | Where-Object { $_ }).Count })) {
+        $userId = Get-UserId $p.key
+        $assignments = if ($userId) { @(Get-DemoPermanentEntraRoleAssignments $userId) } else { @() }
+        $roleChecks = @(Get-DemoPersonaEntraRoleStatus $p $roleDefinitions $assignments)
+        $missing = @($roleChecks | Where-Object { -not $_.verified })
+        if ($Apply -and $userId -and $missing.Count) {
+            Set-DemoPersonaEntraRoles -Prefix $Prefix -Persona $p -UserId $userId -Definitions $roleDefinitions -State $state | Write-Host
+            Write-Host 'Sign out and back in as the persona before using the newly verified Entra roles.'
+        }
+        foreach ($roleCheck in $roleChecks) {
+            $result = if (-not $userId) { 'MISSING user; not recreated' } elseif ($roleCheck.verified) { 'verified; no change' } elseif ($Apply) { 'assigned and verified' } else { 'would assign and verify' }
+            Add-Action "$($p.key): Entra role $($roleCheck.roleName)" $(if ($roleCheck.verified) { 'verified' } else { 'MISSING' }) 'active, permanent, directory scope /' $result
+        }
+    }
+}
 
 # --- 1. Registry owners and blocks ---------------------------------------------------------------------------------
 foreach ($a in @($pack.agents)) {

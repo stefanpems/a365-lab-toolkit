@@ -1,7 +1,5 @@
 {
-  "project": "YOUR_PROJECT_ID",
-  "location": "YOUR_REGION",
+  "agent_url": "https://console.cloud.google.com/agent-platform/agent-registry/agents/YOUR_REGION/YOUR_REGISTRY_ID/overview?project=YOUR_PROJECT_ID",
   "credentials_file": "C:\\private\\google\\session.credentials.json",
-  "resource_kind": "registry",
-  "agent": "YOUR_AGENT_RESOURCE_NAME_OR_DISPLAY_NAME"
+  "resource_kind": "registry"
 }

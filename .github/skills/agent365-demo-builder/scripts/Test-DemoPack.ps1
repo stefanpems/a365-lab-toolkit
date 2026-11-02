@@ -164,6 +164,21 @@ foreach ($loc in $locales) {
     # Personas: names, aliases (diacritics removed), uniqueness; the reports monitor filters officers by department.
     $aliases = @{}
     foreach ($p in $packDef.personas) {
+        $roleNames = @($p.entraRoles | Where-Object { $_ })
+        $rolePath = "pack.personas.$($p.key).entraRoles"
+        foreach ($duplicate in @($roleNames | Group-Object | Where-Object Count -gt 1)) {
+            Add-V $loc 'error' $rolePath "duplicate directory role '$($duplicate.Name)'"
+        }
+        foreach ($roleName in $roleNames) {
+            if ($script:DemoEntraRoleTemplateIds.Contains($roleName) -and $script:DemoEntraRoleTemplateIds.Keys -cnotcontains $roleName) {
+                Add-V $loc 'error' $rolePath "built-in role '$roleName' must use its canonical English name"
+            }
+        }
+        if ($packDef.id -eq 'agent-governance' -and $p.key -eq 'identityAdmin') {
+            foreach ($requiredRole in $script:DemoEntraRoleTemplateIds.Keys) {
+                if ($roleNames -cnotcontains $requiredRole) { Add-V $loc 'error' $rolePath "missing required built-in role '$requiredRole'" }
+            }
+        }
         $lp = $L.personas[$p.key]
         if (-not $lp) { Add-V $loc 'error' "personas.$($p.key)" 'missing'; continue }
         Test-Need $loc $lp "personas.$($p.key)" @('givenName', 'surname', 'jobTitle', 'department')

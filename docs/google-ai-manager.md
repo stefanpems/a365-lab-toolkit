@@ -12,16 +12,39 @@ Its three skills share one deterministic [Python CLI](../.github/skills/google-a
 
 Select **Google AI Manager** in Copilot and request, for example, **"Send 3 test prompts to agent Example Assistant"**. With no supplied text, the script sends **"Who are you and what can you do?"** three times. With no count, it sends that prompt once.
 
-## First step: identify the environment
+## Fixed onboarding order
 
-Every operation needs the Google project ID/number, location and an explicit credential-file path. Existing agents also need an exact display name, ID or full resource name and the resource kind:
+The manager follows the shared [operator guide](../.github/skills/google-ai-agent-test-prompts/references/operator-guide.md):
+
+1. Check the computer/interpreter for required tools before collecting cloud parameters. Explain missing installations first and request approval; never install silently.
+2. Before asking for values, give detailed console-navigation instructions for the selected action.
+3. Request complete agent/project-console URLs wherever possible and derive their project, region and resource ID. Ask only for missing values.
+4. Explicitly offer **an existing credential file** or **interactive isolated Edge authentication**.
+5. Execute the action with the selected explicit credentials and retain confirmation gates.
+6. Always show **every complete received prompt response in chat**, including repeated replies and partial results when a later prompt fails. Summaries and links alone are insufficient.
+
+For existing agents, open Google Cloud Console, select the project, navigate to **Agent Platform > Agent Registry > Agents**, open each target's details, and copy the full browser address with Ctrl+L/Ctrl+C. One address normally supplies the project, location and registry ID.
+
+Explicit parameters and private configuration remain supported. Existing agents may also be identified by exact display name, ID or full resource name:
 
 - `registry`: `projects/PROJECT_ID/locations/REGION/agents/REGISTRY_ID`
 - `runtime`: `projects/PROJECT_ID/locations/REGION/reasoningEngines/RUNTIME_ID`
 
 The two IDs are not interchangeable. Exact display names can be ambiguous; the script lists candidates rather than choosing the first match. Runtime names are resolved inside the requested project and location.
 
-## One-time setup
+## Check prerequisites before setup
+
+The checker needs no third-party Python packages, performs no login and installs nothing. Its PowerShell wrapper can report missing Python before attempting to execute Python:
+
+```powershell
+& .github\skills\google-ai-agent-test-prompts\scripts\Test-GoogleAiEnvironment.ps1
+# Or select an already known dedicated interpreter explicitly:
+& .github\skills\google-ai-agent-test-prompts\scripts\Test-GoogleAiEnvironment.ps1 -PythonPath "<Python executable>"
+```
+
+Its JSON lists installed package versions, missing base prerequisites, additional browser prerequisites and official installation links. A missing dependency returns exit `2` with `installation_required`. File authentication does not require Google Cloud CLI or Edge. Browser authentication additionally requires both; rerun the check with `-AuthMode browser` after the user selects it.
+
+Only after explaining missing dependencies and obtaining approval, create/install into a dedicated environment:
 
 Use Python 3.11 or later; the workflow is tested with Python 3.12. Create a dedicated environment rather than changing the repository's shared Python environment:
 
@@ -35,9 +58,21 @@ Copy the placeholder-only [target configuration](../.github/skills/google-ai-age
 
 The scripts accept an explicit Google credential file supported by `google-auth`, such as a service-account, workforce/workload federation or separately obtained user-ADC file. Treat it as sensitive and trusted input. Use an existing credential file; do not create long-lived keys merely to use this tool.
 
-No command starts a login, switches a CLI account/project, or reads the shared default ADC location. The credential file is loaded explicitly, and SDK calls receive a process-only, run-specific context. Google credentials are not forwarded to arbitrary agent-card URLs.
+Action commands load the selected credential file explicitly; they never fall back to shared default ADC or start a hidden login. SDK calls receive a process-only, run-specific context. Google credentials are not forwarded to arbitrary agent-card URLs.
 
-Missing/expired credentials require an operator decision. Any interactive sign-in must follow the user's session-isolation and browser policy; device-code authentication is not part of this workflow.
+### Fully supported browser authentication
+
+After the user explicitly chooses browser mode, use the committed standard-library helper in a **separate process**:
+
+```powershell
+& $python .github\skills\google-ai-agent-test-prompts\scripts\google_ai_environment.py auth-browser --project "<derived project>" --auth-dir "C:\private\new-google-auth-session" --edge-profile-directory "<approved existing Work profile directory>"
+```
+
+The helper discovers Google Cloud CLI and Edge (or accepts `--gcloud-path` / `--edge-path`), launches only external Edge with the explicitly approved existing Work profile, waits for interactive OAuth, sets the quota project only in that dedicated credential store, and returns `credentials_file`.
+
+Pass **that returned file path** unchanged to `--credentials-file` on all discover, send, create and delete calls. Reuse it for all agents and both preview/apply calls in the request; do not repeat login per prompt. Browser-generated user ADC and existing supported credential files use the same action implementation.
+
+Isolation applies to Google configuration and token files; it does not mean creating an InPrivate, guest or temporary Edge profile. No shared accounts or token caches are switched, copied or overwritten. Browser mode requires a new directory; both modes reject shared default Google credential-store paths. Missing/expired credentials or a failed browser flow require an explicit operator decision; there is no device-code fallback.
 
 ## Commands
 
@@ -48,18 +83,26 @@ $script = ".github\skills\google-ai-agent-test-prompts\scripts\google_ai_agents.
 & $python $script discover --config "C:\private\google-ai.local.json"
 & $python $script send --config "C:\private\google-ai.local.json" --count 3
 & $python $script send --config "C:\private\google-ai.local.json" --prompt "Introduce yourself." --prompt "List your capabilities."
+# Minimal input: the script extracts project, location and registry ID.
+& $python $script send --agent-url "<complete agent console URL>" --credentials-file "C:\private\session.credentials.json" --count 3
 ```
 
 Custom prompt arrays belong in private JSON files passed with `--prompts-file`. One custom text is repeated X times; multiple texts must match X, or define the count when X is omitted. A batch retains one conversation. Optional `--expected-text` checks a case-insensitive substring; otherwise success means a non-empty textual response, not an LLM-based quality judgment.
 
-Registry A2A agents use the ADK remote-agent client from the original invocation workflow. Managed ADK runtimes without A2A use the native session and streaming-query APIs. Unsupported runtimes fail explicitly.
+Default `--transport auto` prefers native session/query APIs whenever the resolved managed ADK agent supports them, including registry entries that also advertise A2A. This avoids dependence on inconsistent A2A card-interface routes. Otherwise registry A2A agents use the ADK remote-agent client. Explicit `--transport native` and `--transport a2a` are available. Transport is selected before sending; failures never trigger automatic replay through another transport.
+
+For multiple agents, run one complete batch per URL with the same explicit credentials and separate private run directories. Display every returned answer for every agent, not just counts.
 
 ### Create
 
 Fill a private copy of [the creation specification](../.github/skills/google-ai-agent-create/assets/agent.example.json). Supply an available Gemini model and an existing runtime service account with the required permissions.
 
+Before collecting these values, guide the user to the project's dashboard/settings and request its complete URL; to Model Garden/deployment details for the exact model ID; and to IAM & Admin > Service Accounts for the existing runtime account's Email. Ask for the region only if it is absent from the URL. The new display name/instructions are user choices; the internal ADK identifier is derived unless explicitly supplied.
+
 ```powershell
 & $python $script create --config "C:\private\google-ai.local.json" --spec "C:\private\agent.local.json"
+# A project-console URL can replace a separate project ID:
+& $python $script create --project-url "<complete project console URL>" --location "<region if missing>" --credentials-file "C:\private\session.credentials.json" --spec "C:\private\agent.local.json"
 # After reviewing and approving the preview:
 & $python $script create --config "C:\private\google-ai.local.json" --spec "C:\private\agent.local.json" --apply --confirm "Example Assistant" --run-dir "C:\private\the-preview-run"
 ```
@@ -80,12 +123,14 @@ Child resources are retained by default. `--force` must be separately reviewed a
 
 ## Results, failures and repeatability
 
-- JSON stdout is a short status summary, not a dump of replies or tokens.
+- Prompt-command JSON stdout includes complete replies in `responses`, with agent, prompt indexes/text, timings and status. Errors after partial completion include replies already received. Treat stdout as private transcript data; it contains no credential contents.
+- The Copilot agent always presents those full replies directly in chat. Transcript links and summary tables are supplementary, not replacements.
 - Full prompt/response pairs and durable operation state are in `state.json` under a private per-run directory. The default root is the user's `~\.copilot\google-ai-manager\runs` directory. Choose another private location with `--run-dir`.
 - Exit `0`: completed or preview awaiting confirmation; `2`: explicit error; `3`: expected-text check failed; `4`: a cloud operation or catalog synchronization is still pending.
 - Reuse a run directory to poll a pending operation without submitting another create/delete. A request fingerprint prevents reusing it for different input.
 - Completed prompt batches are not resent. Interrupted batches are refused rather than replayed, because the service may already have processed a message.
 - Read-only API calls retry selected transient HTTP errors. Mutating requests and prompt sends do not retry automatically.
+- Atomic private-state updates retry only Windows file-contention errors, at most five local replace attempts with bounded backoff and explicit warnings. These retries never repeat a Google request; persistent or other permission errors still fail explicitly.
 - A definite API rejection leaves a mutation eligible for an explicit retry after the operator fixes the cause. Timeouts and unknown server outcomes remain uncertain and are not replayed.
 - An uncertain mutation is not reported as success. Preserve its run directory and inspect the operation before deciding what to do next.
 - Runtime deletion is verified by HTTP 404; automatic catalog synchronization may take longer.

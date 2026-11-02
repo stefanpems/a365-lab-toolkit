@@ -11,6 +11,8 @@ starting point, **not** the objective. The lab is **framework-agnostic by design
 For Google environments, the separate **[Google AI Manager](docs/google-ai-manager.md)**
 Copilot agent provides script-first test prompts, managed ADK agent creation, and confirmed deletion.
 It requires explicit Google targeting and credentials; private runtime data is excluded from Git.
+Guided prerequisite checks and console-URL inputs precede file or isolated Edge authentication;
+prompt requests always include the complete received replies.
 
 ## What this lab is
 

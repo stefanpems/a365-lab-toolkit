@@ -1,13 +1,17 @@
 ---
 name: google-ai-agent-delete
-description: 'Delete a managed Google AI agent after exact target discovery and human confirmation. Use for delete, remove or tear down a Google agent. First identify project, location, explicit credential file and registry/runtime selector. Resolve the real managed runtime, preview it, then use the deterministic script; child-resource deletion requires explicit force approval.'
+description: 'Delete a managed Google AI agent after exact discovery and human confirmation. Use for delete, remove or tear down. First check prerequisites, explain how to copy its complete console URL, and explicitly choose credential-file or isolated Edge authentication. Resolve the managed runtime, preview it, and confirm deletion; child-resource deletion needs separate force approval.'
 ---
 
 # Google AI Agent Delete
 
-## Identify first
+## Mandatory shared workflow
 
-Obtain the project ID/number, location, explicit credential-file path, exact agent selector and resource kind. Use a private copy of [the target example](../google-ai-agent-test-prompts/assets/target.example.json).
+Follow the [operator guide](../google-ai-agent-test-prompts/references/operator-guide.md): check prerequisites first and explain missing installations; give detailed Google Console navigation **before** the parameter form; then explicitly offer credential-file or isolated Edge authentication.
+
+Explain how to select the project, open Agent Platform > Agent Registry > Agents, open the target and copy its complete address. Ask for **one agent URL**, not separate project, region and ID fields. The script extracts them. Private [target configuration](../google-ai-agent-test-prompts/assets/target.example.json) is an alternative.
+
+For browser mode, use the committed helper and pass its returned `credentials_file` to preview and apply. This is the same fully supported action path as existing-file authentication.
 
 A registry entry is **not** the runtime. The script maps it to a managed `reasoningEngines` resource in the selected project/location. Unsupported or cross-project references are refused. Never delete an arbitrary external endpoint or a catalog record as a substitute for deleting the runtime.
 
@@ -16,7 +20,7 @@ A registry entry is **not** the runtime. The script maps it to a managed `reason
 Use the shared [CLI](../google-ai-agent-test-prompts/scripts/google_ai_agents.py) and [dependencies](../google-ai-agent-test-prompts/scripts/requirements.txt).
 
 ```powershell
-python .github\skills\google-ai-agent-test-prompts\scripts\google_ai_agents.py delete --config "C:\private\google-ai.local.json"
+python .github\skills\google-ai-agent-test-prompts\scripts\google_ai_agents.py delete --agent-url "<complete agent console URL>" --credentials-file "C:\private\session.credentials.json"
 ```
 
 Show the full runtime name, project, location and `force` setting. Ask the user to confirm this exact target with a structured control.

@@ -27,6 +27,15 @@ Demo Builder helpers (`_demo-common.ps1`, `_demo-entra.ps1`) plus `scripts/_demo
 managed by the Demo Builder's `New-DemoMcpRegistration.ps1` (Register, Confirm, Retire); the reset prepares the next
 pool name and tells what to do with a consumed instance.
 
+The People pre-flight checks every persona's `pack.json` Entra roles, one named OK/KO row per role. This includes
+`identityAdmin` (P2): Global Secure Access Administrator, Identity Governance Administrator and Lifecycle Workflows
+Administrator alongside its existing roles. It uses the Demo Builder's shared template-ID resolution and requires
+active permanent direct directory-scope `/` assignments, not eligibility, activation, time-bound or scoped access.
+`Reset-DemoState.ps1 -Demo People` previews missing-role repairs; `-Apply` uses the same assignment/read-back helper
+on existing users only, without recreating users/groups or assigning licenses. Sign out and back in afterwards.
+For only this one existing persona, ask the Demo Builder
+`<prefix>: re-apply the Entra roles of identityAdmin and verify them`; do not run a broad reset or build.
+
 ## Rules (lessons of the reference lab)
 
 - **Always pre-flight first, dry run second, `-Apply` third, pre-flight again.** Run the full reset the evening before

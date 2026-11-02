@@ -97,6 +97,26 @@ The remaining operator-slot ids are stable: `slot-1`, `slot-3`, `slot-4`, `slot-
 
 ## Scripts (`scripts/`)
 
+### Scoped persona-role repair in an existing lab
+
+The exact request `<prefix>: re-apply the Entra roles of identityAdmin and verify them` is NOT a build/resume.
+Use the stored lab configuration and its isolated authentication context; do not enter the build interview or run
+any phase. Run `Set-DemoIdentities.ps1 -Prefix <prefix> -Persona identityAdmin -RolesOnly -WhatIf`, then the same
+command without `-WhatIf`, then `Get-DemoPersonas.ps1 -Prefix <prefix> -Persona identityAdmin -AsJson`.
+The existing `aiAdmin` role-only repair uses the same path with `-Persona aiAdmin`.
+`-RolesOnly` requires exactly one explicit existing persona and refuses omitted, `all` or multiple selections.
+It adds only missing active permanent direct assignments at directory scope `/`, verifies them by read-back and
+persists their evidence in `state.json`; it never creates users/groups, assigns licenses, changes user properties,
+managers, other personas or operator roles. A missing user is an error, not permission to build.
+Finish by reminding the operator to sign out and back in as the persona.
+
+For `identityAdmin` (P2), `pack.json` preserves its existing roles and includes Global Secure Access Administrator,
+Identity Governance Administrator and Lifecycle Workflows Administrator. `_demo-roles.ps1` resolves these three by
+built-in template ID and shares the active/permanent/root-scope checks with reporting and the People pre-flight/reset.
+An eligible, activated, time-bound or scoped role is not equivalent. Role-assignment schedule-instance reads must be
+authorized; a failed read is an error, never proof of permanence. Run `test-demo-persona-roles.ps1` and
+`test-demo-followup.ps1` after changing this path. No tenant verification is implied by these offline tests.
+
 ### Standard inventory, at hand-over and on demand
 
 Run `Get-DemoInventory.ps1 -Prefix <p>` (or `Invoke-DemoPhase.ps1 -Prefix <p> -Phase report`).

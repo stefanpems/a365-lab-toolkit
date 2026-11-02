@@ -8,6 +8,7 @@ $script:WizardScriptsDir = Join-Path $script:DemoRepoRoot '.github\skills\agent3
 # Directory roles the operator (demo-config adminUpn) needs on top of Global Administrator (custom security attributes).
 $script:DemoOperatorEntraRoles = @('Attribute Definition Administrator', 'Attribute Assignment Administrator')
 . (Join-Path $script:WizardScriptsDir 'Test-A365Names.ps1')
+. (Join-Path $PSScriptRoot '_demo-roles.ps1')
 
 # --------------------------------------------------------------------------------------------- demo pack + locale
 function Get-DemoPackDir([string]$Pack = 'agent-governance') {
