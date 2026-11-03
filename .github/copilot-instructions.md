@@ -1,12 +1,18 @@
 # Workspace Language Policy
 
-- Always write in English in every file persisted to this workspace, including source code, scripts,
-  agent definitions, skills, instructions, prompts, documentation, notes, logs, configuration files,
-  generated artifacts, comments, test data, and commit-related text prepared in files.
-- Apply this rule to both new content and modifications. Do not translate unrelated existing content
-  unless the task requires it.
-- When a word or phrase is valid in multiple languages and one of them is English, prefer its English
-  meaning and usage in workspace content.
+- The English-only requirement applies only to user-requested creation or modification of this workspace's
+  procedures and their implementation. Write the related source code, scripts, agent definitions, skills,
+  instructions, prompts, documentation, notes, logs, configuration files, comments, test data, and
+  commit-related text prepared in files in English.
+- The requirement does not apply to files or folders produced by agents' runtime procedures when users
+  interact with those procedures to create or configure resources. Preserve the language and names requested
+  by the user. For example, Demo Builder may generate a demo environment in Spanish, and Lab Builder may use
+  a French name supplied by the user for an agent.
+- All files and folders under the workspace-root `generated` directory, including their names and contents,
+  are exempt from the English-only requirement, regardless of how they are created or modified.
+- Do not translate unrelated existing content unless the task requires it.
+- When writing content subject to the English-only requirement, prefer the English meaning and usage of
+  a word or phrase that is valid in multiple languages.
 - Prefer replying in the requester's language in chat, including questions, structured input controls,
-  progress updates, warnings, errors, and final responses. Chat language does not change the
-  English-only rule for persisted workspace content.
+  progress updates, warnings, errors, and final responses. Chat language does not change the scope or
+  exceptions of this policy.
