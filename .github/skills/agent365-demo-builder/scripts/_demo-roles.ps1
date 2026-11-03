@@ -29,26 +29,42 @@ function Get-DemoEntraRoleName($Definition) {
     return [string]$Definition.displayName
 }
 
-function Get-DemoPermanentEntraRoleAssignments([string]$UserId) {
+function Get-DemoPermanentEntraRoleAssignments([string]$UserId, [hashtable]$Config) {
     if (-not $UserId) { throw 'A persona user ID is required for directory-role read-back.' }
+    $readToken = $null
+    if ($Config) {
+        $readToken = Get-DemoMsalToken -TenantId $Config.tenantId -Prefix $Config.prefix -LoginHint $Config.adminUpn `
+            -Scopes 'https://graph.microsoft.com/RoleManagement.Read.Directory' -CacheName 'msal_role_read_cache.json' -SilentOnly
+        if (-not $readToken) {
+            throw "Role read-back requires a cached isolated MSAL sign-in with RoleManagement.Read.Directory for lab '$($Config.prefix)'. Sign in with Get-DemoMsalToken and CacheName msal_role_read_cache.json before retrying."
+        }
+    }
     $base = 'https://graph.microsoft.com/v1.0/roleManagement/directory'
     $filter = "principalId eq '$($UserId.Replace("'", "''"))'"
-    $active = @(Invoke-DemoGraph GET "$base/roleAssignments?`$filter=$filter&`$select=id,principalId,roleDefinitionId,directoryScopeId,appScopeId" -All)
+    # Directory role assignments can omit appScopeId and reject it in $select.
+    $active = @(Invoke-DemoGraph GET "$base/roleAssignments?`$filter=$filter" -Token $readToken -All)
     # roleAssignments alone also contains active time-bound assignments. Require a matching permanent,
     # directly assigned schedule instance; eligibility, PIM activation and scoped assignments are not equivalent.
     # A denied schedule read must fail, never silently assume permanence.
-    $instances = @(Invoke-DemoGraph GET "$base/roleAssignmentScheduleInstances?`$filter=$filter&`$select=principalId,roleDefinitionId,directoryScopeId,appScopeId,assignmentType,memberType,roleAssignmentOriginId,startDateTime,endDateTime" -All)
+    $instances = @(Invoke-DemoGraph GET "$base/roleAssignmentScheduleInstances?`$filter=$filter&`$select=principalId,roleDefinitionId,directoryScopeId,appScopeId,assignmentType,memberType,roleAssignmentOriginId,startDateTime,endDateTime" -Token $readToken -All)
     $now = [datetimeoffset]::UtcNow
     foreach ($assignment in $active) {
-        if (-not $assignment.id -or $assignment.principalId -ne $UserId -or $assignment.directoryScopeId -ne '/' -or $assignment.appScopeId) { continue }
+        $appScope = if ($assignment -is [Collections.IDictionary]) { $assignment['appScopeId'] }
+                    elseif ($assignment.PSObject.Properties['appScopeId']) { $assignment.appScopeId }
+        if (-not $assignment.id -or $assignment.principalId -ne $UserId -or $assignment.directoryScopeId -ne '/' -or $appScope) { continue }
         foreach ($instance in $instances) {
+            $instanceAppScope = if ($instance -is [Collections.IDictionary]) { $instance['appScopeId'] }
+                               elseif ($instance.PSObject.Properties['appScopeId']) { $instance.appScopeId }
             $hasEnd = if ($instance -is [Collections.IDictionary]) { $instance.Contains('endDateTime') } else { $null -ne $instance.PSObject.Properties['endDateTime'] }
+            $hasStart = if ($instance -is [Collections.IDictionary]) { $instance.Contains('startDateTime') } else { $null -ne $instance.PSObject.Properties['startDateTime'] }
             $start = [datetimeoffset]::MinValue
+            # A matching active assignment proves an explicit null start in a legacy permanent schedule is active.
             if ($instance.principalId -eq $UserId -and $instance.roleDefinitionId -eq $assignment.roleDefinitionId -and
                 $instance.roleAssignmentOriginId -eq $assignment.id -and $instance.directoryScopeId -eq '/' -and
-                -not $instance.appScopeId -and $instance.assignmentType -eq 'Assigned' -and $instance.memberType -eq 'Direct' -and
+                -not $instanceAppScope -and $instance.assignmentType -eq 'Assigned' -and $instance.memberType -eq 'Direct' -and
                 $hasEnd -and $null -eq $instance.endDateTime -and
-                [datetimeoffset]::TryParse([string]$instance.startDateTime, [ref]$start) -and $start -le $now) {
+                $hasStart -and ($null -eq $instance.startDateTime -or
+                    ([datetimeoffset]::TryParse([string]$instance.startDateTime, [ref]$start) -and $start -le $now))) {
                 $assignment
                 break
             }
@@ -73,8 +89,8 @@ function Get-DemoPersonaEntraRoleStatus($Persona, [object[]]$Definitions, [objec
 }
 
 function Set-DemoPersonaEntraRoles {
-    param([string]$Prefix, $Persona, [string]$UserId, [object[]]$Definitions, $State, [switch]$WhatIf)
-    $assignments = @(Get-DemoPermanentEntraRoleAssignments $UserId)
+    param([string]$Prefix, $Persona, [string]$UserId, [object[]]$Definitions, $State, [switch]$WhatIf, [hashtable]$Config)
+    $assignments = @(Get-DemoPermanentEntraRoleAssignments $UserId -Config $Config)
     foreach ($name in @($Persona.entraRoles | Where-Object { $_ } | Select-Object -Unique)) {
         $definition = Resolve-DemoEntraRoleDefinition $name $Definitions
         $held = @($assignments | Where-Object { $_.roleDefinitionId -eq $definition.id }) | Select-Object -First 1
@@ -87,7 +103,7 @@ function Set-DemoPersonaEntraRoles {
             $writeError = $result -and $result.PSObject.Properties['error']
             if ($writeError -and $result.status -ne 409) { throw "Role assignment failed for '$($Persona.key)' / '$name' ($($result.status)): $($result.error)" }
             for ($attempt = 0; $attempt -lt 6; $attempt++) {
-                $assignments = @(Get-DemoPermanentEntraRoleAssignments $UserId)
+                $assignments = @(Get-DemoPermanentEntraRoleAssignments $UserId -Config $Config)
                 $held = @($assignments | Where-Object { $_.roleDefinitionId -eq $definition.id }) | Select-Object -First 1
                 if ($held) { break }
                 if ($attempt -lt 5) { Start-Sleep -Seconds 2 }

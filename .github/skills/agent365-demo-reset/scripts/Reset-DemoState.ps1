@@ -58,11 +58,11 @@ if (Test-Sel @('People')) {
     $roleDefinitions = @(Get-DemoEntraRoleDefinitions)
     foreach ($p in @($pack.personas | Where-Object { -not $_.leaver -and @($_.entraRoles | Where-Object { $_ }).Count })) {
         $userId = Get-UserId $p.key
-        $assignments = if ($userId) { @(Get-DemoPermanentEntraRoleAssignments $userId) } else { @() }
+        $assignments = if ($userId) { @(Get-DemoPermanentEntraRoleAssignments $userId -Config $cfg) } else { @() }
         $roleChecks = @(Get-DemoPersonaEntraRoleStatus $p $roleDefinitions $assignments)
         $missing = @($roleChecks | Where-Object { -not $_.verified })
         if ($Apply -and $userId -and $missing.Count) {
-            Set-DemoPersonaEntraRoles -Prefix $Prefix -Persona $p -UserId $userId -Definitions $roleDefinitions -State $state | Write-Host
+            Set-DemoPersonaEntraRoles -Prefix $Prefix -Persona $p -UserId $userId -Definitions $roleDefinitions -State $state -Config $cfg | Write-Host
             Write-Host 'Sign out and back in as the persona before using the newly verified Entra roles.'
         }
         foreach ($roleCheck in $roleChecks) {

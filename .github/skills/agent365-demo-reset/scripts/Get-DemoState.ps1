@@ -58,7 +58,7 @@ if (Test-Sel @('People')) {
         $u = Invoke-DemoGraph GET "$G/v1.0/users/$([uri]::EscapeDataString((Get-Upn $p.key)))?`$select=id,accountEnabled,assignedLicenses" -NoThrow -MaxRetries 1
         $exists = -not (Test-Err $u)
         if ($p.leaver) { Add-Check (@($p.demos) -join ',') "leaver $(Get-Upn $p.key)" 'hard-deleted after creating and sharing the agent' $(if ($exists) { 'still exists' } else { 'gone' }) 'INFO'; continue }
-        $roleAssignments = if ($exists -and @($p.entraRoles | Where-Object { $_ }).Count) { @(Get-DemoPermanentEntraRoleAssignments ([string]$u.id)) } else { @() }
+        $roleAssignments = if ($exists -and @($p.entraRoles | Where-Object { $_ }).Count) { @(Get-DemoPermanentEntraRoleAssignments ([string]$u.id) -Config $cfg) } else { @() }
         foreach ($roleCheck in @(Get-DemoPersonaEntraRoleStatus $p $roleDefinitions $roleAssignments)) {
             $roleStatus = if ($exists -and $roleCheck.verified) { 'OK' } else { 'KO' }
             $actual = if ($roleStatus -eq 'OK') { "VERIFIED $($roleCheck.assignmentId)" } elseif (-not $exists) { 'MISSING (user not found)' } else { "MISSING $($roleCheck.detail)".Trim() }

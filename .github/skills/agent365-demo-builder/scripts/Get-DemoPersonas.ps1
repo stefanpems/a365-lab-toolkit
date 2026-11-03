@@ -33,7 +33,7 @@ $defs = @{}
 foreach ($d in $definitions) { $defs[[string]$d.id] = Get-DemoEntraRoleName $d }
 $leaverKeys = @($pack.agents | Where-Object { $_.leaver } | ForEach-Object { [string]$_.leaver })
 function Format-Roles([string]$UserId, $PlannedPersona) {
-    $assignments = @(Get-DemoPermanentEntraRoleAssignments $UserId)
+    $assignments = @(Get-DemoPermanentEntraRoleAssignments $UserId -Config $cfg)
     $assigned = @($assignments | ForEach-Object { $defs[[string]$_.roleDefinitionId] } | Where-Object { $_ } | Sort-Object -Unique)
     $miss = @((Get-DemoPersonaEntraRoleStatus $PlannedPersona $definitions $assignments) | Where-Object { -not $_.verified } | ForEach-Object { $_.roleName })
     $txt = if ($assigned.Count) { $assigned -join ', ' } else { 'none' }

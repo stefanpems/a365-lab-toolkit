@@ -57,6 +57,7 @@ $definitions = @(
 )
 $script:RoleDefinitions = $definitions
 $script:RoleCalls = [Collections.Generic.List[object]]::new()
+$script:RoleTokenCalls = [Collections.Generic.List[object]]::new()
 $script:Active = [Collections.Generic.List[object]]::new()
 $script:Instances = [Collections.Generic.List[object]]::new()
 $script:DemoG = 'https://graph.microsoft.com'
@@ -71,6 +72,15 @@ function Get-DemoUpn($Locale, $Config, [string]$Key) {
 }
 function Write-DemoLog { }
 function Start-Sleep { }
+function Get-DemoMsalToken {
+    param([string]$TenantId, [string[]]$Scopes, [string]$Prefix, [string]$LoginHint, [string]$CacheName, [switch]$SilentOnly)
+    if ($TenantId -ne 'fixture-tenant' -or $Prefix -ne 'fixture' -or $LoginHint -ne 'operator@example.test' -or
+        $Scopes.Count -ne 1 -or $Scopes[0] -ne 'https://graph.microsoft.com/RoleManagement.Read.Directory' -or
+        $CacheName -ne 'msal_role_read_cache.json' -or -not $SilentOnly) { throw 'Unexpected role-read authentication context or interactive sign-in.' }
+    $script:RoleTokenCalls.Add([pscustomobject]@{ tenantId = $TenantId; prefix = $Prefix; cacheName = $CacheName; silentOnly = [bool]$SilentOnly })
+    if (-not $script:RoleTokenAvailable) { return $null }
+    return 'fixture-role-read-token'
+}
 function Add-HeldRole([string]$Name) {
     $definition = Resolve-DemoEntraRoleDefinition $Name $script:RoleDefinitions
     $script:NextAssignment++
@@ -82,7 +92,10 @@ function Add-HeldRole([string]$Name) {
 }
 function Invoke-DemoGraph {
     param($Method, $Uri, $Body, $Token, [switch]$NoThrow, [switch]$All, [int]$MaxRetries)
-    $script:RoleCalls.Add([pscustomobject]@{ method = $Method; uri = $Uri; body = $Body; all = [bool]$All })
+    $script:RoleCalls.Add([pscustomobject]@{ method = $Method; uri = $Uri; body = $Body; all = [bool]$All; token = [string]$Token })
+    if ($Method -eq 'GET' -and $Uri -match '/roleAssignments\?.*[$]select=[^&]*appScopeId') {
+        throw '400: appScopeId cannot be selected on directory role assignments.'
+    }
     if ($Method -eq 'GET' -and $Uri -match '/users/([^?]+)\?') {
         $reference = [uri]::UnescapeDataString($Matches[1])
         if ($reference -notin 'identity-user', 'identity@example.test') { throw "Unexpected other-user read: $reference" }
@@ -112,13 +125,14 @@ function Invoke-DemoGraph {
     throw "Unexpected request in offline role test: $Method $Uri"
 }
 function New-Case {
-    $script:RoleCalls.Clear(); $script:Active.Clear(); $script:Instances.Clear()
+    $script:RoleCalls.Clear(); $script:RoleTokenCalls.Clear(); $script:Active.Clear(); $script:Instances.Clear()
+    $script:RoleTokenAvailable = $true
     $script:NextAssignment = 0; $script:ConfigReads = 0; $script:TenantChecks = 0
     $script:UserExists = $true; $script:FailWrite = $false; $script:IgnoreWrite = $false; $script:TemporaryWrite = $false
     $script:Conflict = $false; $script:ConcurrentAssignment = $false; $script:DenyScheduleRead = $false
     $script:FailDefinition = ''
     $script:RoleDefinitions = $definitions
-    $script:RoleConfig = @{ prefix = 'fixture'; pack = 'agent-governance'; locale = 'en'; domain = 'example.test'
+    $script:RoleConfig = @{ prefix = 'fixture'; tenantId = 'fixture-tenant'; pack = 'agent-governance'; locale = 'en'; domain = 'example.test'
         adminUpn = 'operator@example.test'; licenseSkus = @{}; copilotStudio = @{ paygEnvironmentId = 'environment' } }
     $script:RolePack = @{ personas = @($identity, @{ key = 'unselected'; entraRoles = @('Global Administrator') })
         groups = @(@{ key = 'untouched' }); agents = @(); demos = @(); operatorSlots = @(); mcp = @{} }
@@ -150,6 +164,35 @@ try {
     foreach ($name in 'Conditional Access Administrator', 'Attribute Definition Administrator', 'Attribute Assignment Administrator', 'Security Operator', 'Reports Reader') {
         Assert ($identity.entraRoles -ccontains $name) "existing role preserved: $name"
     }
+
+    New-Case
+    Add-HeldRole 'Identity Governance Administrator'
+    $script:Active[0].PSObject.Properties.Remove('appScopeId')
+    $script:Instances[0].PSObject.Properties.Remove('appScopeId')
+    $held = @(& { Set-StrictMode -Version Latest; Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig })
+    Assert ($held.Count -eq 1) 'full directory assignments without optional appScopeId remain valid under strict mode'
+    Assert (@($script:RoleCalls | Where-Object { $_.uri -match '/roleAssignments\?' -and $_.uri -match '[$]select=' }).Count -eq 0) 'directory assignment queries do not select unsupported optional fields'
+    Assert ($script:RoleTokenCalls.Count -eq 1 -and @($script:RoleCalls | Where-Object { $_.token -ne 'fixture-role-read-token' }).Count -eq 0) 'both role endpoints use the configured lab-private read token without interactive authentication'
+
+    New-Case
+    Add-HeldRole 'Identity Governance Administrator'
+    $script:Instances[0].startDateTime = $null
+    Assert (@(Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig).Count -eq 1) 'an explicit null start is valid for a matching active permanent direct root assignment'
+    $script:Instances[0].endDateTime = '2099-01-01T00:00:00Z'
+    Assert (@(Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig).Count -eq 0) 'a null start does not make a time-bound assignment permanent'
+    $script:Instances[0].endDateTime = $null
+    $script:Instances[0].startDateTime = 'not-a-date'
+    Assert (@(Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig).Count -eq 0) 'an invalid start date never counts as an active assignment'
+    $script:Instances[0].startDateTime = '2099-01-01T00:00:00Z'
+    Assert (@(Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig).Count -eq 0) 'a future start date never counts as an active assignment'
+    $script:Instances[0].PSObject.Properties.Remove('startDateTime')
+    $held = @(& { Set-StrictMode -Version Latest; Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig })
+    Assert ($held.Count -eq 0) 'a missing start field is not treated as an explicit null under strict mode'
+
+    New-Case
+    $script:RoleTokenAvailable = $false
+    Assert-Throws { Get-DemoPermanentEntraRoleAssignments 'identity-user' -Config $script:RoleConfig } 'RoleManagement.Read.Directory' 'missing cached role consent fails explicitly without an Azure CLI token fallback'
+    Assert ($script:RoleCalls.Count -eq 0) 'missing role-read consent makes no role queries or writes'
 
     New-Case
     Seed-LegacyRoles

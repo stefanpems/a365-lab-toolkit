@@ -158,7 +158,7 @@ if (-not $SkipRoles) {
     $defs = @(Get-DemoEntraRoleDefinitions)
     foreach ($p in $pack.personas) {
         if (-not $ids.ContainsKey($p.key) -or -not ($Persona -contains 'all' -or $Persona -contains $p.key) -or -not @($p.entraRoles | Where-Object { $_ }).Count) { continue }
-        Set-DemoPersonaEntraRoles -Prefix $Prefix -Persona $p -UserId $ids[$p.key] -Definitions $defs -State $state -WhatIf:$WhatIf |
+        Set-DemoPersonaEntraRoles -Prefix $Prefix -Persona $p -UserId $ids[$p.key] -Definitions $defs -State $state -WhatIf:$WhatIf -Config $cfg |
             ForEach-Object { Note $_ }
     }
     # The operator (adminUpn) needs these roles for the governance step: a Global Administrator does NOT have them
@@ -195,7 +195,7 @@ if (-not $SkipLicenses -and -not $RolesOnly) {
             if ($role -eq 'teams' -and $skipTeams) { continue }
             foreach ($part in Get-DemoSkuParts ([string]$cfg.licenseSkus[$role])) {
                 $sku = $skus | Where-Object { $_.skuPartNumber -eq $part } | Select-Object -First 1
-                if (-not $sku) { Note "license SKU missing: $part ($role)"; continue }
+                if (-not $sku) { throw "Configured license SKU '$part' for '$($p.key)' / '$role' is not present in the tenant." }
                 if (@($wanted | Where-Object { $_.skuId -eq $sku.skuId }).Count -eq 0) { $wanted += $sku }
             }
         }
@@ -204,8 +204,8 @@ if (-not $SkipLicenses -and -not $RolesOnly) {
         $desc = ($add | ForEach-Object { "$($_.partNumber)$(if (@($_.disabledPlans).Count) { ' (mailbox plan disabled)' })" }) -join ', '
         if ($WhatIf) { Note "would ADD $($add.Count) license(s) to $($p.key): $desc"; continue }
         $body = @{ addLicenses = @($add | ForEach-Object { @{ skuId = $_.skuId; disabledPlans = @($_.disabledPlans) } }); removeLicenses = @() }
-        $r = Invoke-DemoGraph POST "$G/users/$($ids[$p.key])/assignLicense" -Body $body -NoThrow
-        if ($r -and $r.PSObject.Properties['error']) { Note "licenses FAILED $($p.key) ($($r.status)): free seats? run Test-DemoPrereqs.ps1" } else { Note "licenses ADDED $($p.key): $desc" }
+        Invoke-DemoGraph POST "$G/users/$($ids[$p.key])/assignLicense" -Body $body | Out-Null
+        Note "licenses ADDED $($p.key): $desc"
     }
 }
 

@@ -14,6 +14,14 @@ not invented by the chat agent. Markdown, HTML and JSON are rendered from the sa
 1. **Users:** Demo role (persona); User (name - UPN); Job title; Entra roles assigned; Other roles / notes; Evidence.
    Reuses `Get-DemoPersonas.ps1`, including its operator row and missing-role flags. The operator is not
    described as a user created by this run. Non-Entra roles are planned/manual unless explicitly verified.
+   Role read-back uses the lab-private MSAL cache `msal_role_read_cache.json` with
+   `RoleManagement.Read.Directory`; missing consent fails explicitly without opening a browser.
+   Directory assignments are read as full objects because some endpoints reject the optional `appScopeId`
+   field in `$select`. Permanent, direct, directory-root checks still require authorized schedule read-back.
+   An explicit null start date is valid for a legacy permanent schedule with a matching active assignment.
+   Missing, invalid or future start dates and non-null end dates still do not qualify.
+   License assignment stops on a missing configured SKU or a Graph API error; a failed assignment cannot
+   complete the identity phase. Assigned-license read-back, not an attempted write, establishes license evidence.
 2. **Groups:** Group; Type; Object ID; Members; Owners; Assigned permissions / roles; Purpose; Evidence.
    Live direct membership, owners, direct directory roles, application grants and subscription-visible Azure RBAC.
    Application role ids are preserved when a role name is not resolved. Nested membership and effective

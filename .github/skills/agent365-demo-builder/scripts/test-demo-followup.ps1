@@ -171,6 +171,13 @@ try {
     function Save-DemoLabState { $script:RoleSaveCount++ }
     function Write-DemoLog { }
     function Start-Sleep { }
+    function Get-DemoMsalToken {
+        param([string]$TenantId, [string[]]$Scopes, [string]$Prefix, [string]$LoginHint, [string]$CacheName, [switch]$SilentOnly)
+        if ($TenantId -ne 'tenant' -or $Prefix -ne 'fixture' -or $LoginHint -ne 'operator@example.test' -or
+            $Scopes.Count -ne 1 -or $Scopes[0] -ne 'https://graph.microsoft.com/RoleManagement.Read.Directory' -or
+            $CacheName -ne 'msal_role_read_cache.json' -or -not $SilentOnly) { throw 'Unexpected role-read authentication in the offline fixture.' }
+        return 'fixture-role-read-token'
+    }
     function Invoke-DemoGraph {
         param($Method, $Uri, $Body, $Token, [switch]$NoThrow, [switch]$All)
         $script:RoleCalls.Add([pscustomobject]@{ method = $Method; uri = $Uri; body = $Body })
@@ -227,6 +234,55 @@ try {
     $script:RoleCalls.Clear(); $message = ''
     try { & $productionRoles -Prefix fixture -Persona aiAdmin -RolesOnly -SkipRoles } catch { $message = $_.Exception.Message }
     Assert ($message -match 'cannot be combined' -and $script:RoleCalls.Count -eq 0) 'conflicting role switches fail before any cloud call'
+    $parseTokens = $null; $parseErrors = $null
+    $rolesAst = [Management.Automation.Language.Parser]::ParseFile($rolesScript, [ref]$parseTokens, [ref]$parseErrors)
+    $licenseBlock = @($rolesAst.EndBlock.Statements | Where-Object {
+        $_ -is [Management.Automation.Language.IfStatementAst] -and $_.Extent.Text -match 'if \(-not \$SkipLicenses -and -not \$RolesOnly\)'
+    })
+    Assert ($licenseBlock.Count -eq 1 -and $parseErrors.Count -eq 0) 'the production license-assignment block is parsed without source substitutions'
+    & {
+        param([scriptblock]$Licensing)
+        $G = 'https://graph.microsoft.com/v1.0'; $Prefix = 'fixture'
+        $SkipLicenses = $false; $RolesOnly = $false; $WhatIf = $true; $Persona = @('selected')
+        $pack = @{ personas = @(@{ key = 'selected' }) }; $ids = @{ selected = 'selected-user' }
+        $cfg = @{ licenseSkus = @{ copilotUser = 'fixtureSku' } }
+        $script:LicenseWrites = 0; $script:FailLicenseWrite = $false; $script:LicenseSkuExists = $true
+        function Write-DemoLog { }
+        function Note([string]$Text) { $Text }
+        function Get-DemoRolePlans { @() }
+        function Get-DemoPersonaLicenseRoles { @('copilotUser') }
+        function Get-DemoLicenseAdds {
+            @([pscustomobject]@{ skuId = 'fixture-sku'; partNumber = 'fixtureSku'; disabledPlans = @() })
+        }
+        function Invoke-DemoGraph {
+            param($Method, $Uri, $Body, [switch]$All, [switch]$NoThrow)
+            if ($Method -eq 'GET' -and $Uri.EndsWith('/subscribedSkus')) {
+                if ($script:LicenseSkuExists) { [pscustomobject]@{ skuId = 'fixture-sku'; skuPartNumber = 'fixtureSku' } }
+                return
+            }
+            if ($Method -eq 'GET' -and $Uri -match '/users/selected-user\?') { return [pscustomobject]@{ assignedLicenses = @() } }
+            if ($Method -eq 'POST' -and $Uri.EndsWith('/users/selected-user/assignLicense')) {
+                $script:LicenseWrites++
+                if ($script:FailLicenseWrite) {
+                    if ($NoThrow) { return [pscustomobject]@{ error = 'Synthetic license conflict'; status = 409 } }
+                    throw 'HTTP 409: Synthetic license conflict'
+                }
+                return [pscustomobject]@{ id = 'selected-user' }
+            }
+            throw "Unexpected offline license request: $Method $Uri"
+        }
+        & $Licensing | Out-Null
+        Assert ($script:LicenseWrites -eq 0) 'license dry-run performs no assignment writes'
+        $WhatIf = $false; $script:FailLicenseWrite = $true; $message = ''
+        try { & $Licensing | Out-Null } catch { $message = $_.Exception.Message }
+        Assert ($message -match 'HTTP 409.*Synthetic license conflict') 'a license API conflict fails the phase instead of returning success'
+        $script:FailLicenseWrite = $false; $script:LicenseWrites = 0
+        $output = & $Licensing
+        Assert ($script:LicenseWrites -eq 1 -and $output -match 'licenses ADDED selected') 'successful license assignment is reported only after the API succeeds'
+        $script:LicenseSkuExists = $false; $script:LicenseWrites = 0; $message = ''
+        try { & $Licensing | Out-Null } catch { $message = $_.Exception.Message }
+        Assert ($message -match "Configured license SKU 'fixtureSku'" -and $script:LicenseWrites -eq 0) 'a missing configured SKU fails before any license write'
+    } ([scriptblock]::Create($licenseBlock[0].Extent.Text))
     Write-Host "Passed $passed, failed 0"
 }
 finally {
