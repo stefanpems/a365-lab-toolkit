@@ -7,7 +7,10 @@ block and audit them. The [Demo Builder](../../.github/agents/demo-builder.agent
 [demo guide](../../.github/skills/agent365-demo-guide/SKILL.md) runs it. All people, businesses, documents and data are
 fictional.
 
-Languages: en, it, fr, es, de. Start with the license gate in
+Languages: English (EN), Italian (IT), Spanish (ES), French (FR), and German (DE). The language question always
+offers exactly these five choices, with equal support for generated environments, resource names, content and files.
+The English-only procedure-maintenance convention does not restrict localized runtime output.
+Start with the license gate in
 [docs/demo-environment-prerequisites.md](../../docs/demo-environment-prerequisites.md).
 
 > **Preview, not yet validated end to end:** the pack was derived from a reference lab built by hand and has been
@@ -88,7 +91,7 @@ process before running a script. Azure CLI uses its `azure` subdirectory and MSA
 no shared authentication store is copied, switched or cleared. Sign in interactively in external Edge.
 
 Offline checks: `Test-DemoPack.ps1`, `test-demo-followup.ps1`, `test-demo-agent-resolution.ps1`, `test-demo-registry.ps1`,
-`test-demo-helpers.ps1`, `test-demo-inventory.ps1` and `test-demo-user-actions.ps1`. The agent-resolution source guard
+`test-demo-helpers.ps1`, `test-demo-locales.ps1`, `test-demo-inventory.ps1` and `test-demo-user-actions.ps1`. The agent-resolution source guard
 fails when a demo script reads configured names outside the resolver or constructs conventional agent-name suffixes.
 
 ## Story alignment
@@ -118,11 +121,13 @@ D10 access-package starting conditions.
 Every name must respect the platform limits: `Test-DemoPack.ps1` checks each locale against the iron rules of the
 Lab Builder (`text-limits.json`) before anything is created.
 
-### Adding a language
+### Maintaining the five supported languages
 
-Copy `locales/en` to `locales/<lang>`, translate the values (never the keys, the ids or the `{{...}}` placeholders),
-keep every e-mail address on a reserved example domain, add the language to `locales` in `pack.json`, then run
-`Test-DemoPack.ps1 -Locale <lang>` until it reports no error.
+Keep all five locale folders (`en`, `it`, `es`, `fr`, `de`) available and aligned with `locales` in `pack.json`.
+Preserve localized values, keys, ids and `{{...}}` placeholders, and keep every e-mail address on a reserved example
+domain. Run `Test-DemoPack.ps1 -Locale <lang>` for dictionary and naming validation, and `test-demo-locales.ps1`
+for the exact language-choice contract and configuration round trips. Do not add an ad-hoc language to the build
+question or remove a supported one; changing the supported set is a separate procedure and implementation change.
 
 ## Personas
 

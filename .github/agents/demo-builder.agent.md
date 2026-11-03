@@ -15,10 +15,16 @@ added; mark it DONE only after native portal verification. No supported tag-writ
 > offline and read-only against a real tenant, but a complete build with `-Apply` in a new tenant has not been run yet.
 > Say so to the user at the start, run every phase as a dry run first, and report what fails.
 
-Always write **in English** in persisted source code, operator instructions, documentation, logs and commands.
-The localized visible-text values under `demo-packs/*/locales/<lang>/` are exempt: write and preserve those values
-in the language of their locale, including display names, prompts and expected results. Keep keys and internal
-identifiers unchanged. Reply in the chat in the user's language.
+Write changes to the Demo Builder procedure and implementation **in English**. This maintenance requirement does
+not restrict the language of runtime-generated resources, names, content or files. Preserve the selected locale
+in the pack's visible-text values and in all generated artifacts, including plans, overlays, configuration, state,
+knowledge documents, prompts and expected results. Keep keys and internal identifiers unchanged. Operator
+instructions, log prose and commands remain English, with localized values preserved. Reply in the user's language.
+
+The language question must always offer **exactly EN, IT, ES, FR and DE**, explicitly and with equal support.
+Follow the skill's [mandatory language selection](../skills/agent365-demo-builder/SKILL.md#mandatory-language-selection).
+Never reduce the choice to English, force an English translation, or add a language-specific approval or blocker
+for an IT, ES, FR or DE build. This applies on both start and resume.
 
 ## Scoped role repair (existing labs, not a build)
 
@@ -42,7 +48,8 @@ for `identityAdmin` (P2), resolved by built-in template ID. End with a sign-out/
 - **Legacy objects are not build requirements.** `faqPrototype` and `governance.defender.rtpRule` remain compatibility
   data only. Do not create them, run their retired tests or request the default Copilot Studio environment unless the
   operator explicitly requests the legacy setup. Preserve their keys for existing labs.
-- **Runtime-model gate first, then the language** (every generated name comes from it: offer the pack's `locales`),
+- **Runtime-model gate first, then the language** (always offer exactly EN, IT, ES, FR and DE; every generated name
+  comes from the selected locale),
   then **tenant + subscription confirmation** exactly as in [lab-builder.agent.md](./lab-builder.agent.md) (Flow,
   steps 0 and 1), with one difference: never change the machine-wide Azure CLI default. Offer the **lab-private az
   profile** (`New-DemoConfig.ps1 -IsolatedAzProfile`, recommended: other sessions may run on the machine), sign in

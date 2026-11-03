@@ -42,8 +42,12 @@ The remaining operator-slot ids are stable: `slot-1`, `slot-3`, `slot-4`, `slot-
 
 ## Binding rules
 
-- **Every persisted file is in English.** The only exception are the locale files of a pack, which hold the visible
-  texts of the demo; generated cards are English instructions with the localized values inserted.
+- **English is the procedure-maintenance language, not a runtime language restriction.** Write changes to source,
+  scripts, agent definitions, skills and procedure documentation in English. Preserve the selected locale in
+  visible-text values and in runtime-generated resources, names, content and files, including plans, overlays,
+  configuration, state and knowledge documents under `generated/<prefix>/`. Operator instructions, cards, log
+  prose and commands remain English with localized values inserted unchanged. Never use the maintenance rule
+  to restrict the language choice, require an exception or approval, force an English translation or block a build.
 - **The license gate is first** (`Test-DemoPrereqs.ps1`, [docs/demo-environment-prerequisites.md](../../../docs/demo-environment-prerequisites.md)):
   nothing is created in a tenant that fails it.
 - **Operator slots are never printed.** Use only the ids declared in `pack.operatorSlots`, filled by the operator in
@@ -153,7 +157,8 @@ Run `test-demo-inventory.ps1` after changing the schema or renderers.
 Shared helpers: `_demo-common.ps1` (pack, locale, config, state, tokens, Graph, user-actions register), `_demo-entra.ps1` (agent identities,
 temporary app-only session). Offline tests: `test-demo-user-actions.ps1` (register) and `test-demo-helpers.ps1`
 (license bundles, lab-private az profile, config persistence, reserved knowledge folder names): run them after changing
-those helpers.
+those helpers. Run `test-demo-locales.ps1` after changing the language question or configuration: it checks the exact
+five choices, the shipped locale files, and isolated configuration/locale round trips for every supported language.
 
 ## The localization dictionary
 
@@ -168,7 +173,36 @@ texts (cards, logs, run of show) stay in English.
 
 ## Phases of a demo lab
 
-The first question of the interview is the **language**: every generated name comes from it. The phases are run with
+### Mandatory language selection
+
+Immediately after the runtime-model gate, ask one single-select language question using the interactive questions
+tool. On both start and resume, always present exactly these five options, explicitly and in this order:
+
+| Locale | Language choice |
+|---|---|
+| `en` | English (EN) |
+| `it` | Italian (IT) |
+| `es` | Spanish (ES) |
+| `fr` | French (FR) |
+| `de` | German (DE) |
+
+Use the locale code as the option value and the language name/code as its label; labels may follow the chat language.
+On resume, preselect the stored locale without hiding the other four. Do not infer the choice from the chat language,
+the language of this procedure, the workspace's English maintenance convention or the pack's default locale.
+Do not add an English-only, automatic, other-language or pause option to this list; cancelling the question remains
+a separate UI action. An optional default must never replace the five-choice question.
+
+All five languages are supported equally for generated environments, resource names, content and files. Pass the
+selected code to `New-DemoConfig.ps1 -Locale`, preserve it on later updates and propagate its localized values to
+every generated surface. Do not silently substitute English, request an English-only waiver or stop because the
+choice is IT, ES, FR or DE. The usual tenant prerequisites and platform limits apply equally to all five languages.
+Missing or invalid locale assets are real validation errors to report, not a reason to hide an option or fall back
+to English.
+
+### Phase execution
+
+The first provisioning question after the runtime-model gate is the **language**: every generated name comes from it.
+The phases are run with
 `Invoke-DemoPhase.ps1 -Prefix <p> -Phase <phase>` (dry run first, then `-Apply`); `-Phase status` shows the progress.
 Start at least **five days** before the first event or rehearsal that uses the lab: several effects need hours or a day
 (`timeline` of pack.json). A lab is often the base of several events: no event date is asked.

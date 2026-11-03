@@ -5,6 +5,9 @@
 .DESCRIPTION
   Called by the Demo Builder after the interview. Every other Demo Builder script reads this file, so tenant,
   subscription, language and environments are chosen ONCE. Re-running it updates the given values only.
+.PARAMETER Locale
+  The demo language: en, it, es, fr or de, all equally supported for generated names, content and files.
+  Required on first creation; omitted on a later update to preserve the selected language.
 .EXAMPLE
   pwsh -File .\New-DemoConfig.ps1 -Prefix cts2 -Locale fr -TenantId <tid> -SubscriptionId <sid> -Domain contoso.onmicrosoft.com `
        -AdminUpn admin@contoso.onmicrosoft.com -Region swedencentral -PaygEnvironmentId <envId> -DefaultEnvironmentId <envId> -IsolatedAzProfile
@@ -16,7 +19,7 @@
 param(
     [Parameter(Mandatory)][ValidatePattern('^[a-z][a-z0-9]{2,8}$')][string]$Prefix,
     [string]$Pack = 'agent-governance',
-    [string]$Locale,
+    [ValidateSet('en', 'it', 'es', 'fr', 'de')][string]$Locale,
     [string]$TenantId,
     [string]$SubscriptionId,
     [string]$Domain,
@@ -65,7 +68,8 @@ if ($PSBoundParameters.ContainsKey('IsolatedAzProfile')) {
 }
 # Optional, informational only (no script plans by it): a lab is often the base of several events.
 if ($PSBoundParameters.ContainsKey('EventDate')) { if ($EventDate) { $c['eventDate'] = $EventDate } elseif ($c.Contains('eventDate')) { $c.Remove('eventDate') } }
-if (-not $c.locale) { throw '-Locale is required the first time (en, it, fr, es, de or another locale folder of the pack).' }
+if (-not $c.locale) { throw '-Locale is required the first time. Choose en, it, es, fr or de.' }
+$c['locale'] = ([string]$c.locale).ToLowerInvariant()
 $null = Get-DemoLocale -Locale $c.locale -Pack $Pack   # fails early if the locale is missing
 $c | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
 Write-Host "Demo config written: $path" -ForegroundColor Green
