@@ -4,8 +4,9 @@
   Registers the demo MCP servers in the Agent 365 tool gateway (long-lived servers + the reserve-name pool), pre-empts
   their approval consents, records their BYO audiences and gives the per-user connection URLs BEFORE any test.
 .DESCRIPTION
-  The a365 CLI asks 'Proceed with registration? (y/N)' and needs a real terminal, so this script never registers by
-  itself: it checks everything, writes the payload and prints the exact command to run. Actions:
+  Without -Run this script prepares local input only: no admin-center request is submitted.
+  With -Run it submits through the official executor, using lab-private gateway authentication when configured,
+  then confirms the backing apps and consents. Admin-center approval is a separate manual gate. Actions:
     Status                                 pack validation, instances in state.json, ext_ servers seen in the tenant
     Register -Server <key> [-ServerName n] long-lived server (records, companies): checks + payload + command;
                                            -Run also registers it (pipes 'y' to the a365 prompt) and runs Confirm
@@ -56,6 +57,19 @@ $activeStates = @('pending', 'approved')
 $longKeys = @($pack.mcp.longLived | ForEach-Object { [string]$_.key })
 
 function Save-State { $state.mcp['pool'] = @($pool); Save-DemoLabState $Prefix $state }
+function Test-CompletedDemoMcpSubmission([string]$PayloadPath, [string]$ServerName) {
+    if (-not $PayloadPath -or -not (Test-Path -LiteralPath "$PayloadPath.receipt.json")) { return $false }
+    $receipt = Get-Content -LiteralPath "$PayloadPath.receipt.json" -Raw | ConvertFrom-Json
+    if ($receipt.serverName -ne $ServerName -or $receipt.status -ne 'Success') {
+        throw "The gateway receipt does not prove a successful submission of $ServerName. Reconcile it before retrying."
+    }
+    $log = Join-Path (Split-Path -Parent $PayloadPath) "register-$ServerName.log"
+    if (-not (Test-Path -LiteralPath $log) -or
+        (Get-Content -LiteralPath $log -Raw) -notmatch 'has been registered successfully') {
+        throw "$ServerName has a gateway receipt but incomplete official app configuration. Reconcile it; do not resubmit."
+    }
+    return $true
+}
 function Get-PoolDef([string]$R) {
     $b = @($pack.mcp.pool | Where-Object { @($_.roles) -contains $R }) | Select-Object -First 1
     if (-not $b) { throw "No pool base of pack '$($cfg.pack)' has the role '$R'." }
@@ -135,7 +149,7 @@ if ($Action -eq 'Status') {
     Write-Host "=== ext_ servers in the tenant: $(if ($null -eq $t) { 'unknown (Compliant Container environment not cached yet: see Urls)' } else { "$($t.Count): $($t -join ', ')" })"
     return
 }
-# --- Register (local files only: payload + state; the operator runs the printed a365 command) --------------------
+# --- Register: prepare input; -Run submits and confirms, but never approves ------------------------------------
 if ($Action -eq 'Register') {
     if (-not $Server -and -not $Role) { throw 'Register needs -Server <long-lived key> or -Role live|rehearsal|spare (pool).' }
     $isPool = [bool]$Role
@@ -149,8 +163,19 @@ if ($Action -eq 'Register') {
     if ($v.Count) { throw "Locale '$($cfg.locale)' has $($v.Count) validation error(s): run Test-DemoPack.ps1 -Locale $($cfg.locale) and fix them first." }
     $tenant = Get-TenantExtServers
     if ($null -eq $tenant) { Write-DemoLog $Prefix 'Tenant ext_ servers unknown (Compliant Container environment not cached yet): only state.json is checked for name reuse' 'WARN' }
-    $cur = if ($isPool) { $null } else { $state.mcp.servers[$key] }
-    $known = @(Get-AllInstances | Where-Object { -not ($cur -and $_.name -eq $cur.name -and $cur.status -eq 'payload') } | ForEach-Object { $_.name }) + @($tenant)
+    $cur = if ($isPool) {
+        $pool | Where-Object { $_.key -eq $key -and $_.role -eq $Role -and
+            $_.status -in @('payload', 'failed') -and (-not $Number -or $_.number -eq $Number) } |
+            Sort-Object number -Descending | Select-Object -First 1
+    } else { $state.mcp.servers[$key] }
+    if ($Run -and $cur -and $cur.status -in @('payload', 'failed') -and
+        ($cfg.azConfigDir -or $env:DEMO_SESSION_AUTH_DIR) -and
+        (Test-CompletedDemoMcpSubmission ([string]$cur.payload) ([string]$cur.name))) {
+        Write-DemoLog $Prefix "$($cur.name) already submitted by the isolated executor: resuming confirmation only"
+        pwsh -NoProfile -File $PSCommandPath -Prefix $Prefix -Action Confirm -Name ([string]$cur.name)
+        exit $LASTEXITCODE
+    }
+    $known = @(Get-AllInstances | Where-Object { -not (-not $isPool -and $cur -and $_.name -eq $cur.name -and $cur.status -eq 'payload') } | ForEach-Object { $_.name }) + @($tenant)
     if ($isPool) {
         $base = [string]$ls.base
         $open = @($pool | Where-Object { $_.key -eq $key -and $_.status -in $activeStates })
@@ -191,13 +216,23 @@ if ($Action -eq 'Register') {
     Write-DemoLog $Prefix "MCP payload ready: $cand ($(if ($isPool) { "pool, role $Role" } else { 'long-lived' }); name $($cand.Length) chars, proxy connector $($conn.Length) chars; backend tools [$($declared -join ', ')] match)"
     Write-Host ''
     if ($Run) {
-        # The CLI prompt 'Proceed with registration? (y/N)' reads stdin: piping 'y' answers it (verified 07/10). The
-        # registration runs in the az context of this process (lab-private profile when configured).
         $log = Join-Path $regDir "register-$cand.log"
-        Write-DemoLog $Prefix "Registering $cand with the a365 CLI (answer y piped; log $log)"
-        Push-Location $regDir
-        try { 'y' | a365 develop-mcp register-external-mcp-server -f "register-$cand.json" 2>&1 | Tee-Object -FilePath $log | Out-Null }
-        finally { Pop-Location }
+        if ($cfg.azConfigDir -or $env:DEMO_SESSION_AUTH_DIR) {
+            $completed = Test-CompletedDemoMcpSubmission $payloadPath $cand
+            if ($completed) { Write-DemoLog $Prefix "$cand already submitted by the isolated executor: resuming confirmation only" }
+            else {
+                $hostScript = Join-Path $PSScriptRoot 'Invoke-DemoMcpRegistrationHost.ps1'
+                & $hostScript -Prefix $Prefix -PayloadPath $payloadPath
+                & $hostScript -Prefix $Prefix -PayloadPath $payloadPath -Apply
+            }
+        }
+        else {
+            Write-DemoLog $Prefix "Registering $cand with the a365 CLI (answer y piped; log $log)"
+            Push-Location $regDir
+            try { 'y' | a365 develop-mcp register-external-mcp-server -f "register-$cand.json" 2>&1 | Tee-Object -FilePath $log | Out-Null }
+            finally { Pop-Location }
+            if ($LASTEXITCODE -ne 0) { throw "The a365 registration failed. See $log; reconcile before retrying." }
+        }
         $text = if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Raw } else { '' }
         if ($text -notmatch 'has been registered successfully') {
             Write-DemoLog $Prefix "Registration of $cand did not report success (see $log). The name may stay reserved: run Register again (the pool takes the next number; a long-lived server needs -ServerName)." 'ERROR'
@@ -207,8 +242,12 @@ if ($Action -eq 'Register') {
         pwsh -NoProfile -File $PSCommandPath -Prefix $Prefix -Action Confirm -Name $cand
         exit $LASTEXITCODE
     }
-    Write-Host 'Run this in a terminal (the CLI asks "Proceed with registration? (y/N)": answer y), or re-run this script with -Run:' -ForegroundColor Cyan
-    Write-Host "  cd `"$regDir`"; a365 develop-mcp register-external-mcp-server -f `"register-$cand.json`""
+    Write-Host 'Payload only: no registration request has been submitted. Re-run this script with -Run to submit it:' -ForegroundColor Cyan
+    Write-Host "  New-DemoMcpRegistration.ps1 -Prefix $Prefix -Action Register $(if ($isPool) { "-Role $Role -Number $nn" } else { "-Server $key" }) -Run"
+    if ($cfg.azConfigDir -or $env:DEMO_SESSION_AUTH_DIR) {
+        Write-Host "If the private gateway cache is empty, first announce browser sign-in and run: Invoke-DemoMcpRegistrationHost.ps1 -Prefix $Prefix -PayloadPath `"$payloadPath`" -Authenticate"
+    }
+    else { Write-Host "Or in a terminal: cd `"$regDir`"; a365 develop-mcp register-external-mcp-server -f `"register-$cand.json`"" }
     Write-Host "When it prints 'has been registered successfully':  New-DemoMcpRegistration.ps1 -Prefix $Prefix -Action Confirm -Name $cand"
     Write-Host 'If it fails, the name may stay reserved: run Register again (the pool takes the next number; a long-lived server needs -ServerName).'
     return

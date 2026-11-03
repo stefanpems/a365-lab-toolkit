@@ -90,8 +90,13 @@ for `identityAdmin` (P2), resolved by built-in template ID. End with a sign-out/
   verify them by read-back. A preparation step that is itself a demo moment is done live, not during the build.
 - **Terminals that ask for input** (sign-ins, secrets): follow the Lab Builder protocol "When a terminal blocks on
   input". The `a365` registration prompt `Proceed? (y/N)` is answered by the setup step itself
-  (`New-DemoMcpRegistration.ps1 -Register -Run` pipes `y`, logs to `mcp-registration/register-<name>.log` and runs
-  `-Action Confirm`); without `-Run` it prints the command to run.
+  (`New-DemoMcpRegistration.ps1 -Action Register -Run` uses the official executor, logs to
+  `mcp-registration/register-<name>.log` and runs `-Action Confirm`); without `-Run` it prepares input only,
+  not an admin-center request. For lab-private profiles use `Invoke-DemoMcpRegistrationHost.ps1`:
+  try cached gateway authentication first, announce external browser sign-in only if required, and never
+  use admin-center authentication to submit a request. Azure CLI isolation alone does not isolate the native
+  a365 MSAL/WAM cache. Verify the gateway receipt and official success log before confirmation; approval
+  remains a separate human gate. Continue the existing checkpoint without repeating completed interview gates.
 - **Never duplicate the Lab Builder.** For agents, run `New-DemoLabPlan.ps1 -Scaffold` and continue as a Lab Builder
   resume of the prefix. Its per-agent "Test now / Continue" gate is not a blocker in a demo build: continue, the
   smoke test of every agent is the register row `agent-smoke-tests` written by `New-DemoLabPlan.ps1` (agent, variant

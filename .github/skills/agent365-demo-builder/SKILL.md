@@ -141,7 +141,8 @@ Run `test-demo-inventory.ps1` after changing the schema or renderers.
 | `Set-DemoPhotos.ps1` | profile photos of the personas | yes |
 | `New-DemoKnowledge.ps1` / `Publish-DemoKnowledge.ps1` | fictional documents (docx/pdf/xlsx) and their SharePoint library | yes (publish) |
 | `Deploy-DemoMcp.ps1` | demo MCP backends on Container Apps (`<prefix>-demomcp-rg`) | Azure |
-| `New-DemoMcpRegistration.ps1` | registration payloads + command, consents, BYO audiences, connection URLs, pool | yes (Confirm) |
+| `New-DemoMcpRegistration.ps1` | payload preparation; `-Run` submits and confirms; consents, BYO audiences, connection URLs, pool | yes (`-Run`, Confirm) |
+| `Invoke-DemoMcpRegistrationHost.ps1` | official installed registration executor with lab-private Graph/gateway tokens; dry-run default, `-Authenticate` for browser login | only with `-Apply` |
 | `New-DemoLabPlan.ps1` | Lab Builder plan + agent overlays (`-ValidateOnly`, `-Scaffold`) | no |
 | `Set-DemoGovernance.ps1` | custom security attribute, owners/sponsors/attributes of agent identities, catalog | yes |
 | `New-DemoCards.ps1` | guided cards (`references/cards/`) + test hand-out, in `generated/<prefix>/demo/cards` | no |
@@ -159,6 +160,31 @@ temporary app-only session). Offline tests: `test-demo-user-actions.ps1` (regist
 (license bundles, lab-private az profile, config persistence, reserved knowledge folder names): run them after changing
 those helpers. Run `test-demo-locales.ps1` after changing the language question or configuration: it checks the exact
 five choices, the shipped locale files, and isolated configuration/locale round trips for every supported language.
+
+### MCP registration: authentication, submission and approval
+
+These are three different states: **payload prepared**, **gateway submitted**, **admin approved**.
+Preparing a JSON file is not registration and creates no admin-center request. Do not mark the registration
+step done from a payload or browser login alone.
+
+For a lab-private Azure profile, `New-DemoMcpRegistration.ps1 -Run` uses the isolated host, not the native
+CLI authentication service: `AZURE_CONFIG_DIR` alone does not isolate that service's MSAL/WAM cache.
+The host reuses the installed official command, Graph app creation and post-registration configuration.
+Only the gateway HTTP transport uses the private token; no shared authentication service is constructed.
+It requires the .NET SDK and the installed global Agent 365 CLI and fails before mutation if incompatible.
+
+Try the private gateway cache first. If empty, announce the external browser sign-in as the configured
+administrator, then run `Invoke-DemoMcpRegistrationHost.ps1 -Prefix <p> -PayloadPath <file> -Authenticate`
+without `-Apply`. The official gateway audience is `ea9ffc3e-8a23-4a7d-836d-234d7c7565c1`,
+the public client is `1950a258-227b-4e31-a9cf-717495945fc2`, and the per-lab cache is
+`secrets/msal_gateway_cache.json`. Never use admin-center login as a submission workaround.
+Do not reset the interview, switch shared accounts, use device code or ask for a PAT.
+
+Run the official dry run before submission. A successful response writes a secret-free receipt beside the
+payload. The receipt plus the official success log permits resuming confirmation without resubmission;
+partial application sets or an incomplete post-registration log require reconciliation, not a blind retry.
+Only after gateway success and canonical confirmation request the separate admin-center approval.
+Run `test-demo-mcp-registration.ps1` after changing this path.
 
 ## The localization dictionary
 
