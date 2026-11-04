@@ -48,6 +48,10 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
    steps (SPA app registration, Entra consent (AllPrincipals), Azure RBAC for Foundry agents, SWA deploy) stay
    in [docs/setup-web-ui.md](../../../docs/setup-web-ui.md) §2–§6. Per-host permission specifics (Mail consent
    for OBO, `UI_AUDIENCE` for ACA-S2S, Foundry access for FH/FD) are in that guide.
+   The ACA CORS helper accepts a newly deployed container with no `UI_ALLOWED_ORIGINS` entry, preserves
+   existing origins and reports unreadable or secret-backed values rather than overwriting them.
+   Run [test-webui-cloud.ps1](./scripts/test-webui-cloud.ps1) and
+   [test-webui-config.ps1](./scripts/test-webui-config.ps1) after changing this path.
 
 ## Standalone / shared web UIs, association scripts, and tags
 A web UI can be **lab-owned** (created inside a lab run, mode `create`) or **standalone/shared** (created

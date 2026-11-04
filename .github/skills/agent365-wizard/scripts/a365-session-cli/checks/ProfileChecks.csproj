@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(A365CliDir)\*.dll" Exclude="$(A365CliDir)\Microsoft.Agents.A365.DevTools.Cli.dll" />
+    <Reference Include="$(A365SessionCliDir)\Microsoft.Agents.A365.DevTools.Cli.dll" />
+    <Content Include="$(A365CliDir)\*.dll" Exclude="$(A365CliDir)\Microsoft.Agents.A365.DevTools.Cli.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
+    <Content Include="$(A365SessionCliDir)\Microsoft.Agents.A365.DevTools.Cli.dll" Link="Microsoft.Agents.A365.DevTools.Cli.dll" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+  <Target Name="CopyWindowsRuntimeAssets" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <WindowsRuntimeAsset Include="$(A365CliDir)\runtimes\win\lib\**\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WindowsRuntimeAsset)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

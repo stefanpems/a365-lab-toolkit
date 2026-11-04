@@ -1,0 +1,154 @@
+diff --git a/Helpers/BrowserHelper.cs b/Helpers/BrowserHelper.cs
+index e5a400b..7722e28 100644
+--- a/Helpers/BrowserHelper.cs
++++ b/Helpers/BrowserHelper.cs
+@@ -37,6 +37,11 @@ public static class BrowserHelper
+     /// <param name="logger">Optional logger for diagnostic messages.</param>
+     public static void TryOpenUrl(string url, ILogger? logger = null)
+     {
++        if (Services.SessionAuthenticationProfile.Enabled)
++        {
++            Services.SessionAuthenticationProfile.OpenBrowserAsync(new Uri(url)).GetAwaiter().GetResult();
++            return;
++        }
+         if (OpenUrlOverrideForTests is { } overrideAction)
+         {
+             overrideAction(url, logger);
+diff --git a/Program.cs b/Program.cs
+index d8770f1..58d6a83 100644
+--- a/Program.cs
++++ b/Program.cs
+@@ -21,6 +21,7 @@ class Program
+ {
+     static async Task<int> Main(string[] args)
+     {
++        SessionAuthenticationProfile.RequireSession();
+         // Detect which command is being run for log file naming
+         var commandName = DetectCommandName(args);
+         var logFilePath = ConfigService.GetCommandLogPath(commandName);
+@@ -442,4 +443,3 @@ class Program
+             .Replace("_", "-");
+     }
+ }
+-
+diff --git a/Services/AuthenticationService.cs b/Services/AuthenticationService.cs
+index 878d50e..2769963 100644
+--- a/Services/AuthenticationService.cs
++++ b/Services/AuthenticationService.cs
+@@ -83,8 +83,7 @@ public class AuthenticationService : IAuthenticationService
+     public AuthenticationService(ILogger<AuthenticationService> logger)
+     {
+         _logger = logger;
+-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+-        _cacheDir = Path.Combine(appDataPath, AuthenticationConstants.ApplicationName);
++        _cacheDir = SessionAuthenticationProfile.CacheDirectory;
+         Directory.CreateDirectory(_cacheDir);
+ 
+         // One-time migration cleanup: delete any plaintext auth-token.json written by an older CLI
+@@ -553,6 +552,7 @@ public class AuthenticationService : IAuthenticationService
+     /// </summary>
+     protected virtual TokenCredential CreateDeviceCodeCredential(string clientId, string tenantId)
+     {
++        SessionAuthenticationProfile.RejectDeviceCode();
+         return new DeviceCodeCredential(new DeviceCodeCredentialOptions
+         {
+             TenantId = tenantId,
+diff --git a/Services/ConfigService.cs b/Services/ConfigService.cs
+index 006fb8d..40a52f3 100644
+--- a/Services/ConfigService.cs
++++ b/Services/ConfigService.cs
+@@ -29,6 +29,8 @@ public class ConfigService : IConfigService
+     /// </summary>
+     public static string GetGlobalConfigDirectory()
+     {
++        if (SessionAuthenticationProfile.Enabled)
++            return Path.Combine(SessionAuthenticationProfile.RootDirectory, "config");
+         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+         {
+             var localAppData = Environment.GetEnvironmentVariable("LocalAppData");
+diff --git a/Services/Internal/MicrosoftGraphTokenProvider.cs b/Services/Internal/MicrosoftGraphTokenProvider.cs
+index ce490f6..39a9285 100644
+--- a/Services/Internal/MicrosoftGraphTokenProvider.cs
++++ b/Services/Internal/MicrosoftGraphTokenProvider.cs
+@@ -96,6 +96,7 @@ public sealed class MicrosoftGraphTokenProvider : IMicrosoftGraphTokenProvider,
+         bool forceRefresh = false)
+     {
+         var validatedScopes = ValidateAndPrepareScopes(scopes);
++        if (useDeviceCode) SessionAuthenticationProfile.RejectDeviceCode();
+         ValidateTenantId(tenantId);
+ 
+         if (!string.IsNullOrWhiteSpace(clientAppId))
+@@ -155,6 +156,8 @@ public sealed class MicrosoftGraphTokenProvider : IMicrosoftGraphTokenProvider,
+             // or fails for any reason.
+             if (string.IsNullOrWhiteSpace(token))
+             {
++                if (SessionAuthenticationProfile.Enabled)
++                    throw new InvalidOperationException("Private MSAL authentication failed. Shared Graph PowerShell authentication and device-code fallbacks are disabled for this session.");
+                 _logger.LogDebug("MSAL token acquisition failed, falling back to PowerShell Connect-MgGraph...");
+                 var script = BuildPowerShellScript(tenantId, validatedScopes, useDeviceCode, clientAppId);
+ 
+@@ -211,10 +214,7 @@ public sealed class MicrosoftGraphTokenProvider : IMicrosoftGraphTokenProvider,
+                 _tokenCache.TryRemove(cacheKey, out _);
+ 
+                 // Delete the MSAL persistent cache file so WAM starts with a clean account list.
+-                var msalCachePath = Path.Combine(
+-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+-                    AuthenticationConstants.ApplicationName,
+-                    AuthenticationConstants.MsalCacheFileName);
++                var msalCachePath = MsalBrowserCredential.MsalCacheFilePath;
+                 try
+                 {
+                     if (File.Exists(msalCachePath))
+diff --git a/Services/MsalBrowserCredential.cs b/Services/MsalBrowserCredential.cs
+index 40baede..0a1ff81 100644
+--- a/Services/MsalBrowserCredential.cs
++++ b/Services/MsalBrowserCredential.cs
+@@ -52,9 +52,7 @@ public sealed class MsalBrowserCredential : TokenCredential
+     private static readonly object _cacheHelperLock = new();
+ 
+     private static readonly string CacheFileName = AuthenticationConstants.MsalCacheFileName;
+-    private static readonly string CacheDirectory = Path.Combine(
+-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+-        AuthenticationConstants.ApplicationName);
++    private static readonly string CacheDirectory = SessionAuthenticationProfile.CacheDirectory;
+ 
+     /// <summary>
+     /// Full path to the OS-protected MSAL persistent token cache file — the single source of
+@@ -122,7 +120,7 @@ public sealed class MsalBrowserCredential : TokenCredential
+         // Get window handle for WAM on Windows
+         // Try multiple sources: console window, foreground window, or desktop window
+         _windowHandle = IntPtr.Zero;
+-        _useWam = useWam && OperatingSystem.IsWindows();
++        _useWam = useWam && OperatingSystem.IsWindows() && !SessionAuthenticationProfile.Enabled;
+         
+         if (OperatingSystem.IsWindows() && _useWam)
+         {
+@@ -167,7 +165,7 @@ public sealed class MsalBrowserCredential : TokenCredential
+         {
+             // Use system browser on non-Windows platforms or when WAM isn't available
+             _logger?.LogDebug("Using system browser for authentication");
+-            var effectiveRedirectUri = redirectUri ?? AuthenticationConstants.LocalhostRedirectUri;
++            var effectiveRedirectUri = redirectUri ?? (SessionAuthenticationProfile.Enabled ? "http://localhost" : AuthenticationConstants.LocalhostRedirectUri);
+             builder = builder.WithRedirectUri(effectiveRedirectUri);
+         }
+ 
+@@ -472,6 +470,11 @@ public sealed class MsalBrowserCredential : TokenCredential
+                 var builder = _publicClientApp
+                     .AcquireTokenInteractive(scopes)
+                     .WithUseEmbeddedWebView(false);
++                if (SessionAuthenticationProfile.Enabled)
++                    builder = builder.WithSystemWebViewOptions(new SystemWebViewOptions
++                    {
++                        OpenBrowserAsync = SessionAuthenticationProfile.OpenBrowserAsync
++                    });
+                 if (!string.IsNullOrWhiteSpace(_loginHint))
+                     builder = builder.WithLoginHint(_loginHint);
+                 interactiveResult = await builder.ExecuteAsync(cancellationToken);
+@@ -596,6 +599,7 @@ public sealed class MsalBrowserCredential : TokenCredential
+         string[] scopes,
+         CancellationToken cancellationToken)
+     {
++        SessionAuthenticationProfile.RejectDeviceCode();
+         // Before showing a device code, try to get a cached token.
+         // On Linux, the shared in-process cache may already hold a token from an earlier
+         // authentication step in the same CLI invocation (e.g., blueprint creation),

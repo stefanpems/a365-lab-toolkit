@@ -326,6 +326,21 @@ performs **no cloud mutations and runs no deploys**. Use `-ValidateOnly` to chec
 writing. Print the next commands for the user to run; never auto-run destructive deploys.
 
 ## 8. Deployment execution (only after scaffolding is confirmed)
+- **Session-private authentication when shared defaults must remain untouched.** `AZURE_CONFIG_DIR` isolates Azure
+  CLI but not the native Agent 365 CLI's MSAL/WAM store. Use
+  [New-A365SessionCli.ps1](./scripts/New-A365SessionCli.ps1) and dot-source
+  [Use-A365SessionCli.ps1](./scripts/Use-A365SessionCli.ps1) in every fresh command process. The tested adapter
+  builds official CLI **1.1.214** from its pinned source with an authentication-only patch; provisioning commands
+  and orchestration are unchanged. It requires the installed version's dependency directory and the .NET SDK.
+  Supply a dedicated absolute session directory, the external Edge executable and the existing work-profile
+  directory. The resulting process-local `a365` function preserves stdin, exit codes and its executable path
+  when a deploy script calls it. It does not replace the global tool or persist environment changes.
+  Configuration, logs and encrypted MSAL tokens remain in the private profile; WAM, device code and shared
+  Graph PowerShell fallbacks are disabled. Browser authentication and consent both use the explicit Edge profile.
+  The build includes the official Windows runtime assets: omitting the DPAPI implementation causes cache
+  persistence failures and repeated login prompts. Do not work around that failure with plaintext storage.
+  Run [test-a365-session-cli.ps1](./scripts/test-a365-session-cli.ps1) after changing this path; it tests real
+  DPAPI encryption, private paths, forbidden authentication fallbacks and nested deploy-script invocation.
 - **⛔ ACA `a365 setup all` + `deploy-aca*.ps1` must run FROM the agent folder.** `a365 setup all`
   writes `a365.generated.config.json` (blueprint ids + secret) and stamps `.env` only via its "project
   settings" step, which runs **only when the CLI detects the project in the current directory** — run

@@ -15,6 +15,9 @@ function Invoke-ScaffoldAcaAgent {
         aiTeammate                = ($a.type -eq 'ACA-DW')
         useBlueprint              = $true
     }
+    if ($a.type -ne 'ACA-DW') {
+        $cfg['authMode'] = if ($a.type -eq 'ACA-S2S') { 's2s' } else { 'obo' }
+    }
     $cfg | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dst 'a365.config.json')
     # Parameterize the hardcoded constants in the deploy script.
     $app = ($a.name -replace '[^A-Za-z0-9-]', '-').ToLower()
@@ -89,7 +92,8 @@ function Invoke-ScaffoldAcaAgent {
     $aoaiRgArg = if ($aoai.resourceGroup) { $aoai.resourceGroup } else { '<AOAI_RG>' }
     # Custom naming: no --agent-name, so a365 reads clientAppId from a365.config.json as is (fill the placeholder first).
     $clientIdCmd = if (-not (Get-A365AgentNameArg $plan $a)) { "pwsh -File `"$(Join-Path $RepoRoot '.github\skills\agent365-wizard\scripts\Set-A365ClientAppId.ps1')`" -ConfigPath .\a365.config.json -TenantId $($plan.solution.tenantId); " } else { '' }
-    $nextCommands.Add("cd `"$dst`"; $($clientIdCmd)a365 setup all$(Get-A365AgentNameArg $plan $a)$(if($a.type -eq 'ACA-DW'){' --aiteammate'}); .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg $aoaiRgArg -AoaiAcc $($aoai.account)$reuse$dwNote")
+    $authModeArg = if ($a.type -eq 'ACA-DW') { ' --aiteammate' } elseif ($a.type -eq 'ACA-S2S') { ' --authmode s2s' } else { ' --authmode obo' }
+    $nextCommands.Add("cd `"$dst`"; $($clientIdCmd)a365 setup all$(Get-A365AgentNameArg $plan $a)$authModeArg; .\$($m.deploy) -Subscription $($plan.solution.subscriptionId) -AoaiRg $aoaiRgArg -AoaiAcc $($aoai.account)$reuse$dwNote")
     # App Insights (optional): inject the connection string into the ACA container AFTER the deploy so the
     # agent's OpenTelemetry exports to it (ACA reads APPLICATIONINSIGHTS_CONNECTION_STRING as a normal env var).
     if ($aiTarget.mode -ne 'none') {

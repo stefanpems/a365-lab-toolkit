@@ -29,12 +29,16 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
 
 ## Flow
 1. Scaffold via the router: [scaffold-from-plan.ps1](../agent365-wizard/scripts/scaffold-from-plan.ps1).
-2. Run the printed next-commands: `a365 setup all --agent-name <name>` (default naming; in `namingMode`
+2. Run the printed next-commands: `a365 setup all --agent-name <name> --authmode obo|s2s` for the matching
+   non-DW variant, or `--aiteammate` for DW (default naming; in `namingMode`
    `custom` the scaffolder omits `--agent-name` so that a365 uses the plan's display names from the agent
    folder's `a365.config.json`, after filling its `clientAppId` with
    [Set-A365ClientAppId.ps1](../agent365-wizard/scripts/Set-A365ClientAppId.ps1)) → the variant's `deploy-aca*.ps1`
    (`-ClientSecretFromA365` in `assisted` secret mode). Auth to Azure OpenAI = Managed Identity
    (default) or API key (terminal only).
+   The scaffolder also persists `authMode` for OBO/S2S. Do not let an S2S agent silently use the CLI's
+   OBO default. Run `test-aca-auth-modes.ps1` after changing this mapping; both custom and default
+   naming must preserve the correct mode, while DW must not receive a non-DW authentication flag.
 3. Register the messaging endpoint after the container is up; verify `/api/health`.
 
 ## Known corrections (apply these)

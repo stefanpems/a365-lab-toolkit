@@ -106,8 +106,19 @@ function Add-AcaCorsOrigin {
         [string]$S2sAudience,
         [Parameter(Mandatory)][string]$Subscription
     )
-    $cur = az containerapp show -n $App -g $ResourceGroup --subscription $Subscription --query "properties.template.containers[0].env" -o json 2>$null | ConvertFrom-Json
-    $existing = @($cur | Where-Object { $_.name -eq 'UI_ALLOWED_ORIGINS' } | Select-Object -First 1).value
+    $raw = az containerapp show -n $App -g $ResourceGroup --subscription $Subscription --query "properties.template.containers[0].env" -o json 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "Cannot read environment variables of '$App' in '$ResourceGroup' (az exit $LASTEXITCODE); CORS was not changed." }
+    $cur = $raw | ConvertFrom-Json
+    $entry = $cur | Where-Object { $_.name -eq 'UI_ALLOWED_ORIGINS' } | Select-Object -First 1
+    $existing = $null
+    if ($null -ne $entry) {
+        if ($entry.PSObject.Properties['secretRef'] -and $entry.secretRef) {
+            throw "UI_ALLOWED_ORIGINS of '$App' is secret-backed; refusing to overwrite an unreadable origin list."
+        }
+        $value = $entry.PSObject.Properties['value']
+        if ($null -eq $value) { throw "UI_ALLOWED_ORIGINS of '$App' has no readable value; CORS was not changed." }
+        $existing = [string]$value.Value
+    }
     $origins = @()
     if ($existing) { $origins = @($existing -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
     if ($origins -notcontains $Origin) { $origins += $Origin }

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Microsoft.Agents.A365.DevTools.Cli</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.DevTools.Cli</RootNamespace>
+    <Version>1.1.214</Version>
+    <AssemblyVersion>1.1.214.37060</AssemblyVersion>
+    <FileVersion>1.1.214.37060</FileVersion>
+    <InformationalVersion>1.1.214-session-isolated</InformationalVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RollForward>LatestMajor</RollForward>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(A365SourceRoot)\**\*.cs" Exclude="$(A365SourceRoot)\obj\**;$(A365SourceRoot)\bin\**" />
+    <Compile Include="SessionAuthenticationProfile.cs" />
+    <Reference Include="$(A365CliDir)\*.dll" Exclude="$(A365CliDir)\Microsoft.Agents.A365.DevTools.Cli.dll" />
+    <Content Include="$(A365CliDir)\*.dll" Exclude="$(A365CliDir)\Microsoft.Agents.A365.DevTools.Cli.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
+    <EmbeddedResource Include="$(A365SourceRoot)\Templates\manifest.json" LogicalName="Microsoft.Agents.A365.DevTools.Cli.Templates.manifest.json" />
+    <EmbeddedResource Include="$(A365SourceRoot)\Templates\agenticUserTemplateManifest.json" LogicalName="Microsoft.Agents.A365.DevTools.Cli.Templates.agenticUserTemplateManifest.json" />
+    <EmbeddedResource Include="$(A365SourceRoot)\Templates\color.png" LogicalName="Microsoft.Agents.A365.DevTools.Cli.Templates.color.png" />
+    <EmbeddedResource Include="$(A365SourceRoot)\Templates\outline.png" LogicalName="Microsoft.Agents.A365.DevTools.Cli.Templates.outline.png" />
+    <EmbeddedResource Include="$(A365SourceRoot)\Templates\SchemaEvalReport.html" LogicalName="Microsoft.Agents.A365.DevTools.Cli.Templates.SchemaEvalReport.html" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <Target Name="CopyWindowsRuntimeAssets" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <WindowsRuntimeAsset Include="$(A365CliDir)\runtimes\win\lib\**\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WindowsRuntimeAsset)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

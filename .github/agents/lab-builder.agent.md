@@ -100,6 +100,13 @@ other and neither can resume cleanly. The isolation rules:
   `a365-deployment-plan.json` (legacy; retired for parallel safety). The scaffolder + Lab Cleaner +
   Lab Reporter already read the per-lab copy.
 - **The progress log is per-lab:** `generated/<prefix>/wizard-progress.log` (see below).
+- **Authentication is session-scoped when shared defaults must remain unchanged.** Isolate Azure CLI with
+  `AZURE_CONFIG_DIR`; this alone does not isolate native a365 MSAL/WAM authentication. Use the wizard's
+  [private CLI loader](../skills/agent365-wizard/scripts/Use-A365SessionCli.ps1) in every fresh process,
+  following its [execution contract](../skills/agent365-wizard/SKILL.md#8-deployment-execution-only-after-scaffolding-is-confirmed).
+  It runs the pinned official command implementations with private configuration and encrypted caches,
+  explicit external Edge authentication/consent, and no WAM/device-code/shared-PowerShell fallback.
+  Keep the global installed CLI and all shared accounts/caches unchanged.
 - **Live resume state goes in SESSION memory** (`/memories/session/`), which is scoped to THIS
   conversation and cannot collide with the parallel run. Keep one file, e.g.
   `/memories/session/lab-<prefix>.md`, recording: the plan path, the current phase/step, what is already
