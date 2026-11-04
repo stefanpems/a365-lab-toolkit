@@ -52,6 +52,10 @@ Thin orchestration for the shared web SPA. **All human setup detail is canonical
    existing origins and reports unreadable or secret-backed values rather than overwriting them.
    Run [test-webui-cloud.ps1](./scripts/test-webui-cloud.ps1) and
    [test-webui-config.ps1](./scripts/test-webui-config.ps1) after changing this path.
+   After an ACA environment-variable update, ingress traffic can briefly reach the previous revision.
+   Before declaring the tab ready, verify an actual `OPTIONS /chat` request with the UI origin and
+   bounded polling until `Access-Control-Allow-Origin` matches it. An early preflight without that
+   header is not a reason to rebuild the backend or recreate its resources.
 
 ## Standalone / shared web UIs, association scripts, and tags
 A web UI can be **lab-owned** (created inside a lab run, mode `create`) or **standalone/shared** (created
