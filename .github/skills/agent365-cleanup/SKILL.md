@@ -39,7 +39,10 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
    **auto-discovers the bot GUID** (Dataverse query with an az token; az must be in the target tenant),
    or pass `-BotId`. Drive it from the plan's `solution.copilotStudio` (target tenant + env) and each MCS
    agent's solution unique name (the sanitized `<prefix>MCSOH`/`<prefix>MCSNH`) + display name
-   (`<prefix>-MCS-OH`/`-NH`). Removal is surgical (single agent) and supports `-WhatIf`. If an MCP client
+   (`<prefix>-MCS-OH`/`-NH`). Removal is surgical (single agent) and supports `-WhatIf`; add
+   `-UseDataverseApi -EnvironmentId <id>` to delete through the Dataverse Web API (bound action `PvaDeleteBot` for the
+   agent) with az tokens
+   instead of pac, so the machine-wide pac profile is never switched (lab-private az profiles, parallel sessions). If an MCP client
    Entra app was created (`New-McsMcpClientApp.ps1`), delete it too (`az ad app delete --id <appId>`). MCS
    removal needs the **`pac` CLI** (install if missing). Note: MCS-NH consumes Copilot Credits — deleting
    the agent stops further consumption. **In custom naming mode an MCS agent may have a free-form Copilot
@@ -99,6 +102,14 @@ See [references/resource-model.md](./references/resource-model.md) for the full 
   workspace exists"*). The cleaner adds a `purge-cognitiveservices` step (order 39, before the RG delete)
   that delete+purges each lab-owned account and also sweeps prior-run soft-deleted leftovers. Purging the
   account removes its child project/"workspace" too — there is no separate AML-workspace resource to purge.
+  An account whose delete is refused (an AIServices account with Foundry projects) stays live: the step logs it,
+  the RG delete soft-deletes it, and the next run (or `az cognitiveservices account purge`) purges it.
+- **Managed identities are not purged.** The managed identities that Azure deletes with the resources (container
+  apps, Foundry accounts and projects) stay in the Entra recycle bin for 30 days and cannot be purged (nor
+  restored) by customers; Entra purges them by itself. Discovery does not list them (a purge would fail with 403).
+- **Force-delete Log Analytics workspaces.** An RG delete only soft-deletes the workspaces in it (14 days; a
+  same-name workspace in the same RG recovers the old data). Discovery adds a `purge-loganalytics` step (order 39)
+  per workspace of a discovered lab RG, which deletes it permanently (`--force true`) before the RG delete.
 
 ## Flow (in order)
 0. **Confirm the Copilot runtime model** — first action. Show the active chat model and, when VS Code

@@ -20,6 +20,7 @@
     38  delete-swa                       Delete a Static Web App resource.
     39  purge-cognitiveservices          Delete (if live) + PURGE a Cognitive Services account, freeing its
                                          name + regional quota and removing its child project ("workspace").
+    39  purge-loganalytics               Force-delete a Log Analytics workspace (no 14-day soft-deleted copy).
     40  delete-rg                        Delete an Azure resource group (async by default; see -WaitForRg).
 
   License release is the priority: a soft-delete alone does NOT free M365 licenses — only the purge
@@ -301,8 +302,26 @@ function Remove-CognitiveServicesAccount {
     # ("workspace"), which is what blocks a same-name re-provision. No separate AML-workspace purge needed.
     $out = az cognitiveservices account purge --location $loc --resource-group $rg --name $name --subscription $sub 2>&1
     if ($LASTEXITCODE -eq 0) { Write-Log 'OK' "purged Cognitive Services account '$name' (RG $rg, $loc)"; Add-Result $Item 'OK' 'purged' }
-    elseif (($out | Out-String) -match '(?i)(not\s*found|does not exist|ResourceNotFound|no\s+deleted)') { Write-Log 'SKIP' "Cognitive Services account '$name' already purged/absent"; Add-Result $Item 'SKIP' 'absent' }
+    elseif (($out | Out-String) -match '(?i)(not\s*found|does not exist|ResourceNotFound|no\s+deleted)') {
+        # Not soft-deleted: gone, or still live because its delete was refused (an AIServices account with Foundry
+        # projects). A live account is soft-deleted with its resource group and must be purged after it.
+        $live = az cognitiveservices account show -n $name -g $rg --subscription $sub --query id -o tsv 2>$null
+        if ($live) { Write-Log 'SKIP' "Cognitive Services account '$name' is still live (its delete was refused, e.g. it has Foundry projects): it goes with RG $rg; purge it after the RG deletion (run the cleaner again, or az cognitiveservices account purge --location $loc --resource-group $rg --name $name)"; Add-Result $Item 'SKIP' 'still live: purge after the RG deletion' }
+        else { Write-Log 'SKIP' "Cognitive Services account '$name' already purged/absent"; Add-Result $Item 'SKIP' 'absent' }
+    }
     else { Write-Log 'ERROR' "purge failed '$name' (RG $rg, $loc): $(( $out | Out-String).Trim())"; Add-Result $Item 'ERROR' 'purge failed' }
+}
+
+# Force-delete a Log Analytics workspace: a resource-group delete only soft-deletes it (recoverable for 14 days, and a
+# same-name workspace in the same RG would silently recover the old data), so it is removed permanently first.
+function Remove-LogAnalyticsWorkspace {
+    param($Item)
+    $name = $Item.id; $rg = $Item.resourceGroup
+    if ($WhatIf) { Write-Log 'WHATIF' "would force-delete Log Analytics workspace '$name' (RG $rg)"; Add-Result $Item 'WHATIF' ''; return }
+    $out = az monitor log-analytics workspace delete -g $rg -n $name --force true --yes --subscription $sub 2>&1
+    if ($LASTEXITCODE -eq 0) { Write-Log 'OK' "force-deleted Log Analytics workspace '$name' (RG $rg): no soft-deleted copy kept"; Add-Result $Item 'OK' 'force-deleted' }
+    elseif (($out | Out-String) -match '(?i)(not\s*found|does not exist|ResourceNotFound|ResourceGroupNotFound)') { Write-Log 'SKIP' "Log Analytics workspace '$name' already absent"; Add-Result $Item 'SKIP' 'absent' }
+    else { Write-Log 'ERROR' "force-delete failed '$name' (RG $rg): $(( $out | Out-String).Trim())"; Add-Result $Item 'ERROR' 'force-delete failed' }
 }
 
 function Remove-ServicePrincipal {
@@ -335,6 +354,7 @@ foreach ($item in $ordered) {
             'deregister-webui-tab' { Remove-WebUiTabRegistration $item }
             'delete-swa' { Remove-Swa $item }
             'purge-cognitiveservices' { Remove-CognitiveServicesAccount $item }
+            'purge-loganalytics' { Remove-LogAnalyticsWorkspace $item }
             'delete-rg' { Remove-ResourceGroup $item }
             default { Write-Log 'SKIP' "unknown action '$($item.action)' for '$($item.displayName)'"; Add-Result $item 'SKIP' 'unknown action' }
         }

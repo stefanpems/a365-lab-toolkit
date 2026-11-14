@@ -200,6 +200,11 @@ Keep the remaining slot ids stable; do not renumber an existing lab's operator f
 
 ## Teardown
 
+The [Demo Cleaner](../../.github/agents/demo-cleaner.agent.md) does all of the following in deletion order, hard
+(purges included), with a live HTML report, the exceptions chosen by the operator and a guided step for every portal
+action without an API; it ends with the conflicts to expect when a new lab is built in the same tenant, subscription
+and language. The list below is the manual equivalent.
+
 1. Restore what was changed only for the demo: the Power Platform setting "Authentication for agents" of the default
    environment (only if a legacy prototype was explicitly requested and the setting was relaxed) and the content filter of the Foundry deployment
    used by the review agent (back to the default policy, then delete the custom one).
@@ -208,7 +213,8 @@ Keep the remaining slot ids stable; do not renumber an existing lab's operator f
    Studio solutions of the lab. If a legacy FAQ prototype exists, it lives outside the lab plan (default environment):
    delete it in Copilot Studio.
 3. The demo MCP servers (`ext_...`) cannot be deleted through the platform API: Reject the pending requests and Block
-   the approved servers in the Microsoft 365 admin center > Agents > Tools. Their names stay reserved.
+   the approved servers in the Microsoft 365 admin center > Agents > Tools. Their names stay reserved (the Demo
+   Cleaner records them, and the next build skips them).
 4. Demo extras, removed by hand (Microsoft Entra, Microsoft 365, Purview, Defender): the persona users and the demo
    groups, the SharePoint site of the knowledge, the Agent Builder agents (with their custom skills), the direct
    application permission of the test twin, the access package and then its catalog,
@@ -216,5 +222,6 @@ Keep the remaining slot ids stable; do not renumber an existing lab's operator f
    retention policy, Communication Compliance policy and eDiscovery case, any legacy Defender real-time protection rule and
    saved hunting queries. `generated/<prefix>/demo/state.json` lists what the build created (users, groups, MCP
    registrations with their Entra apps, governance objects).
-5. Custom security attributes and attribute sets cannot be deleted: deactivate the attribute (and its values).
+5. Custom security attributes and attribute sets cannot be deleted: deactivate the attribute (and its values); the
+   next build reactivates them.
 6. Delete `generated/<prefix>/` (it holds the lab state, the MSAL caches and the operator slots file).

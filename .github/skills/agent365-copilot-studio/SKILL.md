@@ -84,7 +84,11 @@ All under [scripts/](scripts/); dot-source `_mcs-common.ps1` for shared helpers.
   `-DisplayName <agent>` and it **auto-discovers the bot GUID** (Dataverse `bots` query with an az token —
   az must be logged into the target tenant) then runs `pac copilot-studio delete-copilot-agent`; or pass
   `-BotId` directly. Removal is **surgical** (single agent) and supports `-WhatIf`. Used by the Lab
-  Cleaner.
+  Cleaner. With **`-UseDataverseApi`** (needs `-EnvironmentId` or `-EnvironmentUrl`) it never touches the
+  machine-wide pac profile: the agent is deleted through the Dataverse bound action `PvaDeleteBot` and the solution
+  through the Dataverse Web API, with az tokens of the target tenant (the Demo Cleaner uses it). The Power Platform API
+  *Bots - Delete Copilot Agent* is not used: it supports only Agent Builder agents and needs an app registration with
+  the `CopilotStudio.AdminActions.Invoke` scope.
 
 ## Create an MCS agent (end to end)
 1. Ensure pac (`Get-PacCli -Install`).

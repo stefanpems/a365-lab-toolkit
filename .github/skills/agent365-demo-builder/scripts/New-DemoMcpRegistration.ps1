@@ -18,10 +18,14 @@
     Retire   -Name <n> | -Role <r> | -All [-Confirmed]   pool only: manual Reject/Block, then -Confirmed records it
   Checks before a payload is written: the locale passes Test-DemoPack.ps1; the concrete name passes the iron rules
   (Test-ExtMcpServer); the backend answers /health and tools/list returns exactly the declared tools; the name is not
-  used in state.json or in the tenant; a pool base has no other non-retired instance (pack.json mcp.rules).
+  used in state.json, in the tenant or in the names left reserved by labs removed with the Demo Cleaner
+  (generated/cleanup/tenant-<tenantId>/reserved-ext-mcp-names.json); a pool base has no other non-retired instance (pack.json mcp.rules).
   Server and tool names are tenant-wide: a second demo lab in the same tenant needs -ServerName (another ext_ name
   within the iron rules) for the long-lived servers, and the same tool names must never be active twice: Block the
-  first lab's servers (or retire its pool instances) first, or build the second lab in another locale.
+  first lab's servers (or retire its pool instances) first, or build the second lab in another locale. After a lab
+  removed with the Demo Cleaner, whose servers it recorded as neutralized (Blocked/Rejected), a long-lived server is
+  registered as its successor <name><n> automatically, when the tenant's ext_ servers are known and no other lab on
+  this machine still has the same tools registered.
 .EXAMPLE
   pwsh -File .\New-DemoMcpRegistration.ps1 -Prefix cts2 -Action Register -Server records
 .EXAMPLE
@@ -147,6 +151,8 @@ if ($Action -eq 'Status') {
     }
     $t = Get-TenantExtServers
     Write-Host "=== ext_ servers in the tenant: $(if ($null -eq $t) { 'unknown (Compliant Container environment not cached yet: see Urls)' } else { "$($t.Count): $($t -join ', ')" })"
+    $reserved = @(Get-DemoReservedMcpNames $cfg.tenantId)
+    if ($reserved.Count) { Write-Host "=== ext_ names left reserved by removed labs (Demo Cleaner, never reused): $($reserved -join ', ')" }
     return
 }
 # --- Register: prepare input; -Run submits and confirms, but never approves ------------------------------------
@@ -175,7 +181,9 @@ if ($Action -eq 'Register') {
         pwsh -NoProfile -File $PSCommandPath -Prefix $Prefix -Action Confirm -Name ([string]$cur.name)
         exit $LASTEXITCODE
     }
-    $known = @(Get-AllInstances | Where-Object { -not (-not $isPool -and $cur -and $_.name -eq $cur.name -and $cur.status -eq 'payload') } | ForEach-Object { $_.name }) + @($tenant)
+    # Names left reserved by labs removed with the Demo Cleaner count as used: their connectors are gone, so the
+    # tenant scan above no longer sees them, but the platform keeps the names reserved forever.
+    $known = @(Get-AllInstances | Where-Object { -not (-not $isPool -and $cur -and $_.name -eq $cur.name -and $cur.status -eq 'payload') } | ForEach-Object { $_.name }) + @($tenant) + @(Get-DemoReservedMcpNames $cfg.tenantId)
     if ($isPool) {
         $base = [string]$ls.base
         $open = @($pool | Where-Object { $_.key -eq $key -and $_.status -in $activeStates })
@@ -189,6 +197,20 @@ if ($Action -eq 'Register') {
     else {
         if ($cur -and $cur.status -in $activeStates) { Write-DemoLog $Prefix "$($cur.name) is already registered ($($cur.status)): nothing to do"; return }
         $cand = if ($ServerName) { $ServerName } elseif ($cur -and $cur.status -eq 'payload') { [string]$cur.name } else { [string]$ls.name }
+        if (-not $ServerName -and $cand -eq [string]$ls.name -and $known -contains $cand) {
+            # The localized name was left by a lab removed with the Demo Cleaner: the successor <name><n> is registered without
+            # -ServerName only when the tenant's ext_ servers are known, every server of its family is recorded as neutralized
+            # (Blocked/Rejected) and no other lab on this machine still has the same tools registered.
+            $twins = @(Get-DemoMcpTwinServers -TenantId $cfg.tenantId -Locale $cfg.locale -Key $key -ExcludePrefix $Prefix)
+            if ($null -eq $tenant) { Write-DemoLog $Prefix "No automatic successor for ${cand}: the tenant's ext_ servers are unknown (pass -EnvironmentId <Compliant Container environment id>)" 'WARN' }
+            elseif ($twins.Count) { Write-DemoLog $Prefix "No automatic successor for ${cand}: $($twins -join ', ') of another lab still expose the same tools (block them first)" 'WARN' }
+            else {
+                $desc = [string]$ls.description
+                $next = Get-DemoMcpSuccessorName -BaseName $cand -Known $known -Neutralized @(Get-DemoNeutralizedMcpNames $cfg.tenantId) `
+                    -IsValid { param($n) -not @(Test-ExtMcpServer -Name $n -Description $desc | Where-Object { $_.level -eq 'error' }).Count }
+                if ($next) { Write-DemoLog $Prefix "$cand is reserved in this tenant by a removed lab and neutralized: registering its successor $next"; $cand = $next }
+            }
+        }
         if ($known -contains $cand) { throw "$cand already exists in this tenant or in state.json: ext_ names are tenant-wide and never reusable; choose another one with -ServerName <ext_ name> (letters/digits after 'ext_', 18 characters at most)." }
     }
     $err = @(Test-ExtMcpServer -Name $cand -Description ([string]$ls.description) | Where-Object { $_.level -eq 'error' })

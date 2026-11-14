@@ -3,7 +3,8 @@
 .SYNOPSIS
   Offline unit test of the Demo Builder helpers that need no tenant: license bundles (Get-DemoSkuParts,
   Get-DemoPersonaLicenseRoles, Get-DemoRolePlans, Get-DemoLicenseAdds), the lab-private az profile (Use-DemoAzProfile,
-  New-DemoConfig.ps1 -IsolatedAzProfile / -TeamsForAllPersonas / SKU persistence) and the reserved knowledge folder
+  New-DemoConfig.ps1 -IsolatedAzProfile / -TeamsForAllPersonas / SKU persistence), the Demo Cleaner hand-over (retired
+  lab names, successors of neutralized ext_ servers) and the reserved knowledge folder
   names of Test-DemoPack.ps1. Uses throwaway prefixes under generated/ that it deletes. Exit code 0 = all passed.
 .EXAMPLE
   pwsh -File .\test-demo-helpers.ps1
@@ -14,7 +15,7 @@ $script:fail = 0; $script:pass = 0
 function Assert([bool]$Cond, [string]$Name) { if ($Cond) { $script:pass++; Write-Host "  ok   $Name" } else { $script:fail++; Write-Host "  FAIL $Name" -ForegroundColor Red } }
 function New-Sku([string]$Part, [string]$Id, [string[]]$Plans) { [pscustomobject]@{ skuPartNumber = $Part; skuId = $Id; servicePlans = @($Plans | ForEach-Object { [pscustomobject]@{ servicePlanName = $_; servicePlanId = "plan-$_" } }) } }
 function Read-DemoLabConfigRaw([string]$Prefix) { Get-Content -LiteralPath (Join-Path (Get-DemoLabDir $Prefix) 'demo-config.json') -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable }
-$tmpPrefixes = @('zzhelp1', 'zzhelp2')
+$tmpPrefixes = @('zzhelp1', 'zzhelp2', 'zzhelp3')
 $saveCfgDir = $env:AZURE_CONFIG_DIR; $saveExtDir = $env:AZURE_EXTENSION_DIR
 try {
     Write-Host 'License bundles'
@@ -66,6 +67,42 @@ try {
     pwsh -NoProfile -File $nc -Prefix zzhelp2 -Locale en *> $null
     $null = Read-DemoConfig 'zzhelp2'
     Assert (-not $env:AZURE_CONFIG_DIR) 'no azConfigDir = the environment is left untouched (legacy behaviour)'
+
+    Write-Host 'Demo Cleaner hand-over (retired lab names, successors of neutralized ext_ servers)'
+    $fakeRun = Join-Path $script:DemoRepoRoot 'generated\cleanup\demo-zzhelp3-20990101-000000'
+    New-Item -ItemType Directory -Force -Path $fakeRun | Out-Null
+    @{ prefix = 'zzhelp3'; phase = 'review' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fakeRun 'cleanup-plan.json') -Encoding utf8
+    Assert (-not (Get-DemoLabRemoval 'zzhelp3')) 'a cleanup that has not started deleting does not retire the lab name'
+    @{ prefix = 'zzhelp3'; phase = 'deleting' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fakeRun 'cleanup-plan.json') -Encoding utf8
+    Assert ((Get-DemoLabRemoval 'zzhelp3').phase -eq 'deleting' -and -not (Get-DemoLabRemoval 'zzhelp')) 'a started removal retires exactly that lab name'
+    pwsh -NoProfile -File $nc -Prefix zzhelp3 -Locale en *> $null
+    Assert ($LASTEXITCODE -ne 0 -and -not (Test-Path -LiteralPath (Get-DemoLabDir 'zzhelp3'))) 'New-DemoConfig.ps1 refuses a retired lab name and creates nothing'
+    $valid = { param($n) $n.Length -le 22 }
+    Assert ((Get-DemoMcpSuccessorName -BaseName 'ext_RecordsTest' -Known @('ext_RecordsTest', 'ext_Other') -Neutralized @('ext_RecordsTest') -IsValid $valid) -eq 'ext_RecordsTest2') 'a neutralized long-lived name gets the successor <name>2'
+    Assert ((Get-DemoMcpSuccessorName -BaseName 'ext_RecordsTest' -Known @('ext_RecordsTest', 'ext_RecordsTest2') -Neutralized @('ext_RecordsTest', 'ext_RecordsTest2') -IsValid $valid) -eq 'ext_RecordsTest3') 'used successors are skipped'
+    Assert ($null -eq (Get-DemoMcpSuccessorName -BaseName 'ext_RecordsTest' -Known @('ext_RecordsTest', 'ext_RecordsTest2') -Neutralized @('ext_RecordsTest') -IsValid $valid)) 'a family server not known as neutralized stops the automatic choice (tools never active twice)'
+    Assert ($null -eq (Get-DemoMcpSuccessorName -BaseName 'ext_RecordsTest' -Known @('ext_RecordsTest') -Neutralized @() -IsValid $valid)) 'a name not recorded as neutralized keeps the -ServerName rule'
+    Assert ((Get-DemoMcpSuccessorName -BaseName 'ext_RecordsTest' -Known @('ext_RecordsTest') -Neutralized @('ext_RecordsTest') -IsValid { param($n) $n -ne 'ext_RecordsTest2' }) -eq 'ext_RecordsTest3') 'a successor that fails the iron rules is skipped'
+    $saveRoot = $script:DemoRepoRoot
+    $script:DemoRepoRoot = Join-Path ([IO.Path]::GetTempPath()) ('zzhelp-mem-' + [guid]::NewGuid().ToString('N'))
+    try {
+        $null = Add-DemoReservedMcpNames -TenantId 't1' -Prefix 'old' -Names @(@{ name = 'ext_RecordsTest'; state = 'approved' }, @{ name = 'ext_CompaniesTest'; state = 'approved' })
+        Assert (@(Get-DemoNeutralizedMcpNames 't1').Count -eq 0) 'names recorded at discovery are not neutralized yet'
+        Set-DemoReservedMcpState -TenantId 't1' -Prefix 'old' -Name 'ext_RecordsTest' -State 'blocked'
+        Set-DemoReservedMcpState -TenantId 't1' -Prefix 'old' -Name 'ext_DatesTest01' -State 'gone'
+        $neut = @(Get-DemoNeutralizedMcpNames 't1')
+        Assert ($neut.Count -eq 2 -and $neut -contains 'ext_RecordsTest' -and $neut -contains 'ext_DatesTest01' -and @(Get-DemoReservedMcpNames 't1').Count -eq 3) 'verified servers are marked neutralized (a missing name is recorded too)'
+        $fakeLab = { param($p, $loc, $name, $status)
+            $dir = Join-Path $script:DemoRepoRoot "generated\$p\demo"; New-Item -ItemType Directory -Force -Path $dir | Out-Null
+            @{ tenantId = 't1'; locale = $loc } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dir 'demo-config.json') -Encoding utf8
+            @{ mcp = @{ servers = @{ records = @{ name = $name; status = $status } } } } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $dir 'state.json') -Encoding utf8 }
+        & $fakeLab 'old' 'en' 'ext_RecordsTest' 'approved'; & $fakeLab 'labit' 'it' 'ext_RegistriTest' 'approved'; & $fakeLab 'labdraft' 'en' 'ext_RecordsB' 'payload'
+        Assert (@(Get-DemoMcpTwinServers -TenantId 't1' -Locale 'en' -Key 'records' -ExcludePrefix 'new').Count -eq 0) 'no twin: neutralized server, other locale and unsubmitted payload do not count'
+        & $fakeLab 'laba' 'en' 'ext_RecordsA' 'approved'
+        Assert ((@(Get-DemoMcpTwinServers -TenantId 't1' -Locale 'en' -Key 'records' -ExcludePrefix 'new') -join ',') -eq 'ext_RecordsA' -and @(Get-DemoMcpTwinServers -TenantId 't1' -Locale 'en' -Key 'records' -ExcludePrefix 'laba').Count -eq 0) "another lab's live server with the same tools stops the automatic successor (not the lab itself)"
+        Assert (@(Get-DemoMcpTwinServers -TenantId 't2' -Locale 'en' -Key 'records').Count -eq 0) 'labs of another tenant do not count'
+    }
+    finally { if (Test-Path -LiteralPath $script:DemoRepoRoot) { Remove-Item -LiteralPath $script:DemoRepoRoot -Recurse -Force }; $script:DemoRepoRoot = $saveRoot }
 
     Write-Host 'Agent naming consistency (Test-DemoPack.ps1)'
     $tp = Join-Path $PSScriptRoot 'Test-DemoPack.ps1'
@@ -156,6 +193,7 @@ P(os.path.join(r"$d", "msal_token_cache.bin")).save(json.dumps(c))
 finally {
     $env:AZURE_CONFIG_DIR = $saveCfgDir; $env:AZURE_EXTENSION_DIR = $saveExtDir
     foreach ($p in $tmpPrefixes) { $d = Join-Path $script:DemoRepoRoot "generated\$p"; if (Test-Path -LiteralPath $d) { Remove-Item -LiteralPath $d -Recurse -Force } }
+    $d = Join-Path $script:DemoRepoRoot 'generated\cleanup\demo-zzhelp3-20990101-000000'; if (Test-Path -LiteralPath $d) { Remove-Item -LiteralPath $d -Recurse -Force }
 }
 Write-Host ''
 Write-Host "Passed $($script:pass), failed $($script:fail)" -ForegroundColor $(if ($script:fail) { 'Red' } else { 'Green' })

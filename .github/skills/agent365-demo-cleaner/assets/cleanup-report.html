@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-accent: #b11f4b;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #b45309;
+  --cp-link: #0078d4;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #a0a0a0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: var(--cp-bg); color: var(--cp-text);
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+header, section { margin-bottom: 20px; padding: 20px; border: 1px solid var(--cp-border);
+  background: var(--cp-surface); border-radius: 16px; }
+h1 { margin: 0 0 8px; color: var(--cp-accent); font-size: 1.6rem; }
+h2 { margin-top: 0; font-size: 1.2rem; }
+.meta { color: var(--cp-text-muted); margin: 4px 0; }
+a { color: var(--cp-link); }
+.banner { margin: 12px 0; padding: 10px 14px; border-radius: 10px; background: var(--cp-accent-soft); font-weight: 600; }
+.controls, .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+fieldset { border: 1px solid var(--cp-border); border-radius: 10px; padding: 6px 12px; margin: 0; }
+fieldset label { margin-right: 10px; white-space: nowrap; }
+input, select, button { padding: 8px 10px; border-radius: 0.625rem; border: 1px solid var(--cp-border-strong);
+  font: inherit; background: var(--cp-bg-elevated); color: var(--cp-text); }
+input[type="checkbox"] { padding: 0; width: 16px; height: 16px; vertical-align: middle; }
+button { cursor: pointer; }
+.counters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip { display: inline-block; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--cp-border-strong);
+  font-size: 0.85rem; white-space: nowrap; }
+.st-toDelete { border-color: var(--cp-border-strong); }
+.st-deleted { color: var(--cp-success); border-color: var(--cp-success); }
+.st-failed { color: var(--cp-danger); border-color: var(--cp-danger); }
+.st-excluded { color: var(--cp-text-muted); border-style: dashed; }
+.sev-blocker { color: var(--cp-danger); }
+.sev-warning { color: var(--cp-warning); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--cp-border); overflow-wrap: anywhere; }
+th { background: var(--cp-surface-soft); position: sticky; top: 0; }
+tbody tr:hover { background: var(--cp-accent-soft); }
+td.idx { width: 48px; font-variant-numeric: tabular-nums; }
+td.when { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.detail { display: block; color: var(--cp-text-muted); font-size: 0.85rem; margin-top: 2px; }
+.reason { display: block; color: var(--cp-text-muted); font-size: 0.8rem; margin-top: 4px; }
+details summary { cursor: pointer; color: var(--cp-link); }
+ol.steps { margin: 6px 0 0 18px; padding: 0; }
+#exceptions-text { min-width: 320px; }
+@media (max-width: 760px) { body { padding: 10px; } header, section { padding: 14px; } }
+@media print { .controls, .filters, .keep-col, #review { display: none !important; } body { padding: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">__TITLE__</h1>
+  <p class="meta" id="context"></p>
+  <div class="banner" id="phase"></div>
+  <div class="controls">
+    <button type="button" id="refresh">Refresh</button>
+    <label><input type="checkbox" id="auto" checked> Auto-refresh every 60 seconds</label>
+    <span class="meta" id="countdown"></span>
+    <span class="meta" id="updated"></span>
+    <button type="button" onclick="window.print()">Print / save PDF</button>
+  </div>
+  <div class="filters">
+    <fieldset id="type-filter"><legend>Type</legend></fieldset>
+    <label>Status <select id="status-filter"><option value="">All</option></select></label>
+    <label>Search <input type="search" id="search" placeholder="Name, notes..."></label>
+    <button type="button" id="show-all">Show all</button>
+  </div>
+  <div class="counters" id="counters"></div>
+</header>
+<main>
+  <section id="review" hidden>
+    <h2>Review gate: exceptions</h2>
+    <p>Tick <strong>Keep</strong> on every element that must NOT be deleted, then copy the list and paste it into the
+      chat at the second gate. You can also type indexes, ranges and types directly in the chat (for example
+      <code>3, 7-9, type:Configuration</code>). Elements kept by default can be included with <code>include: 12</code>.</p>
+    <button type="button" id="copy-exceptions">Copy exception list</button>
+    <input type="text" id="exceptions-text" readonly aria-label="Exception list">
+  </section>
+  <section>
+    <h2>Elements in deletion order</h2>
+    <div class="table-wrap">
+      <table id="items">
+        <thead><tr>
+          <th class="keep-col" scope="col">Keep</th><th scope="col">#</th><th scope="col">Element</th><th scope="col">Type</th>
+          <th scope="col">Status</th><th scope="col">Last updated</th><th scope="col">Notes</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="empty" hidden>No element matches the filters.</p>
+  </section>
+  <section id="warnings" hidden><h2>Discovery warnings</h2><ul id="warning-list"></ul></section>
+  <section id="summary" hidden><h2>Summary</h2><div id="summary-body"></div></section>
+  <section id="problems" hidden><h2>Problems that prevented a deletion, and how to solve them</h2><div id="problem-body"></div></section>
+  <section id="manual" hidden><h2>Manual rollback guide (portal actions and components created by hand)</h2><div id="manual-body"></div></section>
+  <section id="runbook" hidden><h2>Runbook coverage (what the build asked to do by hand, and how it is rolled back)</h2><div id="runbook-body"></div></section>
+  <section id="rebuild" hidden><h2>Rebuilding a lab in the same tenant, subscription and language</h2><div id="rebuild-body"></div></section>
+</main>
+<script type="application/json" id="initial-data">__INITIAL_DATA__</script>
+<script>
+/* Pure helpers (no DOM): also loaded by the offline tests. */
+(function (root) {
+  "use strict";
+  function compressRanges(numbers) {
+    const sorted = Array.from(new Set(numbers.map(Number))).filter(n => Number.isInteger(n)).sort((a, b) => a - b);
+    const out = [];
+    for (let i = 0; i < sorted.length; i++) {
+      let j = i;
+      while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) { j++; }
+      out.push(j > i ? sorted[i] + "-" + sorted[j] : String(sorted[i]));
+      i = j;
+    }
+    return out.join(", ");
+  }
+  function filterItems(items, filter) {
+    const query = (filter.query || "").toLocaleLowerCase();
+    return items.filter(item =>
+      (!filter.types || filter.types.length === 0 || filter.types.indexOf(item.type) >= 0) &&
+      (!filter.status || item.status === filter.status) &&
+      (!query || [item.name, item.detail, item.notes, String(item.index)].join(" ").toLocaleLowerCase().indexOf(query) >= 0));
+  }
+  function formatTime(value) {
+    if (!value) { return ""; }
+    const d = new Date(value);
+    if (isNaN(d.getTime())) { return String(value); }
+    const p = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+  root.DemoCleanerReport = { compressRanges: compressRanges, filterItems: filterItems, formatTime: formatTime };
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>
+(function () {
+  "use strict";
+  const DATA_FILE = "__DATA_FILE__";
+  const R = window.DemoCleanerReport;
+  let data = JSON.parse(document.getElementById("initial-data").textContent);
+  const storeKey = "demoCleaner:" + data.runId;
+  const ui = Object.assign({ types: data.types.slice(), status: "", query: "", auto: true, keep: [] }, readStore());
+  let seconds = 60;
+
+  function readStore() { try { return JSON.parse(localStorage.getItem(storeKey) || "{}"); } catch (e) { return {}; } }
+  function writeStore() { try { localStorage.setItem(storeKey, JSON.stringify(ui)); } catch (e) { /* storage disabled */ } }
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) { e.className = cls; } if (text !== undefined && text !== null) { e.textContent = String(text); } return e; }
+  function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
+  function chip(status, label) { return el("span", "chip st-" + status, label); }
+
+  function buildFilters() {
+    const box = document.getElementById("type-filter");
+    data.types.forEach(type => {
+      const label = el("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.value = type; cb.checked = ui.types.indexOf(type) >= 0;
+      cb.addEventListener("change", () => {
+        ui.types = Array.from(box.querySelectorAll("input:checked")).map(x => x.value);
+        writeStore(); renderTable();
+      });
+      label.append(cb, document.createTextNode(" " + type));
+      box.append(label);
+    });
+    const sel = document.getElementById("status-filter");
+    Object.keys(data.statusLabels).forEach(key => { const o = el("option", null, data.statusLabels[key]); o.value = key; sel.append(o); });
+    sel.value = ui.status;
+    sel.addEventListener("change", () => { ui.status = sel.value; writeStore(); renderTable(); });
+    const search = document.getElementById("search");
+    search.value = ui.query;
+    search.addEventListener("input", () => { ui.query = search.value; writeStore(); renderTable(); });
+    document.getElementById("show-all").addEventListener("click", () => {
+      ui.types = data.types.slice(); ui.status = ""; ui.query = "";
+      box.querySelectorAll("input").forEach(x => { x.checked = true; });
+      sel.value = ""; search.value = ""; writeStore(); renderTable();
+    });
+  }
+
+  function renderHeader() {
+    document.getElementById("context").textContent = "Lab " + data.prefix + " · pack " + data.pack + " · locale " + data.locale +
+      " · tenant " + data.tenantId + " · subscription " + data.subscriptionId + " · run " + data.runId;
+    const phases = {
+      discovery: "Discovery in progress (read-only): the list is still growing" + (data.discovery && data.discovery.section ? " — " + data.discovery.section : ""),
+      review: "Review gate: nothing has been deleted. Choose the exceptions, then confirm the deletion in the chat.",
+      confirmed: "Deletion confirmed: it starts in a moment.",
+      deleting: "Deletion in progress — the table updates as each element is processed" + (data.manualMode === "defer" ? " (manual actions deferred to the end)." : "."),
+      paused: "Paused at a manual action: follow the chat (or the Manual rollback guide below), then the run resumes.",
+      waiting: "Waiting for the asynchronous Azure resource-group deletions to complete.",
+      finished: "Finished. See the summary, the problems and the rebuild notes at the bottom.",
+      snapshot: "Snapshot preview (no cloud reads): run a live discovery before any deletion."
+    };
+    document.getElementById("phase").textContent = phases[data.phase] || data.phase;
+    document.getElementById("updated").textContent = "Data updated " + R.formatTime(data.updatedAt);
+    const c = document.getElementById("counters"); clear(c);
+    const s = data.stats;
+    c.append(el("span", "chip", "Total " + s.total), chip("toDelete", data.statusLabels.toDelete + " " + s.toDelete),
+      chip("deleted", data.statusLabels.deleted + " " + s.deleted), chip("failed", data.statusLabels.failed + " " + s.failed),
+      chip("excluded", data.statusLabels.excluded + " " + s.excluded));
+    document.getElementById("review").hidden = data.phase !== "review";
+    document.querySelectorAll(".keep-col").forEach(x => { x.hidden = data.phase !== "review"; });
+  }
+
+  function notesCell(item) {
+    const td = el("td");
+    if (item.notes) { td.append(el("div", null, item.notes)); }
+    if (item.manual && item.manual.steps && item.manual.steps.length) {
+      const d = el("details"); d.append(el("summary", null, "Manual action: " + (item.manual.where || "see the steps")));
+      const ol = el("ol", "steps"); item.manual.steps.forEach(step => ol.append(el("li", null, step))); d.append(ol);
+      if (item.manual.verify) { d.append(el("div", "reason", "Verification: " + item.manual.verify)); }
+      td.append(d);
+    }
+    return td;
+  }
+
+  function renderTable() {
+    const body = document.querySelector("#items tbody"); clear(body);
+    const rows = R.filterItems(data.items, { types: ui.types, status: ui.status, query: ui.query });
+    const review = data.phase === "review";
+    rows.forEach(item => {
+      const tr = el("tr");
+      const keep = el("td", "keep-col"); keep.hidden = !review;
+      if (review && item.status === "toDelete") {
+        const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = ui.keep.indexOf(item.index) >= 0;
+        cb.setAttribute("aria-label", "Keep #" + item.index);
+        cb.addEventListener("change", () => {
+          ui.keep = ui.keep.filter(n => n !== item.index); if (cb.checked) { ui.keep.push(item.index); }
+          writeStore(); renderExceptions();
+        });
+        keep.append(cb);
+      }
+      tr.append(keep, el("td", "idx", item.index));
+      const name = el("td"); name.append(el("strong", null, item.name)); if (item.detail) { name.append(el("span", "detail", item.detail)); }
+      tr.append(name, el("td", null, item.type));
+      const st = el("td"); st.append(chip(item.status, data.statusLabels[item.status] || item.status));
+      if (item.reason && data.reasonLabels[item.reason]) { st.append(el("span", "reason", data.reasonLabels[item.reason])); }
+      tr.append(st, el("td", "when", R.formatTime(item.lastUpdated)), notesCell(item));
+      body.append(tr);
+    });
+    document.getElementById("empty").hidden = rows.length > 0;
+  }
+
+  function renderExceptions() {
+    const valid = ui.keep.filter(n => data.items.some(i => i.index === n && i.status === "toDelete"));
+    document.getElementById("exceptions-text").value = valid.length ? "exclude: " + R.compressRanges(valid) : "exclude: none";
+  }
+
+  function table(headers, rows) {
+    const t = el("table"); const h = el("tr"); headers.forEach(x => h.append(el("th", null, x)));
+    const thead = el("thead"); thead.append(h); t.append(thead);
+    const tb = el("tbody"); rows.forEach(r => { const tr = el("tr"); r.forEach(c => tr.append(c && c.nodeType ? c : el("td", null, c))); tb.append(tr); });
+    t.append(tb); const w = el("div", "table-wrap"); w.append(t); return w;
+  }
+
+  function renderSections() {
+    const warn = document.getElementById("warning-list"); clear(warn);
+    (data.warnings || []).forEach(w => warn.append(el("li", null, w.topic + ": " + w.detail)));
+    document.getElementById("warnings").hidden = !(data.warnings && data.warnings.length);
+
+    const sum = data.summary;
+    const sb = document.getElementById("summary-body"); clear(sb);
+    document.getElementById("summary").hidden = !sum;
+    if (sum) {
+      const s = sum.stats;
+      sb.append(el("p", null, "Elements: " + s.total + " · deleted successfully: " + s.deleted + " · could not delete: " + s.failed +
+        " (errors " + s.errors + ", platform limitations " + s.limitations + ", manual actions pending " + s.manualPending +
+        ", blocked by a dependency " + s.dependency + ", still in progress " + s.stillRunning + ") · still to be deleted: " + s.toDelete +
+        " · excluded (kept): " + s.excluded));
+      sb.append(table(["Type", "Total", "Deleted successfully", "Could not delete", "To be deleted", "Excluded (kept)"],
+        data.types.map(t => { const x = s.byType[t]; return [t, x.total, x.deleted, x.failed, x.toDelete, x.excluded]; })));
+    }
+    const pb = document.getElementById("problem-body"); clear(pb);
+    const problems = sum ? sum.problems : [];
+    document.getElementById("problems").hidden = !(problems && problems.length);
+    if (problems && problems.length) { pb.append(table(["#", "Element", "Type", "Cause", "Problem and solution"], problems.map(p => [p.index, p.name, p.type, p.reasonLabel, p.notes]))); }
+
+    const mb = document.getElementById("manual-body"); clear(mb);
+    const manual = data.manualGuide || [];
+    document.getElementById("manual").hidden = !(manual && manual.length);
+    if (manual && manual.length) {
+      mb.append(table(["#", "Element", "When", "Where and how", "Verification", "Status"], manual.map(m => {
+        const how = el("td"); if (m.where) { how.append(el("div", null, m.where)); }
+        const ol = el("ol", "steps"); (m.how || []).forEach(s => ol.append(el("li", null, s))); how.append(ol);
+        const st = el("td"); st.append(chip(m.status, data.statusLabels[m.status] || m.status));
+        return [m.index, m.name, m.when, how, m.verify || "", st];
+      })));
+    }
+    const rb = document.getElementById("runbook-body"); clear(rb);
+    document.getElementById("runbook").hidden = !(data.runbook && data.runbook.length);
+    if (data.runbook && data.runbook.length) { rb.append(table(["Source", "Action done by hand", "Rollback"], data.runbook.map(r => [r.source, r.action, r.rollback]))); }
+
+    const bb = document.getElementById("rebuild-body"); clear(bb);
+    document.getElementById("rebuild").hidden = !(data.rebuild && data.rebuild.length);
+    if (data.rebuild && data.rebuild.length) {
+      bb.append(table(["Topic", "Severity", "Expected problem", "How to solve it"], data.rebuild.map(r => {
+        const sev = el("td", "sev-" + r.severity, r.severity); return [r.topic, sev, r.problem, r.fix];
+      })));
+    }
+  }
+
+  function render() { renderHeader(); renderTable(); renderExceptions(); renderSections(); }
+
+  // Reloads only the data file (no page refresh); falls back to a full reload when a browser blocks local scripts.
+  function refresh() {
+    const s = document.createElement("script");
+    s.src = DATA_FILE + "?ts=" + Date.now();
+    s.onload = () => { if (window.DEMO_CLEANUP_DATA) { data = window.DEMO_CLEANUP_DATA; render(); } s.remove(); };
+    s.onerror = () => { s.remove(); writeStore(); window.location.reload(); };
+    document.head.append(s);
+    seconds = 60;
+  }
+
+  document.getElementById("refresh").addEventListener("click", refresh);
+  const auto = document.getElementById("auto");
+  auto.checked = ui.auto !== false;
+  auto.addEventListener("change", () => { ui.auto = auto.checked; seconds = 60; writeStore(); tick(); });
+  document.getElementById("copy-exceptions").addEventListener("click", () => {
+    const box = document.getElementById("exceptions-text"); box.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(box.value).catch(() => document.execCommand("copy")); }
+    else { document.execCommand("copy"); }
+  });
+  function tick() { document.getElementById("countdown").textContent = auto.checked ? "next refresh in " + seconds + " s" : "auto-refresh off"; }
+  setInterval(() => { if (!auto.checked) { tick(); return; } seconds--; if (seconds <= 0) { refresh(); } tick(); }, 1000);
+
+  buildFilters();
+  render();
+  tick();
+})();
+</script>
+</body>
+</html>

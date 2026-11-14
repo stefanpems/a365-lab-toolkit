@@ -146,7 +146,10 @@ repeatable: [agent365-demo-reset](.github/skills/agent365-demo-reset/SKILL.md) (
 conditions before every rehearsal) and [agent365-demo-guide](.github/skills/agent365-demo-guide/SKILL.md) (the run of
 show). Start with the license gate in
 [docs/demo-environment-prerequisites.md](docs/demo-environment-prerequisites.md); the shipped pack is described in
-[demo-packs/agent-governance/README.md](demo-packs/agent-governance/README.md).
+[demo-packs/agent-governance/README.md](demo-packs/agent-governance/README.md). To remove a lab completely, use the
+[Demo Cleaner](.github/agents/demo-cleaner.agent.md): it rolls back everything the build created and what was added
+by hand from its runbook, hard and in deletion order (reusing the Lab Cleaner), with a live HTML report, a guide for
+the manual steps and the conflicts to expect when rebuilding in the same tenant and language.
 **Preview, not yet validated end to end:** checked offline and read-only against a real tenant; a complete build in a
 new tenant has not been run yet.
 

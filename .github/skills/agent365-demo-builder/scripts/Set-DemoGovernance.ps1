@@ -6,7 +6,8 @@
 .DESCRIPTION
   Data-driven: pack.json agents[].entraOwner / sponsor / sponsorOn / attribute and governance.*; names from the locale.
   Steps (-Step, comma-separated, default all):
-    attributes  attribute set + definition + allowed values (delegated: CustomSecAttributeDefinition.ReadWrite.All)
+    attributes  attribute set + definition + allowed values (delegated: CustomSecAttributeDefinition.ReadWrite.All);
+                a definition or value left deactivated by an earlier teardown (Demo Cleaner) is reactivated
     identities  per agent identity: user owner, sponsor (exclusive) and attribute value, through application-only APIs
                 (temporary app, deleted at the end). Identities: code agents by the agenticAppId of their Lab Builder
                 config, Digital Worker instances by blueprint (sponsorOn: instance), the others by their localized
@@ -66,14 +67,27 @@ if (Test-Step 'attributes') {
             Invoke-DemoGraph POST "$G/v1.0/directory/attributeSets" -Token $t -Body @{ id = $setId; description = [string]$gov.attributeSet.description; maxAttributesPerSet = 25 } | Out-Null
             Write-DemoLog $Prefix "Attribute set $setId created"
         }
-        if (Test-Missing (Invoke-DemoGraph GET "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId" -Token $t -NoThrow) "attribute $defId" $hint) {
+        $def = Invoke-DemoGraph GET "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId" -Token $t -NoThrow
+        if (Test-Missing $def "attribute $defId" $hint) {
             Invoke-DemoGraph POST "$G/v1.0/directory/customSecurityAttributeDefinitions" -Token $t -Body @{ attributeSet = $setId; name = $attrName; description = [string]$gov.attribute.description
                 type = 'String'; status = 'Available'; isCollection = $false; isSearchable = $true; usePreDefinedValuesOnly = $true } | Out-Null
             Write-DemoLog $Prefix "Attribute $setId/$attrName created"
         }
-        $have = @((Invoke-DemoGraph GET "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId/allowedValues" -Token $t).value | ForEach-Object { $_.id })
+        elseif ([string]$def.status -eq 'Deprecated') {
+            # Attributes cannot be deleted: the teardown of an earlier lab in this tenant (Demo Cleaner) deactivates them.
+            Invoke-DemoGraph PATCH "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId" -Token $t -Body @{ status = 'Available' } | Out-Null
+            Write-DemoLog $Prefix "Attribute $setId/$attrName reactivated (deactivated by an earlier teardown)"
+        }
+        $existing = @((Invoke-DemoGraph GET "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId/allowedValues" -Token $t).value)
         foreach ($v in $vals) {
-            if ($have -contains $v) { continue }
+            $cur = $existing | Where-Object { $_.id -eq $v } | Select-Object -First 1
+            if ($cur) {
+                if ($cur.isActive -eq $false) {
+                    Invoke-DemoGraph PATCH "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId/allowedValues/$([uri]::EscapeDataString($v))" -Token $t -Body @{ isActive = $true } | Out-Null
+                    Write-DemoLog $Prefix "Allowed value $v reactivated (deactivated by an earlier teardown)"
+                }
+                continue
+            }
             Invoke-DemoGraph POST "$G/v1.0/directory/customSecurityAttributeDefinitions/$defId/allowedValues" -Token $t -Body @{ id = $v; isActive = $true } | Out-Null
             Write-DemoLog $Prefix "Allowed value $v added"
         }

@@ -220,6 +220,43 @@ function Get-McsBotId {
     catch { return $null }
 }
 
+# Removal path that never touches the machine-wide pac profile (parallel sessions, lab-private az profiles), with az
+# tokens of the CURRENT az context: the agent through the Dataverse bound action PvaDeleteBot (the Copilot Studio
+# message that deletes a bot), the solution container through the Dataverse Web API. The Power Platform API
+# 'Bots - Delete Copilot Agent' is not used: it supports only Agent Builder agents and needs an app registration with
+# the CopilotStudio.AdminActions.Invoke scope. Each returns 'deleted' or 'absent' and throws on any other failure.
+function Remove-McsBotViaDataverse {
+    param([Parameter(Mandatory)][string]$OrgUrl, [Parameter(Mandatory)][guid]$BotId)
+    $org = $OrgUrl.TrimEnd('/')
+    $tok = Get-McsDataverseToken -OrgUrl $org
+    if (-not $tok) { throw "az could not get a Dataverse token for $org (az must be signed in to the target tenant)." }
+    $h = @{ Authorization = "Bearer $tok"; Accept = 'application/json'; 'OData-MaxVersion' = '4.0'; 'OData-Version' = '4.0' }
+    foreach ($step in 'read', 'PvaDeleteBot') {
+        try {
+            if ($step -eq 'read') { Invoke-RestMethod -Headers $h -Uri "$org/api/data/v9.2/bots($BotId)?`$select=botid" | Out-Null }
+            else { Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json' -Body '{}' -Uri "$org/api/data/v9.2/bots($BotId)/Microsoft.Dynamics.CRM.PvaDeleteBot" -TimeoutSec 600 | Out-Null }
+        }
+        catch {
+            $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+            if ($code -eq 404) { return 'absent' }
+            throw "Dataverse $step of bot $BotId failed (HTTP $code): $($_.ErrorDetails.Message)"
+        }
+    }
+    return 'deleted'
+}
+function Remove-McsSolutionViaApi {
+    param([Parameter(Mandatory)][string]$OrgUrl, [Parameter(Mandatory)][string]$SolutionUniqueName)
+    $org = $OrgUrl.TrimEnd('/')
+    $tok = Get-McsDataverseToken -OrgUrl $org
+    if (-not $tok) { throw "az could not get a Dataverse token for $org (az must be signed in to the target tenant)." }
+    $h = @{ Authorization = "Bearer $tok"; Accept = 'application/json'; 'OData-MaxVersion' = '4.0'; 'OData-Version' = '4.0' }
+    $filter = [uri]::EscapeDataString("uniquename eq '$($SolutionUniqueName.Replace("'", "''"))'")
+    $s = @((Invoke-RestMethod -Headers $h -Uri "$org/api/data/v9.2/solutions?`$select=solutionid,uniquename,ismanaged&`$filter=$filter").value) | Select-Object -First 1
+    if (-not $s) { return 'absent' }
+    Invoke-RestMethod -Method Delete -Headers $h -Uri "$org/api/data/v9.2/solutions($($s.solutionid))" | Out-Null
+    return 'deleted'
+}
+
 # ---------------------------------------------------------------- transform: base zip -> renamed zip
 # Sanitize an arbitrary string into a valid Dataverse solution unique name (letters/digits/underscore,
 # must start with a letter). Hyphens and other symbols are stripped.

@@ -74,6 +74,8 @@ try {
     )
     $state = @{ mcp = @{ servers = @{ records = @{ name = 'ext_Fixture'; status = 'payload' } } } }
     function Get-AllInstances { @($pool) + @($state.mcp.servers.Values) }
+    $cfg = @{ tenantId = 'fixture-tenant' }
+    function Get-DemoReservedMcpNames([string]$TenantId) { if ($TenantId -eq 'fixture-tenant') { @('ext_RecordsRemoved') } else { @() } }
     $isPool = $true; $key = 'dates'; $Role = 'live'; $Number = 0; $tenant = @()
     . $selectCurrent
     Assert ($cur.name -eq 'ext_DatesTest02') 'Pool resume selects the latest incomplete instance of the requested role.'
@@ -82,6 +84,7 @@ try {
     Assert ($cur.name -eq 'ext_DatesTest01') 'An explicit pool number selects only that incomplete instance.'
     . $selectKnown
     Assert ($known -contains 'ext_DatesTest01' -and $known -contains 'ext_DatesTest02') 'Pool names remain reserved when no completed submission can be resumed.'
+    Assert ($known -contains 'ext_RecordsRemoved') 'Names left reserved by labs removed with the Demo Cleaner count as used.'
     $isPool = $false; $key = 'records'
     . $selectCurrent
     . $selectKnown

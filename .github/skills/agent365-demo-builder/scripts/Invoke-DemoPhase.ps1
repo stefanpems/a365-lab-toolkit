@@ -7,7 +7,7 @@
     interactive  user interaction: registrations run in a terminal, approvals, per-user connections, the portal cards, tests
     use          running the demo: outside this agent (agent365-demo-guide)
     restore      starting conditions again after a rehearsal or a run (agent365-demo-reset), users recreated when needed
-    teardown     removal of the lab (Lab Cleaner + the extras listed in the pack README)
+    teardown     removal of the lab (the Demo Cleaner agent: agent365-demo-cleaner, which reuses the Lab Cleaner)
 .DESCRIPTION
   DRY RUN unless -Apply: each automated step runs its script in preview mode (-WhatIf / -ValidateOnly / Status) and nothing
   is marked done. With -Apply the automated steps run for real and are marked done when they succeed. Manual and terminal
@@ -36,6 +36,7 @@ if ($Phase -eq 'report') {
 }
 if ($SnapshotOnly) { throw '-SnapshotOnly is valid only with -Phase report.' }
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
+if ($Phase -in 'bootstrap', 'setup', 'interactive', 'restore') { Assert-DemoLabNotRemoved $Prefix }
 $cfg = Read-DemoConfig $Prefix
 $pack = Get-DemoPack $cfg.pack
 $reset = Join-Path $PSScriptRoot '..\..\agent365-demo-reset\scripts'
@@ -125,7 +126,7 @@ $steps.Add((New-Step 'use' 'run' 'Run the demo (outside this agent)' 'manual' $n
 $steps.Add((New-Step 'restore' 'preflight' 'Pre-flight of every demo (read-only)' 'auto' (Join-Path $reset 'Get-DemoState.ps1') $P $P ''))
 $steps.Add((New-Step 'restore' 'reset' 'Restore the starting conditions (users recreated when a demo needs them)' 'auto' (Join-Path $reset 'Reset-DemoState.ps1') ($P + '-Apply') $P 'then the manual resets it prints, one per turn'))
 $steps.Add((New-Step 'restore' 'preflight-after' 'Pre-flight again (read-only)' 'auto' (Join-Path $reset 'Get-DemoState.ps1') $P $P ''))
-$steps.Add((New-Step 'teardown' 'remove' 'Remove the lab' 'manual' $null @() @() "Lab Cleaner for everything tagged a365lab=$Prefix, then the extras in demo-packs/$($cfg.pack)/README.md#teardown"))
+$steps.Add((New-Step 'teardown' 'remove' 'Remove the lab' 'manual' $null @() @() "Demo Cleaner agent (agent365-demo-cleaner): Get-DemoCleanupPlan.ps1 -Prefix $Prefix -InitOnly, then the discovery, the review gate and Invoke-DemoCleanup.ps1 -Apply; manual fallback in demo-packs/$($cfg.pack)/README.md#teardown"))
 
 # --- progress in state.json ---------------------------------------------------------------------------------------
 $script:MovedSteps = @{ 'setup/mcp-approve' = 'interactive' }

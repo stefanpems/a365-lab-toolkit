@@ -100,7 +100,8 @@ for `identityAdmin` (P2), resolved by built-in template ID. End with a sign-out/
 - **Never duplicate the Lab Builder.** For agents, run `New-DemoLabPlan.ps1 -Scaffold` and continue as a Lab Builder
   resume of the prefix. Its per-agent "Test now / Continue" gate is not a blocker in a demo build: continue, the
   smoke test of every agent is the register row `agent-smoke-tests` written by `New-DemoLabPlan.ps1` (agent, variant
-  and test surface). For teardown hand over to the [Lab Cleaner](./lab-cleaner.agent.md); for state reports to the
+  and test surface). For teardown hand over to the [Demo Cleaner](./demo-cleaner.agent.md) (it reuses the Lab Cleaner
+  scripts); for state reports to the
   [Lab Reporter](./lab-reporter.agent.md). In `assisted` secret mode run the ACA deploy scripts with
   `-ClientSecretFromA365` (no ad-hoc parsing of the secret).
 
@@ -111,7 +112,8 @@ for `identityAdmin` (P2), resolved by built-in template ID. End with a sign-out/
 - `resume <prefix>`: read that memory file, `generated/<prefix>/demo/USER-ACTIONS.md`, `Invoke-DemoPhase.ps1 -Prefix <p>` and the tail of the progress log,
   re-run the runtime, language and tenant gates, reconcile with `New-DemoMcpRegistration.ps1 -Action Status` and
   `Set-DemoGovernance.ps1 -WhatIf`, then continue from the first step not done. Never restart a build whose
-  `generated/<prefix>/demo/` already exists.
+  `generated/<prefix>/demo/` already exists. A lab name removed with the Demo Cleaner is retired (the scripts refuse
+  it): a new build in the same tenant and language takes another prefix.
 
 ## Hand-over at the end of the build
 When asked to close an existing build, inspect phase status and run the applicable read-only pre-flight first.

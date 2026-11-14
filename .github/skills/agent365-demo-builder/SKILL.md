@@ -57,7 +57,12 @@ The remaining operator-slot ids are stable: `slot-1`, `slot-3`, `slot-4`, `slot-
 - **Iron naming rules** of the Lab Builder ([text-limits.json](../agent365-wizard/references/text-limits.json),
   `Test-A365Names.ps1`) are checked before anything is registered; `Test-DemoPack.ps1` validates a whole locale.
 - **Demo MCP server and tool names are tenant-wide.** One demo lab per tenant and language; a second lab in the same
-  tenant uses `-ServerName` and blocks the first lab's servers first (New-DemoMcpRegistration.ps1 header).
+  tenant uses `-ServerName` and blocks the first lab's servers first (New-DemoMcpRegistration.ps1 header). After a lab
+  removed with the Demo Cleaner, which records its servers as neutralized (Blocked/Rejected), the long-lived servers are
+  registered automatically as their successors `<name><n>`, when the tenant's `ext_` servers can be read and no other
+  lab on this machine (same tenant and language) still has the same tools registered; otherwise `-ServerName` as before.
+- **A lab name removed with the Demo Cleaner is retired.** Once a cleanup run of the prefix started deleting,
+  `New-DemoConfig.ps1` and the build phases of `Invoke-DemoPhase.ps1` refuse it: build the new lab under another name.
 - **Actions that a demo shows are done by the story persona in the portal** (approvals, blocks, their audit trail);
   scripts do only the setup that no demo shows and verify by read-back. A preparation step that is itself a demo
   moment (for example the D8 reassignment rule) is done live.
@@ -241,7 +246,7 @@ Start at least **five days** before the first event or rehearsal that uses the l
 | 3. interactive | per-user connection URLs BEFORE the tests, the portal cards (Copilot Studio, Agent Builder agents created by their personas, Digital Worker instance created from Teams, Foundry, Entra, Purview, Defender, admin center), identities refresh, the test hand-out, the pre-flight | user + personas, verified by script |
 | 4. use | the demo itself, outside this agent: [agent365-demo-guide](../agent365-demo-guide/SKILL.md) | presenters |
 | 5. restore | pre-flight, reset of what the demos change (owners, blocks, assignments, the MCP pool; leavers recreated and deleted again), manual resets: [agent365-demo-reset](../agent365-demo-reset/SKILL.md) | scripts + user |
-| 6. teardown | the Lab Cleaner, then the extras of the pack README (see below) | user |
+| 6. teardown | the [Demo Cleaner](../../agents/demo-cleaner.agent.md) (see below) | agent + user |
 
 Log every step with `Write-DemoLog` (it also appends to `generated/<prefix>/wizard-progress.log`).
 
@@ -256,9 +261,15 @@ Log every step with `Write-DemoLog` (it also appends to `generated/<prefix>/wiza
 
 ## Teardown
 
-The [Lab Cleaner](../../agents/lab-cleaner.agent.md) removes everything tagged with the lab (resource groups,
-including `<prefix>-demomcp-rg`, Entra apps, agents, licenses). The demo extras are listed in
-[demo-packs/agent-governance/README.md](../../../demo-packs/agent-governance/README.md#teardown): personas and groups,
-the catalog and the access package, the Conditional Access policies, the admin-center templates and tags, and the
-`ext_` servers, which cannot be deleted (Reject or Block them). Custom security attributes cannot be deleted either:
-deactivate their values.
+The [Demo Cleaner](../../agents/demo-cleaner.agent.md) ([agent365-demo-cleaner](../agent365-demo-cleaner/SKILL.md))
+rolls back a whole lab in deletion order and hard (purges included): personas and groups, the knowledge site,
+mailboxes and OneDrives, governance, Purview and admin-center objects, the demo MCP servers, the agents of every kind
+(the Azure/Entra part through the [Lab Cleaner](../../agents/lab-cleaner.agent.md) scripts, including
+`<prefix>-demomcp-rg`) and the objects created by hand from the cards, with a live HTML report. What no API deletes
+is guided step by step: the `ext_` servers can only be Rejected or Blocked (their names are then recorded in
+`generated/cleanup/tenant-<tenant id>/reserved-ext-mcp-names.json`, which `New-DemoMcpRegistration.ps1` refuses; the
+servers verified as neutralized let the next build register the long-lived successors `<name><n>` by itself), and
+custom security attributes can only be deactivated (`Set-DemoGovernance.ps1` reactivates them in the next build). The
+name (prefix) of a removed lab is retired: the next lab in the same tenant and language uses another one. The
+manual list of the demo extras stays in
+[demo-packs/agent-governance/README.md](../../../demo-packs/agent-governance/README.md#teardown).

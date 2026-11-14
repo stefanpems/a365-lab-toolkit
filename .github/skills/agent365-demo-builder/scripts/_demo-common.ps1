@@ -735,6 +735,100 @@ function Get-DemoMcpAzureNames([Parameter(Mandatory)][string]$Prefix) {
     [ordered]@{ resourceGroup = "$p-demomcp-rg"; environment = "$p-demomcp-cae"; appPrefix = "$p-dmcp-"; component = 'demo-mcp' }
 }
 
+# Tenant-level local memory written by the Demo Cleaner under generated/cleanup/tenant-<tenantId>/ (it survives the
+# deletion of a lab folder): the ext_ MCP server names that a removed lab left reserved in the tenant (the platform
+# cannot delete them). A later build in the same tenant must never try to register them again.
+function Get-DemoTenantMemoryDir([Parameter(Mandatory)][string]$TenantId) { Join-Path $script:DemoRepoRoot "generated\cleanup\tenant-$TenantId" }
+function Get-DemoReservedMcpNames([string]$TenantId) {
+    if (-not $TenantId) { return @() }
+    $f = Join-Path (Get-DemoTenantMemoryDir $TenantId) 'reserved-ext-mcp-names.json'
+    if (-not (Test-Path -LiteralPath $f)) { return @() }
+    $r = Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json
+    return @($r.names | ForEach-Object { [string]$_.name } | Where-Object { $_ } | Select-Object -Unique)
+}
+function Add-DemoReservedMcpNames([Parameter(Mandatory)][string]$TenantId, [Parameter(Mandatory)][string]$Prefix, [object[]]$Names) {
+    $dir = Get-DemoTenantMemoryDir $TenantId
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $f = Join-Path $dir 'reserved-ext-mcp-names.json'
+    $r = if (Test-Path -LiteralPath $f) { Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable } else { $null }
+    if (-not $r) { $r = [ordered]@{ tenantId = $TenantId; note = 'ext_ MCP server names left reserved in this tenant by removed demo labs: never register them again.'; names = @() } }
+    $list = [System.Collections.Generic.List[object]]::new()
+    foreach ($e in @($r.names)) { if ($e) { $list.Add($e) } }
+    foreach ($n in @($Names | Where-Object { $_ })) {
+        $name = [string]$n.name
+        if (-not $name -or @($list | Where-Object { [string]$_.name -eq $name }).Count) { continue }
+        $list.Add([ordered]@{ name = $name; lab = $Prefix; state = [string]$n.state; recordedAt = (Get-Date).ToString('s') })
+    }
+    $r['names'] = @($list)
+    $r | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $f -Encoding utf8
+    return $f
+}
+# Records that the Demo Cleaner verified a reserved ext_ server as neutralized (blocked, rejected, or no longer listed).
+function Set-DemoReservedMcpState([Parameter(Mandatory)][string]$TenantId, [Parameter(Mandatory)][string]$Prefix, [Parameter(Mandatory)][string]$Name,
+    [Parameter(Mandatory)][ValidateSet('blocked', 'rejected', 'gone')][string]$State) {
+    $f = Add-DemoReservedMcpNames -TenantId $TenantId -Prefix $Prefix -Names @(@{ name = $Name; state = $State })
+    $r = Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
+    foreach ($e in @($r.names)) { if ($e -and [string]$e.name -eq $Name) { $e['state'] = $State; $e['neutralizedAt'] = (Get-Date).ToString('s') } }
+    $r | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $f -Encoding utf8
+}
+function Get-DemoNeutralizedMcpNames([string]$TenantId) {
+    if (-not $TenantId) { return @() }
+    $f = Join-Path (Get-DemoTenantMemoryDir $TenantId) 'reserved-ext-mcp-names.json'
+    if (-not (Test-Path -LiteralPath $f)) { return @() }
+    $r = Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json
+    return @($r.names | Where-Object { [string]$_.state -in 'blocked', 'rejected', 'gone' } | ForEach-Object { [string]$_.name } | Where-Object { $_ } | Select-Object -Unique)
+}
+# Successor of a long-lived demo MCP server whose localized name is already used: '<name><n>' (n = 2..9), only when every
+# used name of that family is recorded as neutralized by the Demo Cleaner (the same tools are never active twice) and the
+# successor passes the iron rules ($IsValid). $null = no automatic choice: the operator passes -ServerName, as before.
+function Get-DemoMcpSuccessorName([Parameter(Mandatory)][string]$BaseName, [string[]]$Known, [string[]]$Neutralized, [Parameter(Mandatory)][scriptblock]$IsValid) {
+    $family = @($Known | Where-Object { $_ -and $_ -match "^$([regex]::Escape($BaseName))\d?$" })
+    if (-not $family.Count) { return $null }
+    foreach ($n in $family) { if ($Neutralized -notcontains $n) { return $null } }
+    foreach ($i in 2..9) {
+        $cand = "$BaseName$i"
+        if ($Known -contains $cand) { continue }
+        if (& $IsValid $cand) { return $cand }
+    }
+    return $null
+}
+# Long-lived demo MCP servers that other labs on this machine (same tenant and locale, hence the same tool names) still
+# have registered (pending or approved) and that are not recorded as neutralized. The same tools must never be active
+# twice: any of them stops the automatic successor (the operator blocks them, or chooses with -ServerName).
+function Get-DemoMcpTwinServers([Parameter(Mandatory)][string]$TenantId, [Parameter(Mandatory)][string]$Locale, [Parameter(Mandatory)][string]$Key, [string]$ExcludePrefix) {
+    $root = Join-Path $script:DemoRepoRoot 'generated'
+    if (-not (Test-Path -LiteralPath $root)) { return @() }
+    $read = { param($f) if (Test-Path -LiteralPath $f) { try { Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable } catch { $null } } }
+    $neutralized = @(Get-DemoNeutralizedMcpNames $TenantId)
+    @(foreach ($d in @(Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne $ExcludePrefix })) {
+            $c = & $read (Join-Path $d.FullName 'demo\demo-config.json')
+            if (-not $c -or [string]$c.tenantId -ne $TenantId -or [string]$c.locale -ne $Locale) { continue }
+            $s = & $read (Join-Path $d.FullName 'demo\state.json')
+            $srv = if ($s -and $s.mcp -and $s.mcp.servers) { $s.mcp.servers[$Key] } else { $null }
+            if ($srv -and [string]$srv.name -and [string]$srv.status -in 'pending', 'approved' -and $neutralized -notcontains [string]$srv.name) { [string]$srv.name }
+        })
+}
+
+# A lab whose removal the Demo Cleaner started is retired: its local state describes objects that no longer exist, so
+# the name (prefix) is never built or resumed again. Read from generated/cleanup/demo-<prefix>-<time>/cleanup-plan.json.
+function Get-DemoLabRemoval([Parameter(Mandatory)][string]$Prefix) {
+    $root = Join-Path $script:DemoRepoRoot 'generated\cleanup'
+    if (-not (Test-Path -LiteralPath $root)) { return $null }
+    foreach ($d in @(Get-ChildItem -LiteralPath $root -Directory -Filter "demo-$Prefix-*" | Sort-Object Name -Descending)) {
+        $f = Join-Path $d.FullName 'cleanup-plan.json'
+        if (-not (Test-Path -LiteralPath $f)) { continue }
+        $p = try { Get-Content -LiteralPath $f -Raw -Encoding utf8 | ConvertFrom-Json } catch { $null }
+        if ($p -and [string]$p.prefix -eq $Prefix -and [string]$p.phase -in 'deleting', 'paused', 'waiting', 'finished') {
+            return [pscustomobject]@{ runDir = $d.FullName; phase = [string]$p.phase }
+        }
+    }
+    return $null
+}
+function Assert-DemoLabNotRemoved([Parameter(Mandatory)][string]$Prefix) {
+    $r = Get-DemoLabRemoval $Prefix
+    if ($r) { throw "Lab '$Prefix' was removed with the Demo Cleaner (run $($r.runDir), phase $($r.phase)): its local state no longer matches the tenant and the name is retired. Build the new lab under another name (prefix)." }
+}
+
 # Tool names the locale declares for one backend key: the exact set the backend must expose.
 function Get-DemoMcpDeclaredTools($Locale, [Parameter(Mandatory)][string]$Key) {
     $s = $Locale.mcp.servers[$Key]

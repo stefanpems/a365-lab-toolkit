@@ -37,6 +37,7 @@ param(
     [string]$EventDate
 )
 . (Join-Path $PSScriptRoot '_demo-common.ps1')
+Assert-DemoLabNotRemoved $Prefix
 $dir = Get-DemoLabDir $Prefix
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 $path = Join-Path $dir 'demo-config.json'

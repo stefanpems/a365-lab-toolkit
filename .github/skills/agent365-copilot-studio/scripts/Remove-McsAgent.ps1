@@ -18,6 +18,11 @@
                               the target tenant.
 .PARAMETER SchemaName         Optional bot schema name, used as a fallback key for bot-id discovery.
 .PARAMETER BotId              Optional bot GUID to delete the agent directly (skips auto-discovery).
+.PARAMETER UseDataverseApi    Delete without pac (needs -EnvironmentId or -EnvironmentUrl): the agent through the Dataverse
+                              bound action PvaDeleteBot and the solution through the Dataverse Web API, with az tokens of
+                              the current az context (a System Administrator of the environment). The machine-wide pac
+                              profile is never touched (parallel sessions, lab-private az profiles such as the Demo
+                              Builder's).
 .PARAMETER WhatIf             Show what would be deleted without deleting.
 #>
 [CmdletBinding(SupportsShouldProcess)]
@@ -28,10 +33,38 @@ param(
     [string]$SolutionUniqueName,
     [string]$DisplayName,
     [string]$SchemaName,
-    [string]$BotId
+    [string]$BotId,
+    [switch]$UseDataverseApi
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_mcs-common.ps1')
+
+if ($UseDataverseApi) {
+    if (-not $EnvironmentId -and -not $EnvironmentUrl) { throw '-UseDataverseApi needs -EnvironmentId or -EnvironmentUrl.' }
+    if ($Tenant) {
+        $azTenant = (az account show --query tenantId -o tsv 2>$null)
+        if ($azTenant -ne $Tenant) { throw "az is on tenant '$azTenant', the target is '$Tenant': sign az in to the target tenant first." }
+    }
+    if (-not $EnvironmentUrl) {
+        $envInfo = Get-McsEnvironmentInfo -EnvironmentId $EnvironmentId
+        if (-not $envInfo.hasDataverse) { throw "Environment $EnvironmentId has no Dataverse instance URL." }
+        $EnvironmentUrl = $envInfo.orgUrl
+    }
+    if (-not $BotId -and ($DisplayName -or $SchemaName)) {
+        $BotId = Get-McsBotId -OrgUrl $EnvironmentUrl -DisplayName $DisplayName -SchemaName $SchemaName
+        if ($BotId) { Write-Host "  Resolved bot id for '$DisplayName': $BotId" -ForegroundColor DarkGray }
+        else { Write-Host "  No bot found for '$DisplayName' (already deleted, or az is not on the target tenant)." -ForegroundColor Yellow }
+    }
+    if ($BotId -and $PSCmdlet.ShouldProcess("$BotId in $EnvironmentUrl", 'delete Copilot Studio agent (Dataverse PvaDeleteBot)')) {
+        $r = Remove-McsBotViaDataverse -OrgUrl $EnvironmentUrl -BotId $BotId
+        Write-Host "  Agent (bot) ${BotId}: $r." -ForegroundColor Green
+    }
+    if ($SolutionUniqueName -and $PSCmdlet.ShouldProcess("$SolutionUniqueName in $EnvironmentUrl", 'delete solution (Dataverse Web API)')) {
+        $r = Remove-McsSolutionViaApi -OrgUrl $EnvironmentUrl -SolutionUniqueName $SolutionUniqueName
+        Write-Host "  Solution '$SolutionUniqueName': $r." -ForegroundColor Green
+    }
+    return
+}
 $pac = Assert-PacCli
 
 # Select the target tenant's own pac profile; the previously active profile is restored at the end.

@@ -78,9 +78,11 @@ rather than lab-owned. These carry a **component tag** but **no** `a365lab`:
 > **Demo MCP backends (labs built by the Demo Builder).** The demo-pack MCP servers live in
 > `<prefix>-demomcp-rg` (ACR + `<prefix>-demomcp-cae` + one `<prefix>-dmcp-<key>-ca` per backend), tagged
 > `a365lab=<prefix>` + `a365component=demo-mcp` (NOT `custom-mcp`, which means the Lab Builder sample pair). The
-> durable tag scan removes the resource group like the web-fetch one. Their `ext_` registrations cannot be deleted
+> durable tag scan classifies it under **Agents** (by its `a365component=demo-mcp` tag, although its name contains
+> `mcp`) and removes the resource group like the web-fetch one. Their `ext_` registrations cannot be deleted
 > through the platform API: they are rejected or blocked in the admin center (see
-> [demo-packs/agent-governance/README.md](../../../../demo-packs/agent-governance/README.md#teardown)).
+> [demo-packs/agent-governance/README.md](../../../../demo-packs/agent-governance/README.md#teardown)); the
+> [Demo Cleaner](../../../agents/demo-cleaner.agent.md) does it together with the rest of a demo lab.
 
 ## 3. Agents
 
@@ -89,7 +91,7 @@ Agent name scheme: `<prefix>-<hosting>-<identity>` (hosting ∈ ACA/FH/FD; ident
 | Layer | Resource | Naming | Cleanup action |
 |-------|----------|--------|----------------|
 | Azure | **Dedicated** resource group (isolated strategy) | `<agent-name>-rg` | `delete-rg` (async) |
-| Azure | ACA container app / env / ACR / Log Analytics | inside the agent RG | covered by the RG delete |
+| Azure | ACA container app / env / ACR / Log Analytics | inside the agent RG | covered by the RG delete; the **Log Analytics workspace** is force-deleted first (order 39) so it does not linger soft-deleted |
 | Azure | FH Foundry account / project / ACR / model / Bot Service (DW) / UAMI | inside the agent RG | ACR/model/Bot/UAMI covered by the RG delete; the **Cognitive Services account** (+ its project) is **delete+purged first** (order 39) so it does not linger soft-deleted |
 | Azure | **Shared** Foundry account + project + model (`solution.foundry` `create-shared`) | `<prefix>-foundry-rg` | account **delete+purged** (order 39), then `delete-rg` removes the RG — both matched by the prefix filter (lab-owned) |
 | Azure | **Shared** Azure OpenAI account + deployment (`solution.azureOpenAI` `create-shared`) | `<prefix>-aoai-rg` (account `<prefix>aoai`) | account **delete+purged** (order 39), then `delete-rg` removes the RG — both matched by the prefix filter (lab-owned) |
@@ -138,6 +140,15 @@ account also removes its child **project** — the *"workspace"* the Foundry azd
 Only prefix-named (lab-owned) accounts are purged; a shared/user-owned account (`reuse-existing`, the FD
 project, the ACA-shared Azure OpenAI account) is never prefix-matched and is left intact.
 
+### Log Analytics workspaces soft-delete — force-delete them
+Deleting a resource group only **soft-deletes** the Log Analytics workspaces inside it (for example the one the ACA
+deploy scripts create for each Container Apps environment): the workspace stays recoverable for 14 days and a new
+workspace with the same name in the same resource group silently **recovers the old one with its data**. Discovery
+therefore adds a `purge-loganalytics` item (order **39**, before `delete-rg`) for every workspace in a discovered lab
+resource group, and the removal runs `az monitor log-analytics workspace delete --force true`, which deletes it
+permanently. A workspace that is already soft-deleted from an earlier cleanup is not swept (recovering it needs its
+resource group again); it expires on its own after 14 days.
+
 ### Why instances need special handling (the license guarantee)
 An autopilot is **one blueprint → many instances**, and **each hired instance gets its own agent
 identity + agent user** with its own **M365 licenses**. Instance names are **arbitrary** (chosen at hire
@@ -153,4 +164,5 @@ unavailable in the tenant. A **soft-delete does not release licenses; only the p
 
 ## Delete order (dependencies)
 `10` agent instances (licenses first) → `20` Entra apps (cascade SPs) → `24` recycle-bin purge →
-`30` Power Platform connectors → `38` Static Web Apps → `40` Azure resource groups (async, last).
+`30` Power Platform connectors → `38` Static Web Apps → `39` Cognitive Services purge and Log Analytics force-delete →
+`40` Azure resource groups (async, last).

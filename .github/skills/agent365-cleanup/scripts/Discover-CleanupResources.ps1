@@ -17,6 +17,8 @@
                 identity apps, agent instances (agent users) and the M365 licenses they hold, plus any
                 matching objects still sitting in the Entra recycle bin (deletedItems) from a prior
                 half-finished deletion.
+  For every discovered lab resource group it also lists the Log Analytics workspaces inside it (force-deleted
+  before the RG delete, so no soft-deleted workspace is left behind).
 
   Agent instances (agent users) are scoped to THIS lab by their DURABLE blueprint link, never by the
   instance's (arbitrary) name: user.identityParentId -> agentIdentity -> agentIdentityBlueprintId (=
@@ -515,6 +517,9 @@ function Find-DeletedItems {
         $del = Get-GraphObject "https://graph.microsoft.com/v1.0/directory/deletedItems/$($t.seg)"
         foreach ($d in @($del.value)) {
             if (-not $d.displayName -or $d.displayName -notmatch [regex]::Escape($Filter)) { continue }
+            # Managed identities of deleted Azure resources cannot be purged (nor restored) by customers: Entra purges
+            # them by itself 30 days after their deletion, so they are not listed (a purge would fail with 403).
+            if ($d.servicePrincipalType -eq 'ManagedIdentity') { continue }
             $when = if ($d.deletedDateTime) { " (deleted $($d.deletedDateTime))" } else { '' }
             Add-Item -Category $Category -Kind $t.kind -Id ($d.appId ?? $d.id) -ObjectId $d.id -DisplayName $d.displayName `
                 -Detail "In Entra recycle bin$when — will be permanently purged" `
@@ -585,7 +590,11 @@ function Find-TaggedResources {
     $rgs = Invoke-AzJson @('group', 'list', '--subscription', $sub, '--query', "[?tags.a365lab=='$NameFilter']", '-o', 'json')
     foreach ($rg in @($rgs)) {
         $n = $rg.name
-        $cat = if ($n -match '(?i)ui-rg' -and $n -notmatch '(?i)mcp') { 'WebUI' } elseif ($n -match '(?i)mcp') { 'CustomMcp' } else { 'Agents' }
+        # The Demo Builder's demo MCP backends (<prefix>-demomcp-rg, a365component=demo-mcp) are lab-owned like the
+        # web-fetch RG: they belong to Agents, not to the CustomMcp category of the Lab Builder sample pair.
+        $cat = if ($n -match '(?i)ui-rg' -and $n -notmatch '(?i)mcp') { 'WebUI' }
+               elseif ($rg.tags -and [string]$rg.tags.a365component -eq 'demo-mcp') { 'Agents' }
+               elseif ($n -match '(?i)mcp') { 'CustomMcp' } else { 'Agents' }
         if ($Categories -notcontains $cat) { continue }
         Add-Item -Category $cat -Kind 'azure-rg' -Id $n -ObjectId $null -DisplayName $n `
             -Detail ((Get-RgDetail $n) + ' [tag]') -Action 'delete-rg' -DeleteOrder 40 -Extra @{ location = $rg.location }
@@ -664,6 +673,24 @@ function Find-PlanSeeded {
 
 Find-TaggedResources
 if ($script:SeedPlan) { Find-PlanSeeded $script:SeedPlan }
+
+# ---------------------------------------------------------------------------
+# Log Analytics workspaces in the discovered lab resource groups. A resource-group delete only SOFT-deletes a
+# workspace (recoverable for 14 days; a new workspace with the same name in the same RG silently recovers the old
+# one with its data). Add an explicit force-delete just BEFORE the RG delete (order 39) so nothing is left behind.
+# ---------------------------------------------------------------------------
+function Find-LogAnalyticsWorkspaces {
+    $rgItems = @($items | Where-Object { $_.kind -eq 'azure-rg' } | Group-Object id | ForEach-Object { $_.Group[0] })
+    foreach ($rgItem in $rgItems) {
+        foreach ($ws in @(Invoke-AzJson @('monitor', 'log-analytics', 'workspace', 'list', '-g', $rgItem.id, '--subscription', $sub, '-o', 'json'))) {
+            if (-not $ws -or -not $ws.name) { continue }
+            Add-Item -Category $rgItem.category -Kind 'loganalytics-workspace' -Id $ws.name -ObjectId $ws.id -DisplayName $ws.name `
+                -Detail "Log Analytics workspace in RG $($rgItem.id) — an RG delete only soft-deletes it (14 days); force-delete removes it permanently" `
+                -Action 'purge-loganalytics' -DeleteOrder 39 -Extra @{ resourceGroup = $rgItem.id; location = $ws.location }
+        }
+    }
+}
+Find-LogAnalyticsWorkspaces
 
 
 # ---------------------------------------------------------------------------
