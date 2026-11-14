@@ -42,6 +42,13 @@ Each deploy grants the app's managed identity **Cognitive Services OpenAI User**
 3. Register the messaging endpoint after the container is up; verify `/api/health`.
 
 ## Known corrections (apply these)
+- **S2S runtime identity wiring.** The verified agent identity app ID must populate both
+  `A365_AGENT_ID` (observability) and `AGENT_IDENTITY_ID` (agent-identity token exchange used by
+  directory tools). The service connection's client ID remains the blueprint app ID; never
+  substitute it for the agent identity. `deploy-aca-S2S.ps1` sets both identity variables.
+  Run `test-aca-auth-modes.ps1` after changing this mapping. A health HTTP 200 alone does not
+  verify tool authentication: test a tool that acquires an agent-identity token. Preserve any
+  expected permission denial or Conditional Access block rather than bypassing it.
 - **⛔ `a365 setup all` + `deploy-aca*.ps1` must run FROM the agent folder.** `a365 setup all` writes
   `a365.generated.config.json` (blueprint ids + DPAPI secret) and stamps `.env` only via its "project
   settings" step, which runs **only when it detects the project in the current directory**; run it

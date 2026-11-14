@@ -46,6 +46,30 @@ try {
             }
         }
     }
+    $deploy = Join-Path $RepoRoot 'aca\s2s\deploy-aca-S2S.ps1'
+    $tokens = $null; $errors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseFile($deploy, [ref]$tokens, [ref]$errors)
+    if ($errors.Count) { throw 'S2S deployment script has a syntax error.' }
+    $environmentStatements = @($ast.EndBlock.Statements | Where-Object {
+        ($_ -is [Management.Automation.Language.AssignmentStatementAst] -and
+            $_.Left -is [Management.Automation.Language.VariableExpressionAst] -and
+            $_.Left.VariablePath.UserPath -eq 'envVars') -or
+        ($_ -is [Management.Automation.Language.IfStatementAst] -and
+            $_.Extent.Text -match 'A365_AGENT_ID=')
+    })
+    $buildEnvironment = [scriptblock]::Create(($environmentStatements.Extent.Text -join "`n") + "`n`$envVars")
+    $clientId = '33333333-3333-3333-3333-333333333333'
+    $tenantId = $plan.solution.tenantId
+    $APP = 'fixture-s2s'
+    $m = @{ AZURE_OPENAI_ENDPOINT = 'https://fixture.openai.azure.com'; AZURE_OPENAI_DEPLOYMENT_NAME = 'fixture'; AZURE_OPENAI_API_VERSION = 'fixture' }
+    $AgentId = '44444444-4444-4444-4444-444444444444'
+    $environment = @(& $buildEnvironment)
+    Assert ($environment -contains "AGENT_IDENTITY_ID=$AgentId") 'S2S directory tools receive the actual agent identity, not the blueprint.'
+    Assert ($environment -contains "A365_AGENT_ID=$AgentId" -and
+        $environment -contains "CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=$clientId") 'Observability keeps the agent identity while the service connection keeps its blueprint.'
+    $AgentId = ''
+    $environment = @(& $buildEnvironment)
+    Assert (-not @($environment | Where-Object { $_ -match '^(AGENT_IDENTITY_ID|A365_AGENT_ID)=' }).Count) 'An unresolved agent identity is never replaced with the blueprint identity.'
     Write-Host "$passed ACA authentication-mode checks passed."
 }
 finally {

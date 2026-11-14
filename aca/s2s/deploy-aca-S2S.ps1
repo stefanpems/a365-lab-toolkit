@@ -175,7 +175,7 @@ $envVars = @(
     # App Insights role name = the app (instead of 'unknown_service').
     "OTEL_SERVICE_NAME=$APP"
 )
-if ($AgentId) { $envVars += "A365_AGENT_ID=$AgentId" }
+if ($AgentId) { $envVars += @("A365_AGENT_ID=$AgentId", "AGENT_IDENTITY_ID=$AgentId") }
 if ($m['SECRET_AZURE_OPENAI_API_KEY']) {
     $envVars += "AZURE_OPENAI_API_KEY=$($m['SECRET_AZURE_OPENAI_API_KEY'])"
 }
