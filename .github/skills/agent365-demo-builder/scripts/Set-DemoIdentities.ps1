@@ -2,7 +2,8 @@
 <#
 .SYNOPSIS
   Creates or updates the demo people and groups from the demo pack + locale: users (properties, lab tag),
-  managers, groups (members, owners, lab tag), directory roles and licenses. Idempotent. -WhatIf = dry run.
+  managers, groups (members, owners, lab tag), directory roles, licenses and the Power Platform roles in the payg
+  environment (admin API + Dataverse Web API with the lab's az session, never pac). Idempotent. -WhatIf = dry run.
 .DESCRIPTION
   Passwords of NEW users go ONLY to generated/<prefix>/demo/secrets/personas.secret.txt (never printed).
   Users are tagged extensionAttribute15 = a365lab:<prefix>; groups carry the open extension com.a365lab.lab.
@@ -209,7 +210,7 @@ if (-not $SkipLicenses -and -not $RolesOnly) {
     }
 }
 
-# --- Purview role groups and Power Platform roles: printed, not applied (other tools) -----------------------------
+# --- Purview role groups: printed and recorded as user actions (no API) -------------------------------------------
 foreach ($p in $pack.personas | Where-Object { $_.purviewRoleGroups -and -not $RolesOnly }) {
     Note "MANUAL (Purview portal > Roles and scopes > Role groups, or Security & Compliance PowerShell Add-RoleGroupMember): add $(Get-DemoPersonaAlias $LOC $p.key)@$($cfg.domain) to $($p.purviewRoleGroups -join ', ')"
     if (-not $WhatIf) {
@@ -218,9 +219,83 @@ foreach ($p in $pack.personas | Where-Object { $_.purviewRoleGroups -and -not $R
             -Where 'Purview portal > Settings > Roles and scopes > Role groups (card 40-purview, section 1)' -NeededBy $(if ($pv.Count) { $pv -join ', ' } else { 'the Purview demos' })
     }
 }
-$pp = @($pack.personas | Where-Object { $_.powerPlatformRoles -and -not $RolesOnly })
-if ($pp.Count -and $cfg.copilotStudio.paygEnvironmentId) {
-    foreach ($p in $pp) { foreach ($r in $p.powerPlatformRoles) { Note ("NEXT: pac admin assign-user --environment {0} --user {1}@{2} --role `"{3}`"" -f $cfg.copilotStudio.paygEnvironmentId, (Get-DemoPersonaAlias $LOC $p.key), $cfg.domain, $r) } }
+# --- Power Platform roles in the payg environment -------------------------------------------------------------------
+# The Power Platform admin API adds (syncs) the licensed user to the environment and the Dataverse Web API assigns the
+# security roles, both with the lab's az session: never pac, whose authentication profiles are machine-wide. Roles are
+# found by name in the root business unit; the well-known IDs serve environments whose base language renames them.
+$script:DemoDataverseRoleFallback = @{
+    'Environment Maker' = @{ field = 'roleid'; id = 'd58407f2-48d5-e711-a82c-000d3a37c848' }
+    'Basic User'        = @{ field = '_roletemplateid_value'; id = '236750cd-45ae-4939-ab12-b24b920ced93' }
+}
+function Set-DemoEnvironmentRoles([string]$EnvironmentId, [string]$UserId, [string[]]$Roles) {
+    $org = Get-DemoCopilotStudioOrgUrl $cfg $EnvironmentId
+    $api = "$org/api/data/v9.2"
+    $dv = Get-DemoAzToken -Resource $org -TenantId $cfg.tenantId
+    $bu = @((Invoke-DemoGraph GET "$api/businessunits?`$select=businessunitid&`$filter=_parentbusinessunitid_value eq null" -Token $dv).value) | Select-Object -First 1
+    if (-not $bu) { throw 'root business unit not found' }
+    $roleIds = @{}
+    foreach ($rn in $Roles) {
+        $q = "_businessunitid_value eq $($bu.businessunitid) and name eq '$($rn.Replace("'", "''"))'"
+        $r = @((Invoke-DemoGraph GET "$api/roles?`$select=roleid&`$filter=$([uri]::EscapeDataString($q))" -Token $dv).value)
+        if (-not $r.Count -and $script:DemoDataverseRoleFallback.Contains($rn)) {
+            $fb = $script:DemoDataverseRoleFallback[$rn]
+            $q = "_businessunitid_value eq $($bu.businessunitid) and $($fb.field) eq $($fb.id)"
+            $r = @((Invoke-DemoGraph GET "$api/roles?`$select=roleid&`$filter=$([uri]::EscapeDataString($q))" -Token $dv).value)
+        }
+        if ($r.Count -ne 1) { throw "Dataverse role '$rn' not found in the root business unit" }
+        $roleIds[$rn] = [string]$r[0].roleid
+    }
+    $find = { @((Invoke-DemoGraph GET "$api/systemusers?`$select=systemuserid&`$filter=azureactivedirectoryobjectid eq $UserId" -Token $dv).value) | Select-Object -First 1 }
+    $su = & $find
+    if (-not $su) {
+        if ($WhatIf) { foreach ($rn in $Roles) { "would ADD to the environment and ASSIGN $rn" }; return }
+        $ppToken = Get-DemoAzToken -Resource 'https://service.powerapps.com/' -TenantId $cfg.tenantId
+        Invoke-DemoGraph POST "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$EnvironmentId/addUser?api-version=2020-10-01" -Token $ppToken -Body @{ ObjectId = $UserId } | Out-Null
+        # Dataverse creates the user record asynchronously.
+        foreach ($i in 1..12) { $su = & $find; if ($su) { break }; Start-Sleep -Seconds 10 }
+        if (-not $su) { throw 'the user is not in the environment yet (license not propagated to Power Platform?)' }
+    }
+    $assocUri = "$api/systemusers($($su.systemuserid))/systemuserroles_association"
+    $have = @((Invoke-DemoGraph GET "$assocUri`?`$select=roleid" -Token $dv).value | ForEach-Object { [string]$_.roleid })
+    $added = @()
+    foreach ($rn in $Roles) {
+        if ($have -contains $roleIds[$rn]) { if ($WhatIf) { "role present $rn (payg environment)" }; continue }
+        if ($WhatIf) { "would ASSIGN $rn"; continue }
+        Invoke-DemoGraph POST "$assocUri/`$ref" -Token $dv -Body @{ '@odata.id' = "$api/roles($($roleIds[$rn]))" } | Out-Null
+        $added += $rn
+    }
+    if ($WhatIf) { return }
+    $after = @((Invoke-DemoGraph GET "$assocUri`?`$select=roleid" -Token $dv).value | ForEach-Object { [string]$_.roleid })
+    foreach ($rn in $Roles) {
+        if ($after -notcontains $roleIds[$rn]) { throw "Dataverse role '$rn' missing at read-back" }
+        "role $(if ($added -contains $rn) { 'ASSIGNED and VERIFIED' } else { 'VERIFIED' }) $rn (payg environment)"
+    }
+}
+$envId = [string]$cfg.copilotStudio.paygEnvironmentId
+$pp = @($pack.personas | Where-Object { $_.powerPlatformRoles -and -not $RolesOnly -and ($Persona -contains 'all' -or $Persona -contains $_.key) })
+if ($pp.Count -and $envId) {
+    Write-DemoLog $Prefix 'Identities: Power Platform roles (payg environment)'
+    $mcsIds = @(Get-DemoIdsFor $pack -AgentKeys @($pack.agents | Where-Object { $_.platform -eq 'copilotStudio' } | ForEach-Object { [string]$_.key }))
+    foreach ($p in $pp) {
+        $upn = Get-DemoUpn $LOC $cfg $p.key
+        if (-not $ids.ContainsKey($p.key)) {
+            if ($WhatIf) { Note "$upn would get $($p.powerPlatformRoles -join ', ') in the payg environment (after its creation)" }
+            continue
+        }
+        $key = "pp-roles-$($p.key)"
+        try {
+            Set-DemoEnvironmentRoles $envId $ids[$p.key] @($p.powerPlatformRoles) | ForEach-Object { Note "$upn $_" }
+            if (-not $WhatIf -and @((Read-DemoUserActions $Prefix).actions | Where-Object { $_.key -eq $key }).Count) { $null = Set-DemoUserAction -Prefix $Prefix -Key $key -Status DONE }
+        }
+        catch {
+            Note "Power Platform roles FAILED for ${upn}: $($_.Exception.Message)"
+            if (-not $WhatIf) {
+                $null = Set-DemoUserAction -Prefix $Prefix -Key $key -Action "Power Platform roles for $upn in the payg environment: $($p.powerPlatformRoles -join ', ')" `
+                    -Where "re-run Set-DemoIdentities.ps1 -Prefix $Prefix once the license reached Power Platform, or Power Platform admin center > Manage > Environments > $envId > Settings > Users + permissions > Users" `
+                    -NeededBy $(if ($mcsIds.Count) { $mcsIds -join ', ' } else { 'the Copilot Studio card and demos' })
+            }
+        }
+    }
 }
 if (-not $WhatIf) { Save-DemoLabState $Prefix $state }
 Write-DemoLog $Prefix "Identities done ($(if ($WhatIf) { 'dry run' } else { 'applied' })): $($log.Count) line(s)"

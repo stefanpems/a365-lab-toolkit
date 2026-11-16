@@ -84,7 +84,7 @@ when a role lacks free seats. It changes nothing.
 | "No authentication" allowed for agents of the default environment | the prototype of D14 is unauthenticated on purpose (after its Microsoft channels are removed) | Power Platform admin center → Security → Identity and access → Authentication for agents; change it only for the demo and restore it after the event |
 | Power Platform **IP firewall not enforced** on both environments | admin-center actions on Copilot Studio agents (D5) fail when it is enforced | Power Platform admin center → Security → Identity and access → IP firewall |
 | `pac` CLI signed in to the tenant | solution import of the Copilot Studio agents | `pac auth list` |
-| The demo people get **Environment Maker + Basic User** in the payg environment | maker and program lead build, publish and submit agents | done by the build (`pac admin assign-user`) |
+| The demo people get **Environment Maker + Basic User** in the payg environment | maker and program lead build, publish and submit agents | done by the build (`Set-DemoIdentities.ps1`: Power Platform admin API + Dataverse Web API with the lab's az session, never `pac`; a failure becomes a user action) |
 
 ## 4. Microsoft Purview
 
