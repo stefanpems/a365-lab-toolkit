@@ -703,7 +703,11 @@ function Invoke-DemoGraph {
             catch {
                 $status = $null; try { $status = [int]$_.Exception.Response.StatusCode } catch { }
                 $attempt++
-                if ($attempt -le $MaxRetries -and (($null -eq $status) -or ($status -in 429, 500, 502, 503, 504))) { Start-Sleep -Seconds ([Math]::Min(60, [Math]::Pow(2, $attempt))); continue }
+                # 409 Directory_ConcurrencyViolation is a transient directory lock ("wait briefly and retry"), for
+                # example assignLicense right after role assignments; every other 409 is a real conflict.
+                $concurrency = $status -eq 409 -and "$($_.ErrorDetails.Message)" -match 'Directory_ConcurrencyViolation'
+                # No HTTP response (a dropped connection) leaves $status at 0: [int]$null is 0, not $null.
+                if ($attempt -le $MaxRetries -and ((-not $status) -or ($status -in 429, 500, 502, 503, 504) -or $concurrency)) { Start-Sleep -Seconds ([Math]::Min(60, [Math]::Pow(2, $attempt))); continue }
                 $msg = "$Method $next failed ($status): $($_.ErrorDetails.Message)"
                 $cae = $status -eq 401 -and -not $Token -and "$($_.ErrorDetails.Message)" -match 'InteractionRequired|TokenIssuedBeforeRevocationTimestamp|TokenCreatedWithOutdated|AADSTS50173|AADSTS700082'
                 if ($cae -and -not $script:DemoCaeRetried -and $env:AZURE_CONFIG_DIR) {

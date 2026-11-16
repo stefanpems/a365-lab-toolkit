@@ -188,7 +188,23 @@ P(os.path.join(r"$d", "msal_token_cache.bin")).save(json.dumps(c))
     $script:calls = 0; $script:resets = 0; $script:failCalls = 9; $script:DemoCaeRetried = $false
     $r = Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/x' -MaxRetries 0 -Token 'explicit' -NoThrow
     Assert ($script:resets -eq 0 -and $r.status -eq 401) 'an explicit -Token (MSAL) is never handled as an az token'
-    Remove-Item Function:\Invoke-RestMethod, Function:\Get-DemoAzToken, Function:\Reset-DemoAzCachedTokens
+
+    Write-Host 'Invoke-DemoGraph: 409 Directory_ConcurrencyViolation retried, other 409 conflicts not (mocked)'
+    function New-Conflict409([string]$Code) { $r = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Conflict); $er = [System.Management.Automation.ErrorRecord]::new([Microsoft.PowerShell.Commands.HttpResponseException]::new('409', $r), 'conflict', 'InvalidOperation', $null); $er.ErrorDetails = [System.Management.Automation.ErrorDetails]::new("{`"error`":{`"code`":`"$Code`",`"message`":`"x`"}}"); return $er }
+    function Start-Sleep { }
+    function Invoke-RestMethod { $script:calls++; if ($script:calls -le $script:failCalls) { throw (New-Conflict409 $script:conflictCode) }; [pscustomobject]@{ ok = $true } }
+    $script:calls = 0; $script:failCalls = 1; $script:conflictCode = 'Directory_ConcurrencyViolation'
+    $r = Invoke-DemoGraph POST 'https://graph.microsoft.com/v1.0/users/x/assignLicense' -Body @{} -Token 'explicit'
+    Assert ($r.ok -and $script:calls -eq 2) 'a transient directory lock is retried, then the call succeeds'
+    $script:calls = 0; $script:failCalls = 9; $script:conflictCode = 'Request_MultipleObjectsWithSameKeyValue'
+    $r = Invoke-DemoGraph POST 'https://graph.microsoft.com/v1.0/users' -Body @{} -Token 'explicit' -NoThrow
+    Assert ($script:calls -eq 1 -and $r.status -eq 409) 'a real conflict is returned at once'
+    Write-Host 'Invoke-DemoGraph: a dropped connection (no HTTP response) is retried (mocked)'
+    function Invoke-RestMethod { $script:calls++; if ($script:calls -le $script:failCalls) { throw [System.Net.Http.HttpRequestException]::new('An existing connection was forcibly closed by the remote host.') }; [pscustomobject]@{ ok = $true } }
+    $script:calls = 0; $script:failCalls = 1
+    $r = Invoke-DemoGraph GET 'https://graph.microsoft.com/v1.0/groups/x/members' -Token 'explicit'
+    Assert ($r.ok -and $script:calls -eq 2) 'a transport error is retried, then the call succeeds'
+    Remove-Item Function:\Invoke-RestMethod, Function:\Get-DemoAzToken, Function:\Reset-DemoAzCachedTokens, Function:\Start-Sleep
 }
 finally {
     $env:AZURE_CONFIG_DIR = $saveCfgDir; $env:AZURE_EXTENSION_DIR = $saveExtDir
