@@ -131,7 +131,7 @@ function Expand-Prompt([string]$P) {
 function Format-Prompt([string]$P) { $e = Expand-Prompt $P; if ($e.Contains("`n")) { return ("`n" + (Format-Block $e)) }; return (Format-Code $e) }
 function Get-TestSection($t) {
     $it = if ($LOC.tests.items -and $LOC.tests.items.Contains($t.id)) { $LOC.tests.items[$t.id] } else { $null }
-    $agentName = if ($t.agent) { Get-DemoAgentName -Locale $LOC -Key $t.agent -Surface $(if ($t.surface -eq 'webUi') { 'webui' } elseif ($t.surface -eq 'copilotStudio') { 'copilotStudio' } else { 'registry' }) } else { '' }
+    $agentName = Get-DemoTestAgentName $LOC $t
     $surface = if ($surfaces.ContainsKey([string]$t.surface)) { $surfaces[[string]$t.surface] } else { [string]$t.surface }
     $who = @(@($t.persona) + @($t.personas) | Where-Object { $_ } | ForEach-Object { if ($_ -eq 'anyone') { 'any licensed demo user' } else { Get-Who $_ } })
     $lines = @("### $($t.id) · $agentName · $surface", '', "- **Who**: $($who -join '; ')")

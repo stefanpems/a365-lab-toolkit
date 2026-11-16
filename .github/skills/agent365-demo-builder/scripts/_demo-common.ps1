@@ -99,6 +99,16 @@ function Get-DemoAgentName {
     }
 }
 
+# Agent column of a pack test (hand-out, run of show): agent 'any' is a wildcard (any agent on the test's surface, for
+# example Microsoft 365 Copilot), never an agent key.
+function Get-DemoTestAgentName($Locale, $Test) {
+    $key = [string]$Test.agent
+    if (-not $key) { return '' }
+    if ($key -eq 'any') { return 'any agent' }
+    $surface = switch ([string]$Test.surface) { 'webUi' { 'webui' } 'copilotStudio' { 'copilotStudio' } default { 'registry' } }
+    return [string](Get-DemoAgentName -Locale $Locale -Key $key -Surface $surface | Select-Object -First 1)
+}
+
 function Assert-DemoLiveNames($Pack, $Locale) {
     foreach ($agent in @($Pack.agents | Where-Object { $_.instance.live })) {
         $null = Get-DemoAgentName -Locale $Locale -Key $agent.key -Surface liveInstance

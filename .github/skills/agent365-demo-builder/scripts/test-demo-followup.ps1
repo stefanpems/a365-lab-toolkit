@@ -109,6 +109,10 @@ try {
     $message = ''
     try { Assert-DemoLiveNames $pack $locale } catch { $message = $_.Exception.Message }
     Assert ($message -match 'no configured name') 'missing live names stop rendering instead of falling back to English or a constructed city name'
+    $testLocale = $original | ConvertFrom-Json -AsHashtable
+    $rendered = @(foreach ($t in $pack.tests) { Get-DemoTestAgentName $testLocale $t })
+    Assert ($rendered.Count -eq @($pack.tests).Count) 'every shipped pack test renders its agent column (hand-out and run of show)'
+    Assert ((Get-DemoTestAgentName $testLocale @{ agent = 'any'; surface = 'm365Copilot' }) -ceq 'any agent') "the test agent wildcard 'any' is never resolved as an agent key"
 
     $preparedLocale = $original | ConvertFrom-Json -AsHashtable
     $preparedConfig = @{ prefix = 'prep1'; domain = 'example.test'; tenantId = 'tenant' }

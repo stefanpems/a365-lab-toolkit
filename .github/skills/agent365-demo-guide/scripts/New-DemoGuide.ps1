@@ -73,7 +73,7 @@ function Get-TestLines([string]$Id) {
     foreach ($t in @($pack.tests | Where-Object { @($_.demos) -contains $Id })) {
         $it = if ($LOC.tests.items -and $LOC.tests.items.Contains($t.id)) { $LOC.tests.items[$t.id] } else { $null }
         $who = @(@($t.persona) + @($t.personas) | Where-Object { $_ -and $_ -ne 'anyone' } | ForEach-Object { Get-DemoPersonaDisplayName $LOC $_ }) -join ', '
-        $agent = if ($t.agent) { Get-DemoAgentName -Locale $LOC -Key $t.agent -Surface $(if ($t.surface -eq 'webUi') { 'webui' } elseif ($t.surface -eq 'copilotStudio') { 'copilotStudio' } else { 'registry' }) } else { '' }
+        $agent = Get-DemoTestAgentName $LOC $t
         $prompt = if ($it -and $it.prompt) { Format-Code (Expand-Prompt ([string]$it.prompt)) }
                   elseif ($it -and $it.prompts) { @($it.prompts | ForEach-Object { Format-Code (Expand-Prompt ([string]$_)) }) -join ' then ' }
                   elseif ($it -and $it.promptSlot) { "fill $($it.promptSlot) (operator slot)" }
